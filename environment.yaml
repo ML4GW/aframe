@@ -1,0 +1,13 @@
+name: bbhnet
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.9
+  - gwpy=2.1.0
+  - astropy<5.0.0
+  - python-ldas-tools-framecpp
+  - python-nds2-client
+  - pytorch
+  - torchvision
+  - cudatoolkit=10.2
