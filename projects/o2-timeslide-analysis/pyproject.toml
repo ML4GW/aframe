@@ -1,11 +1,10 @@
 [tool.poetry]
-name = "bbhnet-analysis"
+name = "analyze_o2"
 version = "0.0.1"
 description = "Analyzing BBHNet outputs"
 authors = ["Alec Gunny"]
 license = "MIT"
-readme = "README.md"
-packages = [{include = "bbhnet_analysis"}]
+# readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
