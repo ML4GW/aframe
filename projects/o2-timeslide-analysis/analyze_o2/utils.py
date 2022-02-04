@@ -12,7 +12,7 @@ def analyze_run(
     run_dir: str,
     write_dir: str,
     window_length: float = 1.0,
-    norm_seconds: Optional[float] = None
+    norm_seconds: Optional[float] = None,
 ):
     os.makedirs(write_dir, exist_ok=True)
 
@@ -83,7 +83,7 @@ def analyze_outputs_parallel(
     shifts: Optional[List[float]] = None,
     t0: Optional[float] = None,
     length: Optional[float] = None,
-    norm_seconds: Optional[float] = None
+    norm_seconds: Optional[float] = None,
 ):
     ex = ProcessPoolExecutor(num_proc)
     futures = []
@@ -101,7 +101,7 @@ def analyze_outputs_parallel(
                     run_dir,
                     os.path.join(write_dir, shift),
                     window_length,
-                    norm_seconds
+                    norm_seconds,
                 )
                 futures.append(future)
 
@@ -139,7 +139,7 @@ def build_background(
         shifts=shifts,
         t0=t0,
         length=length,
-        norm_seconds=norm_seconds
+        norm_seconds=norm_seconds,
     ):
         fnames.append(fname)
 

@@ -9,7 +9,7 @@ def discrete_distribution(
     min_val: float,
     max_val: float,
     num_bins: int,
-    group: str = "filtered"
+    group: str = "filtered",
 ) -> Tuple[np.ndarray, np.ndarray]:
     bins = np.linspace(min_val, max_val, num_bins)
     hist = np.zeros((num_bins,))

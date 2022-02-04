@@ -25,7 +25,7 @@ def write_data(
     write_dir: str,
     t: np.ndarray,
     y: np.ndarray,
-    mf: Optional["np.ndarray"] = None
+    mf: Optional["np.ndarray"] = None,
 ):
     t0 = t[0]
     if int(t0) == t0:
