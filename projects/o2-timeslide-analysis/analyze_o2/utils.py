@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
 from typing import List, Optional
@@ -116,6 +117,15 @@ def analyze_outputs_parallel(
                 yield output_file
 
 
+def hhmmss(s):
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+
+    m = str(int(m)).zfill(2)
+    h = str(int(h)).zfill(2)
+    return f"{h}:{m}:{s:0.3f}"
+
+
 def build_background(
     data_dir: str,
     write_dir: str,
@@ -131,6 +141,8 @@ def build_background(
     length = 0
     shifts = [i for i in os.listdir(data_dir) if i != "dt-0.0"]
     fnames = []
+    start_time = time.time()
+    percent_completed = 0
     for fname in analyze_outputs_parallel(
         data_dir,
         write_dir,
@@ -156,10 +168,26 @@ def build_background(
 
         length += float(io.fname_re.search(fname).group("length"))
         logging.debug(f"Analyzed {length:0.1f}s of data")
-        if length >= max_tb:
-            logging.info(
-                f"Analyzed {length:0.1f}s of data, terminating analysis"
-            )
-            break
+        if max_tb is not None:
+            if (length / max_tb) > (percent_completed + 0.01):
+                percent_completed += 0.01
+                elapsed = time.time() - start_time
+                eta = (1 - percent_completed) * elapsed / percent_completed
+
+                logging.info(
+                    "Analyzed {}s of data, {}% complete in {}s, "
+                    "estimated {}s remaining".format(
+                        length,
+                        int(percent_completed * 100),
+                        hhmmss(elapsed),
+                        hhmmss(eta),
+                    )
+                )
+
+            if length >= max_tb:
+                logging.info(
+                    f"Analyzed {length:0.1f}s of data, terminating analysis"
+                )
+                break
 
     return fnames, length, min_mf, max_mf
