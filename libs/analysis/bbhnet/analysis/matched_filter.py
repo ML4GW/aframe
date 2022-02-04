@@ -6,21 +6,21 @@ from scipy.signal import convolve
 from bbhnet import io
 
 
-def match_filter(t, y, window_length: float = 1.0):
+def boxcar_filter(t, y, window_length: float = 1.0):
     sample_rate = 1 / (t[1] - t[0])
 
     window_size = int(window_length * sample_rate)
     window = np.ones((window_size,)) / window_size
 
     mf = convolve(y, window, mode="valid")
-    t = t[window_size - 1:]
+    t = t[window_size - 1 :]
     return t, mf
 
 
 def analyze_segment(
     fnames: List[str],
     window_length: float = 1,
-    norm_seconds: Optional[int] = None
+    norm_seconds: Optional[int] = None,
 ) -> Tuple[np.darray, np.ndarray, np.ndarray]:
     """Analyze a segment of time-contiguous BBHNet outputs
 
@@ -85,24 +85,24 @@ def analyze_segment(
     t, y = zip(*map(io.read_fname, io.filter_and_sort_files(fnames)))
     t = np.concatenate(t) + 1
     y = np.concatenate(y)
-    t, mf = match_filter(t, y, window_length=window_length)
+    t, mf = boxcar_filter(t, y, window_length=window_length)
 
     if norm_seconds is not None:
         # compute the mean and standard deviation of
         # the last `norm_seconds` seconds of data
         # compute the standard deviation by the
         # sigma^2 = E[x^2] - E^2[x] trick
-        _, shifts = match_filter(t, y, norm_seconds)
-        _, sqs = match_filter(t, y ** 2, norm_seconds)
+        _, shifts = boxcar_filter(t, y, norm_seconds)
+        _, sqs = boxcar_filter(t, y ** 2, norm_seconds)
         scales = np.sqrt(sqs - shifts ** 2)
 
         # slice all our arrays from the latest
         # possible time forward, to make sure that
         # we're dealing with strictly past data
-        mf = mf[-len(shifts):]
-        t = t[-len(shifts):]
-        y = y[-len(shifts):]
+        mf = mf[-len(shifts) :]
+        t = t[-len(shifts) :]
+        y = y[-len(shifts) :]
         mf = (mf - shifts) / scales
     else:
-        y = y[-len(mf):]
+        y = y[-len(mf) :]
     return t, y, mf

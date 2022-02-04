@@ -1,4 +1,4 @@
-name: bbhnet
+name: bbhnet-base
 channels:
   - conda-forge
   - pytorch

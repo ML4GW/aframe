@@ -6,14 +6,21 @@ authors = ["Alec Gunny"]
 license = "MIT"
 # readme = "README.md"
 
+[tool.poetry.scripts]
+analyze = "analyze_o2.analysis:main"
+
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-jupyter = "^1.0.0"
-scipy = "^1.7.3"
-bokeh = "^2.4.2"
-rich = "^11.0.0"
+"bbhnet.analysis" = {path = "../../libs/analysis", develop = true}
+"bbhnet.io" = {path = "../../libs/io", develop = true}
 
+jupyter = {version = "^1.0.0", optional = true}
+bokeh = {version = "^2.4.2", optional = true}
+rich = {version = "^11.0.0", optional = true}
+
+[tool.poetry.extras]
+notebook = ["jupyter", "bokeh", "rich"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry>=1.1"]
+build-backend = "poetry.masonry.api"
