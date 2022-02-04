@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "bbhnet"
+version = "0.0.1"
+description = "End-to-end BBHNet training, inference, and analysis repo"
+authors = [
+    "Alec Gunny <alec.gunny@ligo.org>",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^2.16"
+
+[tool.black]
+line-length = 79
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.tox
+  | _build
+  | dist
+  | docs
+)/
+'''
+
+[tool.isort]
+known_first_party = ["bbhnet"]
+multi_line_output = 3
+include_trailing_comma = true
