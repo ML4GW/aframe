@@ -82,7 +82,8 @@ def analyze_segment(
     # add one second to our timestamps
     # to make them equate to when samples
     # enter our "field of vision"
-    t, y = zip(*map(io.read_fname, io.filter_and_sort_files(fnames)))
+    fnames = io.filter_and_sort_files(fnames)
+    t, y = zip(*map(io.read_fname, fnames))
     t = np.concatenate(t) + 1
     y = np.concatenate(y)
     t, mf = boxcar_filter(t, y, window_length=window_length)

@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
 from pathlib import Path
@@ -24,8 +25,10 @@ def analyze_run(
     this_group = []
     last_t0, length = None, None
     for fname in io.filter_and_sort_files(run_dir):
-        if fnames is not None and fname not in fnames:
-            continue
+        if fnames is not None:
+            run = Path(run_dir.parents[0].name)
+            if run / "out" / fname not in  fnames:
+                continue
 
         # don't need to check if match checkes
         # because we filtered those out in
@@ -46,6 +49,8 @@ def analyze_run(
     # add whatever group we were working on when
     # the loop terminated in to our group list
     groups.append(this_group)
+    if len(groups[0]) == 0:
+        raise ValueError(f"No groups in run directory {run_dir}")
 
     output_files = []
     for group in groups:
@@ -88,11 +93,11 @@ def analyze_outputs_parallel(
             for run in _runs:
                 future = ex.submit(
                     analyze_run,
-                    shift_dir / run,
+                    shift_dir / run / "out",
                     os.path.join(write_dir, shift),
                     window_length,
                     norm_seconds,
-                    [data_dir / shift / i for i in fnames],
+                    fnames,
                 )
                 futures.append(future)
 
@@ -108,12 +113,14 @@ def analyze_outputs_parallel(
 
 
 def hhmmss(s):
+    if s == 0:
+        return "00:00:00.000"
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
 
     m = str(int(m)).zfill(2)
     h = str(int(h)).zfill(2)
-    return f"{h}:{m}:{s:0.3f}"
+    return f"{h}:{m}:{s:2.3f}"
 
 
 def build_background(
@@ -129,7 +136,6 @@ def build_background(
     min_mf, max_mf = None, None
     length = 0
     shifts = [i for i in os.listdir(data_dir) if i != "dt-0.0"]
-    fnames = []
     start_time = time.time()
     percent_completed = 0
     for fname in analyze_outputs_parallel(

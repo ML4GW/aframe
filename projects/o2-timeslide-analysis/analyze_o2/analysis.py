@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from analyze_o2 import utils as analysis_utils
+from analyze_o2.utils import build_background
 from hermes.typeo import typeo
 
 from bbhnet.io import filter_and_sort_files, fname_re
@@ -35,7 +35,7 @@ def main(
         logging.getLogger().addHandler(handler)
 
     data_dir = Path(data_dir)
-    groups, current_group, current_t0, lengths = [], [], []
+    groups, current_group, current_t0, lengths = [], [], [], []
     events, current_event = [], None
     last_t0, last_length = None, None
 
@@ -87,7 +87,9 @@ def main(
             divided_groups.append(current_group)
             divided_lengths.append(current_length)
             divided_events.append(current_event)
-            current_group, current_length = [group], length, event_name
+            current_group, current_length, current_event = (
+                [group], length, event_name
+            )
 
     divided_groups.append(current_group)
     divided_lengths.append(current_length)
@@ -100,7 +102,7 @@ def main(
     for event_name, fnames, length in zip(
         divided_events, divided_groups, divided_lengths
     ):
-        t0 = fname_re.search(fnames[0]).group("t0")
+        t0 = fname_re.search(str(fnames[0])).group("t0")
         if event_name is None:
             logging.info(
                 "Building max {}s of background samples from timesliding "
@@ -108,7 +110,7 @@ def main(
                     max_tb, length, t0
                 )
             )
-            fnames, Tb, min_value, max_value = analysis_utils.build_background(
+            analyzed_fnames, Tb, min_value, max_value = build_background(
                 data_dir,
                 write_dir,
                 num_bins=num_bins,
