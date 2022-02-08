@@ -1,6 +1,6 @@
 import os
 import re
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import h5py
 
@@ -11,14 +11,23 @@ fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*).hdf5$")
 minmax_re = re.compile(r"min-(?P<min>[0-9.]+)_max-(?P<max>[0-9.]+)")
 
 
-def filter_and_sort_files(fnames):
+def filter_and_sort_files(
+    fnames: Union[str, List[str]], return_matches: bool = False
+):
     """Find all timestamped data files and sort them by their timestamps"""
+    if isinstance(fnames, str):
+        fnames = os.listdir(fnames)
 
-    matches = [fname_re.search(f) for f in fnames]
-    tups = [
-        (m.group("t0"), f) for m, f in zip(matches, fnames) if m is not None
-    ]
-    return [t[1] for t in sorted(tups)]
+    # use the timestamps from all valid timestamped
+    # filenames to sort the files as the first index
+    # in a tuple
+    matches = zip(map(fname_re.search, fnames), fnames)
+    tups = [(m.group("t0"), f, m) for m, f in matches if m is not None]
+
+    # if return_matches is True, return the match object,
+    # otherwise just return the raw filename
+    return_idx = 2 if return_matches else 1
+    return [t[return_idx] for t in sorted(tups)]
 
 
 def write_data(

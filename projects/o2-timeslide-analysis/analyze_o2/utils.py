@@ -3,6 +3,7 @@ import os
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
+from pathlib import Path
 from typing import List, Optional
 
 from bbhnet import io
@@ -10,10 +11,11 @@ from bbhnet.analysis import matched_filter
 
 
 def analyze_run(
-    run_dir: str,
-    write_dir: str,
+    run_dir: Path,
+    write_dir: Path,
     window_length: float = 1.0,
     norm_seconds: Optional[float] = None,
+    fnames: Optional[List[Path]] = None,
 ):
     os.makedirs(write_dir, exist_ok=True)
 
@@ -21,7 +23,10 @@ def analyze_run(
     groups = []
     this_group = []
     last_t0, length = None, None
-    for fname in io.filter_and_sort_files(os.listdir(run_dir)):
+    for fname in io.filter_and_sort_files(run_dir):
+        if fnames is not None and fname not in fnames:
+            continue
+
         # don't need to check if match checkes
         # because we filtered those out in
         # "filter_and_sort_files"
@@ -36,9 +41,7 @@ def analyze_run(
 
         last_t0 = t0
         length = float(match.group("length"))
-
-        fname = os.path.join(run_dir, fname)
-        this_group.append(fname)
+        this_group.append(run_dir / fname)
 
     # add whatever group we were working on when
     # the loop terminated in to our group list
@@ -61,52 +64,35 @@ def impatient_pool(num_proc):
         ex.shutdown(wait=False, cancel_futures=True)
 
 
-def _run_in_range(
-    run_dir: str, t0: Optional[float], length: Optional[float]
-) -> bool:
-    if t0 is None:
-        return True
-
-    fnames = io.filter_and_sort_files(os.listdir(run_dir))
-    t0s = [float(io.fname_re.search(f).group("t0")) for f in fnames]
-    if all([t0 > t for t in t0s]):
-        return False
-    elif length is not None and all([(t0 + length) < t for t in t0s]):
-        return False
-    return True
-
-
 def analyze_outputs_parallel(
-    data_dir: str,
-    write_dir: str,
+    data_dir: Path,
+    write_dir: Path,
     window_length: float = 1.0,
     num_proc: int = 1,
     shifts: Optional[List[float]] = None,
-    t0: Optional[float] = None,
-    length: Optional[float] = None,
+    fnames: Optional[List[Path]] = None,
     norm_seconds: Optional[float] = None,
 ):
     ex = ProcessPoolExecutor(num_proc)
     futures = []
+    if fnames is not None:
+        runs = list(set([f.parent.parent for f in fnames]))
+    else:
+        runs = None
 
     with impatient_pool(num_proc) as ex:
         shifts = shifts or os.listdir(data_dir)
         for shift in shifts:
-            shift_dir = os.path.join(data_dir, shift)
-            for run in os.listdir(shift_dir):
-                run_dir = os.path.join(shift_dir, run, "out")
-                in_range = _run_in_range(run_dir, t0, length)
-                if not in_range:
-                    continue
-
+            shift_dir = data_dir / shift
+            _runs = runs or os.listdir(shift_dir)
+            for run in _runs:
                 future = ex.submit(
                     analyze_run,
-                    run_dir,
+                    shift_dir / run,
                     os.path.join(write_dir, shift),
                     window_length,
                     norm_seconds,
-                    t0,
-                    length
+                    [data_dir / shift / i for i in fnames],
                 )
                 futures.append(future)
 
@@ -136,8 +122,7 @@ def build_background(
     num_bins: int,
     window_length: float = 1.0,
     num_proc: int = 1,
-    t0: Optional[float] = None,
-    length: Optional[float] = None,
+    fnames: Optional[List[Path]] = None,
     norm_seconds: Optional[float] = None,
     max_tb: Optional[float] = None,
 ):
@@ -153,8 +138,7 @@ def build_background(
         window_length=window_length,
         num_proc=num_proc,
         shifts=shifts,
-        t0=t0,
-        length=length,
+        fnames=fnames,
         norm_seconds=norm_seconds,
     ):
         fnames.append(fname)

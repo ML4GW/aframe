@@ -17,84 +17,95 @@ event_names = ["GW170809", "GW170814", "GW170818", "GW170823"]
 def main(
     data_dir: Path,
     write_dir: Path,
+    analysis_period: float,
     num_bins: int = 10000,
     window_length: float = 1.0,
     norm_seconds: Optional[float] = None,
     max_tb: Optional[float] = None,
     log_file: Optional[str] = None,
-    verbose: bool = False
+    verbose: bool = False,
 ):
     logging.basicConfig(
         stream=sys.stdout,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.DEBUG if verbose else logging.INFO
+        level=logging.DEBUG if verbose else logging.INFO,
     )
     if log_file is not None:
         handler = logging.FileHandler(filename=log_file, mode="w")
         logging.getLogger().addHandler(handler)
 
     data_dir = Path(data_dir)
-    t0s, t0, events, current_event = [], None, [], None
+    groups, current_group, current_t0, lengths = [], [], []
+    events, current_event = [], None
+    last_t0, last_length = None, None
+
     runs = sorted(map(int, os.listdir(data_dir / "dt-0.0")))
     for run in runs:
         run_dir = data_dir / "dt-0.0" / str(run) / "out"
-        for fname in filter_and_sort_files(os.listdir(run_dir)):
-            f_t0 = int(fname_re.search(fname).group("t0"))
-            f_length = int(fname_re.search(fname).group("length"))
+        for fname in filter_and_sort_files(run_dir):
+            t0 = int(fname_re.search(fname).group("t0"))
+            length = int(fname_re.search(fname).group("length"))
 
-            if t0 is None:
-                # this is the first iteration, so initialize everything
-                t0 = current_group_t0 = last_t0 = f_t0
-                last_length = f_length
-                continue
-            elif f_t0 > (last_t0 + last_length):
-                # a segment has ended, so clock a new segment t0
-                logging.debug(f"Detected new segment beginning at GPS time {f_t0}")
-                current_group_t0 = f_t0
-
-                if current_event is not None:
-                    logging.debug(f"Ending segment with event {current_event}")
-                    # if the current segment has an event in it, end
-                    # the current analysis period and record the
-                    # presence of the event
-                    t0s.append(t0)
+            fname = Path(str(run)) / "out" / fname
+            try:
+                new_group = t0 > (last_t0 + last_length)
+            except TypeError:
+                current_t0 = t0
+            else:
+                if new_group:
+                    groups.append(current_group)
                     events.append(current_event)
-                    current_event = None
-                    t0 = f_t0
+                    lengths.append(t0 + length - current_t0)
 
-            last_t0 = f_t0
-            last_length = f_length
+                    current_group = []
+                    current_event = None
+                    current_t0 = t0
+
+            current_group.append(fname)
+            last_t0 = t0
+            last_length = length
 
             # check to see if there's an event contained in this file
-            for event_time, event_name in zip(event_times, event_names):
-                if f_t0 < event_time < (f_t0 + f_length):
-                    logging.debug(
-                        "Segment beginning at GPS time {} contains "
-                        "event {} at GPS time {}. Ending period beginning "
-                        "at GPS time {} to isolate segment.".format(
-                            current_group_t0, event_name, event_time, t0
-                        )
-                    )
+            if current_event is None:
+                for event_time, event_name in zip(event_times, event_names):
+                    if t0 < event_time < (t0 + length):
+                        current_event = event_name
+                        break
 
-                    # there is an event, so end the current analysis
-                    # period and start a new on beginning at the
-                    # start of this segment
-                    events.append(None)
-                    current_event = event_name
-                    t0s.append(t0)
-                    t0 = current_group_t0
-                    break
+    groups.append(current_group)
+    lengths.append(t0 + length - current_t0)
+    divided_groups, current_group = [], []
+    divided_lengths, current_length = [], 0
+    divided_events, current_event = [], None
+    for length, group, event_name in zip(lengths, groups, events):
+        if (current_length + length) < analysis_period:
+            current_group.extend(group)
+            current_length += length
+            if event_name is not None:
+                current_event = event_name
+        else:
+            divided_groups.append(current_group)
+            divided_lengths.append(current_length)
+            divided_events.append(current_event)
+            current_group, current_length = [group], length, event_name
 
-    t0s.append(f_t0 + f_length)
-    logging.debug(t0s)
+    divided_groups.append(current_group)
+    divided_lengths.append(current_length)
+    logging.info(
+        "Analyzing {} segments of lengths {}".format(
+            len(divided_lengths), divided_lengths
+        )
+    )
 
-    for event_name, t0, t1 in zip(events, t0s[:-1], t0s[1:]):
-        length = t1 - t0
+    for event_name, fnames, length in zip(
+        divided_events, divided_groups, divided_lengths
+    ):
+        t0 = fname_re.search(fnames[0]).group("t0")
         if event_name is None:
             logging.info(
-                "Building max {}s of background samples from timeslides "
-                "beginning at GPS time {} and ending at {}".format(
-                    max_tb, t0, t1
+                "Building max {}s of background samples from timesliding "
+                "{}s of data beginning at GPS time {}".format(
+                    max_tb, length, t0
                 )
             )
             fnames, Tb, min_value, max_value = analysis_utils.build_background(
@@ -102,9 +113,8 @@ def main(
                 write_dir,
                 num_bins=num_bins,
                 window_length=window_length,
+                fnames=fnames,
                 num_proc=8,
-                t0=t0,
-                length=length,
                 norm_seconds=norm_seconds,
                 max_tb=max_tb,
             )
