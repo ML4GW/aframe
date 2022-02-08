@@ -95,14 +95,18 @@ def analyze_outputs_parallel(
             shift_dir = os.path.join(data_dir, shift)
             for run in os.listdir(shift_dir):
                 run_dir = os.path.join(shift_dir, run, "out")
-                if not _run_in_range(run_dir, t0, length):
+                in_range = _run_in_range(run_dir, t0, length)
+                if not in_range:
                     continue
+
                 future = ex.submit(
                     analyze_run,
                     run_dir,
                     os.path.join(write_dir, shift),
                     window_length,
                     norm_seconds,
+                    t0,
+                    length
                 )
                 futures.append(future)
 

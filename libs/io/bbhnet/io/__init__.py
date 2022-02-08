@@ -23,8 +23,8 @@ def filter_and_sort_files(fnames):
 
 def write_data(
     write_dir: str,
-    t: np.ndarray,
-    y: np.ndarray,
+    t: "np.ndarray",
+    y: "np.ndarray",
     mf: Optional["np.ndarray"] = None,
 ):
     t0 = t[0]

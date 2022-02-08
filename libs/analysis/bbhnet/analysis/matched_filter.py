@@ -21,7 +21,7 @@ def analyze_segment(
     fnames: List[str],
     window_length: float = 1,
     norm_seconds: Optional[int] = None,
-) -> Tuple[np.darray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Analyze a segment of time-contiguous BBHNet outputs
 
     Compute matched filter outputs on a stretch
