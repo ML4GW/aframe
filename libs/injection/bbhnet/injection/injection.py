@@ -3,7 +3,6 @@
 
 import logging
 import os
-import sys
 
 import bilby
 import h5py
@@ -12,10 +11,6 @@ import scipy.signal as sig
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from gwpy.timeseries import TimeSeries
-
-logging.basicConfig(
-    format="%(asctime)s - %(message)s", level=logging.INFO, stream=sys.stdout
-)
 
 
 def get_snr(data, noise_psd, fs, fmin=20):
