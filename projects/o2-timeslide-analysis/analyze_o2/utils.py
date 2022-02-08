@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
 from pathlib import Path
@@ -27,7 +26,7 @@ def analyze_run(
     for fname in io.filter_and_sort_files(run_dir):
         if fnames is not None:
             run = Path(run_dir.parents[0].name)
-            if run / "out" / fname not in  fnames:
+            if run / "out" / fname not in fnames:
                 continue
 
         # don't need to check if match checkes

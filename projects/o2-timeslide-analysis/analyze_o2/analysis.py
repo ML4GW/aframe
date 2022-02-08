@@ -88,7 +88,9 @@ def main(
             divided_lengths.append(current_length)
             divided_events.append(current_event)
             current_group, current_length, current_event = (
-                [group], length, event_name
+                [group],
+                length,
+                event_name,
             )
 
     divided_groups.append(current_group)
