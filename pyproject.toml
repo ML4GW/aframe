@@ -29,3 +29,7 @@ exclude = '''
 known_first_party = ["bbhnet"]
 multi_line_output = 3
 include_trailing_comma = true
+
+[build-system]
+requires = ["poetry>=1.2"]
+build-backend = "poetry.masonry.api"
