@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 import logging
 import os
+from collections.abc import Iterable
 
 import bilby
 import h5py
@@ -13,7 +13,7 @@ from bilby.gw.source import lal_binary_black_hole
 from gwpy.timeseries import TimeSeries
 
 
-def get_snr(data, noise_psd, fs, fmin=20):
+def calc_snr(data, noise_psd, fs, fmin=20):
     """ Calculate the waveform SNR given the background noise PSD"""
 
     data_fd = np.fft.rfft(data) / fs
@@ -51,7 +51,10 @@ def generate_gw(
     - whiten_fn: whiten each sample using the background noise PSD
     """
 
-    n_sample = len(sample_params["geocent_time"])
+    sample_params = [
+        dict(zip(sample_params, col)) for col in zip(*sample_params.values())
+    ]
+    n_sample = len(sample_params)
 
     if waveform_generator is None:
         waveform_generator = bilby.gw.WaveformGenerator(
@@ -74,32 +77,27 @@ def generate_gw(
     snr = np.zeros(n_sample)
 
     ifo = bilby.gw.detector.get_empty_interferometer(ifo)
-    for i in range(n_sample):
-        # Get parameter for one signal
-        p = dict()
-        for k, v in sample_params.items():
-            p[k] = v[i]
-        ra, dec, geocent_time, psi = (
-            p["ra"],
-            p["dec"],
-            p["geocent_time"],
-            p["psi"],
-        )
+    b, a = sig.butter(
+        N=8,
+        Wn=waveform_generator.waveform_arguments["minimum_frequency"],
+        btype="highpass",
+        fs=waveform_generator.sampling_frequency,
+    )
+    for i, p in enumerate(sample_params):
+
+        # For less ugly function calls later on
+        ra = p["ra"]
+        dec = p["dec"]
+        geocent_time = p["geocent_time"]
+        psi = p["psi"]
 
         # Generate signal in IFO
         polarizations = waveform_generator.time_domain_strain(p)
         signal = np.zeros(waveform_size)
-        b, a = sig.butter(
-            N=8,
-            Wn=waveform_generator.waveform_arguments["minimum_frequency"],
-            btype="highpass",
-            fs=waveform_generator.sampling_frequency,
-        )
-        for mode in polarizations.keys():
+        for mode, polarization in polarizations.items():
             # Get ifo response
             response = ifo.antenna_response(ra, dec, geocent_time, psi, mode)
-            polarizations[mode] = sig.filtfilt(b, a, polarizations[mode])
-            signal += polarizations[mode] * response
+            signal += response * sig.filtfilt(b, a, polarization)
 
         # Total shift = shift to trigger time + geometric shift
         dt = waveform_duration / 2.0
@@ -109,7 +107,7 @@ def generate_gw(
         # Calculate SNR
         if noise_psd is not None:
             if get_snr:
-                snr[i] = get_snr(signal, noise_psd, sample_rate)
+                snr[i] = calc_snr(signal, noise_psd, sample_rate)
 
         signals[i] = signal
     if get_snr:
@@ -118,7 +116,7 @@ def generate_gw(
 
 
 def inject_signals(
-    frame_files: [str],
+    frame_files: Iterable[str],
     channels: [str],
     ifos: [str],
     prior_file: str,
@@ -126,18 +124,43 @@ def inject_signals(
     outdir: str,
     fmin: float = 20,
     waveform_duration: float = 8,
-    snr_range: [float] = [25, 50],
+    snr_range: Iterable[float] = [25, 50],
 ):
 
-    """ Start simulation """
+    """Injects simulated BBH signals into a frame, or set of corresponding
+    frames from different interferometers. Frames should have the same
+    start/stop time and the same sample rate
 
-    strain = TimeSeries.read(frame_files[0], channels[0])
-    logging.info(f"Read strain from {frame_files[0]}")
+    Arguments:
+    - frame_files: list of paths to frames to be injected
+    - channels: channel names of the strain data in each frame
+    - ifos: list of interferometers corresponding to frames, e.g., H1, L1
+    - prior_file: prior file for bilby to sample from
+    - n_samples: number of signal to inject
+    - outdir: output directory to which injected frames will be written
+    - fmin: Minimum frequency for highpass filter
+    - waveform_duration: length of injected waveforms
+    - snr_range: desired signal SNR range
+    """
 
-    frame_start, frame_stop = strain.span
+    strains = [
+        TimeSeries.read(frame, ch) for frame, ch in zip(frame_files, channels)
+    ]
+
+    logging.info("Read strain from frame files")
+
+    span = set([strain.span for strain in strains])
+    if len(span) != 1:
+        print("Error: The given strains have different durations")
+        exit()
+    frame_start, frame_stop = next(iter(span))
     frame_duration = frame_stop - frame_start
 
-    sample_rate = int(strain.sample_rate.value)
+    sample_rate = set([int(strain.sample_rate.value) for strain in strains])
+    if len(sample_rate) != 1:
+        print("Error: The given strains have different sample rates")
+        exit()
+    sample_rate = next(iter(sample_rate))
     fftlength = int(max(2, np.ceil(2048 / sample_rate)))
 
     # set the non-overlapping times of the signals in the frames randomly
@@ -177,16 +200,12 @@ def inject_signals(
     # sample GW parameters from prior distribution
     priors = bilby.gw.prior.BBHPriorDict(prior_file)
     sample_params = priors.sample(n_samples)
-
-    # Come back to this and see if can add frame_start
     sample_params["geocent_time"] = signal_times
 
     signal_strains = []
     signals_list = []
     snr_list = []
-    for frame, channel, ifo in zip(frame_files, channels, ifos):
-        # Get the strain from each frame file
-        strain = TimeSeries.read(frame, channel)
+    for strain, channel, ifo in zip(strains, channels, ifos):
 
         # calculate the PSD
         strain_psd = strain.psd(fftlength)
@@ -215,8 +234,11 @@ def inject_signals(
     )
     snr_list = [snr * new_snr / old_snr for snr in snr_list]
 
-    for strain, signals, frame in zip(
-        signal_strains, signals_list, frame_files
+    frame_out_paths = [
+        os.path.join(outdir, os.path.basename(frame)) for frame in frame_files
+    ]
+    for strain, signals, frame_path in zip(
+        signal_strains, signals_list, frame_out_paths
     ):
         for i in range(n_samples):
             idx1 = int(
@@ -225,7 +247,7 @@ def inject_signals(
             idx2 = idx1 + waveform_duration * sample_rate
             strain[idx1:idx2] += signals[i]
 
-        strain.write(os.path.join(outdir, frame))
+        strain.write(frame_path)
 
     # Write params and similar to output file
     param_file = os.path.join(
@@ -259,3 +281,5 @@ def inject_signals(
         # Update signal attributes
         f.attrs["waveform_duration"] = waveform_duration
         f.attrs["flag"] = "GW"
+
+    return frame_out_paths, param_file
