@@ -2,7 +2,7 @@
 name = "bbhnet.injection"
 version = "0.0.1"
 description = "Function for injecting BBH signals into input frames"
-authors = ["Will Benoit" <william.benoit@ligo.org,]
+authors = ["Will Benoit <william.benoit@ligo.org>",]
 license = "MIT"
 packages = [
     {include = "bbhnet"}

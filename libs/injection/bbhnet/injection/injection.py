@@ -151,15 +151,23 @@ def inject_signals(
 
     span = set([strain.span for strain in strains])
     if len(span) != 1:
-        print("Error: The given strains have different durations")
-        exit()
+        raise ValueError(
+            "Frame files {} and {} have different durations".format(
+                *frame_files
+            )
+        )
+
     frame_start, frame_stop = next(iter(span))
     frame_duration = frame_stop - frame_start
 
     sample_rate = set([int(strain.sample_rate.value) for strain in strains])
     if len(sample_rate) != 1:
-        print("Error: The given strains have different sample rates")
-        exit()
+        raise ValueError(
+            "Frame files {} and {} have different sample rates".format(
+                *frame_files
+            )
+        )
+
     sample_rate = next(iter(sample_rate))
     fftlength = int(max(2, np.ceil(2048 / sample_rate)))
 
@@ -202,7 +210,6 @@ def inject_signals(
     sample_params = priors.sample(n_samples)
     sample_params["geocent_time"] = signal_times
 
-    signal_strains = []
     signals_list = []
     snr_list = []
     for strain, channel, ifo in zip(strains, channels, ifos):
@@ -219,7 +226,6 @@ def inject_signals(
             noise_psd=strain_psd,
         )
 
-        signal_strains.append(strain)
         signals_list.append(signals)
         snr_list.append(snr)
 
@@ -238,7 +244,7 @@ def inject_signals(
         os.path.join(outdir, os.path.basename(frame)) for frame in frame_files
     ]
     for strain, signals, frame_path in zip(
-        signal_strains, signals_list, frame_out_paths
+        strains, signals_list, frame_out_paths
     ):
         for i in range(n_samples):
             idx1 = int(
