@@ -81,7 +81,7 @@ def generate_gw(
     return signals
 
 
-def make_signals(
+def main(
     prior_file: str,
     n_samples: int,
     outdir: str,
@@ -161,4 +161,6 @@ def make_signals(
             }
         )
 
-    return signal_file
+
+if __name__ == "__main__":
+    main()
