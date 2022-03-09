@@ -2,7 +2,6 @@
 # coding: utf-8
 import logging
 import os
-from collections.abc import Iterable
 
 import bilby
 import h5py
@@ -10,7 +9,6 @@ import numpy as np
 import scipy.signal as sig
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
-from gwpy.timeseries import TimeSeries
 
 
 def generate_gw(
@@ -88,10 +86,10 @@ def make_signals(
     n_samples: int,
     outdir: str,
     waveform_duration: float = 8,
-    sample_rate: float = 4096
+    sample_rate: float = 4096,
 ):
 
-    """ Simulates a set of BBH waveforms that can be added to background
+    """Simulates a set of BBH waveforms that can be added to background
 
     Arguments:
     - prior_file: prior file for bilby to sample from
@@ -129,13 +127,13 @@ def make_signals(
 
     H1_signals = generate_gw(
         sample_params,
-        'H1',
+        "H1",
         waveform_generator=waveform_generator,
     )
 
     L1_signals = generate_gw(
         sample_params,
-        'L1',
+        "L1",
         waveform_generator=waveform_generator,
     )
 
@@ -152,15 +150,14 @@ def make_signals(
         for k, v in sample_params.items():
             f.create_dataset(k, data=v)
 
-
-        f.create_dataset('signals', data=signals)
+        f.create_dataset("signals", data=signals)
 
         # write attributes
         f.attrs.update(
             {
-                'size': n_samples,
-                'sample_rate': sample_rate,
-                'waveform_duration': waveform_duration
+                "size": n_samples,
+                "sample_rate": sample_rate,
+                "waveform_duration": waveform_duration,
             }
         )
 
