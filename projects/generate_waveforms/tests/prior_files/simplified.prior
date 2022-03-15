@@ -1,0 +1,15 @@
+mass_1 = Uniform(name='mass_1', minimum=25, maximum=75, unit='$M_{\odot}$', boundary=None)
+mass_2 = Uniform(name='mass_2', minimum=25, maximum=75, unit='$M_{\odot}$', boundary=None)
+mass_ratio = Constraint(name='mass_ratio', minimum=0.125, maximum=1.0)
+luminosity_distance = bilby.gw.prior.UniformSourceFrame(name='luminosity_distance', minimum=500, maximum=1000, unit='Mpc', boundary=None)
+dec = Cosine(name='dec')
+ra = Uniform(name='ra', minimum=0, maximum=2 * np.pi, boundary='periodic')
+theta_jn = 0
+psi = 0
+phase = 0
+a_1 = 0
+a_2 = 0
+tilt_1 = 0
+tilt_2 = 0
+phi_12 = 0
+phi_jl = 0

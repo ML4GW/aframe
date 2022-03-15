@@ -9,25 +9,29 @@ import numpy as np
 import scipy.signal as sig
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
+from hermes.typeo import typeo
 
 
 def generate_gw(
     sample_params,
-    ifo,
     waveform_generator=None,
 ):
-    """Generate gravitational-wave events
+    """Generate raw gravitational-wave signals, pre-interferometer projection.
 
-    Arguments:
-    - sample_params: dictionary of GW parameters
-    - ifo: interferometer
-    - waveform_generator: bilby.gw.WaveformGenerator with appropriate params
+    Args:
+        sample_params: dictionary of GW parameters
+        waveform_generator: bilby.gw.WaveformGenerator with appropriate params
+
+    Returns:
+        An (n_samples, 2, waveform_size) array, containing both polarizations
+        for each of the desired number of samples. The first polarization is
+        always plus and the second is always cross
     """
 
     sample_params = [
         dict(zip(sample_params, col)) for col in zip(*sample_params.values())
     ]
-    n_sample = len(sample_params)
+    n_samples = len(sample_params)
 
     if waveform_generator is None:
         waveform_generator = bilby.gw.WaveformGenerator(
@@ -46,9 +50,9 @@ def generate_gw(
     waveform_duration = waveform_generator.duration
     waveform_size = int(sample_rate * waveform_duration)
 
-    signals = np.zeros((n_sample, waveform_size))
+    num_pols = 2
+    signals = np.zeros((n_samples, num_pols, waveform_size))
 
-    ifo = bilby.gw.detector.get_empty_interferometer(ifo)
     b, a = sig.butter(
         N=8,
         Wn=waveform_generator.waveform_arguments["minimum_frequency"],
@@ -56,31 +60,13 @@ def generate_gw(
         fs=waveform_generator.sampling_frequency,
     )
     for i, p in enumerate(sample_params):
-
-        # For less ugly function calls later on
-        ra = p["ra"]
-        dec = p["dec"]
-        geocent_time = p["geocent_time"]
-        psi = p["psi"]
-
-        # Generate signal in IFO
         polarizations = waveform_generator.time_domain_strain(p)
-        signal = np.zeros(waveform_size)
-        for mode, polarization in polarizations.items():
-            # Get ifo response
-            response = ifo.antenna_response(ra, dec, geocent_time, psi, mode)
-            signal += response * sig.filtfilt(b, a, polarization)
-
-        # Total shift = shift to trigger time + geometric shift
-        dt = waveform_duration / 2.0
-        dt += ifo.time_delay_from_geocenter(ra, dec, geocent_time)
-        signal = np.roll(signal, int(np.round(dt * sample_rate)))
-
-        signals[i] = signal
+        signals[i] = sig.filtfilt(b, a, list(polarizations.values()), axis=1)
 
     return signals
 
 
+@typeo
 def main(
     prior_file: str,
     n_samples: int,
@@ -89,14 +75,17 @@ def main(
     sample_rate: float = 4096,
 ):
 
-    """Simulates a set of BBH waveforms that can be added to background
+    """Simulates a set of raw BBH signals and saves them to an output file.
 
-    Arguments:
-    - prior_file: prior file for bilby to sample from
-    - n_samples: number of signal to inject
-    - outdir: output directory to which signals will be written
-    - waveform_duration: length of injected waveforms
-    - sample_rate: sample rate of the signal in Hz
+    Args:
+        prior_file: prior file for bilby to sample from
+        n_samples: number of signal to inject
+        outdir: output directory to which signals will be written
+        waveform_duration: length of injected waveforms
+        sample_rate: sample rate of the signal in Hz
+
+    Returns:
+        path to output file
     """
 
     # log and print out some simulation parameters
@@ -121,23 +110,12 @@ def main(
     # sample GW parameters from prior distribution
     priors = bilby.gw.prior.BBHPriorDict(prior_file)
     sample_params = priors.sample(n_samples)
-    # Random times from O3
-    signal_times = np.random.randint(1238166018, 1269363618, n_samples)
-    sample_params["geocent_time"] = signal_times
 
-    H1_signals = generate_gw(
+    # generate raw GW signal
+    signals = generate_gw(
         sample_params,
-        "H1",
         waveform_generator=waveform_generator,
     )
-
-    L1_signals = generate_gw(
-        sample_params,
-        "L1",
-        waveform_generator=waveform_generator,
-    )
-
-    signals = np.stack([H1_signals, L1_signals], axis=1)
 
     # Write params and similar to output file
     prior_name = os.path.basename(prior_file)[:-6]

@@ -9,6 +9,13 @@ license = "MIT"
 python = ">=3.9,<3.11"
 scipy = "^1.8.0"
 bilby = "^1.1.5"
+"hermes.typeo" = "^0.1.4"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[tool.poetry.scripts]
+simulate = "generate_waveforms.py:main"
 
 [build-system]
 requires = ["poetry>=1.2"]
