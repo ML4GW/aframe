@@ -1,17 +1,57 @@
 #!/usr/bin/env python
 # coding: utf-8
+import os
+import shutil
+from pathlib import Path
+
 import h5py
+import pytest
 from generate_waveforms import main
 
-prior_files = "/home/william.benoit/simulateWaveforms/prior_files/"
-outdir = "/home/william.benoit/simulateWaveforms/"
+
+@pytest.fixture(scope="session")
+def data_dir():
+    data_dir = "tmp"
+    os.makedirs(data_dir, exist_ok=True)
+    yield Path(data_dir)
+    shutil.rmtree(data_dir)
 
 
-def check_file_contents(
-    signal_file, n_samples, waveform_duration, sample_rate
+@pytest.fixture(params=[0, 10, 100])
+def n_samples(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 8, 60])
+def waveform_duration(request):
+    return request.param
+
+
+@pytest.fixture(params=[512, 4096, 16384])
+def sample_rate(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=["prior_files/nonspin_BBH.prior", "prior_files/precess_tides.prior"]
+)
+def prior_file(request):
+    return request.param
+
+
+def test_check_file_contents(
+    data_dir, n_samples, waveform_duration, sample_rate, prior_file
 ):
 
     signal_length = waveform_duration * sample_rate
+
+    signal_file = main(
+        prior_file,
+        n_samples,
+        data_dir,
+        waveform_duration=waveform_duration,
+        sample_rate=sample_rate,
+    )
 
     with h5py.File(signal_file, "r") as f:
         for key in f.keys():
@@ -27,96 +67,3 @@ def check_file_contents(
                 assert (
                     act_shape == exp_shape
                 ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
-
-
-def basic_test():
-    prior_file = prior_files + "nonspin_BBH.prior"
-    n_samples = 100
-    waveform_duration = 8
-    sample_rate = 4096
-
-    signal_file = main(
-        prior_file,
-        n_samples,
-        outdir,
-        waveform_duration=waveform_duration,
-        sample_rate=sample_rate,
-    )
-
-    check_file_contents(signal_file, n_samples, waveform_duration, sample_rate)
-
-
-def different_prior():
-    prior_file = prior_files + "precess_tides.prior"
-    n_samples = 100
-    waveform_duration = 8
-    sample_rate = 4096
-
-    signal_file = main(
-        prior_file,
-        n_samples,
-        outdir,
-        waveform_duration=waveform_duration,
-        sample_rate=sample_rate,
-    )
-
-    check_file_contents(signal_file, n_samples, waveform_duration, sample_rate)
-
-
-def different_duration():
-    prior_file = prior_files + "nonspin_BBH.prior"
-    n_samples = 100
-    waveform_duration = 4
-    sample_rate = 4096
-
-    signal_file = main(
-        prior_file,
-        n_samples,
-        outdir,
-        waveform_duration=waveform_duration,
-        sample_rate=sample_rate,
-    )
-
-    check_file_contents(signal_file, n_samples, waveform_duration, sample_rate)
-
-
-def different_sample_rate():
-    prior_file = prior_files + "nonspin_BBH.prior"
-    n_samples = 100
-    waveform_duration = 8
-    sample_rate = 16384
-
-    signal_file = main(
-        prior_file,
-        n_samples,
-        outdir,
-        waveform_duration=waveform_duration,
-        sample_rate=sample_rate,
-    )
-
-    check_file_contents(signal_file, n_samples, waveform_duration, sample_rate)
-
-
-def different_n_samples():
-    prior_file = prior_files + "nonspin_BBH.prior"
-    n_samples = 10
-    waveform_duration = 8
-    sample_rate = 4096
-
-    signal_file = main(
-        prior_file,
-        n_samples,
-        outdir,
-        waveform_duration=waveform_duration,
-        sample_rate=sample_rate,
-    )
-
-    check_file_contents(signal_file, n_samples, waveform_duration, sample_rate)
-
-
-if __name__ == "__main__":
-    basic_test()
-    different_prior()
-    different_duration()
-    different_sample_rate()
-    different_n_samples()
