@@ -10,6 +10,7 @@ python = ">=3.9,<3.11"
 scipy = "^1.8.0"
 bilby = "^1.1.5"
 "hermes.typeo" = "^0.1.4"
+"bbhnet.injection" = {path="../../libs/injection", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
