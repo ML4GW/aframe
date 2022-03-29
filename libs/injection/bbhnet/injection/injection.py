@@ -32,29 +32,24 @@ def calc_snr(data, noise_psd, fs, fmin=20):
 
 def generate_gw(
     sample_params,
-    ifo,
     waveform_generator=None,
-    get_snr=False,
-    noise_psd=None,
-    whiten_fn=None,
 ):
-    """Generate gravitational-wave events
+    """Generate raw gravitational-wave signals, pre-interferometer projection.
 
-    Arguments:
-    - sample_params: dictionary of GW parameters
-    - sample_duration: time duration of each sample
-    - triggers: trigger time (relative to `sample_duration`) of each sample
-    - ifo: interferometer
-    - waveform_generator: bilby.gw.WaveformGenerator with appropriate params
-    - get_snr: return the SNR of each sample
-    - noise_psd: background noise PSD used to calculate SNR the sample
-    - whiten_fn: whiten each sample using the background noise PSD
+    Args:
+        sample_params: dictionary of GW parameters
+        waveform_generator: bilby.gw.WaveformGenerator with appropriate params
+
+    Returns:
+        An (n_samples, 2, waveform_size) array, containing both polarizations
+        for each of the desired number of samples. The first polarization is
+        always plus and the second is always cross
     """
 
     sample_params = [
         dict(zip(sample_params, col)) for col in zip(*sample_params.values())
     ]
-    n_sample = len(sample_params)
+    n_samples = len(sample_params)
 
     if waveform_generator is None:
         waveform_generator = bilby.gw.WaveformGenerator(
@@ -73,16 +68,65 @@ def generate_gw(
     waveform_duration = waveform_generator.duration
     waveform_size = int(sample_rate * waveform_duration)
 
-    signals = np.zeros((n_sample, waveform_size))
-    snr = np.zeros(n_sample)
+    num_pols = 2
+    signals = np.zeros((n_samples, num_pols, waveform_size))
 
-    ifo = bilby.gw.detector.get_empty_interferometer(ifo)
     b, a = sig.butter(
         N=8,
         Wn=waveform_generator.waveform_arguments["minimum_frequency"],
         btype="highpass",
         fs=waveform_generator.sampling_frequency,
     )
+    for i, p in enumerate(sample_params):
+        polarizations = waveform_generator.time_domain_strain(p)
+        signals[i] = sig.filtfilt(b, a, list(polarizations.values()), axis=1)
+
+    return signals
+
+
+def project_raw_gw(
+    raw_waveforms,
+    sample_params,
+    waveform_generator,
+    ifo,
+    get_snr=False,
+    noise_psd=None,
+):
+    """Project a raw gravitational wave onto an intterferometer
+
+    Args:
+        raw_waveforms: the plus and cross polarizations of a list of GWs
+        sample_params: dictionary of GW parameters
+        waveform_generator: the waveform generator that made the raw GWs
+        ifo: interferometer
+        get_snr: return the SNR of each sample
+        noise_psd: background noise PSD used to calculate SNR the sample
+
+    Returns:
+        An (n_samples, waveform_size) array containing the GW signals as they
+        would appear in the given interferometer with the given set of sample
+        parameters. If get_snr=True, also returns a list of the SNR associated
+        with each signal
+    """
+
+    polarizations = {
+        "plus": raw_waveforms[:, 0, :],
+        "cross": raw_waveforms[:, 1, :],
+    }
+
+    sample_params = [
+        dict(zip(sample_params, col)) for col in zip(*sample_params.values())
+    ]
+    n_sample = len(sample_params)
+
+    sample_rate = waveform_generator.sampling_frequency
+    waveform_duration = waveform_generator.duration
+    waveform_size = int(sample_rate * waveform_duration)
+
+    signals = np.zeros((n_sample, waveform_size))
+    snr = np.zeros(n_sample)
+
+    ifo = bilby.gw.detector.get_empty_interferometer(ifo)
     for i, p in enumerate(sample_params):
 
         # For less ugly function calls later on
@@ -92,12 +136,11 @@ def generate_gw(
         psi = p["psi"]
 
         # Generate signal in IFO
-        polarizations = waveform_generator.time_domain_strain(p)
         signal = np.zeros(waveform_size)
         for mode, polarization in polarizations.items():
             # Get ifo response
             response = ifo.antenna_response(ra, dec, geocent_time, psi, mode)
-            signal += response * sig.filtfilt(b, a, polarization)
+            signal += response * polarization[i]
 
         # Total shift = shift to trigger time + geometric shift
         dt = waveform_duration / 2.0
@@ -131,16 +174,19 @@ def inject_signals(
     frames from different interferometers. Frames should have the same
     start/stop time and the same sample rate
 
-    Arguments:
-    - frame_files: list of paths to frames to be injected
-    - channels: channel names of the strain data in each frame
-    - ifos: list of interferometers corresponding to frames, e.g., H1, L1
-    - prior_file: prior file for bilby to sample from
-    - n_samples: number of signal to inject
-    - outdir: output directory to which injected frames will be written
-    - fmin: Minimum frequency for highpass filter
-    - waveform_duration: length of injected waveforms
-    - snr_range: desired signal SNR range
+    Args:
+        frame_files: list of paths to frames to be injected
+        channels: channel names of the strain data in each frame
+        ifos: list of interferometers corresponding to frames, e.g., H1, L1
+        prior_file: prior file for bilby to sample from
+        n_samples: number of signal to inject
+        outdir: output directory to which injected frames will be written
+        fmin: Minimum frequency for highpass filter
+        waveform_duration: length of injected waveforms
+        snr_range: desired signal SNR range
+
+    Returns:
+        Paths to the injected frames and the parameter file
     """
 
     strains = [
@@ -218,10 +264,16 @@ def inject_signals(
         strain_psd = strain.psd(fftlength)
 
         # generate GW waveforms
-        signals, snr = generate_gw(
+        raw_signals = generate_gw(
             sample_params,
-            ifo,
             waveform_generator=waveform_generator,
+        )
+
+        signals, snr = project_raw_gw(
+            raw_signals,
+            sample_params,
+            waveform_generator,
+            ifo,
             get_snr=True,
             noise_psd=strain_psd,
         )

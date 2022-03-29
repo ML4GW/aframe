@@ -1,0 +1,3 @@
+f0_min = Uniform(name='f0_min', minimum=20, maximum=100, unit='$Hz$', boundary=None)
+f0_width = Uniform(name='f0_width', minimum=100, maximum=1000, unit='$Hz$', boundary=None)
+SNR = Uniform(name='SNR', minimum=25, maximum=75, unit=None, boundary=None)
