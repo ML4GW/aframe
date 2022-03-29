@@ -36,7 +36,7 @@ def sample_rate(request):
     params=["prior_files/nonspin_BBH.prior", "prior_files/precess_tides.prior"]
 )
 def prior_file(request):
-    return request.param
+    return str(Path(__file__).resolve().parent / request.param)
 
 
 def test_check_file_contents(
