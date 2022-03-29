@@ -140,12 +140,7 @@ def project_raw_gw(
         for mode, polarization in polarizations.items():
             # Get ifo response
             response = ifo.antenna_response(ra, dec, geocent_time, psi, mode)
-            signal += (
-                response
-                * polarization[
-                    i,
-                ]
-            )
+            signal += response * polarization[i]
 
         # Total shift = shift to trigger time + geometric shift
         dt = waveform_duration / 2.0

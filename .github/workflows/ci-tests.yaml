@@ -24,6 +24,9 @@ jobs:
         with:
           submodules: recursive
       -
+        name: install gcc
+        run: apt get update && apt install -y build-essential
+      -
         name: run waveform tests
         env:
           test_dir: /github/workspace/projects/generate_waveforms
