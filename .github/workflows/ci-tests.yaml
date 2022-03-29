@@ -1,0 +1,30 @@
+name: ci-tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  library-ci-tests:
+    if: github.repository_owner == 'ML4GW'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    container:
+      image: ghcr.io/ml4gw/pinto:main
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+      volumes:
+        - ${{ github.workspace }}:/github/workspace
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      -
+        name: run waveform tests
+        env:
+          test_dir: /github/workspace/projects/generate_waveforms
+        run: pinto run $test_dir pytest $test_dir/tests
