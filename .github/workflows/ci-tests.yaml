@@ -25,7 +25,7 @@ jobs:
           submodules: recursive
       -
         name: install gcc
-        run: apt get update && apt install -y build-essential
+        run: apt update && apt install -y build-essential
       -
         name: run waveform tests
         env:
