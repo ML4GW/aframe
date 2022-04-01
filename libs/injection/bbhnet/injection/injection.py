@@ -14,7 +14,7 @@ from gwpy.timeseries import TimeSeries
 
 
 def calc_snr(data, noise_psd, fs, fmin=20):
-    """ Calculate the waveform SNR given the background noise PSD"""
+    """Calculate the waveform SNR given the background noise PSD"""
 
     data_fd = np.fft.rfft(data) / fs
     data_freq = np.fft.rfftfreq(len(data)) * fs

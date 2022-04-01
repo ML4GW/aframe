@@ -94,8 +94,8 @@ def analyze_segment(
         # compute the standard deviation by the
         # sigma^2 = E[x^2] - E^2[x] trick
         _, shifts = boxcar_filter(t, y, norm_seconds)
-        _, sqs = boxcar_filter(t, y ** 2, norm_seconds)
-        scales = np.sqrt(sqs - shifts ** 2)
+        _, sqs = boxcar_filter(t, y**2, norm_seconds)
+        scales = np.sqrt(sqs - shifts**2)
 
         # slice all our arrays from the latest
         # possible time forward, to make sure that

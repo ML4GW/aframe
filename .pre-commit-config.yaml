@@ -4,11 +4,12 @@ repos:
   hooks:
   - id: isort
     name: isort (python)
--   repo: https://github.com/ambv/black
-    rev: 20.8b1
-    hooks:
+- repo: https://github.com/psf/black
+  rev: 22.3.0
+  hooks:
     - id: black
-      language_version: python3.8
+      additional_dependencies: ["click==8.0.4"]
+      language_version: python3.9
       args:
       - "--config"
       - "./pyproject.toml"
