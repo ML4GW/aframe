@@ -14,7 +14,18 @@ from gwpy.timeseries import TimeSeries
 
 
 def calc_snr(data, noise_psd, fs, fmin=20):
-    """Calculate the waveform SNR given the background noise PSD"""
+    """Calculate the waveform SNR given the background noise PSD
+
+    Args:
+        data: timeseries of the signal whose SNR is to be calculated
+        noise_psd: PSD of the background that the signal is in
+        fs: sampling frequency of the signal and background
+        fmin: minimum frequency for the highpass filter
+
+    Returns:
+        The SNR of the signal, a single value
+
+    """
 
     data_fd = np.fft.rfft(data) / fs
     data_freq = np.fft.rfftfreq(len(data)) * fs
@@ -281,7 +292,7 @@ def inject_signals(
         signals_list.append(signals)
         snr_list.append(snr)
 
-    old_snr = np.sqrt(np.sum(np.square(snr_list)))
+    old_snr = np.sqrt(np.sum(np.square(snr_list), axis=0))
     new_snr = np.random.uniform(snr_range[0], snr_range[1], len(snr_list[0]))
 
     signals_list = [
