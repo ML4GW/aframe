@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "bbhnet.data"
+version = "0.0.1"
+description = "Tools for data loading and preprocessing"
+authors = ["Alec Gunny <alec.gunny@gmail.com>"]
+license = "MIT"
+packages = [
+    {include = "bbhnet"}
+]
+# readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+scipy = "<1.8"
+h5py = "^3.6"
+"bbhnet.injection" = {path = "../injection", develop = true}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry>=1.1"]
+build-backend = "poetry.masonry.api"
+
+[tool.pytest.ini_options]
+markers = ["gpu: run tests using default CUDA device"]

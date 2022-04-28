@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  library-ci-tests:
+  ci-tests:
     if: github.repository_owner == 'ML4GW'
     runs-on: ubuntu-latest
     permissions:
@@ -35,4 +35,9 @@ jobs:
         name: run waveform tests
         env:
           test_dir: /github/workspace/projects/generate_waveforms
-        run: pinto run $test_dir pytest -x $test_dir/tests
+        run: pinto run $test_dir pytest $test_dir/tests
+      -
+        name: run dataloader tests
+        env:
+          test_dir: /github/workspace/libs/data
+        run: pinto run $test_dir pytest $test_dir/tests -m "not gpu"

@@ -1,7 +1,7 @@
 name: bbhnet-base
 channels:
-  - conda-forge
   - pytorch
+  - conda-forge
 dependencies:
   - python=3.9
   - gwpy=2.1.0
@@ -10,4 +10,4 @@ dependencies:
   - python-nds2-client
   - pytorch
   - torchvision
-  - cudatoolkit=10.2
+  - cudatoolkit=11.3
