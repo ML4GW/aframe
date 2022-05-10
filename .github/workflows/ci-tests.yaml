@@ -24,11 +24,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       # create filters for each lib so that we
       # only run the tests we absolutely need to
       -
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v2.10.1
         id: filter
         with:
           filters: |
@@ -42,12 +41,10 @@ jobs:
               - 'libs/data/**'
             generate_waveforms:
               - 'projects/generate_waveforms/**'
-
       # install gcc for bilby build
       -
         name: install gcc
         run: apt update && apt install -y build-essential
-
       # test injection library up front since multiple
       # libraries depend on it
       -
@@ -56,7 +53,6 @@ jobs:
         env:
           test_dir: /github/workspace/libs/injection
         run: pinto run $test_dir pytest -x $test_dir/tests
-
       # run dataloader tests if dataloader library code changed
       # _or_ if injection code (on which it depends) changed
       -
