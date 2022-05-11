@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "bbhnet.architectures"
+version = "0.0.1"
+description = "BBHNet neural network architecture zoo"
+authors = ["Alec Gunny <alec.gunny@gmail.com>"]
+# readme = "README.md"
+packages = [
+    {include = "bbhnet"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.10"
+torch = "^1.0"
+numpy = "^1.22.3"
+
+"hermes.typeo" = { version="^0.1.4", optional = true}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[tool.poetry.extras]
+wrapper = ["hermes.typeo"]
+
+[build-system]
+requires = ["poetry>=1.2"]
+build-backend = "poetry.masonry.api"
