@@ -59,7 +59,7 @@ jobs:
         name: run dataloader tests
         if: |
           (steps.filter.outputs.injection == 'true')
-          && (steps.filter.outputs.data == 'true')
+          || (steps.filter.outputs.data == 'true')
         env:
           test_dir: /github/workspace/libs/data
         run: pinto run $test_dir pytest $test_dir/tests -m "not gpu"
