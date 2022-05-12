@@ -44,6 +44,8 @@ jobs:
               - 'libs/data/**'
             generate_waveforms:
               - 'projects/generate_waveforms/**'
+            generate_glitches:
+              - 'projects/generate_glitches/**'
 
       # install gcc for bilby build
       -
@@ -67,11 +69,12 @@ jobs:
         env:
           test_dir: /github/workspace/libs/injection
         run: pinto run $test_dir pytest -x $test_dir/tests
-
+       
       # run dataloader tests if dataloader library code changed
       # _or_ if injection code (on which it depends) changed
       # make sure we don't run GPU tests since our GitHub CI
       # node won't have those (presumably)
+
       -
         name: run dataloader tests
         if: |
@@ -91,3 +94,10 @@ jobs:
         env:
           test_dir: /github/workspace/projects/generate_waveforms
         run: pinto run $test_dir pytest $test_dir/tests
+        
+      - name: run glitch generation tests
+        if: |
+          (steps.filter.outputs.generate_glitches == 'true')
+        env:
+          test_dir: /github/workspace/projects/generate_glitches
+        run: pinto run $test_dir pytest -x $test_dir/tests

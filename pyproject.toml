@@ -5,6 +5,7 @@ description = "End-to-end BBHNet training, inference, and analysis repo"
 authors = [
     "Alec Gunny <alec.gunny@ligo.org>",
     "Will Benoit <william.benoit@ligo.org>",
+    "Ethan Marx <emarx@mit.edu>",
 ]
 
 [tool.poetry.dependencies]
