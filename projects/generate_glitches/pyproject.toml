@@ -6,20 +6,31 @@ authors = ["Ethan Marx <emarx@mit.edu>",]
 license = "MIT"
 
 [tool.typeo]
-omicron_dir = "${OMICRON_DIR}"   
 out_dir = "${OUT_DIR}"
 snr_thresh = 8
 window = 2
-start = 1258848000 
-stop = 1259048000 
+start = 1263588390
+stop = 1263592390
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
-
+f_min = 32
+q_min = 3.3166
+q_max = 108
+cluster_dt = 0.5
+chunk_duration = 124
+segment_duration = 64 
+overlap = 4 
+mismatch_max = 0.2
+state_flag = "DCS-ANALYSIS_READY_C01:1"
+ifos = ['H1', 'L1']
+sample_rate = 1024 
 
 [tool.poetry.dependencies]
 python = ">3.8,<3.11"
 "hermes.typeo" = "^0.1.4"
-
+htcondor = "^9.8.1"
+dqsegdb2="<1.1.0"
+pre-commit = "^2.19.0"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 

@@ -58,7 +58,7 @@ def omicron_dir(request):
 
 @pytest.fixture()
 def trig_file(ifo):
-    return str(TEST_DIR / "triggers" / f"triggers_{ifo}.txt")
+    return str(TEST_DIR / "triggers" / f"triggers_{ifo}.h5")
 
 
 def test_glitch_data_shape_and_glitch_snrs(
