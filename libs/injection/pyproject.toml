@@ -10,10 +10,10 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-scipy = "<1.8"
 bilby = "^1.1.5"
 lalsuite = "^7.4"
-astropy = "<5.0"
+
+"bbhnet.base" = {path = "../base", extras = ["gwpy"], develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
