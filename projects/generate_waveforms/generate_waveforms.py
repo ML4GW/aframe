@@ -2,6 +2,7 @@
 # coding: utf-8
 import logging
 import os
+from pathlib import Path
 
 import bilby
 import h5py
@@ -14,9 +15,9 @@ from bbhnet.injection import generate_gw
 
 @typeo
 def main(
-    prior_file: str,
+    prior_file: Path,
     n_samples: int,
-    outdir: str,
+    outdir: Path,
     waveform_duration: float = 8,
     sample_rate: float = 4096,
 ):

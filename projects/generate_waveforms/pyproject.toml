@@ -13,6 +13,16 @@ python = ">=3.9,<3.11"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 
+[tool.typeo]
+outdir = "${OUT_DIR}"
+n_samples = 10000
+prior_file = "./priors/nonspin_BBH.prior"
+
+# don't think we need the 
+# 4096 default specified
+sample_rate = 2048 
+waveform_duration = 8
+
 [tool.poetry.scripts]
 simulate = "generate_waveforms:main"
 
