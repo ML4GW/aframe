@@ -1,0 +1,31 @@
+[tool.typeo.scripts.train]
+
+output_directory = "${PROJECT_DIRECTORY}"
+
+sample_rate = 2048 
+waveform_frac = 0.4
+glitch_frac = 0.4
+min_snr = 4
+max_snr = 1000
+highpass = 32
+kernel_length = 1 
+
+batch_size = 128
+batches_per_epoch = 40
+
+valid_frac = 0.2
+
+
+max_epochs = 100
+lr = 3.2e-2
+weight_decay = 1e-5
+patience = 25
+factor = 0.2
+early_stop = 100
+
+
+device = "cuda"
+profile = false
+verbose = true 
+
+commands.resnet = {layers = [2, 2, 2], }

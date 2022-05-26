@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "train"
+version = "0.1.0"
+description = "Train BBHnet"
+authors = ["ethan.marx <ethan.marx@ligo.org>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.scripts]
+train = "train.train:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

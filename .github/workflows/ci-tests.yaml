@@ -42,6 +42,8 @@ jobs:
               - 'libs/injection/**'
             data:
               - 'libs/data/**'
+            trainer:
+                - 'libs/trainer/**'
             generate_waveforms:
               - 'projects/generate_waveforms/**'
             generate_glitches:
@@ -84,6 +86,18 @@ jobs:
           test_dir: /github/workspace/libs/data
         run: pinto run $test_dir pytest $test_dir/tests -m "not gpu"
 
+      # run trainer tests if architecture library has changed
+      # or if data library has changed
+      -
+        name: run trainer tests
+        if: |
+          (steps.filter.outputs.trainer == 'true')
+          || (steps.filter.outputs.data == 'true')
+          || (steps.filter.outputs.architectures == 'true')     
+        env:
+            test_dir: /github/workspace/libs/trainer
+        run: pinto run $test_dir pytest $test_dir/tests 
+      
       # test projects, and filter by both changes to
       # project code and their dependent libraries
       -
@@ -95,7 +109,8 @@ jobs:
           test_dir: /github/workspace/projects/generate_waveforms
         run: pinto run $test_dir pytest $test_dir/tests
         
-      - name: run glitch generation tests
+      - 
+        name: run glitch generation tests
         if: |
           (steps.filter.outputs.generate_glitches == 'true')
         env:

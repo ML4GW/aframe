@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "bbhnet.trainer"
+version = "0.0.1"
+description = "BBHNet training helper functions"
+authors = ["Ethan Marx"]
+license = "MIT"
+packages = [
+    {include = "bbhnet"}
+]
+# readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9,<3.10"
+"bbhnet.data" = {path = "../data", develop = true}
+"bbhnet.architectures" = {path = "../architectures", develop = true}
+"hermes.typeo" = "^0.1.5"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.1.2"
+
+[build-system]
+requires = ["poetry>=1.1"]
+build-backend = "poetry.masonry.api"
