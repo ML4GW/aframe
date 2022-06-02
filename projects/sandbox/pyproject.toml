@@ -1,31 +1,89 @@
+[tool.pinto]
+steps = [
+    "generate_background:generate-background",
+    "generate_waveforms:generate-waveforms",
+    "generate_glitches:generate-glitches",
+    "train:train:resnet"
+]
+
+[tool.typeo.base]
+outdir = "${OUT_DIR}"
+sample_rate = 2048
+ifos = ['H1', 'L1']
+start = 1263588390 
+stop = 1263698390 
+channel = "DCS-CALIB_STRAIN_CLEAN_C01"
+frame_type = "HOFT_C01"
+state_flag = "DCS-ANALYSIS_READY_C01:1"
+
+
+[tool.typeo.scripts.generate-background]
+outdir = "${base.outdir}/data/"
+channel = "${base.channel}"
+frame_type = "${base.frame_type}"
+state_flag = "${base.state_flag}"
+start = "${base.start}" 
+stop = "${base.stop}" 
+ifos = "${base.ifos}"
+sample_rate = "${base.sample_rate}" 
+minimum_length = 8000
+force_generation = false
+
+[tool.typeo.scripts.generate-glitches]
+snr_thresh = 8
+window = 2
+start = "${base.start}"
+stop = "${base.stop}"
+
+channel = "${base.channel}"
+frame_type = "${base.frame_type}"
+state_flag = "${base.state_flag}"
+
+f_min = 32
+q_min = 3.3166
+q_max = 108
+cluster_dt = 0.5
+chunk_duration = 124
+segment_duration = 64 
+overlap = 4 
+mismatch_max = 0.2
+force_generation = false
+
+ifos = "${base.ifos}"
+outdir = "${base.outdir}/data"
+sample_rate = "${base.sample_rate}"
+
+[tool.typeo.scripts.generate-waveforms]
+outdir = "${base.outdir}/data/"
+n_samples = 10000
+prior_file = "./generate_waveforms/priors/nonspin_BBH.prior"
+sample_rate = "${base.sample_rate}" 
+waveform_duration = 8
+force_generation = false
+
 [tool.typeo.scripts.train]
 
-output_directory = "${PROJECT_DIRECTORY}"
+hanford_background = "${base.outdir}/data/H1_background.h5"
+livingston_background = "${base.outdir}/data/L1_background.h5"
+glitch_dataset = "${base.outdir}/data/glitches.h5"
+signal_dataset = "${base.outdir}/data/signals.h5"
+outdir = "${base.outdir}/training"
 
-sample_rate = 2048 
+sample_rate = "${base.sample_rate}"
 waveform_frac = 0.4
 glitch_frac = 0.4
 min_snr = 4
 max_snr = 1000
 highpass = 32
 kernel_length = 1 
-
-batch_size = 128
-batches_per_epoch = 40
-
-valid_frac = 0.2
-
-
+batch_size = 32
+batches_per_epoch = 300
 max_epochs = 100
 lr = 3.2e-2
 weight_decay = 1e-5
 patience = 25
 factor = 0.2
 early_stop = 100
-
-
 device = "cuda"
 profile = false
-verbose = true 
-
-commands.resnet = {layers = [2, 2, 2], }
+commands.resnet = {layers = [2, 2, 2]}

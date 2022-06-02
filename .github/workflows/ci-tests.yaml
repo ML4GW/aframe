@@ -45,9 +45,9 @@ jobs:
             trainer:
                 - 'libs/trainer/**'
             generate_waveforms:
-              - 'projects/generate_waveforms/**'
+              - 'projects/sandbox/generate_waveforms/**'
             generate_glitches:
-              - 'projects/generate_glitches/**'
+              - 'projects/sandbox/generate_glitches/**'
 
       # install gcc for bilby build
       -
@@ -106,7 +106,7 @@ jobs:
           (steps.filter.outputs.injection == 'true')
           && (steps.filter.outputs.generate_waveforms == 'true')
         env:
-          test_dir: /github/workspace/projects/generate_waveforms
+          test_dir: /github/workspace/projects/sandbox/generate_waveforms
         run: pinto run $test_dir pytest $test_dir/tests
         
       - 
@@ -114,5 +114,5 @@ jobs:
         if: |
           (steps.filter.outputs.generate_glitches == 'true')
         env:
-          test_dir: /github/workspace/projects/generate_glitches
+          test_dir: /github/workspace/projects/sandbox/generate_glitches
         run: pinto run $test_dir pytest -x $test_dir/tests

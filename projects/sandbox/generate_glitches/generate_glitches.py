@@ -264,13 +264,14 @@ def main(
     overlap: int,
     mismatch_max: float,
     window: float,
-    out_dir: Path,
+    outdir: Path,
     channel: str,
     frame_type: str,
     sample_rate: float,
     state_flag: str,
     ifos: List[str],
     veto_files: Optional[dict[str, str]] = None,
+    force_generation: bool = False,
 ):
 
     """Generates a set of glitches for both
@@ -296,7 +297,7 @@ def main(
     - mismatch_max: maximum distance between (Q, f) tiles
     - window: half window around trigger time to query data for
     - sample_rate: sampling frequency
-    - out_dir: output directory to which signals will be written
+    - outdir: output directory to which signals will be written
     - channel: channel name used to read data
     - frame_type: frame type for data discovery w/ gwdatafind
     - sample_rate: sampling frequency of timeseries data
@@ -311,24 +312,28 @@ def main(
     # In the future, we can try to eliminate condor dependency,
     # but for now using condor will speed up jobs.
 
-    os.makedirs(out_dir, exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
 
     # create logging file in model_dir
     logging.basicConfig(
-        filename=out_dir / "log.log",
+        filename=outdir / "log.log",
         format="%(message)s",
         filemode="w",
         level=logging.INFO,
     )
 
     # output file
-    glitch_file = out_dir / Path("glitches.h5")
+    glitch_file = outdir / Path("glitches.h5")
+
+    if os.path.exists(glitch_file) and not force_generation:
+        logging.info("Glitch file exists, not generating glitvches")
+        return
 
     # nyquist
     f_max = sample_rate / 2
 
     for ifo in ifos:
-        run_dir = out_dir / ifo
+        run_dir = outdir / ifo
         os.makedirs(run_dir, exist_ok=True)
 
         # launch omicron dag for ifo
@@ -387,6 +392,9 @@ def main(
             trigger_file,
             vetoes=vetoes,
         )
+
+        if np.isnan(glitches).any():
+            raise ValueError("The glitch data contains NaN values")
 
         with h5py.File(glitch_file, "a") as f:
             f.create_dataset(f"{ifo}_glitches", data=glitches)

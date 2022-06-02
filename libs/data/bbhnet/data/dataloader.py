@@ -367,6 +367,9 @@ class RandomWaveformDataset:
             X[-self.num_waveforms :] += waveforms
             y[-self.num_waveforms :] = 1
 
+        # send targets to device
+        y = torch.Tensor(y).to(self.device)
+
         X = self.whiten(X)
         self._batch_idx += 1
         return X, y

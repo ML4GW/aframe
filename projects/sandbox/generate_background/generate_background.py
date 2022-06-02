@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import List
 
@@ -18,9 +19,10 @@ def main(
     sample_rate: float,
     channel: str,
     frame_type: str,
-    segment_name: str,
+    state_flag: str,
     minimum_length: float,
     outdir: Path,
+    force_generation: bool = False,
 ):
     """Generates background data for training BBHnet
 
@@ -31,20 +33,32 @@ def main(
         outdir: where to store data
     """
 
+    # check if paths already exist
+    # TODO: maybe put all background in one path
+    paths_exist = [
+        os.path.exists(outdir / f"{ifo}_background.h5") for ifo in ifos
+    ]
+    if all(paths_exist) and not force_generation:
+        logging.info(
+            "Background data already exists"
+            " and forced generation is off, not generating"
+        )
+        return
+
     # query segments for each ifo
     # I think a certificate is needed for this
     segments = DataQualityDict.query_dqsegdb(
-        [f"{ifo}:{segment_name}" for ifo in ifos],
+        [f"{ifo}:{state_flag}" for ifo in ifos],
         start,
         stop,
     )
 
     # create copy of first ifo segment list to start
-    intersection = segments[f"{ifos[0]}:{segment_name}"].active.copy()
+    intersection = segments[f"{ifos[0]}:{state_flag}"].active.copy()
 
     # loop over ifos finding segment intersection
     for ifo in ifos:
-        intersection &= segments[f"{ifo}:{segment_name}"].active
+        intersection &= segments[f"{ifo}:{state_flag}"].active
 
     # find first continuous segment of minimum length
     segment_lengths = np.array(
@@ -82,6 +96,11 @@ def main(
         # resample
         data = data.resample(sample_rate)
 
-        with h5py.File(outdir / f"{ifo}_background.h5", "a") as f:
+        if np.isnan(data).any():
+            raise ValueError(
+                f"The background for ifo {ifo} contains NaN values"
+            )
+
+        with h5py.File(outdir / f"{ifo}_background.h5", "w") as f:
             f.create_dataset("hoft", data=data)
             f.create_dataset("t0", data=float(segment[0]))

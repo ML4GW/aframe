@@ -6,7 +6,7 @@ authors = ["Ethan Marx <emarx@mit.edu>",]
 license = "MIT"
 
 [tool.typeo]
-out_dir = "${OUT_DIR}"
+outdir = "${OUT_DIR}"
 snr_thresh = 8
 window = 2
 start = 1263588390

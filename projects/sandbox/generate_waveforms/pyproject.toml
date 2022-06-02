@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 "hermes.typeo" = "^0.1.4"
-"bbhnet.injection" = {path="../../libs/injection", develop = true}
+"bbhnet.injection" = {path="../../../libs/injection", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
@@ -24,7 +24,7 @@ sample_rate = 2048
 waveform_duration = 8
 
 [tool.poetry.scripts]
-simulate = "generate_waveforms:main"
+generate-waveforms = "generate_waveforms:main"
 
 [build-system]
 requires = ["poetry>=1.2"]

@@ -10,7 +10,7 @@ from bbhnet.trainer.wrapper import trainify
 
 
 @pytest.fixture(scope="session")
-def output_directory(tmpdir_factory):
+def outdir(tmpdir_factory):
     out_dir = tmpdir_factory.mktemp("out")
     return out_dir
 
@@ -81,7 +81,7 @@ def create_all_data_files(datadir):
 
 
 def return_random_waveform_datasets(
-    data_directory: str, output_directory: str, **kwargs
+    data_directory: str, outdir: str, **kwargs
 ):
 
     train_files = {
@@ -180,12 +180,12 @@ def return_random_waveform_datasets(
     return train_dataset, valid_dataset
 
 
-def test_wrapper(data_directory, output_directory):
+def test_wrapper(data_directory, outdir):
 
     fn = trainify(return_random_waveform_datasets)
 
     # make sure we can run the function as-is with regular arguments
-    train_dataset, valid_dataset = fn(data_directory, output_directory)
+    train_dataset, valid_dataset = fn(data_directory, outdir)
     assert isinstance(train_dataset, RandomWaveformDataset)
     assert isinstance(valid_dataset, RandomWaveformDataset)
 
@@ -193,7 +193,7 @@ def test_wrapper(data_directory, output_directory):
     # for train function
     result = fn(
         data_directory,
-        output_directory,
+        outdir,
         max_epochs=1,
         arch="resnet",
         layers=[2, 2, 2],
@@ -204,8 +204,8 @@ def test_wrapper(data_directory, output_directory):
         None,
         "--data-directory",
         str(data_directory),
-        "--output-directory",
-        str(output_directory),
+        "--outdir",
+        str(outdir),
         "--max-epochs",
         "1",
         "resnet",

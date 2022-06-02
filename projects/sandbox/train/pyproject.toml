@@ -4,13 +4,15 @@ version = "0.1.0"
 description = "Train BBHnet"
 authors = ["ethan.marx <ethan.marx@ligo.org>"]
 license = "MIT"
-readme = "README.md"
+#readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9,<3.10"
+"bbhnet.data" = {path = "../../../libs/data", develop  = true}
+"bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
 
 [tool.poetry.scripts]
-train = "train.train:main"
+train = "train:main"
 
 [build-system]
 requires = ["poetry-core"]
