@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-# coding: utf-8
 import logging
-import os
 from collections.abc import Iterable
+from pathlib import Path
 
 import bilby
 import h5py
@@ -303,9 +301,9 @@ def inject_signals(
     )
     snr_list = [snr * new_snr / old_snr for snr in snr_list]
 
-    frame_out_paths = [
-        os.path.join(outdir, os.path.basename(frame)) for frame in frame_files
-    ]
+    outdir = Path(outdir)
+    frame_out_paths = [outdir / f.name for f in map(Path, frame_files)]
+
     for strain, signals, frame_path in zip(
         strains, signals_list, frame_out_paths
     ):
@@ -319,9 +317,7 @@ def inject_signals(
         strain.write(frame_path)
 
     # Write params and similar to output file
-    param_file = os.path.join(
-        outdir, f"param_file_{frame_start}-{frame_stop}.h5"
-    )
+    param_file = outdir / f"param_file_{frame_start}-{frame_stop}.h5"
     with h5py.File(param_file, "w") as f:
         # write signals attributes, snr, and signal parameters
         params_gr = f.create_group("signal_params")

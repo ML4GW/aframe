@@ -9,7 +9,6 @@ on:
 jobs:
   ci-tests:
     # set up Pinto container permissions
-    if: github.repository_owner == 'ML4GW'
     runs-on: ubuntu-latest
     permissions:
       packages: read
@@ -62,7 +61,7 @@ jobs:
           test_dir: /github/workspace/libs/architectures
         run: |
           pinto build $test_dir -E wrapper
-          pinto run $test_dir pytest $test_dir/tests
+          pinto -p $test_dir run pytest $test_dir/tests
 
       # test injection library before the libraries that depend on it
       -
@@ -70,7 +69,7 @@ jobs:
         if: steps.filter.outputs.injection == 'true'
         env:
           test_dir: /github/workspace/libs/injection
-        run: pinto run $test_dir pytest -x $test_dir/tests
+        run: pinto -p $test_dir run pytest -x $test_dir/tests
        
       # run dataloader tests if dataloader library code changed
       # _or_ if injection code (on which it depends) changed
@@ -84,7 +83,7 @@ jobs:
           || (steps.filter.outputs.data == 'true')
         env:
           test_dir: /github/workspace/libs/data
-        run: pinto run $test_dir pytest $test_dir/tests -m "not gpu"
+        run: pinto -p $test_dir run pytest $test_dir/tests -m "not gpu"
 
       # run trainer tests if architecture library has changed
       # or if data library has changed
@@ -96,7 +95,7 @@ jobs:
           || (steps.filter.outputs.architectures == 'true')     
         env:
             test_dir: /github/workspace/libs/trainer
-        run: pinto run $test_dir pytest $test_dir/tests 
+        run: pinto -p $test_dir run pytest $test_dir/tests 
       
       # test projects, and filter by both changes to
       # project code and their dependent libraries
@@ -107,7 +106,7 @@ jobs:
           && (steps.filter.outputs.generate_waveforms == 'true')
         env:
           test_dir: /github/workspace/projects/sandbox/generate_waveforms
-        run: pinto run $test_dir pytest $test_dir/tests
+        run: pinto -p $test_dir run pytest $test_dir/tests
         
       - 
         name: run glitch generation tests
@@ -115,4 +114,4 @@ jobs:
           (steps.filter.outputs.generate_glitches == 'true')
         env:
           test_dir: /github/workspace/projects/sandbox/generate_glitches
-        run: pinto run $test_dir pytest -x $test_dir/tests
+        run: pinto -p $test_dir run pytest -x $test_dir/tests
