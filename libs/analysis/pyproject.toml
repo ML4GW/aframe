@@ -13,6 +13,10 @@ packages = [
 python = ">=3.9,<3.11"
 scipy = "^1.7.3"
 "bbhnet.io" = {path = "../io", develop = true}
+"bbhnet.parallelize" = {path = "../parallelize", develop = true}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
 
 [build-system]
 requires = ["poetry>=1.1"]

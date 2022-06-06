@@ -41,6 +41,8 @@ jobs:
               - 'libs/injection/**'
             data:
               - 'libs/data/**'
+            parallelize:
+              - 'libs/parallelize/**'
             trainer:
                 - 'libs/trainer/**'
             generate_waveforms:
@@ -85,6 +87,31 @@ jobs:
           test_dir: /github/workspace/libs/data
         run: pinto -p $test_dir run pytest $test_dir/tests -m "not gpu"
 
+      -
+        name: run parallelization tests
+        if: steps.filter.outputs.parallelize == 'true'
+        env:
+          test_dir: /github/workspace/libs/parallelize
+        run: pinto -p $test_dir run pytest $test_dir/tests
+
+      # run I/O tests then analysis tests that depend
+      # on them, adding I/O to analysis filter
+      -
+        name: run io tests
+        if: steps.filter.outputs.io == 'true'
+        env:
+          test_dir: /github/workspace/libs/io
+        run: pinto -p $test_dir run pytest $test_dir/tests
+
+      -
+        name: run analysis tests
+        if: |
+          (steps.filter.outputs.analysis == 'true')
+          || (steps.filter.outputs.io == 'true')
+        env:
+          test_dir: /github/workspace/libs/analysis
+        run: pinto -p $test_dir run pytest $test_dir/tests
+
       # run trainer tests if architecture library has changed
       # or if data library has changed
       -
@@ -96,7 +123,7 @@ jobs:
         env:
             test_dir: /github/workspace/libs/trainer
         run: pinto -p $test_dir run pytest $test_dir/tests 
-      
+
       # test projects, and filter by both changes to
       # project code and their dependent libraries
       -
