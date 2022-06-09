@@ -8,6 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 "hermes.typeo" = "^0.1.5"
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [tool.typeo]
 start = 1263588390 

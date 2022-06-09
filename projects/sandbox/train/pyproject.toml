@@ -10,6 +10,7 @@ license = "MIT"
 python = "^3.9,<3.10"
 "bbhnet.data" = {path = "../../../libs/data", develop  = true}
 "bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [tool.poetry.scripts]
 train = "train:main"

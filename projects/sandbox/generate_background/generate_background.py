@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 from typing import List
 
@@ -9,6 +8,8 @@ from gwdatafind import find_urls
 from gwpy.segments import DataQualityDict
 from gwpy.timeseries import TimeSeries
 from hermes.typeo import typeo
+
+from bbhnet.logging import configure_logging
 
 
 @typeo
@@ -23,6 +24,7 @@ def main(
     minimum_length: float,
     outdir: Path,
     force_generation: bool = False,
+    verbose: bool = False,
 ):
     """Generates background data for training BBHnet
 
@@ -33,11 +35,18 @@ def main(
         outdir: where to store data
     """
 
+    # make output dir
+    outdir.mkdir(exist_ok=True, parents=True)
+
+    # configure logging output file
+    configure_logging(outdir / "generate_background.log", verbose)
+
     # check if paths already exist
     # TODO: maybe put all background in one path
     paths_exist = [
-        os.path.exists(outdir / f"{ifo}_background.h5") for ifo in ifos
+        Path(outdir / f"{ifo}_background.h5").exists() for ifo in ifos
     ]
+
     if all(paths_exist) and not force_generation:
         logging.info(
             "Background data already exists"

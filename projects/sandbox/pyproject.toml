@@ -10,8 +10,8 @@ steps = [
 outdir = "${OUT_DIR}"
 sample_rate = 2048
 ifos = ['H1', 'L1']
-start = 1263588390 
-stop = 1263698390 
+start = 1262588390 
+stop = 1262698390 
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
@@ -62,7 +62,6 @@ waveform_duration = 8
 force_generation = false
 
 [tool.typeo.scripts.train]
-
 hanford_background = "${base.outdir}/data/H1_background.h5"
 livingston_background = "${base.outdir}/data/L1_background.h5"
 glitch_dataset = "${base.outdir}/data/glitches.h5"
@@ -70,20 +69,20 @@ signal_dataset = "${base.outdir}/data/signals.h5"
 outdir = "${base.outdir}/training"
 
 sample_rate = "${base.sample_rate}"
-waveform_frac = 0.4
-glitch_frac = 0.4
+waveform_frac = 0.5
+glitch_frac = 0.3
 min_snr = 4
 max_snr = 1000
 highpass = 32
 kernel_length = 1 
-batch_size = 32
+batch_size = 64
 batches_per_epoch = 300
-max_epochs = 100
+max_epochs = 50
 lr = 3.2e-2
 weight_decay = 1e-5
-patience = 25
+patience = 10
 factor = 0.2
 early_stop = 100
 device = "cuda"
 profile = false
-commands.resnet = {layers = [2, 2, 2]}
+commands.resnet = {layers = [4, 4, 4]}

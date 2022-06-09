@@ -13,6 +13,7 @@ packages = [
 python = "^3.9,<3.10"
 "bbhnet.data" = {path = "../data", develop = true}
 "bbhnet.architectures" = {path = "../architectures", develop = true}
+"bbhnet.logging" = {path = "../logging", develop = true}
 "hermes.typeo" = "^0.1.5"
 
 [tool.poetry.group.dev.dependencies]

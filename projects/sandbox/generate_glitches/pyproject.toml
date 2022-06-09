@@ -24,13 +24,17 @@ mismatch_max = 0.2
 state_flag = "DCS-ANALYSIS_READY_C01:1"
 ifos = ['H1', 'L1']
 sample_rate = 1024 
+force_generation= true
+
 
 [tool.poetry.dependencies]
-python = ">3.8,<3.11"
+python = ">3.9,<3.11"
 "hermes.typeo" = "^0.1.4"
 htcondor = "^9.8.1"
 dqsegdb2="<1.1.0"
 pre-commit = "^2.19.0"
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 

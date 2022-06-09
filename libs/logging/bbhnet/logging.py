@@ -19,4 +19,3 @@ def configure_logging(
         handler = logging.FileHandler(filename=filename, mode="w")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-    return logger

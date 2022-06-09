@@ -24,6 +24,7 @@ def train_for_one_epoch(
     model.train()
 
     for samples, targets in train_dataset:
+
         optimizer.zero_grad(set_to_none=True)  # reset gradient
 
         # do forward step in mixed precision
@@ -248,6 +249,7 @@ def train(
             profiler,
             scaler,
         )
+
         history["train_loss"].append(train_loss)
 
         # do some house cleaning with our

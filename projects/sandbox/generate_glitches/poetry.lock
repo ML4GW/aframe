@@ -21,12 +21,25 @@ tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)"
 tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "cloudpickle"]
 
 [[package]]
+name = "bbhnet.logging"
+version = "0.1.0"
+description = "Basic logging utilities"
+category = "main"
+optional = false
+python-versions = "^3.9"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../../../libs/logging"
+
+[[package]]
 name = "certifi"
-version = "2021.10.8"
+version = "2022.5.18.1"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 
 [[package]]
 name = "cffi"
@@ -107,7 +120,7 @@ ligo-segments = "*"
 
 [[package]]
 name = "filelock"
-version = "3.7.0"
+version = "3.7.1"
 description = "A platform independent file lock."
 category = "main"
 optional = false
@@ -147,7 +160,7 @@ toml = ">=0.10.2,<0.11.0"
 
 [[package]]
 name = "htcondor"
-version = "9.8.1"
+version = "9.9.0"
 description = "HTCondor Python bindings"
 category = "main"
 optional = false
@@ -155,7 +168,7 @@ python-versions = "*"
 
 [[package]]
 name = "identify"
-version = "2.5.0"
+version = "2.5.1"
 description = "File identification library for Python"
 category = "main"
 optional = false
@@ -428,8 +441,8 @@ testing = ["coverage (>=4)", "coverage-enable-subprocess (>=1)", "flaky (>=3)", 
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">3.8,<3.11"
-content-hash = "0d574c30863087de0670ad7e502ee4b819eb113bf09cc2521642d9ecbdc3671d"
+python-versions = ">3.9,<3.11"
+content-hash = "28177894f7a0ce5931713e1e8188026bf73aac7ed12dd2a31a15e0b91ce099a9"
 
 [metadata.files]
 atomicwrites = [
@@ -440,9 +453,10 @@ attrs = [
     {file = "attrs-21.4.0-py2.py3-none-any.whl", hash = "sha256:2d27e3784d7a565d36ab851fe94887c5eccd6a463168875832a1be79c82828b4"},
     {file = "attrs-21.4.0.tar.gz", hash = "sha256:626ba8234211db98e869df76230a137c4c40a12d72445c45d5f5b716f076e2fd"},
 ]
+"bbhnet.logging" = []
 certifi = [
-    {file = "certifi-2021.10.8-py2.py3-none-any.whl", hash = "sha256:d62a0163eb4c2344ac042ab2bdf75399a71a2d8c7d47eac2e2ee91b9d6339569"},
-    {file = "certifi-2021.10.8.tar.gz", hash = "sha256:78884e7c1d4b00ce3cea67b44566851c4343c120abd683433ce934a68ea58872"},
+    {file = "certifi-2022.5.18.1-py3-none-any.whl", hash = "sha256:f1d53542ee8cbedbe2118b5686372fb33c297fcd6379b050cca0ef13a597382a"},
+    {file = "certifi-2022.5.18.1.tar.gz", hash = "sha256:9c5705e395cd70084351dd8ad5c41e65655e08ce46f2ec9cf6c2c08390f71eb7"},
 ]
 cffi = [
     {file = "cffi-1.15.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:c2502a1a03b6312837279c8c1bd3ebedf6c12c4228ddbad40912d671ccc8a962"},
@@ -541,8 +555,8 @@ dqsegdb2 = [
     {file = "dqsegdb2-1.0.1.tar.gz", hash = "sha256:51bbe3fc6adf1ca7bb06305dfc684a9f45de96db67c6003eecff1ab26dd8dcc5"},
 ]
 filelock = [
-    {file = "filelock-3.7.0-py3-none-any.whl", hash = "sha256:c7b5fdb219b398a5b28c8e4c1893ef5f98ece6a38c6ab2c22e26ec161556fed6"},
-    {file = "filelock-3.7.0.tar.gz", hash = "sha256:b795f1b42a61bbf8ec7113c341dad679d772567b936fbd1bf43c9a238e673e20"},
+    {file = "filelock-3.7.1-py3-none-any.whl", hash = "sha256:37def7b658813cda163b56fc564cdc75e86d338246458c4c28ae84cabefa2404"},
+    {file = "filelock-3.7.1.tar.gz", hash = "sha256:3a0fd85166ad9dbab54c9aec96737b744106dc5f15c0b09a6744a445299fcf04"},
 ]
 gwdatafind = [
     {file = "gwdatafind-1.1.1-py3-none-any.whl", hash = "sha256:66135c76f215f6e52522bc73c67098ee28635dcee9c907b683e5097d014525af"},
@@ -553,15 +567,15 @@ gwdatafind = [
     {file = "hermes.typeo-0.1.5.tar.gz", hash = "sha256:8bd1d97a698c0e99a7d2a6b3b082c8b8290aea1bf0e6a44548752ca178a8c73e"},
 ]
 htcondor = [
-    {file = "htcondor-9.8.1-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2ea6a49df8db1c8d99bb868d98f5ea8a3289384c7ceb7ebb89f697e386e20d62"},
-    {file = "htcondor-9.8.1-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:8caea51cf4733892d3c4f899b0290fbc3cc55b9f8f60b950ca3c9f99bcfb1ebb"},
-    {file = "htcondor-9.8.1-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:80dd88763dfdd8380b642790b58efef385d10e155490a168a8db9ed5dc180340"},
-    {file = "htcondor-9.8.1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2b461c1fe3a71f2e39d68cd42a6bdd3633b994a8fe3f4c881991cd6cc2e29046"},
-    {file = "htcondor-9.8.1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:91ba66351893f52b35dfee1d250b38473b60fdb9fad3b31ed1e862bda162be6f"},
+    {file = "htcondor-9.9.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:a6a2e509abf2f3359c7622053c3abd4c8f28d4d304f476380b771a722eeca3dd"},
+    {file = "htcondor-9.9.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:8d3bcdc1becb187c16fc7e46a38c087553381820affb9ca8aa8b091532f70d1e"},
+    {file = "htcondor-9.9.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:b7f29a5c61ca5278db69d9c0f054f780d33a35991f879adb1e6a56ecdd3772f1"},
+    {file = "htcondor-9.9.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:0796398e50ec709a6a38d571f224541346ad60bc56e279ca4a06142fb3a81b1c"},
+    {file = "htcondor-9.9.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:f3a1f99d5a26c77f432ff1e4174e833d074ada08ed89191a9d9e5236400b5566"},
 ]
 identify = [
-    {file = "identify-2.5.0-py2.py3-none-any.whl", hash = "sha256:3acfe15a96e4272b4ec5662ee3e231ceba976ef63fd9980ed2ce9cc415df393f"},
-    {file = "identify-2.5.0.tar.gz", hash = "sha256:c83af514ea50bf2be2c4a3f2fb349442b59dc87284558ae9ff54191bff3541d2"},
+    {file = "identify-2.5.1-py2.py3-none-any.whl", hash = "sha256:0dca2ea3e4381c435ef9c33ba100a78a9b40c0bab11189c7cf121f75815efeaa"},
+    {file = "identify-2.5.1.tar.gz", hash = "sha256:3d11b16f3fe19f52039fb7e39c9c884b21cb1b586988114fbe42671f03de3e82"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},

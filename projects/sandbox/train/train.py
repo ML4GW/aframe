@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from bbhnet.data import GlitchSampler, RandomWaveformDataset, WaveformSampler
+from bbhnet.logging import configure_logging
 from bbhnet.trainer import trainify
 
 # note that this function decorator acts both to
@@ -31,10 +34,12 @@ def main(
     batch_size: int,
     batches_per_epoch: int,
     device: str,
+    outdir: Path,
     val_glitch_dataset: str = None,
     val_signal_dataset: str = None,
     val_hanford_background: str = None,
     val_livingston_background: str = None,
+    verbose: bool = False,
     **kwargs
 ):
     """
@@ -62,6 +67,12 @@ def main(
         a `StopIteration` while iteratingkernel_length:
     """
 
+    # make out dir and configure logging file
+    outdir.mkdir(exist_ok=True)
+
+    configure_logging(outdir / "train.log", verbose)
+
+    # TODO: definitely a cleaner way to set validation flag
     # if validation files are all passed, set validate bool to true
     validation_files = (
         val_glitch_dataset,
