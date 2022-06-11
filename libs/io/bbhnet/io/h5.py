@@ -26,12 +26,23 @@ def write_timeseries(
 
     # format the filename and write the data to an archive
     fname = write_dir / f"{prefix}_{t0}-{length}.hdf5"
+
+    # check the lengths of all data arrays to see
+    # if they match the length of timeseries array
+
     with h5py.File(fname, "w") as f:
         f["GPSstart"] = t
         if y is not None:
+            if len(y) != len(t):
+                raise ValueError("Length of y and t doesn't match")
             f["out"] = y
 
         for key, value in datasets.items():
+            if len(value) != len(t):
+                raise ValueError(
+                    f"Length of data array '{key}' "
+                    f"doesn't match the length of timeseries",
+                )
             f[key] = value
 
     return fname
