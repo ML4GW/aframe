@@ -80,16 +80,25 @@ def generate_gw(
     num_pols = 2
     signals = np.zeros((n_samples, num_pols, waveform_size))
 
-    b, a = sig.butter(
+    sos = sig.butter(
         N=8,
         Wn=waveform_generator.waveform_arguments["minimum_frequency"],
         btype="highpass",
+        output="sos",
         fs=waveform_generator.sampling_frequency,
     )
+
+    polarization_names = None
     for i, p in enumerate(sample_params):
         polarizations = waveform_generator.time_domain_strain(p)
-        signals[i] = sig.filtfilt(b, a, list(polarizations.values()), axis=1)
+        if polarization_names is None:
+            polarization_names = sorted(polarizations.keys())
 
+        polarizations = np.stack(
+            [polarizations[p] for p in polarization_names]
+        )
+        filtered = sig.sosfiltfilt(sos, polarizations, axis=1)
+        signals[i] = filtered
     return signals
 
 

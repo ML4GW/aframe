@@ -24,7 +24,6 @@ def train_for_one_epoch(
     model.train()
 
     for samples, targets in train_dataset:
-
         optimizer.zero_grad(set_to_none=True)  # reset gradient
 
         # do forward step in mixed precision
@@ -98,6 +97,7 @@ def train(
     # data params
     train_dataset: Iterable[Tuple[np.ndarray, np.ndarray]],
     valid_dataset: Iterable[Tuple[np.ndarray, np.ndarray]] = None,
+    preprocessor: Optional[torch.nn.Module] = None,
     # optimization params
     max_epochs: int = 40,
     init_weights: Optional[str] = None,
@@ -111,7 +111,6 @@ def train(
     use_amp: bool = False,
     profile: bool = False,
 ) -> float:
-
     """Train BBHnet model on in-memory data
     Args:
         architecture:
@@ -166,7 +165,6 @@ def train(
     """
 
     device = device or "cpu"
-
     os.makedirs(outdir, exist_ok=True)
 
     # Creating model, loss function, optimizer and lr scheduler
@@ -178,6 +176,13 @@ def train(
 
     model = architecture(num_ifos)
     model.to(device)
+
+    # if we passed a module for preprocessing,
+    # include it in the model so that the weights
+    # get exported along with everything else
+    if preprocessor is not None:
+        preprocessor.to(device)
+        model = torch.nn.Sequential(preprocessor, model)
 
     if init_weights is not None:
         # allow us to easily point to the best weights
@@ -222,7 +227,6 @@ def train(
         logging.warning("'use_amp' flag set but no cuda device, ignoring")
 
     best_valid_loss = np.inf
-    best_train_loss = np.inf
     since_last_improvement = 0
     history = {"train_loss": [], "valid_loss": []}
 
@@ -285,26 +289,5 @@ def train(
                     )
                     break
 
-        # TODO: Remove this portion: I put it in since I was finding
-        # some oscillations in the training loss while trying to overfit
-        # a dataset. Probably need either larger model or smaller dataset
-
-        # if no validation dataset passed, save model based on
-        # best training loss. i.e. attempt to overfit
-        else:
-            # update our learning rate scheduler if we
-            # indicated a schedule with `patience`
-            if patience is not None:
-                lr_scheduler.step(train_loss)
-
-            if train_loss < best_train_loss:
-                logging.debug(
-                    "No validation dataset passed. "
-                    "Achieved new lowest training loss, "
-                    "saving model weights "
-                )
-                best_train_loss = train_loss
-                weights_path = os.path.join(outdir, "weights.pt")
-                torch.save(model.state_dict(), weights_path)
-
+    # return the training results
     return history

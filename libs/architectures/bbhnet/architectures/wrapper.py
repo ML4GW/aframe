@@ -1,4 +1,7 @@
 import inspect
+from collections.abc import Callable
+
+import torch
 
 from bbhnet.architectures.resnet import BottleneckResNet, ResNet
 
@@ -136,9 +139,34 @@ def architecturize(f):
     f_kwargs = {}
     arch_fns = get_arch_fns(f, f_kwargs)
 
-    def wrapper(**kwargs):
+    def wrapper(*args, **kwargs):
+        # don't do any wrapping if the function is called
+        # with its first argument as something that could
+        # instantiate an architecture, or if called with an
+        # "architecture" keyword argument
+        call_normal = False
+        if len(args) > 0:
+            arch = args[0]
+            # TODO: perform a check on callable output?
+            if isinstance(arch, Callable) or issubclass(arch, torch.nn.Module):
+                call_normal = True
+        elif "architecture" in kwargs:
+            call_normal = True
+
+        if call_normal:
+            return f(*args, **kwargs)
+        elif len(args) > 0:
+            raise ValueError(
+                "Can't pass positional args to function {} "
+                "when calling without architecture arg".format(f.__name__)
+            )
+
+        # otherwise, just update the dictionary used
+        # to pass arguments to the architecture fns
         f_kwargs.update(kwargs)
 
+    # create a dummy signature for the function that
+    # excludes "architecture" for parsing by typeo
     f_params = inspect.signature(f).parameters.values()
     parameters = [p for p in f_params if p.name != "architecture"]
     wrapper.__signature__ = inspect.Signature(parameters)

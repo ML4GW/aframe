@@ -10,7 +10,7 @@ packages = [
 # readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9,<3.10"
+python = ">=3.8,<3.11"
 "bbhnet.data" = {path = "../data", develop = true}
 "bbhnet.architectures" = {path = "../architectures", develop = true}
 "bbhnet.logging" = {path = "../logging", develop = true}

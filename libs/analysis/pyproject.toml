@@ -10,7 +10,7 @@ packages = [
 # readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 scipy = "^1.7.3"
 "bbhnet.io" = {path = "../io", develop = true}
 "bbhnet.parallelize" = {path = "../parallelize", develop = true}
@@ -19,5 +19,5 @@ scipy = "^1.7.3"
 pytest = "^6.2"
 
 [build-system]
-requires = ["poetry>=1.1"]
+requires = ["poetry>=1.2"]
 build-backend = "poetry.masonry.api"

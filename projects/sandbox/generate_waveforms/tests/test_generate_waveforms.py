@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-import os
+import logging
 import shutil
 from pathlib import Path
 
@@ -9,12 +7,13 @@ import pytest
 from generate_waveforms import main
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture  # (scope="session")
 def data_dir():
-    data_dir = "tmp"
-    os.makedirs(data_dir, exist_ok=True)
-    yield Path(data_dir)
-    shutil.rmtree(data_dir)
+    tmpdir = Path(__file__).resolve().parent / "tmp"
+    tmpdir.mkdir(parents=True, exist_ok=False)
+    yield tmpdir
+    logging.shutdown()
+    shutil.rmtree(tmpdir)
 
 
 @pytest.fixture(params=[0, 10, 100])

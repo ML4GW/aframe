@@ -1,77 +1,26 @@
+from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Union
 
 import h5py
 import numpy as np
 import torch
-from gwpy.frequencyseries import FrequencySeries
-from gwpy.signal.filter_design import fir_from_transfer
 from gwpy.timeseries import TimeSeries
 
 from bbhnet.data.glitch_sampler import GlitchSampler
+from bbhnet.data.transforms.whitening import DEFAULT_FFTLENGTH
 from bbhnet.data.utils import sample_kernels
 from bbhnet.data.waveform_sampler import WaveformSampler
 
-DEFAULT_FFTLENGTH = 2
 
-
-def _build_time_domain_filter(
-    asd: FrequencySeries,
-    sample_rate: float,
-    kernel_length: float,
-    fftlength: float = DEFAULT_FFTLENGTH,
-) -> np.ndarray:
-    """
-    Create a time-domain filter for whitening using the
-    indicated timeseries as background. Replicating the
-    behavior of `gwpy.timeseries.TimeSeries.whiten`.
-    Args:
-        timeseries:
-            Background timeseries whose spectrum to
-            use for whitening
-        sample_rate:
-            Data rate of timeseries
-        kernel_length:
-            Length of data that will eventually be used
-            to be whitened by this filter
-    Returns:
-        Time domain filter to convolve with sampled
-        training data
-    """
-
-    asd = asd.interpolate(1 / kernel_length)
-    ntaps = int(fftlength * sample_rate)
-
-    tdf = fir_from_transfer(
-        1 / asd.value, ntaps=ntaps, window="hanning", ncorner=0
-    )
-    return tdf
-
-
-def _load_background(
-    background_file: str,
-    sample_rate: float,
-    device: str,
-    fftlength: float = DEFAULT_FFTLENGTH,
-):
+def _load_background(fname: str):
     # TODO: maybe these are gwf and we resample?
-    with h5py.File(background_file, "r") as f:
+    with h5py.File(fname, "r") as f:
         background = f["hoft"][:]
 
         # grab the timestamps from the dataset for geocent sampling
         t0 = f["t0"][()]
-
-    # build the asd for building the time domain filter
-    ts = TimeSeries(background, dt=1 / sample_rate)
-    asd = ts.asd(fftlength=fftlength, window="hanning", method="median")
-
-    # move everything onto the GPU up front so that
-    # we don't have to pay for transfer time later.
-    # If our datasets are on the scale of ~GBs this
-    # shouldn't be a problem, esp. for the current
-    # size of BBHNet
-    background = torch.Tensor(background).to(device)
-    return background, asd, t0
+    return background, t0
 
 
 class RandomWaveformDataset:
@@ -179,63 +128,21 @@ class RandomWaveformDataset:
         self.batches_per_epoch = batches_per_epoch
         self.device = device
 
-        # load in the background data and build time-domain
-        # filters for whitening using them
-        self.hanford_background, hanford_asd, t0 = _load_background(
-            hanford_background, sample_rate, device
-        )
-        self.livingston_background, livingston_asd, t0 = _load_background(
-            livingston_background, sample_rate, device
-        )
+        # load in the background data
+        hanford_background, t0 = _load_background(hanford_background)
+        livingston_background, _ = _load_background(livingston_background)
+        assert len(hanford_background) == len(livingston_background)
 
-        assert len(self.hanford_background) == len(self.livingston_background)
-        tf = t0 + len(self.hanford_background) / sample_rate
-
-        # build time-domain filters using the background
-        # asd so that we can perform whitening using a
-        # grouped 1d convolution at data-loading time
-        hanford_tdf = _build_time_domain_filter(
-            hanford_asd, sample_rate=sample_rate, kernel_length=kernel_length
-        )
-        livingston_tdf = _build_time_domain_filter(
-            livingston_asd,
-            sample_rate=sample_rate,
-            kernel_length=kernel_length,
-        )
-
-        # move the filters to a single torch Tensor
-        # on the desired device, adding a dummy dimension
-        # in the middle for compatability with Torch's
-        # conv op's expectations
-        whitening_filter = np.stack([hanford_tdf, livingston_tdf])
-        self.whitening_filter = torch.Tensor(whitening_filter[:, None]).to(
+        self.hanford_background = torch.Tensor(hanford_background).to(device)
+        self.livingston_background = torch.Tensor(livingston_background).to(
             device
-        )
-
-        # create a window for applying the time domain filter
-        # at data loading time. Since the filter will have the
-        # same size as the timeseries at data loading time,
-        # we can use the window as-is without having to apply
-        # it just to the edges of the timeseries
-        self.whitening_window = torch.hann_window(
-            whitening_filter.shape[-1], device=device
         )
 
         # if we specified a waveform sampler, fit its snr
         # computation to the given background asd
         if waveform_sampler is not None:
             assert waveform_frac > 0
-
-            # give the asds channel names so that the waveform
-            # sampler knows which ifo responses to calculate
-            if hanford_asd.channel is None:
-                hanford_asd.channel = "H1:STRAIN"
-            if livingston_asd.channel is None:
-                livingston_asd.channel = "L1:STRAIN"
-
-            # now fit the the waveform_sampler's background_asd
-            # attribute to the given asds for the snr computation
-            waveform_sampler.fit(t0, tf, hanford_asd, livingston_asd)
+            self.fit_waveform_sampler(waveform_sampler, t0)
 
             # assign our attributes
             self.waveform_sampler = waveform_sampler
@@ -268,6 +175,25 @@ class RandomWaveformDataset:
         # pure background in each batch
         assert (self.num_waveforms + self.num_glitches) < batch_size
 
+    def fit_waveform_sampler(
+        self, waveform_sampler: WaveformSampler, t0: float
+    ) -> None:
+        backgrounds = OrderedDict(
+            H1=self.hanford_background, L1=self.livingston_background
+        )
+        asds = []
+        for channel, background in backgrounds.items():
+            background = background.cpu().numpy()
+            ts = TimeSeries(background, dt=1 / self.sample_rate)
+            asd = ts.asd(
+                fftlength=DEFAULT_FFTLENGTH, window="hanning", method="median"
+            )
+            asd.channel = channel + ":STRAIN"
+            asds.append(asd)
+
+        tf = t0 + len(background) / self.sample_rate
+        waveform_sampler.fit(t0, tf, *asds)
+
     def sample_from_background(self):  # , independent: bool = True):
         """Sample a batch of kernels from the background data
 
@@ -293,36 +219,6 @@ class RandomWaveformDataset:
         kernels = [i for j in kernels for i in j]
         kernels = torch.stack(kernels, dim=0)
         return kernels.reshape(self.batch_size, 2, -1)
-
-    def whiten(self, X: torch.Tensor) -> torch.Tensor:
-        """Detrend and time-domain filter an array
-        Use the time-domain filters built from the
-        background data used to initialize the dataset
-        to whiten an array of data.
-        """
-
-        # do a constant detrend along the time axis,
-        # transposing to ensure that the last two dimensions
-        # of the original and dimension-reduced tensors match.
-        # TODO: will using X.mean(axis=-1, keepdims=True)
-        # allow us to avoid these transposes?
-        X = X.transpose(2, 0)
-        X = X - X.mean(axis=0)
-        X = X.transpose(0, 2)
-        X *= self.whitening_window
-
-        # convolve the detrended data with the time-domain
-        # filters constructed during initialization from
-        # the background data, using groups to ensure that
-        # the convolution is performed independently for
-        # each interferometer channel
-        X = torch.nn.functional.conv1d(
-            X, self.whitening_filter, groups=2, padding="same"
-        )
-
-        # scale by sqrt(2 / sample_rate) for some inscrutable
-        # signal processing reason beyond my understanding
-        return X * (2 / self.sample_rate) ** 0.5
 
     def __iter__(self):
         self._batch_idx = 0
@@ -370,6 +266,5 @@ class RandomWaveformDataset:
         # send targets to device
         y = torch.Tensor(y).to(self.device)
 
-        X = self.whiten(X)
         self._batch_idx += 1
         return X, y

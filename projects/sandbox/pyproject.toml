@@ -3,7 +3,8 @@ steps = [
     "generate_background:generate-background",
     "generate_waveforms:generate-waveforms",
     "generate_glitches:generate-glitches",
-    "train:train:resnet"
+    "train:train:resnet",
+    "export:export:resnet"
 ]
 
 [tool.typeo.base]

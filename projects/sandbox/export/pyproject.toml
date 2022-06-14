@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "export"
+version = "0.0.1"
+description = "Export BBHNet for IaaS inference"
+authors = ["Alec Gunny <alec.gunny@gmail.com>"]
+# readme = "README.md"
+
+[tool.poetry.scripts]
+export-model = "export:export"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+gwpy = "^2.1"
+
+"bbhnet.architectures" = {path = "../../../libs/architectures", develop = true}
+"bbhnet.base" = {path = "../../../libs/base", develop = true}
+"bbhnet.data" = {path = "../../../libs/data", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"hermes.typeo" = {path = "../../../gw-iaas/libs/hermes/hermes.typeo", develop = true}
+
+[tool.poetry.dependencies."hermes.quiver"]
+path = "../../../gw-iaas/libs/hermes/hermes.quiver"
+develop = true
+extras = ["torch", "tensorflow"]
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry>=1.2"]
+build-backend = "poetry.masonry.api"

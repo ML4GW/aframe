@@ -1,10 +1,10 @@
 [[package]]
 name = "bbhnet.logging"
-version = "0.1.0"
-description = "Basic logging utilities"
+version = "0.0.1"
+description = "BBHNet logging utilities"
 category = "main"
 optional = false
-python-versions = "^3.9"
+python-versions = ">=3.8,<3.11"
 develop = true
 
 [package.source]
@@ -32,8 +32,8 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9"
-content-hash = "3a4ca4068ef189544b4cb0966dc6c1352d81dec6939050f33984cdfe2bc4b189"
+python-versions = ">=3.8,<3.11"
+content-hash = "551c90bb598b90ab6974072220f31fdf40b8ba63577b8ac46192cabeca5a50b2"
 
 [metadata.files]
 "bbhnet.logging" = []

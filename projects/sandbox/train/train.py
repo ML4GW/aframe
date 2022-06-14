@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import torch
+
 from bbhnet.data import GlitchSampler, RandomWaveformDataset, WaveformSampler
+from bbhnet.data.transforms import WhiteningTransform
 from bbhnet.logging import configure_logging
 from bbhnet.trainer import trainify
 
@@ -115,6 +118,18 @@ def main(
         glitch_frac,
         device,
     )
+
+    # TODO: hard-coding num_ifos into preprocessor. Should
+    # we just expose this as an arg? How will this fit in
+    # to the broader-generalization scheme?
+    preprocessor = WhiteningTransform(2, sample_rate, kernel_length)
+
+    # TODO: make this a `train_dataset.background` `@property`?
+    background = torch.stack(
+        [train_dataset.hanford_background, train_dataset.livingston_background]
+    )
+    preprocessor.fit(background)
+
     # deterministic validation glitch sampler
     if validate:
         val_glitch_sampler = GlitchSampler(
@@ -145,8 +160,7 @@ def main(
             glitch_frac,
             device,
         )
-
-        return train_dataset, valid_dataset
-
     else:
-        return train_dataset
+        valid_dataset = None
+
+    return train_dataset, valid_dataset, preprocessor

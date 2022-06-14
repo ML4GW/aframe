@@ -1,0 +1,3 @@
+[submodule "gw-iaas"]
+	path = gw-iaas
+	url = git@github.com:fastmachinelearning/gw-iaas.git

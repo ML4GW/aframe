@@ -49,7 +49,7 @@ def main(
 
     if signal_file.exists() and not force_generation:
         logging.info("Signal file already exists, exiting")
-        return
+        return signal_file
 
     # log and print out some simulation parameters
     logging.info("Simulation parameters")

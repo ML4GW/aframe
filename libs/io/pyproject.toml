@@ -10,7 +10,7 @@ packages = [
 # readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 h5py = "^3.6"
 numpy = ">=1.22.0,<1.22.4"
 

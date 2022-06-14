@@ -18,11 +18,6 @@ def max_snr(request):
     return request.param
 
 
-# def project_raw_gw(waveform, sample_params):
-
-#     return waveform
-
-
 def test_waveform_sampler(
     sine_waveforms,
     glitch_length,

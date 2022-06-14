@@ -73,15 +73,7 @@ def trainify(f):
         # use the passed function `f` to return data files
         # f returns training and validation
         # glitch, signal and background dataset files
-
-        data = f(*args, **kwargs)
-        # if valid dataset is passed
-        # data needs to be unpacked
-        if isinstance(data, tuple):
-            train_dataset, valid_dataset = data
-        else:
-            train_dataset = data
-            valid_dataset = None
+        train_dataset, valid_dataset, preprocessor = f(*args, **kwargs)
 
         # pass any args passed to this wrapper that
         # `train` needs into the `train_kwargs` dictionary

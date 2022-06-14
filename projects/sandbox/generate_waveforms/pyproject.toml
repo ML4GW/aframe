@@ -6,7 +6,7 @@ authors = ["Will Benoit <william.benoit@ligo.org>",]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 "hermes.typeo" = "^0.1.4"
 "bbhnet.injection" = {path="../../../libs/injection", develop = true}
 "bbhnet.logging" = {path="../../../libs/logging", develop = true}
