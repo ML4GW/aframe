@@ -3,13 +3,14 @@
 import os
 import shutil
 from pathlib import Path
+from unittest.mock import patch
 
 import h5py
 import numpy as np
 import pytest
 from gwpy.timeseries import TimeSeries
 
-from bbhnet.injection import inject_signals
+import bbhnet.injection
 
 TEST_DIR = Path(__file__).resolve().parent
 
@@ -71,6 +72,76 @@ def snr_range(request):
     return request.param
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        (dict(duration=16),),
+        (dict(sampling_frequency=128, waveform_approximant="TaylorF2"),),
+    ],
+)
+def test_get_waveform_generator(kwargs):
+    (kwargs,) = kwargs
+    waveform_generator = bbhnet.injection.injection.get_waveform_generator(
+        **kwargs
+    )
+    sampling_kwargs = {
+        "duration",
+        "sampling_frequency",
+        "frequency_domain_source_model",
+        "parameter_conversion",
+    }
+    waveform_kwargs = {
+        "waveform_approximant",
+        "reference_frequency",
+        "minimum_frequency",
+    }
+
+    for k in sampling_kwargs:
+        assert hasattr(waveform_generator, k)
+        if k in kwargs:
+            assert getattr(waveform_generator, k) == kwargs[k]
+
+    assert hasattr(waveform_generator, "waveform_arguments")
+
+    for k in waveform_kwargs:
+        assert waveform_generator.waveform_arguments.get(k)
+        if k in kwargs:
+            assert waveform_generator.waveform_arguments.get(k) == kwargs[k]
+
+
+@patch("bbhnet.injection.injection.apply_high_pass_filter")
+def test_generate_gw(mock_filter):
+    """Test generate_gw using supplied waveform generator, or
+    initializing generator
+    """
+    import bilby
+
+    sample_params = bilby.gw.prior.BBHPriorDict().sample(10)
+
+    with patch("bilby.gw.waveform_generator.WaveformGenerator") as mock_gen:
+        bbhnet.injection.injection.generate_gw(
+            sample_params,
+            waveform_generator=None,
+            waveform_approximant="TaylorF2",
+            sampling_frequency=128,
+        )
+
+    assert mock_gen.call_count == 1
+
+    dummy_waveform_generator = bilby.gw.waveform_generator.WaveformGenerator(
+        frequency_domain_source_model=bilby.gw.source.lal_binary_black_hole,
+        duration=1,
+        sampling_frequency=128,
+    )
+    mock_gen.reset_mock()
+    with patch("bilby.gw.waveform_generator.WaveformGenerator") as mock_gen:
+        bbhnet.injection.injection.generate_gw(
+            sample_params, waveform_generator=dummy_waveform_generator
+        )
+
+    assert mock_gen.call_count == 0
+
+
 def test_signal_data_shape(
     data_dir,
     ifos,
@@ -88,7 +159,7 @@ def test_signal_data_shape(
         frame_files = [H1_frame, L1_frame]
         channels = ["Strain", "Strain"]
 
-    frames, signal_file = inject_signals(
+    frames, signal_file = bbhnet.injection.inject_signals(
         frame_files,
         channels,
         ifos,
@@ -142,7 +213,7 @@ def test_snr_range(data_dir, ifos, H1_frame, L1_frame, snr_range):
         frame_files = [H1_frame, L1_frame]
         channels = ["Strain", "Strain"]
 
-    _, signal_file = inject_signals(
+    _, signal_file = bbhnet.injection.inject_signals(
         frame_files,
         channels,
         ifos,
@@ -175,7 +246,7 @@ def test_signal_injected(data_dir, ifos, H1_frame, L1_frame):
         frame_files = [H1_frame, L1_frame]
         channels = ["Strain", "Strain"]
 
-    out_frames, signal_file = inject_signals(
+    out_frames, signal_file = bbhnet.injection.inject_signals(
         frame_files,
         channels,
         ifos,
