@@ -107,3 +107,19 @@ def test_waveform_sampler(
         for ifo in sample:
             calcd += calc_snr(ifo, fs, sample_rate) ** 2
         assert min_snr < calcd**0.5 < max_snr
+
+    # build "backgroud" asds of all 0s
+    # to test that exception is raised
+    asds = []
+    for ifo in ifos:
+        fs = FrequencySeries(
+            np.zeros((sample_rate // 2,)),
+            df=2 / sample_rate + 1,
+            channel=ifo + ":STRAIN",
+        )
+        asds.append(fs)
+
+    # make sure ValueError is raised
+    # when asds are passed with zeros
+    with pytest.raises(ValueError):
+        sampler.fit(1234567890, 1234567990, *asds)

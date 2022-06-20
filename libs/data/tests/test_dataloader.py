@@ -1,12 +1,25 @@
 import time
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import torch
+from gwpy.frequencyseries import FrequencySeries
 
 from bbhnet.data import dataloader
 from bbhnet.data.glitch_sampler import GlitchSampler
 from bbhnet.data.waveform_sampler import WaveformSampler
+
+
+def mock_asd(data_length, sample_rate):
+    # mock asd object to ones
+    # so that the ValueError doesn't
+    # get raised  for 0 asd values
+    df = 1 / data_length
+    fmax = sample_rate / 2
+    nfreqs = int(fmax / df)
+    asd = FrequencySeries(np.ones(nfreqs), df=df, channel="H1:STRAIN")
+    return asd
 
 
 @pytest.fixture
@@ -35,8 +48,8 @@ def data_size(sample_rate, data_length):
 
 
 @pytest.fixture
-def zero_data(data_size):
-    return np.zeros((data_size,))
+def ones_data(data_size):
+    return np.ones((data_size,))
 
 
 @pytest.fixture
@@ -64,13 +77,13 @@ def sequential_livingston_background(sequential_data, write_background):
 
 
 @pytest.fixture
-def zeros_hanford_background(zero_data, write_background):
-    return write_background("hanford.h5", zero_data)
+def ones_hanford_background(ones_data, write_background):
+    return write_background("hanford.h5", ones_data)
 
 
 @pytest.fixture
-def zeros_livingston_background(zero_data, write_background):
-    return write_background("livingston.h5", zero_data)
+def ones_livingston_background(ones_data, write_background):
+    return write_background("livingston.h5", ones_data)
 
 
 @pytest.fixture(params=["path", "sampler"])
@@ -152,7 +165,7 @@ def validate_dataset(dataset, cutoff_idx, target):
         y = y.cpu().numpy()
         for i, x in enumerate(X):
             # check to make sure ifo is not all 0s
-            is_background = (x == 0).all()
+            is_background = (x == 1).all()
 
             if target:
                 # y == 1 targets should come at the end
@@ -170,25 +183,30 @@ def validate_dataset(dataset, cutoff_idx, target):
 
 
 def test_glitch_sampling(
-    zeros_hanford_background,
-    zeros_livingston_background,
+    ones_hanford_background,
+    ones_livingston_background,
     glitch_sampler,
     glitch_frac,
     sample_rate,
+    data_length,
     device,
 ):
     batch_size = 32
-    dataset = dataloader.RandomWaveformDataset(
-        zeros_hanford_background,
-        zeros_livingston_background,
-        kernel_length=1,
-        sample_rate=sample_rate,
-        batch_size=batch_size,
-        glitch_frac=glitch_frac,
-        glitch_sampler=glitch_sampler,
-        batches_per_epoch=10,
-        device=device,
-    )
+    with patch(
+        "gwpy.timeseries.TimeSeries.asd",
+        return_value=mock_asd(data_length, sample_rate),
+    ):
+        dataset = dataloader.RandomWaveformDataset(
+            ones_hanford_background,
+            ones_livingston_background,
+            kernel_length=1,
+            sample_rate=sample_rate,
+            batch_size=batch_size,
+            glitch_frac=glitch_frac,
+            glitch_sampler=glitch_sampler,
+            batches_per_epoch=10,
+            device=device,
+        )
     expected_num = max(1, int(glitch_frac * batch_size))
     assert dataset.num_glitches == expected_num
     validate_dataset(dataset, dataset.num_glitches, 0)
@@ -199,11 +217,12 @@ def test_glitch_sampling(
 
 
 def test_waveform_sampling(
-    zeros_hanford_background,
-    zeros_livingston_background,
+    ones_hanford_background,
+    ones_livingston_background,
     sine_waveforms,
     waveform_frac,
     sample_rate,
+    data_length,
     device,
 ):
     waveform_sampler = WaveformSampler(
@@ -211,17 +230,21 @@ def test_waveform_sampling(
     )
 
     batch_size = 32
-    dataset = dataloader.RandomWaveformDataset(
-        zeros_hanford_background,
-        zeros_livingston_background,
-        kernel_length=1,
-        sample_rate=sample_rate,
-        batch_size=batch_size,
-        waveform_sampler=waveform_sampler,
-        waveform_frac=waveform_frac,
-        batches_per_epoch=10,
-        device=device,
-    )
+    with patch(
+        "gwpy.timeseries.TimeSeries.asd",
+        return_value=mock_asd(data_length, sample_rate),
+    ):
+        dataset = dataloader.RandomWaveformDataset(
+            ones_hanford_background,
+            ones_livingston_background,
+            kernel_length=1,
+            sample_rate=sample_rate,
+            batch_size=batch_size,
+            waveform_sampler=waveform_sampler,
+            waveform_frac=waveform_frac,
+            batches_per_epoch=10,
+            device=device,
+        )
     expected_num = max(1, int(waveform_frac * batch_size))
     assert dataset.num_waveforms == expected_num
 

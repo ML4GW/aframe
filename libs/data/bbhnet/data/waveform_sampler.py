@@ -62,8 +62,10 @@ class WaveformSampler:
         background_asds = [asd.interpolate(self.df) for asd in background_asds]
         background_asds = np.stack([asd.value for asd in background_asds])
 
-        # TODO: replace with 1s here or clip to a nonzero value?
-        background_asds = np.clip(background_asds, 1e-6, np.inf)
+        # for now, make sure our background asds
+        # don't have 0 values
+        if (background_asds == 0).any():
+            raise ValueError("The background asds contain 0 values")
 
         self.priors["geocent_time"] = Uniform(minimum=t0, maximum=tf)
         self.background_asd = background_asds
