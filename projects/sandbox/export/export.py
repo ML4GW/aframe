@@ -130,8 +130,13 @@ def export(
     # export this version of the model (with its current
     # weights), to this entry in the model repository
     input_shape = (1, num_ifos, int(kernel_length * sample_rate))
+
+    # TODO: make opset version a parameter?
     bbhnet.export_version(
-        nn, input_shapes={"hoft": input_shape}, output_names=["discriminator"]
+        nn,
+        input_shapes={"hoft": input_shape},
+        output_names=["discriminator"],
+        opset_version=15,
     )
 
     # now try to create an ensemble that has a snapshotter
