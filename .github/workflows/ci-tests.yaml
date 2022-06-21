@@ -51,6 +51,8 @@ jobs:
               - 'projects/sandbox/generate_glitches/**'
             export:
               - 'projects/sandbox/export/**'
+            infer:
+              - 'projects/sandbox/infer/**'
 
       # install gcc for bilby build
       -
@@ -153,4 +155,14 @@ jobs:
           || (steps.filter.outputs.export == 'true')
         env:
           test_dir: /github/workspace/projects/sandbox/export
+        run: pinto -p $test_dir run pytest $test_dir/tests
+
+      -
+        name: run infer tests
+        if: |
+          (steps.filter.outputs.io == 'true')
+          || (steps.filter.outputs.parallelize == 'true')
+          || (steps.filter.outputs.infer == 'true')
+        env:
+          test_dir: /github/workspace/projects/sandbox/infer
         run: pinto -p $test_dir run pytest $test_dir/tests

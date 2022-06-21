@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "infer"
+version = "0.0.1"
+description = "Perform local IaaS inference with BBHNet"
+authors = ["Alec Gunny <alec.gunny@gmail.com>"]
+# readme = "README.md"
+
+[tool.poetry.scripts]
+infer = "infer:main"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+
+"bbhnet.io" = {path = "../../../libs/io", develop = true}
+"bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+
+"hermes.typeo" = {path = "../../../gw-iaas/libs/hermes/hermes.typeo", develop = true}
+"hermes.stillwater" = {path = "../../../gw-iaas/libs/hermes/hermes.stillwater", develop = true}
+
+"tritonserve" = {path = "../../../tritonserve", develop = true}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry>=1.2"]
+build-backend = "poetry.masonry.api"
