@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
-import os
-import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import h5py
 import numpy as np
 import pytest
+from gwpy.detector import Channel
 from gwpy.timeseries import TimeSeries
 
 import bbhnet.injection
@@ -15,61 +15,16 @@ import bbhnet.injection
 TEST_DIR = Path(__file__).resolve().parent
 
 
-@pytest.fixture(scope="session")
-def data_dir():
-    data_dir = "tmp"
-    os.makedirs(data_dir, exist_ok=True)
-    yield Path(data_dir)
-    shutil.rmtree(data_dir)
-
-
-@pytest.fixture(scope="session")
-def H1_frame():
-    frame_path = "H1_test_frame.gwf"
-    if not os.path.exists(frame_path):
-        H1_frame = TimeSeries.fetch_open_data(
-            "H1", 1185587200, 1185591296 + 1e-5
-        )
-        H1_frame.write(frame_path)
-    yield frame_path
-    os.remove(frame_path)
-
-
-@pytest.fixture(scope="session")
-def L1_frame():
-    frame_path = "L1_test_frame.gwf"
-    if not os.path.exists(frame_path):
-        L1_frame = TimeSeries.fetch_open_data(
-            "L1", 1185587200, 1185591296 + 1e-5
-        )
-        L1_frame.write(frame_path)
-    yield frame_path
-    os.remove(frame_path)
-
-
-@pytest.fixture(params=[["H1"], ["H1", "L1"]])
-def ifos(request):
-    return request.param
-
-
-@pytest.fixture(params=[50, 10, 50])
-def n_samples(request):
-    return request.param
-
-
-@pytest.fixture(params=[60, 8, 60])
-def waveform_duration(request):
-    return request.param
-
-
-@pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
-def prior_file(request):
-    return str(TEST_DIR / "prior_files" / request.param)
-
-
-@pytest.fixture(params=[[2, 5], [25, 50], [100, 500]])
-def snr_range(request):
-    return request.param
+def mock_frame(sample_rate, duration):
+    mock_data = np.random.random(int(sample_rate * duration))
+    return TimeSeries(
+        mock_data,
+        unit=None,
+        t0=0,
+        sample_rate=sample_rate,
+        channel=Channel("IFO:Strain", sample_rate=sample_rate, dtype="float"),
+        name="Strain",
+    )
 
 
 @pytest.mark.parametrize(
@@ -142,22 +97,43 @@ def test_generate_gw(mock_filter):
     assert mock_gen.call_count == 0
 
 
+@pytest.mark.parametrize(
+    "ifos,n_samples,sample_rate,frame_duration,waveform_duration,prior",
+    [
+        (["H1"], 1, 4096, 2, 0.5, "nonspin_BBH.prior"),
+        (["H1"], 10, 128, 1024, 60, "nonspin_BBH.prior"),
+        (["H1"], 50, 128, 4096, 8, "nonspin_BBH.prior"),
+        (["H1"], 50, 128, 4096, 60, "nonspin_BBH.prior"),
+        (["H1", "L1"], 1, 4096, 2, 0.5, "nonspin_BBH.prior"),
+        (["H1", "L1"], 10, 128, 1024, 60, "precess_tides.prior"),
+        (["H1", "L1"], 50, 128, 4096, 8, "precess_tides.prior"),
+        (["H1", "L1"], 50, 128, 4096, 60, "precess_tides.prior"),
+    ],
+)
 def test_signal_data_shape(
-    data_dir,
     ifos,
-    H1_frame,
-    L1_frame,
     n_samples,
+    sample_rate,
+    frame_duration,
     waveform_duration,
-    prior_file,
+    prior,
 ):
+    """Test injection into varying frame lengths, waveform duration,
+    sampling frequency, and number of interferometers.
+    """
+    frame_files = []
+    channels = []
+    for ifo in ifos:
+        frame_content = mock_frame(sample_rate, frame_duration)
+        frame_filename = tempfile.mktemp(suffix=".gwf")
+        frame_content.write(frame_filename)
+        frame_files.append(frame_filename)
+        channels.append("Strain")
 
-    if len(ifos) == 1:
-        frame_files = [H1_frame]
-        channels = ["Strain"]
-    else:
-        frame_files = [H1_frame, L1_frame]
-        channels = ["Strain", "Strain"]
+    data_dir = tempfile.mkdtemp()
+    prior_file = Path(__file__).absolute().parent / "prior_files"
+    prior_file /= prior
+    prior_file = prior_file.as_posix()
 
     frames, signal_file = bbhnet.injection.inject_signals(
         frame_files,
@@ -202,16 +178,23 @@ def test_signal_data_shape(
         ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
 
 
-def test_snr_range(data_dir, ifos, H1_frame, L1_frame, snr_range):
+@pytest.mark.parametrize(
+    "ifos,snr_range", [(["H1"], [2, 5]), (["H1", "L1"], [100, 500])]
+)
+def test_snr_range(ifos, snr_range):
     n_samples = 10
     waveform_duration = 8
+    frame_duration = 1000
+    data_dir = tempfile.mkdtemp()
 
-    if len(ifos) == 1:
-        frame_files = [H1_frame]
-        channels = ["Strain"]
-    else:
-        frame_files = [H1_frame, L1_frame]
-        channels = ["Strain", "Strain"]
+    frame_files = []
+    channels = []
+    for ifo in ifos:
+        frame_content = mock_frame(2048, frame_duration)
+        frame_filename = tempfile.mktemp(suffix=".gwf")
+        frame_content.write(frame_filename)
+        frame_files.append(frame_filename)
+        channels.append("Strain")
 
     _, signal_file = bbhnet.injection.inject_signals(
         frame_files,
@@ -235,16 +218,22 @@ def test_snr_range(data_dir, ifos, H1_frame, L1_frame, snr_range):
             ), f"Some of {mean_snrs} not in {snr_range}"
 
 
-def test_signal_injected(data_dir, ifos, H1_frame, L1_frame):
+@pytest.mark.parametrize(
+    "ifos,frame_duration", [(["H1"], 20), (["H1", "L1"], 200)]
+)
+def test_signal_injected(ifos, frame_duration):
+    data_dir = tempfile.mkdtemp()
     n_samples = 1
     waveform_duration = 8
 
-    if len(ifos) == 1:
-        frame_files = [H1_frame]
-        channels = ["Strain"]
-    else:
-        frame_files = [H1_frame, L1_frame]
-        channels = ["Strain", "Strain"]
+    frame_files = []
+    channels = []
+    for ifo in ifos:
+        frame_content = mock_frame(2048, frame_duration)
+        frame_filename = tempfile.mktemp(suffix=".gwf")
+        frame_content.write(frame_filename)
+        frame_files.append(frame_filename)
+        channels.append("Strain")
 
     out_frames, signal_file = bbhnet.injection.inject_signals(
         frame_files,

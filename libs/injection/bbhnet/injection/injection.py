@@ -350,7 +350,7 @@ def inject_signals(
     snr_list = [snr * new_snr / old_snr for snr in snr_list]
 
     outdir = Path(outdir)
-    frame_out_paths = [outdir / f.name for f in map(Path, frame_files)]
+    frame_out_paths = [str(outdir / f.name) for f in map(Path, frame_files)]
 
     for strain, signals, frame_path in zip(
         strains, signals_list, frame_out_paths
@@ -359,9 +359,8 @@ def inject_signals(
             idx1 = int(
                 (signal_times[i] - waveform_duration / 2.0) * sample_rate
             )
-            idx2 = idx1 + waveform_duration * sample_rate
+            idx2 = int(idx1 + waveform_duration * sample_rate)
             strain[idx1:idx2] += signals[i]
-
         strain.write(frame_path)
 
     # Write params and similar to output file
