@@ -4,7 +4,10 @@ import numpy as np
 
 
 def sample_kernels(
-    x: np.ndarray, size: int, N: Optional[int] = None
+    x: np.ndarray,
+    size: int,
+    trigger_distance_size: int = 0,
+    N: Optional[int] = None,
 ) -> np.ndarray:
     """Sample fixed-size kernels from a timeseries array
 
@@ -22,12 +25,25 @@ def sample_kernels(
             a kernel will be generated from each row in `x` in order
             if `x.ndim > 1`, otherwise a `ValueError` will be
             raised.
-    Returns:
-        Array of sampled kernels of size `(n, ..., size)`, where
+        trigger_distance_size:
+            Maximum amount of samples away from the closest edge
+            of the kernel the trigger time (t0) is allowed. A positive
+            value allows kernels where the trigger is not in the kernel.
+            A value of 0 allows the trigger to lie anywhere in the kernel.
+            A negative value sets a 'padding' from either kernel edge where
+            trigger cannot lie.
+        Returns:
+            Array of sampled kernels of size `(n, ..., size)`, where
             `n = len(x) if N is None else N` and `...` represents
             all of `x`'s intermediate dimensions between its first
             and last.
     """
+
+    if trigger_distance_size < 0 and abs(trigger_distance_size) >= size / 2:
+        raise ValueError(
+            "If trigger_distance_size is negative, "
+            "its magnitude cannot be more than half the kernel size"
+        )
 
     if len(x.shape) == 1 and N is None:
         raise ValueError(
@@ -59,8 +75,13 @@ def sample_kernels(
     # always make sure that the center of x's
     # 1st axis is in the kernel that we sample
     # if we're doing >1D sampling
-    min_sample_start = max(x.shape[-1] // 2 - size + 1, 0)
-    max_sample_start = min(x.shape[-1] // 2 - 1, x.shape[-1] - size)
+
+    # t0 is the center sample
+
+    dim = x.shape[-1]
+    min_sample_start = max(dim // 2 + 1 - trigger_distance_size - size, 0)
+    right_pad = min(trigger_distance_size, 0)
+    max_sample_start = min(dim // 2 - 1 + right_pad, x.shape[-1] - size)
 
     # now iterate through and grab all the kernels
     # TODO: is there a more array-friendly way of doing this?

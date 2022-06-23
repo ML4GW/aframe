@@ -88,7 +88,9 @@ class WaveformSampler:
         signals = signals.transpose(1, 2, 0) * weights
         return signals.transpose(2, 0, 1)
 
-    def sample(self, N: int, size: int) -> np.ndarray:
+    def sample(
+        self, N: int, size: int, trigger_distance_size: int = 0
+    ) -> np.ndarray:
         if self.background_asd is None:
             raise RuntimeError(
                 "Must fit WaveformGenerator to background asd before sampling"
@@ -128,4 +130,4 @@ class WaveformSampler:
         signals = self.reweight_snrs(signals)
 
         # randomly sample kernels from these signals
-        return sample_kernels(signals, size=size)
+        return sample_kernels(signals, size, trigger_distance_size)

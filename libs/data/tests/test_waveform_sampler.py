@@ -93,7 +93,7 @@ def test_waveform_sampler(
     # "trigger" is in there. Should we apply some sort
     # of gaussian to the waves so that there's a unique
     # max value we can check for?
-    results = sampler.sample(4, data_length)
+    results = sampler.sample(4, data_length, 100)
     assert len(results) == 4
     assert all([i.shape == (len(ifos), data_length) for i in results])
 
@@ -101,7 +101,7 @@ def test_waveform_sampler(
     # the SNR ranges. There's definitely a better,
     # more explicit check to do here with patching
     # but this will work for now.
-    results = sampler.sample(4, sampler.waveforms.shape[-1])
+    results = sampler.sample(4, sampler.waveforms.shape[-1], 100)
     for sample in results:
         calcd = 0
         for ifo in sample:

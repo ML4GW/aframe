@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import torch
 
@@ -38,6 +39,8 @@ def main(
     batches_per_epoch: int,
     device: str,
     outdir: Path,
+    fduration: Optional[float] = None,
+    trigger_distance_size: float = 0,
     val_glitch_dataset: str = None,
     val_signal_dataset: str = None,
     val_hanford_background: str = None,
@@ -68,6 +71,13 @@ def main(
     batches_per_epoch:
         The number of batches to produce before raising
         a `StopIteration` while iteratingkernel_length:
+    fduration:
+        duration of the time domain filter used
+        to whiten the data (If using WhiteningTransform).
+        Note that fduration / 2 seconds will be cropped from
+        both ends of kernel_length
+    trigger_distance_size:
+
     """
 
     # make out dir and configure logging file
@@ -116,13 +126,17 @@ def main(
         waveform_frac,
         train_glitch_sampler,
         glitch_frac,
+        trigger_distance_size,
         device,
     )
 
     # TODO: hard-coding num_ifos into preprocessor. Should
     # we just expose this as an arg? How will this fit in
     # to the broader-generalization scheme?
-    preprocessor = WhiteningTransform(2, sample_rate, kernel_length)
+
+    preprocessor = WhiteningTransform(
+        2, sample_rate, kernel_length, highpass=highpass, fduration=fduration
+    )
 
     # TODO: make this a `train_dataset.background` `@property`?
     background = torch.stack(

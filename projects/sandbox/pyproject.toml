@@ -68,14 +68,15 @@ livingston_background = "${base.outdir}/data/L1_background.h5"
 glitch_dataset = "${base.outdir}/data/glitches.h5"
 signal_dataset = "${base.outdir}/data/signals.h5"
 outdir = "${base.outdir}/training"
-
+fduration = 1
+trigger_distance_size = -0.5
 sample_rate = "${base.sample_rate}"
 waveform_frac = 0.5
 glitch_frac = 0.3
 min_snr = 4
 max_snr = 1000
 highpass = 32
-kernel_length = 1 
+kernel_length = 2
 batch_size = 64
 batches_per_epoch = 300
 max_epochs = 50

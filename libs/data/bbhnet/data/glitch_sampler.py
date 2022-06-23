@@ -16,18 +16,24 @@ class GlitchSampler:
         self.hanford = torch.Tensor(hanford_glitches).to(device)
         self.livingston = torch.Tensor(livingston_glitches).to(device)
 
-    def sample(self, N: int, size: int) -> np.ndarray:
+    def sample(
+        self, N: int, size: int, trigger_distance_size: int = 0
+    ) -> np.ndarray:
         num_hanford = np.random.randint(N)
         num_livingston = N - num_hanford
 
         if num_hanford > 0:
-            hanford = sample_kernels(self.hanford, size, num_hanford)
+            hanford = sample_kernels(
+                self.hanford, size, trigger_distance_size, num_hanford
+            )
             hanford = torch.stack(hanford, axis=0)
         else:
             hanford = None
 
         if num_livingston > 0:
-            livingston = sample_kernels(self.livingston, size, num_livingston)
+            livingston = sample_kernels(
+                self.livingston, size, trigger_distance_size, num_livingston
+            )
             livingston = torch.stack(livingston, axis=0)
         else:
             livingston = None
