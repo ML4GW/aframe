@@ -303,3 +303,19 @@ def test_timeslide(tmpdir, shift, more_segment_fnames):
 
         for segment_f, f in zip(segment.fnames, fnames):
             assert segment_f == f
+
+
+def test_create_timeslide(tmpdir, shift, more_segment_fnames):
+    ts = TimeSlide.create(tmpdir / shift, "nn")
+    assert ts.path == tmpdir / shift / "nn"
+    assert ts.shift == shift
+
+    assert len(ts.segments) == len(more_segment_fnames)
+    for segment, fnames in zip(ts.segments, more_segment_fnames):
+        assert len(segment.fnames) == len(fnames)
+
+        for segment_f, f in zip(segment.fnames, fnames):
+            assert segment_f == f
+
+
+# TODO: test TimeSlide.create() when path doesnt already exist

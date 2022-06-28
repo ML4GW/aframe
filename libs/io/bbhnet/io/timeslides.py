@@ -342,7 +342,10 @@ class TimeSlide:
 
     def __post_init__(self):
         self.root = Path(self.root)
+        self.update()
 
+    def update(self):
+        """Recrawl through the directory and re filter and sort segments"""
         segment = None
         self.segments = []
         for match in filter_and_sort_files(self.path, return_matches=True):
@@ -367,3 +370,14 @@ class TimeSlide:
         # append whichever segment was in
         # process when the loop terminated
         self.segments.append(segment)
+
+    @classmethod
+    def create(cls, root: Union[Path, str], field: str):
+        """Creates a TimeSlide object;
+        If path specified by root and field doesn't exist, will
+        create it.
+        """
+        path = root / field
+        path.mkdir(exist_ok=True, parents=True)
+        obj = cls(root=root, field=field)
+        return obj

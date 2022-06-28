@@ -4,7 +4,9 @@ steps = [
     "generate_waveforms:generate-waveforms",
     "generate_glitches:generate-glitches",
     "train:train:resnet",
-    "export:export:resnet"
+    "export:export:resnet",
+    "timeslide_injections:timeslide_injections",
+    "infer:infer"
 ]
 
 [tool.typeo.base]
@@ -16,6 +18,8 @@ stop = 1262698390
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
+resnet = {layers = [4, 4, 4]}
+repository_directory = "/home/ethan.marx/path/to/model/dir"
 
 
 [tool.typeo.scripts.generate-background]
@@ -87,4 +91,47 @@ factor = 0.2
 early_stop = 100
 device = "cuda"
 profile = false
-commands.resnet = {layers = [4, 4, 4]}
+commands.resnet = "${base.resnet}"
+
+
+[tool.typeo.scripts.export]
+repository_directory = "${base.repository_directory}" 
+output_directory = "${base.outdir}/export"
+num_ifos = 2 
+kernel_length = "${base.kernel_length}" 
+inference_sampling_rate = "${base.inference_sampling_rate}"
+sample_rate = "${base.sample_rate}"
+streams_per_gpu = 1
+verbose = true
+commands.resnet = "${base.resnet}"
+
+[tool.typeo.scripts.timeslide_injections]
+start = "${base.start}"  
+stop = "${base.stop}" 
+
+outdir = "${base.outdir}/timeslide_injections/"
+prior_file = "/home/ethan.marx/forks/BBHNet/projects/sandbox/timeslide_injections/priors/nonspin_BBH.prior"
+spacing = 60
+buffer = 10
+n_slides = 100
+shifts = [0, 1]
+ifos = "${base.ifos}"
+file_length = 4096
+fmin = "${base.fmin}" 
+sample_rate = "${base.sample_rate}"
+channel = "${base.channel}"
+frame_type = "${base.frame_type}" 
+state_flag = "${base.state_flag}"
+
+[tool.typeo.scripts.infer]
+model_repo_dir = "${base.repository_directory}"
+model_name = "bbhnet"
+data_dir = "${base.outdir}/timeslide_injections/" 
+field = "injection"
+sample_rate = "${base.sample_rate}"
+inference_sampling_rate = 16
+num_workers = 4
+model_version = 1
+base_sequence_id = 1001
+log_file = "${base.outdir}/infer"
+verbose = true

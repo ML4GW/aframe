@@ -1,83 +1,19 @@
-import logging
+from collections import defaultdict
 from pathlib import Path
-from typing import Iterable
+from typing import List
 
 import bilby
 import h5py
 import numpy as np
-import scipy.signal as sig
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
 from gwpy.timeseries import TimeSeries
 
-
-def calc_snr(data, noise_psd, fs, fmin=20):
-    """Calculate the waveform SNR given the background noise PSD
-
-    Args:
-        data: timeseries of the signal whose SNR is to be calculated
-        noise_psd: PSD of the background that the signal is in
-        fs: sampling frequency of the signal and background
-        fmin: minimum frequency for the highpass filter
-
-    Returns:
-        The SNR of the signal, a single value
-
-    """
-
-    data_fd = np.fft.rfft(data) / fs
-    data_freq = np.fft.rfftfreq(len(data)) * fs
-    dfreq = data_freq[1] - data_freq[0]
-
-    noise_psd_interp = noise_psd.interpolate(dfreq)
-    noise_psd_interp[noise_psd_interp == 0] = 1.0
-
-    snr = 4 * np.abs(data_fd) ** 2 / noise_psd_interp.value * dfreq
-    snr = np.sum(snr[fmin <= data_freq])
-    snr = np.sqrt(snr)
-
-    return snr
-
-
-def _set_missing_params(default, supplied):
-    common = set(default).intersection(supplied)
-    res = {k: supplied[k] for k in common}
-    for k in default.keys() - common:
-        res.update({k: default[k]})
-    return res
-
-
-def get_waveform_generator(**waveform_generator_params):
-    """Get a waveform generator using
-    :meth:`bilby.gw.waveform_generator.WaveformGenerator`
-
-    Args:
-        waveform_generator_params: dict
-        Keyword arguments to waveform generator
-    """
-    default_waveform_sampling_params = dict(
-        duration=8,
-        sampling_frequency=16384,
-        frequency_domain_source_model=lal_binary_black_hole,
-        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-    )
-    default_waveform_approximant_params = dict(
-        waveform_approximant="IMRPhenomPv2",
-        reference_frequency=50,
-        minimum_frequency=20,
-    )
-
-    sampling_params = _set_missing_params(
-        default_waveform_sampling_params, waveform_generator_params
-    )
-    waveform_approximant_params = _set_missing_params(
-        default_waveform_approximant_params, waveform_generator_params
-    )
-
-    sampling_params["waveform_arguments"] = waveform_approximant_params
-
-    logging.debug("Waveform parameters: {}".format(sampling_params))
-    return bilby.gw.waveform_generator.WaveformGenerator(**sampling_params)
+from bbhnet.injection.utils import (
+    apply_high_pass_filter,
+    calc_snr,
+    get_waveform_generator,
+)
+from bbhnet.io import h5
+from bbhnet.io.timeslides import TimeSlide
 
 
 def generate_gw(
@@ -117,28 +53,6 @@ def generate_gw(
         signals, sample_params, waveform_generator
     )
     return filtered_signal
-
-
-def apply_high_pass_filter(signals, sample_params, waveform_generator):
-    sos = sig.butter(
-        N=8,
-        Wn=waveform_generator.waveform_arguments["minimum_frequency"],
-        btype="highpass",
-        output="sos",
-        fs=waveform_generator.sampling_frequency,
-    )
-    polarization_names = None
-    for i, p in enumerate(sample_params):
-        polarizations = waveform_generator.time_domain_strain(p)
-        if polarization_names is None:
-            polarization_names = sorted(polarizations.keys())
-
-        polarizations = np.stack(
-            [polarizations[p] for p in polarization_names]
-        )
-        filtered = sig.sosfiltfilt(sos, polarizations, axis=1)
-        signals[i] = filtered
-    return signals
 
 
 def project_raw_gw(
@@ -215,183 +129,158 @@ def project_raw_gw(
     return signals
 
 
-def inject_signals(
-    frame_files: Iterable[str],
-    channels: [str],
-    ifos: [str],
-    prior_file: str,
-    n_samples: int,
-    outdir: str,
-    fmin: float = 20,
+def inject_signals_into_timeslide(
+    raw_timeslide: TimeSlide,
+    out_timeslide: TimeSlide,
+    ifos: List[str],
+    prior_file: Path,
+    spacing: float,
+    sample_rate: float,
+    file_length: int,
+    fmin: float,
     waveform_duration: float = 8,
-    snr_range: Iterable[float] = [25, 50],
+    reference_frequency: float = 20,
+    waveform_approximant: float = "IMRPhenomPv2",
+    buffer: float = 0,
+    fftlength: float = 2,
 ):
 
-    """Injects simulated BBH signals into a frame, or set of corresponding
-    frames from different interferometers. Frames should have the same
-    start/stop time and the same sample rate
+    """Injects simulated BBH signals into h5 files TimeSlide object that represents
+    timeshifted background data. Currently only supports h5 file format.
 
     Args:
-        frame_files: list of paths to frames to be injected
-        channels: channel names of the strain data in each frame
-        ifos: list of interferometers corresponding to frames, e.g., H1, L1
+        raw_timeslide: TimeSlide object of raw background data Segments
+        out_timeslide: TimeSlide object to store injection Segments
+        ifos: list of interferometers corresponding to timeseries
         prior_file: prior file for bilby to sample from
-        n_samples: number of signal to inject
-        outdir: output directory to which injected frames will be written
+        spacing: seconds between each injection
+        sample_rate: sampling rate
+        file_length: length in seconds of each h5 file
         fmin: Minimum frequency for highpass filter
         waveform_duration: length of injected waveforms
-        snr_range: desired signal SNR range
+        reference_frequency: reference frequency for generating waveforms
+        waveform_approximant: waveform type to inject
+        buffer: buffer between beginning and end of segments and waveform
+        fftlength: fftlength to use for calculating psd
 
     Returns:
-        Paths to the injected frames and the parameter file
+        Paths to the injected files and the parameter file
     """
 
-    strains = [
-        TimeSeries.read(frame, ch) for frame, ch in zip(frame_files, channels)
-    ]
-
-    logging.info("Read strain from frame files")
-
-    span = set([strain.span for strain in strains])
-    if len(span) != 1:
-        raise ValueError(
-            "Frame files {} and {} have different durations".format(
-                *frame_files
-            )
-        )
-
-    frame_start, frame_stop = next(iter(span))
-    frame_duration = frame_stop - frame_start
-
-    sample_rate = set([int(strain.sample_rate.value) for strain in strains])
-    if len(sample_rate) != 1:
-        raise ValueError(
-            "Frame files {} and {} have different sample rates".format(
-                *frame_files
-            )
-        )
-
-    sample_rate = next(iter(sample_rate))
-    fftlength = int(max(2, np.ceil(2048 / sample_rate)))
-
-    # set the non-overlapping times of the signals in the frames randomly
-    # leaves buffer at either end of the series so edge effects aren't an issue
-    signal_times = sorted(
-        np.random.choice(
-            np.arange(
-                waveform_duration,
-                frame_duration - waveform_duration,
-                waveform_duration,
-            ),
-            size=n_samples,
-            replace=False,
-        )
-    )
-
-    # log and print out some simulation parameters
-    logging.info("Simulation parameters")
-    logging.info("Number of samples     : {}".format(n_samples))
-    logging.info("Sample rate [Hz]      : {}".format(sample_rate))
-    logging.info("High pass filter [Hz] : {}".format(fmin))
-    logging.info("Prior file            : {}".format(prior_file))
-
     # define a Bilby waveform generator
-    waveform_generator = bilby.gw.WaveformGenerator(
-        duration=waveform_duration,
+
+    # TODO: should sampling rate be automatically inferred
+    # from raw data?
+    waveform_generator = get_waveform_generator(
+        waveform_approximant=waveform_approximant,
+        reference_frequency=reference_frequency,
+        minimum_frequency=fmin,
         sampling_frequency=sample_rate,
-        frequency_domain_source_model=lal_binary_black_hole,
-        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-        waveform_arguments={
-            "waveform_approximant": "IMRPhenomPv2",
-            "reference_frequency": 50,
-            "minimum_frequency": 20,
-        },
+        duration=waveform_duration,
     )
 
-    # sample GW parameters from prior distribution
+    # initiate prior
     priors = bilby.gw.prior.BBHPriorDict(prior_file)
-    sample_params = priors.sample(n_samples)
-    sample_params["geocent_time"] = signal_times
 
-    signals_list = []
-    snr_list = []
-    for strain, channel, ifo in zip(strains, channels, ifos):
+    # dict to store all parameters
+    # of injections
+    parameters = defaultdict(list)
 
-        # calculate the PSD
-        strain_psd = strain.psd(fftlength)
+    for segment in raw_timeslide.segments:
 
-        # generate GW waveforms
+        # extract start and stop of segment
+        start = segment.t0
+        stop = segment.tf
+
+        # determine signal times
+        # based on length of segment and spacing;
+        # The signal time represents the first sample
+        # in the signals generated by project_raw_gw.
+        # not to be confused with the t0, which should
+        # be the middle sample
+
+        signal_times = np.arange(start + buffer, stop - buffer, spacing)
+        n_samples = len(signal_times)
+
+        # sample prior for this segment
+        segment_parameters = priors.sample(n_samples)
+
+        # append to master parameters dict
+        for key, value in segment_parameters.items():
+            parameters[key].extend(value)
+
+        # the center of the sample
+        # is geocent time
+        segment_parameters["geocent_time"] = signal_times + (
+            waveform_duration / 2
+        )
+
+        # generate raw waveforms
         raw_signals = generate_gw(
-            sample_params,
-            waveform_generator=waveform_generator,
+            segment_parameters, waveform_generator=waveform_generator
         )
 
-        signals, snr = project_raw_gw(
-            raw_signals,
-            sample_params,
-            waveform_generator,
-            ifo,
-            get_snr=True,
-            noise_psd=strain_psd,
-        )
+        # dictionary to store
+        # gwpy timeseries of background
+        raw_ts = {}
 
-        signals_list.append(signals)
-        snr_list.append(snr)
+        # load segment;
+        # expects that ifo is the name
+        # of the dataset
+        data = segment.load(*ifos)
 
-    old_snr = np.sqrt(np.sum(np.square(snr_list), axis=0))
-    new_snr = np.random.uniform(snr_range[0], snr_range[1], len(snr_list[0]))
-
-    signals_list = [
-        signals * (new_snr / old_snr)[:, None] for signals in signals_list
-    ]
-    sample_params["luminosity_distance"] = (
-        sample_params["luminosity_distance"] * old_snr / new_snr
-    )
-    snr_list = [snr * new_snr / old_snr for snr in snr_list]
-
-    outdir = Path(outdir)
-    frame_out_paths = [str(outdir / f.name) for f in map(Path, frame_files)]
-
-    for strain, signals, frame_path in zip(
-        strains, signals_list, frame_out_paths
-    ):
-        for i in range(n_samples):
-            idx1 = int(
-                (signal_times[i] - waveform_duration / 2.0) * sample_rate
-            )
-            idx2 = int(idx1 + waveform_duration * sample_rate)
-            strain[idx1:idx2] += signals[i]
-        strain.write(frame_path)
-
-    # Write params and similar to output file
-    param_file = outdir / f"param_file_{frame_start}-{frame_stop}.h5"
-    with h5py.File(param_file, "w") as f:
-        # write signals attributes, snr, and signal parameters
-        params_gr = f.create_group("signal_params")
-        for k, v in sample_params.items():
-            params_gr.create_dataset(k, data=v)
-
-        # Save signal times as actual GPS times
-        f.create_dataset("GPS-start", data=signal_times + frame_start)
+        # times array is returned last
+        times = data[-1]
 
         for i, ifo in enumerate(ifos):
-            ifo_gr = f.create_group(ifo)
-            ifo_gr.create_dataset("signal", data=signals_list[i])
-            ifo_gr.create_dataset("snr", data=snr_list[i])
+            raw_ts[ifo] = TimeSeries(data[i], times=times)
 
-        # write frame attributes
-        f.attrs.update(
-            {
-                "size": n_samples,
-                "frame_start": frame_start,
-                "frame_stop": frame_stop,
-                "sample_rate": sample_rate,
-                "psd_fftlength": fftlength,
-            }
-        )
+            # calculate psd for this segment
+            psd = raw_ts[ifo].psd(fftlength)
 
-        # Update signal attributes
-        f.attrs["waveform_duration"] = waveform_duration
-        f.attrs["flag"] = "GW"
+            # project raw waveforms
+            signals, snr = project_raw_gw(
+                raw_signals,
+                segment_parameters,
+                waveform_generator,
+                ifo,
+                get_snr=True,
+                noise_psd=psd,
+            )
 
-    return frame_out_paths, param_file
+            # loop over signals, injecting them into the
+            # raw strain
+
+            for signal_start, signal in zip(signal_times, signals):
+                signal_stop = signal_start + len(signal) * (1 / sample_rate)
+                signal_times = np.arange(
+                    signal_start, signal_stop, 1 / sample_rate
+                )
+
+                # create gwpy timeseries for signal
+                signal = TimeSeries(signal, times=signal_times)
+
+                # inject into raw background
+                raw_ts[ifo] = raw_ts[ifo].inject(signal)
+
+        # now write this segment to out TimeSlide
+        # in files of length file_length
+        for t0 in np.arange(start, stop, file_length):
+            inj_datasets = {}
+
+            tf = min(t0 + file_length, stop)
+            times = np.arange(t0, tf, 1 / sample_rate)
+
+            for ifo in ifos:
+                inj_datasets[ifo] = raw_ts[ifo].crop(t0, tf)
+
+            h5.write_timeseries(
+                out_timeslide.path, prefix="inj", t=times, **inj_datasets
+            )
+
+    # concat parameters for all segments and save
+    with h5py.File(out_timeslide.path / "params.h5", "w") as f:
+        for k, v in parameters.items():
+            f.create_dataset(k, data=v)
+
+    return out_timeslide

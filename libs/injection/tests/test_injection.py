@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import h5py
 import numpy as np
 import pytest
 from gwpy.detector import Channel
@@ -98,171 +96,38 @@ def test_generate_gw(mock_filter):
 
 
 @pytest.mark.parametrize(
-    "ifos,n_samples,sample_rate,frame_duration,waveform_duration,prior",
+    "ifos,sample_rate,spacing,file_length,fmin,prior",
     [
-        (["H1"], 1, 4096, 2, 0.5, "nonspin_BBH.prior"),
-        (["H1"], 10, 128, 1024, 60, "nonspin_BBH.prior"),
-        (["H1"], 50, 128, 4096, 8, "nonspin_BBH.prior"),
-        (["H1"], 50, 128, 4096, 60, "nonspin_BBH.prior"),
-        (["H1", "L1"], 1, 4096, 2, 0.5, "nonspin_BBH.prior"),
-        (["H1", "L1"], 10, 128, 1024, 60, "precess_tides.prior"),
-        (["H1", "L1"], 50, 128, 4096, 8, "precess_tides.prior"),
-        (["H1", "L1"], 50, 128, 4096, 60, "precess_tides.prior"),
+        (["H1", "L1"], 2048, 60, 4096, 32, "nonspin_BBH.prior"),
     ],
 )
-def test_signal_data_shape(
+def test_inject_signals_into_timeslide(
+    raw_timeslide,
+    inj_timeslide,
     ifos,
-    n_samples,
     sample_rate,
-    frame_duration,
-    waveform_duration,
+    spacing,
+    file_length,
+    fmin,
     prior,
 ):
-    """Test injection into varying frame lengths, waveform duration,
-    sampling frequency, and number of interferometers.
-    """
-    frame_files = []
-    channels = []
-    for ifo in ifos:
-        frame_content = mock_frame(sample_rate, frame_duration)
-        frame_filename = tempfile.mktemp(suffix=".gwf")
-        frame_content.write(frame_filename)
-        frame_files.append(frame_filename)
-        channels.append("Strain")
 
-    data_dir = tempfile.mkdtemp()
+    # TODO: why did we get rid of this fixture? just re using code
     prior_file = Path(__file__).absolute().parent / "prior_files"
     prior_file /= prior
     prior_file = prior_file.as_posix()
 
-    frames, signal_file = bbhnet.injection.inject_signals(
-        frame_files,
-        channels,
+    out_timeslide = bbhnet.injection.inject_signals_into_timeslide(
+        raw_timeslide,
+        inj_timeslide,
         ifos,
         prior_file,
-        n_samples,
-        data_dir,
-        waveform_duration=waveform_duration,
+        spacing,
+        sample_rate,
+        file_length,
+        fmin,
     )
 
-    sample_rate = TimeSeries.read(
-        frame_files[0], channels[0]
-    ).sample_rate.value
-    signal_length = waveform_duration * sample_rate
-
-    with h5py.File(signal_file, "r") as f:
-        for key in f["signal_params"].keys():
-            act_shape = f["signal_params"][key].shape
-            exp_shape = (n_samples,)
-            assert (
-                act_shape == exp_shape
-            ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
-
-        for ifo in ifos:
-            act_shape = f[ifo]["snr"].shape
-            exp_shape = (n_samples,)
-            assert (
-                act_shape == exp_shape
-            ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
-
-            act_shape = f[ifo]["signal"].shape
-            exp_shape = (n_samples, signal_length)
-            assert (
-                act_shape == exp_shape
-            ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
-
-        act_shape = f["GPS-start"].shape
-        exp_shape = (n_samples,)
-        assert (
-            act_shape == exp_shape
-        ), f"Expected shape {exp_shape} for {key}, found {act_shape}"
-
-
-@pytest.mark.parametrize(
-    "ifos,snr_range", [(["H1"], [2, 5]), (["H1", "L1"], [100, 500])]
-)
-def test_snr_range(ifos, snr_range):
-    n_samples = 10
-    waveform_duration = 8
-    frame_duration = 1000
-    data_dir = tempfile.mkdtemp()
-
-    frame_files = []
-    channels = []
-    for ifo in ifos:
-        frame_content = mock_frame(2048, frame_duration)
-        frame_filename = tempfile.mktemp(suffix=".gwf")
-        frame_content.write(frame_filename)
-        frame_files.append(frame_filename)
-        channels.append("Strain")
-
-    _, signal_file = bbhnet.injection.inject_signals(
-        frame_files,
-        channels,
-        ifos,
-        prior_file=str(TEST_DIR / "prior_files" / "nonspin_BBH.prior"),
-        n_samples=n_samples,
-        outdir=data_dir,
-        waveform_duration=waveform_duration,
-        snr_range=snr_range,
-    )
-
-    snr_list = []
-    with h5py.File(signal_file, "r") as f:
-        for ifo in ifos:
-            snr_list.append(f[ifo]["snr"][:])
-        mean_snrs = np.sqrt(np.sum(np.square(snr_list), axis=0))
-        if mean_snrs.size > 0:
-            assert all(snr_range[0] < mean_snrs) and all(
-                mean_snrs < snr_range[1]
-            ), f"Some of {mean_snrs} not in {snr_range}"
-
-
-@pytest.mark.parametrize(
-    "ifos,frame_duration", [(["H1"], 20), (["H1", "L1"], 200)]
-)
-def test_signal_injected(ifos, frame_duration):
-    data_dir = tempfile.mkdtemp()
-    n_samples = 1
-    waveform_duration = 8
-
-    frame_files = []
-    channels = []
-    for ifo in ifos:
-        frame_content = mock_frame(2048, frame_duration)
-        frame_filename = tempfile.mktemp(suffix=".gwf")
-        frame_content.write(frame_filename)
-        frame_files.append(frame_filename)
-        channels.append("Strain")
-
-    out_frames, signal_file = bbhnet.injection.inject_signals(
-        frame_files,
-        channels,
-        ifos,
-        prior_file=str(TEST_DIR / "prior_files" / "nonspin_BBH.prior"),
-        n_samples=n_samples,
-        outdir=data_dir,
-        waveform_duration=waveform_duration,
-    )
-
-    with h5py.File(signal_file, "r") as f:
-        signal_times = f["signal_params"]["geocent_time"][:]
-
-        for n in range(n_samples):
-            for i, ifo in enumerate(ifos):
-                orig_data = TimeSeries.read(frame_files[i], channels[i])
-                inj_data = TimeSeries.read(out_frames[i], channels[i])
-                sample_rate = orig_data.sample_rate.value
-                signal_time = signal_times[n]
-                signal = f[ifo]["signal"][n, :]
-
-                idx1 = int((signal_time - waveform_duration / 2) * sample_rate)
-                idx2 = int(idx1 + waveform_duration * sample_rate)
-
-                exp_output = signal + orig_data.value[idx1:idx2]
-                act_output = inj_data.value[idx1:idx2]
-
-                assert all(
-                    exp_output == act_output
-                ), f"Sum of signal {n} and orignal data does not match \
-                    injected data for {ifo}"
+    param_file = out_timeslide.path / "params.h5"
+    assert out_timeslide.path.exists()
+    assert param_file.exists()

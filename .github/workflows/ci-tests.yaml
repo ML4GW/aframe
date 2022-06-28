@@ -53,6 +53,8 @@ jobs:
               - 'projects/sandbox/export/**'
             infer:
               - 'projects/sandbox/infer/**'
+            timeslide_injections:
+              - 'projects/sandbox/timeslide_injections/**'
 
       # install gcc for bilby build
       -
@@ -165,4 +167,13 @@ jobs:
           || (steps.filter.outputs.infer == 'true')
         env:
           test_dir: /github/workspace/projects/sandbox/infer
+        run: pinto -p $test_dir run pytest $test_dir/tests
+
+      - name: run timeslide injection tests
+        if: |
+          (steps.filter.outputs.timeslide_injections == 'true')
+          || (steps.filter.outputs.io == 'true')
+          || (steps.filter.outputs.injection == 'true')
+        env:
+          test_dir: /github/workspace/projects/sandbox/timeslide_injections
         run: pinto -p $test_dir run pytest $test_dir/tests

@@ -19,8 +19,12 @@ packaging = "<21.0"
 scipy = {version = "<1.8", optional = true}
 astropy = {version = "<5.0", optional = true}
 
+# numpy constraint
+numpy = {version = ">=1.22.0,<1.22.4", optional = true}
+
 [tool.poetry.extras]
 gwpy = ["scipy", "astropy"]
+numpy = ["numpy"]
 
 [build-system]
 requires = ["poetry>=1.2"]
