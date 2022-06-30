@@ -10,15 +10,14 @@ infer = "infer:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
+"hermes.typeo" = "^0.1.5"
 
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
-"hermes.typeo" = {path = "../../../gw-iaas/libs/hermes/hermes.typeo", develop = true}
-"hermes.stillwater" = {path = "../../../gw-iaas/libs/hermes/hermes.stillwater", develop = true}
-
-"tritonserve" = {path = "../../../tritonserve", develop = true}
+"hermes.stillwater" = {path = "../../../hermes/hermes/hermes.stillwater", develop = true}
+"hermes.aeriel" = {path = "../../../hermes/hermes/hermes.aeriel", extras = ["serve"], develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

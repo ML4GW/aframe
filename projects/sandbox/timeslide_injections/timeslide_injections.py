@@ -11,12 +11,12 @@ from gwpy.segments import (
     SegmentListDict,
 )
 from gwpy.timeseries import TimeSeries, TimeSeriesDict
-from hermes.typeo import typeo
 
 from bbhnet.injection import inject_signals_into_timeslide
 from bbhnet.io import h5
 from bbhnet.io.timeslides import TimeSlide
 from bbhnet.logging import configure_logging
+from hermes.typeo import typeo
 
 
 def circular_shift_segments(

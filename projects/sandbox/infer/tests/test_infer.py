@@ -1,10 +1,8 @@
-import time
+from queue import Queue
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from hermes.stillwater.process import PipelineProcess
-from hermes.stillwater.utils import Package
 from infer import main as infer
 
 from bbhnet.io.h5 import read_timeseries, write_timeseries
@@ -21,16 +19,9 @@ class DummyInferInput:
 
 def get_async_stream_infer(obj):
     def f(*args, **kwargs):
-        obj.out_q.put(
-            {
-                "prob": Package(
-                    x=kwargs["inputs"][0].x[0, 0, -1] + 1,
-                    t0=time.time(),
-                    sequence_id=kwargs["sequence_id"],
-                    sequence_end=kwargs["sequence_end"],
-                )
-            }
-        )
+        y = kwargs["inputs"][0].x[0, 0, -1] + 1
+        response = (y, None, kwargs["sequence_id"])
+        obj.callback_q.put(response)
 
     return f
 
@@ -55,18 +46,18 @@ def new_init(sample_rate, inference_sampling_rate):
         url,
         model_name,
         model_version,
-        name,
     ):
-        PipelineProcess.__init__(obj, name)
         obj.client = MagicMock()
         obj.client.async_stream_infer = get_async_stream_infer(obj)
 
         obj.inputs = []
         obj.states = [(infer_input, {"": (1, 2, stream_size)})]
+        obj.num_states = 1
         obj.model_name = model_name
         obj.model_version = model_version
         obj.message_start_times = {}
-        obj.profile = False
+        obj.clock = None
+        obj.callback_q = Queue()
 
     return __init__
 
@@ -118,9 +109,12 @@ def fake_init(obj, *args, **kwargs):
     obj._response_queue = MagicMock()
 
 
-@patch("tritonserve.SingularityInstance.__init__", new=fake_init)
-@patch("tritonserve.SingularityInstance.run")
-@patch("tritonserve.SingularityInstance.name", return_value="FAKE")
+SINGULARITY_INSTANCE = "hermes.aeriel.serve.SingularityInstance"
+
+
+@patch(SINGULARITY_INSTANCE + ".__init__", new=fake_init)
+@patch(SINGULARITY_INSTANCE + ".run")
+@patch(SINGULARITY_INSTANCE + ".name", return_value="FAKE")
 @patch(
     "tritonclient.grpc.InferenceServerClient.is_server_live", return_value=True
 )
@@ -133,7 +127,7 @@ def test_infer(
     inference_sampling_rate,
     new_init,
 ):
-    with patch("hermes.stillwater.InferenceClient.__init__", new=new_init):
+    with patch("hermes.aeriel.client.InferenceClient.__init__", new=new_init):
         infer(
             "",
             "",

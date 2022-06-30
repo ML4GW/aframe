@@ -7,7 +7,6 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from hermes.typeo import typeo
 from rich.progress import Progress
 
 from bbhnet.analysis.analysis import integrate
@@ -17,6 +16,7 @@ from bbhnet.io.h5 import write_timeseries
 from bbhnet.io.timeslides import Segment, TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
+from hermes.typeo import typeo
 
 event_times = [1186302519.8, 1186741861.5, 1187058327.1, 1187529256.5]
 event_names = ["GW170809", "GW170814", "GW170818", "GW170823"]

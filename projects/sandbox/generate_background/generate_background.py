@@ -7,9 +7,9 @@ import numpy as np
 from gwdatafind import find_urls
 from gwpy.segments import DataQualityDict
 from gwpy.timeseries import TimeSeries
-from hermes.typeo import typeo
 
 from bbhnet.logging import configure_logging
+from hermes.typeo import typeo
 
 
 @typeo

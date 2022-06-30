@@ -1,19 +1,16 @@
 import logging
-import time
 from pathlib import Path
-from queue import Empty
 from typing import Iterable, Optional
 
 import numpy as np
-from hermes.stillwater import InferenceClient
-from hermes.stillwater.utils import ExceptionWrapper, Package
-from hermes.typeo import typeo
 
 from bbhnet.io.h5 import write_timeseries
 from bbhnet.io.timeslides import Segment, TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
-from tritonserve import serve
+from hermes.aeriel.client import InferenceClient
+from hermes.aeriel.serve import serve
+from hermes.typeo import typeo
 
 
 def load(segment: Segment):
@@ -28,15 +25,13 @@ def stream_data(
     num_streams = (x.shape[-1] - 1) // stream_size + 1
     for i in range(num_streams):
         stream = x[:, i * stream_size : (i + 1) * stream_size]
-        package = Package(
-            x=stream,
-            t0=time.time(),
+        client.infer(
+            stream,
             request_id=i,
             sequence_id=sequence_id,
             sequence_start=i == 0,
             sequence_end=(i + 1) == num_streams,
         )
-        client.in_q.put(package)
 
 
 def infer(
@@ -70,25 +65,17 @@ def infer(
         while len(timeseries) > 0:
             # see if the client has a response for us,
             # otherwise take a breath then keep going
-            try:
-                package = client.out_q.get_nowait()
-            except Empty:
-                time.sleep(1e-4)
+            response = client.get()
+            if response is None:
                 continue
-            else:
-                if isinstance(package, ExceptionWrapper):
-                    package.reraise()
-                package = package["prob"]
-
-            # grab the network output and the corresponding
-            # sequence id that the output belongs to
-            y = package.x.reshape(-1)
-            sequence_id = package.sequence_id
+            y, _, sequence_id = response
 
             # update our running neural network outputs
             y = np.append(timeseries[sequence_id]["y"], y)
             timeseries[sequence_id]["y"] = y
-            if package.sequence_end:
+            if len(timeseries[sequence_id]["y"]) == len(
+                timeseries[sequence_id]["t"]
+            ):
                 logging.debug(f"Finished inference on sequence {sequence_id}")
 
                 # grab the relevant data from the dictionary entry
@@ -122,7 +109,7 @@ def main(
     sample_rate: float,
     inference_sampling_rate: float,
     num_workers: int,
-    model_version: int = 1,
+    model_version: int = -1,
     base_sequence_id: int = 1001,
     log_file: Optional[str] = None,
     verbose: bool = False,
@@ -133,9 +120,7 @@ def main(
     # spin up a triton server and don't move on until it's ready
     with serve(model_repo_dir, wait=True):
         # now build a client to connect to the inference service
-        client = InferenceClient(
-            "localhost:8001", model_name, model_version, name="client"
-        )
+        client = InferenceClient("localhost:8001", model_name, model_version)
 
         # create a process pool that we'll use to perform
         # read/writes of timeseries in parallel

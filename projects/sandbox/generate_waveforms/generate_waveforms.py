@@ -9,10 +9,10 @@ import h5py
 import numpy as np
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
-from hermes.typeo import typeo
 
 from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging
+from hermes.typeo import typeo
 
 
 @typeo

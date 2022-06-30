@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 from typing import Callable, Optional
 
-import hermes.quiver as qv
 import torch
 
+import hermes.quiver as qv
 from bbhnet.architectures import architecturize
 from bbhnet.data.transforms import WhiteningTransform
 from bbhnet.logging import configure_logging

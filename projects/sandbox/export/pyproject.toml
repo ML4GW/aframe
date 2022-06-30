@@ -12,15 +12,15 @@ export-model = "export:export"
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 gwpy = "^2.1"
+"hermes.typeo" = "^0.1.5"
 
 "bbhnet.architectures" = {path = "../../../libs/architectures", develop = true}
 "bbhnet.base" = {path = "../../../libs/base", develop = true}
 "bbhnet.data" = {path = "../../../libs/data", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
-"hermes.typeo" = {path = "../../../gw-iaas/libs/hermes/hermes.typeo", develop = true}
 
 [tool.poetry.dependencies."hermes.quiver"]
-path = "../../../gw-iaas/libs/hermes/hermes.quiver"
+path = "../../../hermes/hermes/hermes.quiver"
 develop = true
 extras = ["torch", "tensorflow"]
 

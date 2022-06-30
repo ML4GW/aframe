@@ -1,6 +1,3 @@
-[submodule "gw-iaas"]
-	path = gw-iaas
-	url = git@github.com:fastmachinelearning/gw-iaas.git
-[submodule "tritonserve"]
-	path = tritonserve
-	url = git@github.com:ML4GW/tritonserve.git
+[submodule "hermes"]
+	path = hermes
+	url = git@github.com:ML4GW/hermes.git

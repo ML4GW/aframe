@@ -8,11 +8,11 @@ import h5py
 import numpy as np
 from gwpy.segments import Segment, SegmentList
 from gwpy.timeseries import TimeSeries
-from hermes.typeo import typeo
 from omicron.cli.process import main as omicron_main
 from tqdm import tqdm
 
 from bbhnet.logging import configure_logging
+from hermes.typeo import typeo
 
 """
 Script that generates a dataset of glitches from omicron triggers.
