@@ -177,6 +177,12 @@ def train(
     model = architecture(num_ifos)
     model.to(device)
 
+    # now move the train dataset and the validation dataset
+    # (if the latter exists) to the target device
+    train_dataset.to(device)
+    if valid_dataset is not None:
+        valid_dataset.to(device)
+
     # if we passed a module for preprocessing,
     # include it in the model so that the weights
     # get exported along with everything else

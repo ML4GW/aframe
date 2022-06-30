@@ -87,11 +87,11 @@ def ones_livingston_background(ones_data, write_background):
 
 
 @pytest.fixture(params=["path", "sampler"])
-def glitch_sampler(arange_glitches, request, device):
+def glitch_sampler(arange_glitches, request):
     if request.param == "path":
         return arange_glitches
     else:
-        return GlitchSampler(arange_glitches, device)
+        return GlitchSampler(arange_glitches)
 
 
 def validate_sequential(X):
@@ -124,8 +124,18 @@ def test_random_waveform_dataset(
         sample_rate=sample_rate,
         batch_size=batch_size,
         batches_per_epoch=10,
-        device=device,
     )
+
+    for ifo in ["hanford", "livingston"]:
+        background = getattr(dataset, f"{ifo}_background")
+        assert background.device.type == "cpu"
+        assert background.dtype == torch.float64
+
+    dataset.to(device)
+    for ifo in ["hanford", "livingston"]:
+        background = getattr(dataset, f"{ifo}_background")
+        assert background.device.type == device
+        assert background.dtype == torch.float32
 
     # test the background sampling method to make sure
     # that the base batch is generated properly
@@ -205,8 +215,11 @@ def test_glitch_sampling(
             glitch_frac=glitch_frac,
             glitch_sampler=glitch_sampler,
             batches_per_epoch=10,
-            device=device,
         )
+        dataset.to(device)
+        assert dataset.glitch_sampler.hanford.device.type == device
+        assert dataset.glitch_sampler.livingston.device.type == device
+
     expected_num = max(1, int(glitch_frac * batch_size))
     assert dataset.num_glitches == expected_num
     validate_dataset(dataset, dataset.num_glitches, 0)
@@ -243,8 +256,8 @@ def test_waveform_sampling(
             waveform_sampler=waveform_sampler,
             waveform_frac=waveform_frac,
             batches_per_epoch=10,
-            device=device,
         )
+        dataset.to(device)
     expected_num = max(1, int(waveform_frac * batch_size))
     assert dataset.num_waveforms == expected_num
 

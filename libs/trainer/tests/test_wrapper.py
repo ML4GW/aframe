@@ -23,11 +23,24 @@ def preprocess(request):
     return request.param
 
 
-def dataset(batches):
-    for i in range(batches):
+class dataset:
+    def __init__(self, batches):
+        self.batches = batches
+
+    def __iter__(self):
+        self.i = 0
+        return self
+
+    def __next__(self):
+        if self.i == self.batches:
+            raise StopIteration
         x = torch.randn(8, 2, 512).type(torch.float32)
         y = torch.randint(0, 2, size=(8, 1)).type(torch.float32)
-        yield x, y
+        self.i += 1
+        return x, y
+
+    def to(self, device):
+        return
 
 
 class Preprocessor(Transform):

@@ -8,7 +8,11 @@ from bbhnet.data.glitch_sampler import GlitchSampler
 def test_glitch_sampler(
     arange_glitches, glitch_length, sample_rate, data_length, device
 ):
-    sampler = GlitchSampler(arange_glitches, device)
+    sampler = GlitchSampler(arange_glitches)
+    sampler.to(device)
+    assert sampler.hanford.device.type == device
+    assert sampler.livingston.device.type == device
+
     assert sampler.hanford.shape == (10, glitch_length * sample_rate)
     assert sampler.livingston.shape == (10, glitch_length * sample_rate)
 

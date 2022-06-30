@@ -37,7 +37,6 @@ class RandomWaveformDataset:
         glitch_sampler: Union[GlitchSampler, str, None] = None,
         glitch_frac: float = 0,
         trigger_distance: float = 0,
-        device: torch.device = "cuda",
     ) -> None:
         """Iterable dataset which can sample and inject auxiliary data
 
@@ -117,9 +116,6 @@ class RandomWaveformDataset:
             trigger_distance:
                 The maximum number of seconds the t0 of signals and glitches
                 can lie away from the edge of sampled kernels
-            device:
-                The device on which to host all the relevant
-                torch tensors.
         """
 
         # default behavior is set trigger_distance to half
@@ -137,7 +133,6 @@ class RandomWaveformDataset:
         self.kernel_size = int(kernel_length * sample_rate)
         self.batch_size = batch_size
         self.batches_per_epoch = batches_per_epoch
-        self.device = device
 
         # load in the background data
         hanford_background, t0 = _load_background(hanford_background)
@@ -146,10 +141,10 @@ class RandomWaveformDataset:
 
         self.hanford_background = torch.tensor(
             hanford_background, dtype=torch.float64
-        ).to(device)
+        )
         self.livingston_background = torch.tensor(
             livingston_background, dtype=torch.float64
-        ).to(device)
+        )
 
         # if we specified a waveform sampler, fit its snr
         # computation to the given background asd
@@ -175,7 +170,7 @@ class RandomWaveformDataset:
             self.num_glitches = max(1, int(glitch_frac * batch_size))
 
             if isinstance(glitch_sampler, (str, Path)):
-                glitch_sampler = GlitchSampler(glitch_sampler, device)
+                glitch_sampler = GlitchSampler(glitch_sampler)
             self.glitch_sampler = glitch_sampler
         else:
             # likewise, ensure that we didn't indicate that
@@ -183,6 +178,11 @@ class RandomWaveformDataset:
             assert glitch_frac == 0
             self.num_glitches = 0
             self.glitch_sampler = None
+
+        # initialize our device to be cpu so that we
+        # have to be explicit about forcing the background
+        # tensors to the device at lower precision
+        self.device = "cpu"
 
         # make sure that we have at least _some_
         # pure background in each batch
@@ -238,6 +238,29 @@ class RandomWaveformDataset:
         kernels = [i for j in kernels for i in j]
         kernels = torch.stack(kernels, dim=0)
         return kernels.reshape(self.batch_size, 2, -1)
+
+    def to(self, device: str):
+        """
+        Map the background tensors to the indicated device
+        and downcast to float32. Implement the downcasting
+        here because the assumption is that if you're moving
+        to the device, you're ready for training, and you
+        (in general) don't want to train at double precision
+        """
+        self.hanford_background = self.hanford_background.to(device).type(
+            torch.float32
+        )
+        self.livingston_background = self.livingston_background.to(
+            device
+        ).type(torch.float32)
+
+        if self.glitch_sampler is not None:
+            self.glitch_sampler.to(device)
+
+        # store the indicated device so that we know where to
+        # move our simulated waveforms and target tensors
+        # at data loading time
+        self.device = device
 
     def __iter__(self):
         self._batch_idx = 0
