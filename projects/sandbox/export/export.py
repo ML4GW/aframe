@@ -30,6 +30,7 @@ def export(
     Export a BBHNet architecture to a model repository
     for streaming inference, including adding a model
     for caching input snapshot state on the server.
+
     Args:
         architecture:
             A function which takes as input a number of witness
@@ -126,6 +127,10 @@ def export(
         bbhnet = repo.add("bbhnet", platform=platform)
         if instances is not None:
             bbhnet.config.add_instance_group(count=instances)
+
+    # turn off graph optimization because of this error
+    # https://github.com/triton-inference-server/server/issues/3418
+    bbhnet.config.optimization.graph.level = -1
 
     # export this version of the model (with its current
     # weights), to this entry in the model repository

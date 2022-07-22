@@ -132,6 +132,8 @@ def validate_repo(repo_dir):
                 for j in range(expected_versions):
                     assert (model / str(j + 1) / "model.onnx").is_file()
                 assert not (model / str(j + 2)).is_dir()
+
+                assert config.optimization.graph.level == -1
             elif model.name == "bbhnet-stream":
                 assert (model / "1").is_dir()
                 assert not (model / "2").is_dir()
