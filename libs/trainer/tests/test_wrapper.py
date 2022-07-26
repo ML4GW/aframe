@@ -46,10 +46,15 @@ class dataset:
 class Preprocessor(Transform):
     def __init__(self):
         super().__init__()
-        self.factor = self.add_parameter(2)
+        self.factor = self.add_parameter(10.0)
+        print(self.factor)
 
     def forward(self, x):
         return self.factor * x
+
+    def to(self, device):
+        super().to(device)
+        return
 
 
 @pytest.fixture
@@ -57,7 +62,7 @@ def get_data(validate, preprocess):
     def fn(batches: int):
         train_dataset = dataset(batches)
         valid_dataset = dataset(batches) if validate else None
-        preprocessor = Preprocessor if preprocess else None
+        preprocessor = Preprocessor() if preprocess else None
         return train_dataset, valid_dataset, preprocessor
 
     return fn
@@ -89,9 +94,9 @@ def test_wrapper(data_fn, preprocess, outdir, unique_args):
 
     # make sure we can run the function as-is with regular arguments
     if unique_args:
-        train_dataset, valid_dataset = fn(4)
+        train_dataset, valid_dataset, preprocessor = fn(4)
     else:
-        train_dataset, valid_dataset = fn(4, 1)
+        train_dataset, valid_dataset, preprocessor = fn(4, 1)
 
     for i, (X, y) in enumerate(train_dataset):
         continue

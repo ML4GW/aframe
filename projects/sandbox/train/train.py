@@ -13,13 +13,8 @@ from bbhnet.trainer import trainify
 # (i.e. the training and possible validation data)
 # get passed as inputs to deepclean.trainer.trainer.train,
 # as well as to expose these arguments _as well_ as those
-# from deepclean.trainer.trainer.train to command line
+# from bbhnet.trainer.trainer.train to command line
 # execution and parsing
-
-# note that this function is trivial:
-# it simply just returns the data paths passed to it.
-# however, future projects may have more complicated
-# data discovery/generation processes.
 
 
 @trainify
@@ -39,6 +34,7 @@ def main(
     batches_per_epoch: int,
     device: str,
     outdir: Path,
+    logdir: Path,
     fduration: Optional[float] = None,
     trigger_distance_size: float = 0,
     val_glitch_dataset: str = None,
@@ -81,9 +77,10 @@ def main(
     """
 
     # make out dir and configure logging file
-    outdir.mkdir(exist_ok=True)
+    outdir.mkdir(exist_ok=True, parents=True)
+    logdir.mkdir(exist_ok=True, parents=True)
 
-    configure_logging(outdir / "train.log", verbose)
+    configure_logging(logdir / "train.log", verbose)
 
     # TODO: definitely a cleaner way to set validation flag
     # if validation files are all passed, set validate bool to true
@@ -100,7 +97,7 @@ def main(
     # for simplicity
 
     # initiate training glitch sampler
-    train_glitch_sampler = GlitchSampler(glitch_dataset, device=device)
+    train_glitch_sampler = GlitchSampler(glitch_dataset)
 
     # initiate training waveform sampler
     train_waveform_sampler = WaveformSampler(
@@ -127,7 +124,6 @@ def main(
         train_glitch_sampler,
         glitch_frac,
         trigger_distance_size,
-        device,
     )
 
     # TODO: hard-coding num_ifos into preprocessor. Should
@@ -148,7 +144,6 @@ def main(
     if validate:
         val_glitch_sampler = GlitchSampler(
             val_glitch_dataset,
-            device=device,
         )
 
         # deterministic validation waveform sampler
@@ -172,7 +167,6 @@ def main(
             waveform_frac,
             val_glitch_sampler,
             glitch_frac,
-            device,
         )
     else:
         valid_dataset = None

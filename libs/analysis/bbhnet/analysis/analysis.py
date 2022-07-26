@@ -7,11 +7,11 @@ from bbhnet.analysis.integrators import boxcar_filter
 if TYPE_CHECKING:
     from bbhnet.analysis.integrators import Integrator
     from bbhnet.analysis.normalizers import Normalizer
-    from bbhnet.io.timeslides import Segment
 
 
 def integrate(
-    segment: "Segment",
+    y: np.ndarray,
+    t: np.ndarray,
     kernel_length: float = 1,
     window_length: Optional[float] = None,
     integrator: "Integrator" = boxcar_filter,
@@ -19,17 +19,17 @@ def integrate(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Analyze a segment of time-contiguous BBHNet outputs
 
-    Compute matched filter outputs on a stretch
-    of frame files that are assumed to be contiguous
+    Compute matched filter outputs on an array of
+    network outputs that are assumed to be contiguous
     and ordered in time. Matched filters are computed
     as the average over the the last `window_length`
-    seconds of data, optionally normalized by the mean
+    seconds of data. Optionally normalized by the mean
     and standard deviation of the previous `norm_seconds`
     seconds worth of data.
 
     Args:
-        segment:
-            Segment of contiguous HDF5 files to analyze
+        y: Array of network outputs to integrate
+        t: timestamps of network outputs
         kernel_length:
             The length of time, in seconds, of the input kernel
             to BBHNet used to produce the outputs being analyzed
@@ -44,10 +44,9 @@ def integrate(
             outputs. Default `boxcar_filter` just performs simple
             uniform integration
         normalizer:
-            Callable with a `.fit` method to fit a background of
-            raw neural network outputs for normalizing integrated
-            outputs
-    Returns:
+            A pre-fit Normalizer object
+
+        Returns:
         Array of timestamps corresponding to the
             _end_ of the input kernel that would produce
             the corresponding network output and matched
@@ -58,7 +57,6 @@ def integrate(
 
     # read in all the data for a given segment
     # TODO: should we make the dataset name an argument?
-    y, t = segment.load("out")
     sample_rate = 1 / (t[1] - t[0])
     window_length = window_length or kernel_length
     window_size = int(window_length * sample_rate)
@@ -67,7 +65,6 @@ def integrate(
     integrated = integrator(y, window_size)
 
     if normalizer is not None:
-        normalizer.fit(y)
         integrated = normalizer(integrated, window_size)
         y = y[-len(integrated) :]
         t = t[-len(integrated) :]

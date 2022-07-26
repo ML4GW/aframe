@@ -14,7 +14,7 @@ from bbhnet.logging import configure_logging
 def export(
     architecture: Callable,
     repository_directory: str,
-    output_directory: Path,
+    outdir: Path,
     num_ifos: int,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -39,7 +39,7 @@ def export(
         repository_directory:
             Directory to which to save the models and their
             configs
-        output_directory:
+        outdir:
             Path to save logs. If `weights` is `None`, this
             directory is assumed to contain a file `"weights.pt"`.
         num_ifos:
@@ -75,17 +75,23 @@ def export(
         verbose:
             If set, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
+        **kwargs:
+            key word arguments specific to the export platform
     """
+
+    # make relevant directories
+    logging.info(architecture)
+    outdir.mkdir(exist_ok=True, parents=True)
 
     # if we didn't specify a weights filename, assume
     # that a "weights.pt" lives in our output directory
     if weights is None or weights.is_dir():
-        weights_dir = output_directory if weights is None else weights
+        weights_dir = outdir if weights is None else weights
         weights = weights_dir / "weights.pt"
     if not weights.exists():
         raise FileNotFoundError(f"No weights file '{weights}'")
 
-    configure_logging(output_directory / "export.log", verbose)
+    configure_logging(outdir / "export.log", verbose)
 
     # instantiate the architecture and initialize
     # its weights with the trained values
@@ -136,12 +142,11 @@ def export(
     # weights), to this entry in the model repository
     input_shape = (1, num_ifos, int(kernel_length * sample_rate))
 
-    # TODO: make opset version a parameter?
     bbhnet.export_version(
         nn,
         input_shapes={"hoft": input_shape},
         output_names=["discriminator"],
-        opset_version=15,
+        opset_version=13,
     )
 
     # now try to create an ensemble that has a snapshotter

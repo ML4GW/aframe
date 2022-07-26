@@ -268,7 +268,8 @@ def main(
     overlap: int,
     mismatch_max: float,
     window: float,
-    outdir: Path,
+    datadir: Path,
+    logdir: Path,
     channel: str,
     frame_type: str,
     sample_rate: float,
@@ -313,34 +314,26 @@ def main(
         to file containing vetoes
     """
 
-    outdir.mkdir(exist_ok=True, parents=True)
+    logdir.mkdir(exist_ok=True, parents=True)
+    datadir.mkdir(exist_ok=True, parents=True)
 
-    configure_logging(outdir / "generate_glitches.log", verbose)
-
-    # TODO: add check that system has condor installation.
-    # In the future, we can try to eliminate condor dependency,
-    # but for now using condor will speed up jobs.
-
-    # create logging file in model_dir
-    logging.basicConfig(
-        filename=outdir / "log.log",
-        format="%(message)s",
-        filemode="w",
-        level=logging.INFO,
-    )
+    configure_logging(logdir / "generate_glitches.log", verbose)
 
     # output file
-    glitch_file = outdir / Path("glitches.h5")
+    glitch_file = datadir / "glitches.h5"
 
     if glitch_file.exists() and not force_generation:
-        logging.info("Glitch file exists, not generating glitvches")
+        logging.info(
+            "Glitch data already exists and forced generation is off. "
+            "Not generating glitches"
+        )
         return
 
     # nyquist
     f_max = sample_rate / 2
 
     for ifo in ifos:
-        run_dir = outdir / ifo
+        run_dir = datadir / ifo
         run_dir.mkdir(exist_ok=True)
 
         # launch omicron dag for ifo

@@ -15,7 +15,10 @@ def test_make_tensor(tensor_type, device):
     # test default behavior
     t = _make_tensor(1.0, device)
     assert isinstance(t, torch.Tensor)
-    assert t.ndim == 1
+    # TODO: not sure why this assertion
+    # was ndim == 1 before since this is
+    # a scalar?
+    assert t.ndim == 0
     assert t.dtype == torch.float32
     assert t.device == device
 
@@ -34,7 +37,7 @@ def test_make_tensor(tensor_type, device):
     # now run same tests with explicit tensor type
     t = _make_tensor(1.0, device, tensor_type)
     assert isinstance(t, torch.Tensor)
-    assert t.ndim == 1
+    assert t.ndim == 0
     assert t.dtype == tensor_type
     assert t.device == device
 
@@ -58,8 +61,11 @@ def test_transform(tensor_type, device):
     param = Transform.add_parameter(None, 1.0, device, tensor_type)
     assert isinstance(param, torch.nn.Parameter)
     assert not param.requires_grad
-    assert param.data[0] == 1.0
-    assert param.ndim == 1
+    # TODO: same as above:
+    # do we want these scalars
+    # to have ndim > 0?
+    assert param.data == 1.0
+    assert param.ndim == 0
     assert param.dtype == tensor_type
     assert param.device == device
 

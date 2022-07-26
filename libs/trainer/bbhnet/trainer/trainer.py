@@ -32,7 +32,6 @@ def train_for_one_epoch(
             predictions = torch.flatten(model(samples))
             targets = torch.flatten(targets)
             loss = criterion(predictions, targets)
-
         train_loss += loss.item()
         samples_seen += len(samples)
 
@@ -167,6 +166,7 @@ def train(
     device = device or "cpu"
     os.makedirs(outdir, exist_ok=True)
 
+    logging.info(f"Device: {device}")
     # Creating model, loss function, optimizer and lr scheduler
     logging.info("Building and initializing model")
 
@@ -294,6 +294,11 @@ def train(
                         "epochs, halting training early".format(early_stop)
                     )
                     break
+
+    # TODO: remove me; here b/c
+    # we don't have validation yet
+    weights_path = os.path.join(outdir, "weights.pt")
+    torch.save(model.state_dict(), weights_path)
 
     # return the training results
     return history

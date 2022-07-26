@@ -15,6 +15,7 @@ lalsuite = "^7.4"
 
 "bbhnet.base" = {path = "../base", extras = ["gwpy", "numpy"], develop = true}
 "bbhnet.io" ={ path = "../io",  develop = true}
+"bbhnet.parallelize" = {path = "../parallelize", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

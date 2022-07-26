@@ -7,9 +7,18 @@ import pytest
 from generate_waveforms import main
 
 
-@pytest.fixture  # (scope="session")
+@pytest.fixture
 def data_dir():
     tmpdir = Path(__file__).resolve().parent / "tmp"
+    tmpdir.mkdir(parents=True, exist_ok=False)
+    yield tmpdir
+    logging.shutdown()
+    shutil.rmtree(tmpdir)
+
+
+@pytest.fixture
+def log_dir():
+    tmpdir = Path(__file__).resolve().parent / "log"
     tmpdir.mkdir(parents=True, exist_ok=False)
     yield tmpdir
     logging.shutdown()
@@ -39,7 +48,7 @@ def prior_file(request):
 
 
 def test_check_file_contents(
-    data_dir, n_samples, waveform_duration, sample_rate, prior_file
+    data_dir, log_dir, n_samples, waveform_duration, sample_rate, prior_file
 ):
 
     signal_length = waveform_duration * sample_rate
@@ -47,6 +56,7 @@ def test_check_file_contents(
     signal_file = main(
         prior_file,
         n_samples,
+        log_dir,
         data_dir,
         waveform_duration=waveform_duration,
         sample_rate=sample_rate,

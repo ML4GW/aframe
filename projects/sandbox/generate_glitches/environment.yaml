@@ -9,4 +9,4 @@ dependencies:
   - python-nds2-client
   - python-ligo-lw
   - pyomicron
-  - omicron
+  - omicron=2.4.2

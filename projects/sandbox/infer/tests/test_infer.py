@@ -68,38 +68,43 @@ def tmpdir(tmp_path):
     return tmp_path
 
 
+@pytest.fixture(params=[["raw", "injection"]])
+def fields(request):
+    return request.param
+
+
 @pytest.fixture
-def data_dir(tmpdir, sample_rate):
+def data_dir(tmpdir, sample_rate, fields):
     data_dir = tmpdir / "data"
     data_dir.mkdir()
 
-    for dt in ["0.0", "0.5", "1.0"]:
-        write_dir = data_dir / f"dt-{dt}" / "raw"
-        write_dir.mkdir(parents=True)
+    for field in fields:
+        for dt in ["0.0", "0.5", "1.0"]:
+            write_dir = data_dir / f"dt-{dt}" / field
+            write_dir.mkdir(parents=True)
 
-        x = np.arange(0, 1024, 1 / sample_rate)
-        t = 1234567890 + x
+            x = np.arange(0, 1024, 1 / sample_rate)
+            t = 1234567890 + x
 
-        # create two segments of length 3 * 1024
-        # and 2 * 1024 seconds respectively for
-        # each timeslide
-        for i in range(3):
-            write_timeseries(
-                write_dir,
-                prefix="raw",
-                hanford=x + i * 1024,
-                livingston=-x,
-                t=t + i * 1024,
-            )
-        for i in range(2):
-            write_timeseries(
-                write_dir,
-                prefix="raw",
-                hanford=x + i * 1024,
-                livingston=-x,
-                t=t + (i + 4) * 1024,
-            )
-
+            # create two segments of length 3 * 1024
+            # and 2 * 1024 seconds respectively for
+            # each timeslide
+            for i in range(3):
+                write_timeseries(
+                    write_dir,
+                    prefix=field,
+                    H1=x + i * 1024,
+                    L1=-x,
+                    t=t + i * 1024,
+                )
+            for i in range(2):
+                write_timeseries(
+                    write_dir,
+                    prefix=field,
+                    H1=x + i * 1024,
+                    L1=-x,
+                    t=t + (i + 4) * 1024,
+                )
     return data_dir
 
 
@@ -123,32 +128,36 @@ def test_infer(
     run_mock,
     name_mock,
     data_dir,
+    fields,
     sample_rate,
     inference_sampling_rate,
     new_init,
 ):
+
     with patch("hermes.aeriel.client.InferenceClient.__init__", new=new_init):
         infer(
             "",
             "",
             data_dir=data_dir,
-            field="raw",
+            write_dir=data_dir,
+            fields=fields,
             sample_rate=sample_rate,
             inference_sampling_rate=inference_sampling_rate,
             num_workers=2,
         )
 
     step_size = int(sample_rate // inference_sampling_rate)
-    for dt in ["0.0", "0.5", "1.0"]:
-        out_dir = data_dir / f"dt-{dt}" / "out"
-        assert out_dir.exists()
+    for field in fields:
+        for dt in ["0.0", "0.5", "1.0"]:
+            out_dir = data_dir / f"dt-{dt}" / f"{field}-out"
+            assert out_dir.exists()
 
-        for i, fname in enumerate(out_dir.iterdir()):
-            length = int(fname.stem.split("-")[-1])
-            y, t = read_timeseries(fname, "out")
-            assert len(y) == (length * inference_sampling_rate)
+            for i, fname in enumerate(out_dir.iterdir()):
+                length = int(fname.stem.split("-")[-1])
+                y, t = read_timeseries(fname, "out")
+                assert len(y) == (length * inference_sampling_rate)
 
-            expected = np.arange(0, length, 1 / sample_rate)
-            expected = expected[::step_size] + expected[step_size - 1] + 1
-            assert (expected == y).all()
-        assert i == 1
+                expected = np.arange(0, length, 1 / sample_rate)
+                expected = expected[::step_size] + expected[step_size - 1] + 1
+                assert (expected == y).all()
+            assert i == 1

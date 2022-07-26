@@ -76,6 +76,7 @@ def state_flag(request):
 
 
 def test_timeslide_injections_no_segments(
+    logdir,
     outdir,
     prior_file,
     spacing,
@@ -105,6 +106,7 @@ def test_timeslide_injections_no_segments(
         outdir = main(
             start,
             stop,
+            logdir,
             outdir,
             prior_file,
             spacing,
@@ -134,6 +136,7 @@ def test_timeslide_injections_no_segments(
 
 
 def test_timeslide_injections_with_segments(
+    logdir,
     outdir,
     prior_file,
     spacing,
@@ -177,6 +180,7 @@ def test_timeslide_injections_with_segments(
         outdir = main(
             start,
             stop,
+            logdir,
             outdir,
             prior_file,
             spacing,
@@ -194,32 +198,23 @@ def test_timeslide_injections_with_segments(
 
     # get all the timeslide directories
     timeslides = outdir.iterdir()
-    timeslides = [slide for slide in timeslides if slide.is_dir()]
+    timeslides = [slide.name for slide in timeslides if slide.is_dir()]
     timeslides = list(timeslides)
 
+    # create timeslide
+    injection_ts = TimeSlide(outdir / "dt-0.0-0.0", field="injection")
+    background_ts = TimeSlide(outdir / "dt-0.0-0.0", field="background")
+
+    assert len(injection_ts.segments) == len(background_ts.segments)
     # make sure there is as many directories
     # as requested slides
     assert len(timeslides) == n_slides
 
     for slide in timeslides:
-        injection_ts = TimeSlide(slide, field="injection")
-        background_ts = TimeSlide(slide, field="background")
+        # should be able to find same segment
+        # in different time slide
+        for segment in injection_ts.segments:
+            segment.make_shift(slide)
 
-        # background and injection segments should be the same
-        assert len(injection_ts.segments) == len(background_ts.segments)
-
-        # params file should exist in injection dir
-        assert (injection_ts.path / "params.h5").exists()
-
-        # make sure the t0 of the shifted segment
-        # lines up with expectationt
-        for original_segment, segment in zip(
-            segment_list, background_ts.segments
-        ):
-            shift = float(segment.shift.split("-")[-1])
-            assert (segment.t0 - shift) == original_segment[0]
-            assert (segment.tf) == original_segment[1]
-
-
-# TODO: add some more edge case tests
-# add tests for circular shift
+        for segment in background_ts.segments:
+            segment.make_shift(slide)

@@ -19,7 +19,8 @@ from hermes.typeo import typeo
 def main(
     prior_file: str,
     n_samples: int,
-    outdir: Path,
+    logdir: Path,
+    datadir: Path,
     waveform_duration: float = 8,
     sample_rate: float = 4096,
     force_generation: bool = False,
@@ -39,16 +40,20 @@ def main(
         path to output file
     """
 
-    # make output dir
-    outdir.mkdir(exist_ok=True, parents=True)
+    # make dirs
+    datadir.mkdir(exist_ok=True, parents=True)
+    logdir.mkdir(exist_ok=True, parents=True)
 
-    configure_logging(outdir / "generate_waveforms.log", verbose)
+    configure_logging(logdir / "generate_waveforms.log", verbose)
 
     # check if signal file already exists
-    signal_file = outdir.joinpath("signals.h5")
+    signal_file = datadir / "signals.h5"
 
     if signal_file.exists() and not force_generation:
-        logging.info("Signal file already exists, exiting")
+        logging.info(
+            "Signal data already exists and forced generation is off."
+            " Not generating signals"
+        )
         return signal_file
 
     # log and print out some simulation parameters

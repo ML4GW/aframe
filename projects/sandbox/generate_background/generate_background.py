@@ -22,7 +22,8 @@ def main(
     frame_type: str,
     state_flag: str,
     minimum_length: float,
-    outdir: Path,
+    datadir: Path,
+    logdir: Path,
     force_generation: bool = False,
     verbose: bool = False,
 ):
@@ -35,22 +36,22 @@ def main(
         outdir: where to store data
     """
 
-    # make output dir
-    outdir.mkdir(exist_ok=True, parents=True)
-
+    # make logdir dir
+    logdir.mkdir(exist_ok=True, parents=True)
+    datadir.mkdir(exist_ok=True, parents=True)
     # configure logging output file
-    configure_logging(outdir / "generate_background.log", verbose)
+    configure_logging(logdir / "generate_background.log", verbose)
 
     # check if paths already exist
     # TODO: maybe put all background in one path
     paths_exist = [
-        Path(outdir / f"{ifo}_background.h5").exists() for ifo in ifos
+        Path(datadir / f"{ifo}_background.h5").exists() for ifo in ifos
     ]
 
     if all(paths_exist) and not force_generation:
         logging.info(
             "Background data already exists"
-            " and forced generation is off, not generating"
+            " and forced generation is off. Not generating background"
         )
         return
 
@@ -110,6 +111,6 @@ def main(
                 f"The background for ifo {ifo} contains NaN values"
             )
 
-        with h5py.File(outdir / f"{ifo}_background.h5", "w") as f:
+        with h5py.File(datadir / f"{ifo}_background.h5", "w") as f:
             f.create_dataset("hoft", data=data)
             f.create_dataset("t0", data=float(segment[0]))

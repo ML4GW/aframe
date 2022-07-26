@@ -16,10 +16,10 @@ def _make_tensor(
     initializing scalar tensors
     """
     try:
-        value = torch.Tensor(value)
+        value = torch.tensor(value, dtype=dtype)
     except TypeError:
-        value = torch.Tensor([value])
-    return value.type(dtype).to(device)
+        value = torch.tensor([value], dtype=dtype)
+    return value.to(device)
 
 
 class Transform(torch.nn.Module):

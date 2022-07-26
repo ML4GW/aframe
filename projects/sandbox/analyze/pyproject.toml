@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "analyze"
+version = "0.1.0"
+description = "Project for analyzing the output of timeslides and injections"
+authors = ["ethan.marx <ethan.marx@ligo.org>"]
+license = "MIT"
+
+[tool.poetry.scripts]
+analyze = "analyze:main"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+"hermes.typeo" = "^0.1.5"
+"bbhnet.injection" = {path="../../../libs/injection", develop=true}
+"bbhnet.io" = {path = "../../../libs/io/", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging/", develop = true}
+"bbhnet.parallelize" = {path = "../../../libs/parallelize/", develop = true}
+"bbhnet.analysis" = {path = "../../../libs/analysis/", develop = true}
+rich = "^12.4.4"
+bokeh = "^2.4.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

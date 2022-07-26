@@ -1,5 +1,7 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Union
 
 import h5py
 import numpy as np
@@ -60,7 +62,7 @@ class ClusterDistribution(Distribution):
         """
 
         # cluster values over window length
-        sample_rate = t[1] - t[0]
+        sample_rate = 1 / (t[1] - t[0])
 
         # samples per cluster window
         clust_size = int(sample_rate * self.t_clust)
@@ -83,10 +85,19 @@ class ClusterDistribution(Distribution):
         self.events.extend(maxs)
         self.Tb += t[-1] - t[0] + t[1] - t[0]
 
-    def nb(self, threshold: float):
+    def nb(self, threshold: Union[float, np.ndarray]):
         """
         Counts the number of events above the indicated
         `threshold`
         """
-        nb = np.sum(np.array(self.events) >= threshold)
-        return nb
+        events = np.array(self.events)
+        if isinstance(threshold, np.ndarray):
+            nb = [np.sum(events >= thresh) for thresh in threshold]
+        else:
+            nb = np.sum(events >= threshold)
+
+        logging.debug(
+            "Threshold {} has {} events greater than it "
+            "in distribution {}".format(threshold, nb, self)
+        )
+        return np.array(nb)

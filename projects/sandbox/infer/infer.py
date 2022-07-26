@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -14,14 +15,19 @@ from hermes.typeo import typeo
 
 
 def load(segment: Segment):
-    hanford, t = segment.load("hanford")
-    livingston, _ = segment.load("livingston")
+    hanford, t = segment.load("H1")
+    livingston, _ = segment.load("L1")
     return np.stack([hanford, livingston]), t
 
 
 def stream_data(
     x: np.ndarray, stream_size: int, sequence_id: int, client: InferenceClient
 ):
+
+    # TODO: added this b/c there was a complaint
+    # should the required data types be an argument
+    # to the h5.write functions?
+    x = x.astype(np.float32)
     num_streams = (x.shape[-1] - 1) // stream_size + 1
     for i in range(num_streams):
         stream = x[:, i * stream_size : (i + 1) * stream_size]
@@ -32,18 +38,21 @@ def stream_data(
             sequence_start=i == 0,
             sequence_end=(i + 1) == num_streams,
         )
+        time.sleep(1e-3)
 
 
 def infer(
     client: InferenceClient,
     executor: AsyncExecutor,
     timeslides: Iterable[TimeSlide],
+    write_dir: Path,
     stream_size: int,
     base_sequence_id: int,
 ):
     for timeslide in timeslides:
-        write_dir = timeslide.root / "out"
-        write_dir.mkdir(parents=True, exist_ok=True)
+
+        ts_write_dir = write_dir / timeslide.shift / f"{timeslide.field}-out"
+        ts_write_dir.mkdir(parents=True, exist_ok=True)
         timeseries = {}
 
         data_it = executor.imap(load, timeslide.segments)
@@ -69,7 +78,6 @@ def infer(
             if response is None:
                 continue
             y, _, sequence_id = response
-
             # update our running neural network outputs
             y = np.append(timeseries[sequence_id]["y"], y)
             timeseries[sequence_id]["y"] = y
@@ -91,7 +99,7 @@ def infer(
 
                 # submit a write job to the process pool
                 future = executor.submit(
-                    write_timeseries, write_dir, "out", t=t, y=y
+                    write_timeseries, ts_write_dir, "out", t=t, y=y
                 )
                 futures.append(future)
 
@@ -102,23 +110,29 @@ def infer(
 
 @typeo
 def main(
-    model_repo_dir: Path,
+    model_repo_dir: str,
     model_name: str,
     data_dir: Path,
-    field: str,
+    write_dir: Path,
+    fields: Iterable[str],
     sample_rate: float,
     inference_sampling_rate: float,
     num_workers: int,
     model_version: int = -1,
     base_sequence_id: int = 1001,
-    log_file: Optional[str] = None,
+    log_file: Optional[Path] = None,
     verbose: bool = False,
 ):
     configure_logging(log_file, verbose)
     stream_size = int(sample_rate // inference_sampling_rate)
 
+    if log_file is not None:
+        server_log_file = log_file.parent / "server.log"
+    else:
+        server_log_file = None
+
     # spin up a triton server and don't move on until it's ready
-    with serve(model_repo_dir, wait=True):
+    with serve(model_repo_dir, wait=True, log_file=server_log_file):
         # now build a client to connect to the inference service
         client = InferenceClient("localhost:8001", model_name, model_version)
 
@@ -126,20 +140,28 @@ def main(
         # read/writes of timeseries in parallel
         executor = AsyncExecutor(num_workers, thread=False)
 
-        # initialize all the `TimeSlide`s which will organize
-        # their corresponding files into segments
-        timeslides = [TimeSlide(i, field) for i in data_dir.iterdir()]
-
         # now enter a context which will:
         # - for the client, start a streaming connection with
         #       with the inference service and launch a separate
         #       process for inference
         # - for the executor, launch the process pool
         with client, executor:
-            # now actually do inference in a separate function since
-            # we're already 2 contexts deep and we'll need to do
-            # some nested looping on top of this
-            infer(client, executor, timeslides, stream_size, base_sequence_id)
+            for field in fields:
+                # initialize all the `TimeSlide`s which will organize
+                # their corresponding files into segments
+                timeslides = [TimeSlide(i, field) for i in data_dir.iterdir()]
+
+                # now actually do inference in a separate function since
+                # we're already 2 contexts deep and we'll need to do
+                # some nested looping on top of this
+                infer(
+                    client,
+                    executor,
+                    timeslides,
+                    write_dir,
+                    stream_size,
+                    base_sequence_id,
+                )
 
 
 if __name__ == "__main__":

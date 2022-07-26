@@ -17,7 +17,7 @@ def test_whitening_transform_agrees_with_gwpy(
     whitener = WhiteningTransform(
         num_ifos, sample_rate, kernel_length, highpass=0, fduration=fduration
     )
-    assert len(list(whitener.parameters())) == 1
+    assert len(list(whitener.parameters())) == 3
     assert whitener.time_domain_filter.ndim == 3
     assert len(whitener.time_domain_filter) == num_ifos
     assert (

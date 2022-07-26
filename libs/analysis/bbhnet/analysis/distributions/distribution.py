@@ -55,7 +55,7 @@ class Distribution:
 
     def characterize_events(
         self,
-        segment: "Segment",
+        segment: Union["Segment", Tuple[np.ndarray, np.ndarray]],
         event_times: Union[float, Iterable[float]],
         window_length: float = 1,
         metric: str = "far",
@@ -71,7 +71,7 @@ class Distribution:
         as well as latencies from the indicated trigger time.
 
         Args:
-            segment: The Segment to analyze
+            segment: The Segment object to analyze, or a (y,t) tuple
             event_times:
                 GPS times at which events are known to occur
                 within the given segment. If only a single float
@@ -94,7 +94,6 @@ class Distribution:
                 corresponding event trigger time. Will have the same
                 shape as the metric value return array.
         """
-
         if metric not in ("far", "significance"):
             raise ValueError(
                 f"Can't characterize with unknown metric {metric}"
@@ -112,12 +111,11 @@ class Distribution:
             event_iter = iter([event_times])
             single_event = True
 
-        # TODO: do we also accept (y, t) tuples for `segment`
-        # so that we can do loading asynchronously? This function
-        # is almost certain to be wildly IO bound, so it could be
-        # a good idea if this is what we want to use for ROC curve
-        # analysis.
-        y, t = segment.load(self.dataset)
+        try:
+            y, t = segment.load(self.dataset)
+        except AttributeError:
+            y, t = segment
+
         sample_rate = 1 / (t[1] - t[0])
         window_size = int(window_length * sample_rate)
 

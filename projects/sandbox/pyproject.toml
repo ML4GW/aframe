@@ -4,26 +4,34 @@ steps = [
     "generate_waveforms:generate-waveforms",
     "generate_glitches:generate-glitches",
     "train:train:resnet",
-    "export:export:resnet",
+    "export:export-model:resnet",
     "timeslide_injections:timeslide_injections",
-    "infer:infer"
+    "infer:infer",
+    "analyze:analyze"
 ]
 
 [tool.typeo.base]
-outdir = "${OUT_DIR}"
+basedir = "${BASE_DIR}"
+datadir = "${DATA_DIR}"
+logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 ifos = ['H1', 'L1']
-start = 1262588390 
-stop = 1262698390 
+start = 1262607622
+stop = 1262620622 
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
-resnet = {layers = [4, 4, 4]}
-repository_directory = "/home/ethan.marx/path/to/model/dir"
-
+resnet = {layers = [3, 3, 3]}
+repository_directory = "${BASE_DIR}/model_repo/" 
+force_generation = false
+kernel_length = 2
+inference_sampling_rate = 16
+fmin = 32
+prior_file = "/home/ethan.marx/forks/BBHNet/projects/sandbox/generate_waveforms/priors/nonspin_BBH.prior"
 
 [tool.typeo.scripts.generate-background]
-outdir = "${base.outdir}/data/"
+datadir = "${base.datadir}"
+logdir = "${base.logdir}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
@@ -32,19 +40,17 @@ stop = "${base.stop}"
 ifos = "${base.ifos}"
 sample_rate = "${base.sample_rate}" 
 minimum_length = 8000
-force_generation = false
+force_generation = "${base.force_generation}"
 
 [tool.typeo.scripts.generate-glitches]
-snr_thresh = 8
+snr_thresh = 5
 window = 2
 start = "${base.start}"
 stop = "${base.stop}"
-
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
-
-f_min = 32
+f_min = "${base.fmin}"
 q_min = 3.3166
 q_max = 108
 cluster_dt = 0.5
@@ -52,39 +58,41 @@ chunk_duration = 124
 segment_duration = 64 
 overlap = 4 
 mismatch_max = 0.2
-force_generation = false
-
+force_generation = "${base.force_generation}"
 ifos = "${base.ifos}"
-outdir = "${base.outdir}/data"
+datadir = "${base.datadir}"
+logdir = "${base.logdir}"
 sample_rate = "${base.sample_rate}"
 
 [tool.typeo.scripts.generate-waveforms]
-outdir = "${base.outdir}/data/"
+datadir = "${base.datadir}"
+logdir = "${base.logdir}"
 n_samples = 10000
-prior_file = "./generate_waveforms/priors/nonspin_BBH.prior"
+prior_file = "${base.prior_file}"
 sample_rate = "${base.sample_rate}" 
 waveform_duration = 8
-force_generation = false
+force_generation = "${base.force_generation}"
 
 [tool.typeo.scripts.train]
-hanford_background = "${base.outdir}/data/H1_background.h5"
-livingston_background = "${base.outdir}/data/L1_background.h5"
-glitch_dataset = "${base.outdir}/data/glitches.h5"
-signal_dataset = "${base.outdir}/data/signals.h5"
-outdir = "${base.outdir}/training"
+hanford_background = "${base.datadir}/H1_background.h5"
+livingston_background = "${base.datadir}/L1_background.h5"
+glitch_dataset = "${base.datadir}/glitches.h5"
+signal_dataset = "${base.datadir}/signals.h5"
+logdir = "${base.logdir}"
+outdir = "${base.basedir}/training"
 fduration = 1
 trigger_distance_size = -0.5
 sample_rate = "${base.sample_rate}"
 waveform_frac = 0.5
-glitch_frac = 0.3
+glitch_frac = 0.25
 min_snr = 4
-max_snr = 1000
-highpass = 32
-kernel_length = 2
+max_snr = 10000
+highpass = "${base.fmin}"
+kernel_length = "${base.kernel_length}" 
 batch_size = 64
-batches_per_epoch = 300
-max_epochs = 50
-lr = 3.2e-2
+batches_per_epoch = 50
+max_epochs = 200
+lr = 1e-5
 weight_decay = 1e-5
 patience = 10
 factor = 0.2
@@ -93,27 +101,27 @@ device = "cuda"
 profile = false
 commands.resnet = "${base.resnet}"
 
-
-[tool.typeo.scripts.export]
+[tool.typeo.scripts.export-model]
 repository_directory = "${base.repository_directory}" 
-output_directory = "${base.outdir}/export"
+outdir = "${base.logdir}"
 num_ifos = 2 
 kernel_length = "${base.kernel_length}" 
 inference_sampling_rate = "${base.inference_sampling_rate}"
 sample_rate = "${base.sample_rate}"
-streams_per_gpu = 1
+weights = "${base.basedir}/training/weights.pt"
+streams_per_gpu = 10
 verbose = true
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
-start = "${base.start}"  
+start = "${base.start}" 
 stop = "${base.stop}" 
-
-outdir = "${base.outdir}/timeslide_injections/"
-prior_file = "/home/ethan.marx/forks/BBHNet/projects/sandbox/timeslide_injections/priors/nonspin_BBH.prior"
+datadir = "${base.basedir}/timeslide_injections/"
+logdir = "${base.logdir}"
+prior_file = "${base.prior_file}"
 spacing = 60
 buffer = 10
-n_slides = 100
+n_slides = 10
 shifts = [0, 1]
 ifos = "${base.ifos}"
 file_length = 4096
@@ -125,13 +133,26 @@ state_flag = "${base.state_flag}"
 
 [tool.typeo.scripts.infer]
 model_repo_dir = "${base.repository_directory}"
-model_name = "bbhnet"
-data_dir = "${base.outdir}/timeslide_injections/" 
-field = "injection"
+model_name = "bbhnet-stream"
+data_dir = "${base.basedir}/timeslide_injections/" 
+write_dir = "${base.basedir}/timeslide_injections/"
+fields = ["injection", "background"]
+inference_sampling_rate = "${base.inference_sampling_rate}"
 sample_rate = "${base.sample_rate}"
-inference_sampling_rate = 16
-num_workers = 4
-model_version = 1
+model_version = -1
 base_sequence_id = 1001
-log_file = "${base.outdir}/infer"
+log_file = "${base.logdir}/infer.log"
+num_workers = 1
+verbose = true
+
+[tool.typeo.scripts.analyze]
+data_dir = "${base.basedir}/timeslide_injections/"
+write_dir = "${base.basedir}/timeslide_injections/"
+results_dir = "${base.basedir}/results/" 
+window_length = 1.0
+norm_seconds = [10, 100, 1000]
+t_clust = 5
+max_tb = 20000
+force = false
+log_file = "${base.basedir}/log/analyze.log"
 verbose = true
