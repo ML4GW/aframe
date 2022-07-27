@@ -6,23 +6,41 @@ from bbhnet.data.glitch_sampler import GlitchSampler
 
 
 def test_glitch_sampler(
-    arange_glitches, glitch_length, sample_rate, data_length, device
+    deterministic,
+    arange_glitches,
+    glitch_length,
+    sample_rate,
+    data_length,
+    offset,
+    device,
+    frac,
 ):
-    sampler = GlitchSampler(arange_glitches)
+    sampler = GlitchSampler(arange_glitches, deterministic, frac=frac)
     sampler.to(device)
     assert sampler.hanford.device.type == device
     assert sampler.livingston.device.type == device
 
-    assert sampler.hanford.shape == (10, glitch_length * sample_rate)
-    assert sampler.livingston.shape == (10, glitch_length * sample_rate)
+    expected_length = glitch_length * sample_rate
+    init_idx = 0
+    if frac is None:
+        expected_num = 100
+    else:
+        expected_num = abs(frac) * 100
+        if frac < 0:
+            init_idx = (100 - expected_num) * expected_length
+
+    assert sampler.hanford.shape == (expected_num, expected_length)
+    assert sampler.livingston.shape == (expected_num, expected_length)
 
     # take over randint to return 4 so that we
     # know what size arrays to expect and verify
     # that they come out correctly
     with patch("numpy.random.randint", return_value=4):
-        hanford, livingston = sampler.sample(8, data_length)
-    assert hanford.shape == (4, data_length)
-    assert livingston.shape == (4, data_length)
+        hanford, livingston = sampler.sample(8, data_length, offset)
+
+    expected_batch = 8 if deterministic else 4
+    assert hanford.shape == (expected_batch, data_length)
+    assert livingston.shape == (expected_batch, data_length)
 
     # resample these since setting randint to equal
     # 4 actually throws off sample_kernels when it
@@ -31,7 +49,7 @@ def test_glitch_sampler(
     # interferometers to verify
     hanford = livingston = None
     while hanford is None or livingston is None:
-        hanford, livingston = sampler.sample(8, data_length)
+        hanford, livingston = sampler.sample(8, data_length, offset)
 
     glitch_size = glitch_length * sample_rate
     for i, tensor in enumerate([hanford, livingston]):
@@ -41,15 +59,24 @@ def test_glitch_sampler(
         power = (-1) ** i
 
         # make sure each sampled glitch matches our expectations
-        for row in value:
-            # make sure that the "trigger" of each glitch aka
-            # the center value is in each sample
-            assert glitch_size // 2 in row % glitch_size
+        for j, row in enumerate(value):
+            if deterministic:
+                step = glitch_length * sample_rate
+                expected = j * step + step // 2 - data_length // 2 + offset
+                expected += init_idx
+                assert row[0] == power * expected
+            else:
+                # make sure that the "trigger" of each glitch aka
+                # the center value is in each sample
+                assert glitch_size // 2 in row % glitch_size
 
             # make sure that the sampled glitch is a
             # contiguous chunk of ints
             j = row[0]
             assert (row == np.arange(j, j + power * data_length, power)).all()
+
+    if deterministic:
+        return
 
     # now make sure that Nones get returned when
     # all the glitches are one or the other

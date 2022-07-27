@@ -78,8 +78,12 @@ hanford_background = "${base.datadir}/H1_background.h5"
 livingston_background = "${base.datadir}/L1_background.h5"
 glitch_dataset = "${base.datadir}/glitches.h5"
 signal_dataset = "${base.datadir}/signals.h5"
+valid_frac = 0.025
+valid_stride = 0.0625
+
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
+
 fduration = 1
 trigger_distance_size = -0.5
 sample_rate = "${base.sample_rate}"
