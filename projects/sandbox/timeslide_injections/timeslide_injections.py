@@ -28,7 +28,8 @@ def main(
     datadir: Path,
     prior_file: str,
     spacing: float,
-    buffer: float,
+    jitter: float,
+    buffer_: float,
     n_slides: int,
     shifts: Iterable[float],
     ifos: Iterable[str],
@@ -200,13 +201,14 @@ def main(
                 ifos,
                 prior_file,
                 spacing,
+                jitter,
                 sample_rate,
                 file_length,
                 fmin,
                 waveform_duration,
                 reference_frequency,
                 waveform_approximant,
-                buffer,
+                buffer_,
             )
 
     return datadir

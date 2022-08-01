@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 import h5py
 import numpy as np
 from rich.progress import Progress
-from utils import characterize_events, get_write_dir, load_segments
+from utils import get_write_dir, load_segments
 
 from bbhnet.analysis.analysis import integrate
 from bbhnet.analysis.distributions.cluster import ClusterDistribution
@@ -31,7 +31,8 @@ def build_background(
     write_dir: Path,
     max_tb: float,
     t_clust: float,
-    window_length: float = 1.0,
+    kernel_length: float,
+    window_length: float,
     norm_seconds: Optional[Iterable[float]] = None,
 ):
     """
@@ -103,16 +104,15 @@ def build_background(
     write_dir.mkdir(exist_ok=True)
     norm_seconds = norm_seconds or [norm_seconds]
 
-    # keep track of all the files that we've written
-    # for each normalization window size so that we
-    # can iterate through them later and submit them
-    # for reloading once we have our distributions initialized
-    fname_futures = defaultdict(list)
-
     # iterate through timeshifts of our background segments
     # until we've generated enough background data.
     background_segments = iter(background_segments)
     main_task_id = pbar.add_task("[red]Building background", total=max_tb)
+
+    # initialize dictionary of backgrounds
+    # where key is norm length and value is
+    # is a Distribution object
+    backgrounds = {}
     while not pbar.tasks[main_task_id].finished:
         segment = next(background_segments)
 
@@ -135,6 +135,7 @@ def build_background(
             # so for ~O(10k) long segments this means this should
             # be fine as long as N ~ O(100). Worth doing a check for?
             future = process_ex.submit(load_segments, shifted, "out")
+
             load_futures[shift.name] = [future]
 
         # create progress bar tasks for each one
@@ -153,12 +154,20 @@ def build_background(
             total=len(load_futures) * len(norm_seconds),
         )
 
-        # now once each segment is loaded, submit a job
-        # to our process pool to integrate it using each
-        # one of the specified normalization periods
-        integration_futures = {}
+        # now once each segment is loaded,
+        # integrate it using each
+        # one of the specified normalization periods,
+        # and then submit a job to the thread pool to
+        # write the integrated outputs
+        write_futures = []
         sample_rate = None
+
         for shift, seg in as_completed(load_futures):
+
+            # advance the task keeping track of how many files
+            # we've loaded by one
+            pbar.update(load_task_id, advance=1)
+
             # get the sample rate of the NN output timeseries
             # dynamically from the first timeseries we load,
             # since we'll need it to initialize our normalizers
@@ -173,6 +182,11 @@ def build_background(
             y, t = seg.load("out")
 
             for norm in norm_seconds:
+                # if user passes 0
+                # in norm_seconds treat it
+                # as no normalization
+                if norm == 0:
+                    norm = None
                 # build a normalizer for the given normalization window length
                 if norm is not None:
                     normalizer = GaussianNormalizer(norm * sample_rate)
@@ -183,111 +197,67 @@ def build_background(
                 else:
                     normalizer = None
 
-                # submit the integration job and have it update the
+                try:
+                    # if we already have a background distribution
+                    # for this normalization, grab it and fit it with a
+                    # "warm start" aka don't ditch the existing histogram
+                    background = backgrounds[norm]
+                    warm_start = True
+                except KeyError:
+                    # otherwise create a new distribution
+                    # and fit it from scratch
+                    background = ClusterDistribution("integrated", t_clust)
+                    backgrounds[norm] = background
+                    warm_start = False
+
+                # run integration in main process job and have it update the
                 # corresponding progress bar task once it completes
-                future = process_ex.submit(
-                    integrate,
+                t, y, integrated = integrate(
                     y,
                     t,
-                    kernel_length=1.0,
+                    kernel_length=kernel_length,
                     window_length=window_length,
                     normalizer=normalizer,
                 )
+
+                pbar.update(analyze_task_id, advance=1)
+
+                # fit background to integrated output
+                # in the main process
+                background.fit((integrated, t), warm_start=warm_start)
+
+                # submit the writing job to our thread pool and
+                # use a callback to keep track of all the filenames
+                # for a given normalization window
+                shift_dir = get_write_dir(
+                    write_dir, shift, "background-integrated", norm
+                )
+
+                future = thread_ex.submit(
+                    write_timeseries,
+                    shift_dir,
+                    prefix="integrated",
+                    t=t,
+                    y=y,
+                    integrated=integrated,
+                )
+
                 future.add_done_callback(
-                    lambda f: pbar.update(analyze_task_id, advance=1)
+                    lambda f: pbar.update(write_task_id, advance=1)
                 )
-                integration_futures[(norm, shift)] = [future]
 
-            # advance the task keeping track of how many files
-            # we've loaded by one
-            pbar.update(load_task_id, advance=1)
+                write_futures.append(future)
 
-        # make sure we have the expected number of jobs submitted
-        if len(integration_futures) < (len(norm_seconds) * len(load_futures)):
-            raise ValueError(
-                "Expected {} integration jobs submitted, "
-                "but only found {}".format(
-                    len(norm_seconds) * len(load_futures),
-                    len(integration_futures),
-                )
+            pbar.update(
+                main_task_id, advance=len(load_futures) * segment.length
             )
 
-        # as the integration jobs come back, write their
-        # results using our thread pool and record the
-        # min and max values for our discrete distribution
-        segment_futures = []
-        for (norm, shift), (t, y, integrated) in as_completed(
-            integration_futures
-        ):
-            # submit the writing job to our thread pool and
-            # use a callback to keep track of all the filenames
-            # for a given normalization window
-            shift_dir = get_write_dir(
-                write_dir, shift, "background-integrated", norm
-            )
-            future = thread_ex.submit(
-                write_timeseries,
-                shift_dir,
-                t=t,
-                y=y,
-                integrated=integrated,
-            )
-            future.add_done_callback(
-                lambda f: pbar.update(write_task_id, advance=1)
-            )
-            fname_futures[norm].append(future)
-            segment_futures.append(future)
-
-        # wait for all the writing to finish before we
-        # move on so that we don't overload our processes
-        wait(segment_futures, return_when=FIRST_EXCEPTION)
-        pbar.update(main_task_id, advance=len(load_futures) * segment.length)
+    wait(write_futures, return_when=FIRST_EXCEPTION)
 
     Tb = pbar.tasks[main_task_id].completed
     logging.info(f"Accumulated {Tb}s of background matched filter outputs.")
 
-    # submit a bunch of jobs for loading these integrated
-    # segments back in.
-    # TODO: don't need to reload in segments
-    load_futures = defaultdict(list)
-    for norm, fname in as_completed(fname_futures):
-        future = process_ex.submit(load_segments, Segment(fname), "integrated")
-        load_futures[norm].append(future)
-
-    # create a task for each one of the normalization windows
-    # tracking how far along the distribution fit is
-    fit_task_ids = {}
-    for norm in norm_seconds:
-        norm_name = f"{norm}s" if norm is not None else "empty"
-        task_id = pbar.add_task(
-            "[purple]Fitting background using {} normalization window".format(
-                norm_name
-            ),
-            total=len(load_futures[norm]),
-        )
-        fit_task_ids[norm] = task_id
-
-    # now discretized the analyzed segments as they're loaded back in
-    backgrounds = {}
-    for norm, segment in as_completed(load_futures):
-        try:
-            # if we already have a background distribution
-            # for this event, grab it and fit it with a
-            # "warm start" aka don't ditch the existing histogram
-            background = backgrounds[norm]
-            warm_start = True
-        except KeyError:
-            # otherwise create a new distribution
-            # and fit it from scratch
-            background = ClusterDistribution("integrated", t_clust)
-            backgrounds[norm] = background
-            warm_start = False
-
-        # fit the distribution to the new data and then
-        # update the corresponding task tracker
-        background.fit(segment, warm_start=warm_start)
-        pbar.update(fit_task_ids[norm], advance=1)
-
+    # write all of the background distributions
     for norm, background in backgrounds.items():
         background.write(write_dir / f"background_{norm}.h5")
 
@@ -359,9 +329,14 @@ def analyze_injections(
     # for each normalization length
     # in backgrounds dictionary
 
+    norms = list(backgrounds.keys())
+    main_task_id = pbar.add_task(
+        f"[red]Analyzing injections with norms: {norms}",
+        total=len(injection_segments) * len(norms),
+    )
     for norm, background in backgrounds.items():
         master_fars, master_latencies, master_event_times = [], [], []
-
+        master_params = defaultdict(list)
         # create normalizer
         if norm is not None:
             normalizer = GaussianNormalizer(norm * sample_rate)
@@ -370,11 +345,6 @@ def analyze_injections(
 
         # get all the timeslide directories
         shifts = list(data_dir.iterdir())
-
-        main_task_id = pbar.add_task(
-            f"[red]Analyzing injections with norm {norm}",
-            total=len(background_segments),
-        )
 
         logging.info(
             f"Analyzing {len(injection_segments)}"
@@ -441,8 +411,8 @@ def analyze_injections(
             # as the segment loading jobs complete
             # submit jobs to integrate the injection segments
             # using the background segment for normalization
-            integrate_futures = {}
             for shift, segments in as_completed(load_futures):
+                pbar.update(load_task_id, advance=2)
                 back, injection = segments
 
                 # as segments are already
@@ -455,49 +425,18 @@ def analyze_injections(
                 if normalizer is not None:
                     normalizer.fit(back_y)
 
-                # submit integration job
-                future = process_ex.submit(
-                    integrate,
+                # run integration job in main process
+                t, y, integrated = integrate(
                     injection_y,
                     t,
                     kernel_length=kernel_length,
                     window_length=window_length,
                     normalizer=normalizer,
                 )
-                future.add_done_callback(
-                    lambda f: pbar.update(analyze_task_id, advance=1)
-                )
 
-                integrate_futures[shift] = [future]
+                pbar.update(analyze_task_id, advance=1)
 
-                pbar.update(load_task_id, advance=2)
-
-            # as the integration jobs come back
-            # submit jobs to write integration outputs
-
-            # Also, submit jobs to analyze event times
-            # using the integrated outputs
-            write_futures = []
-            characterize_futures = []
-            for shift, (t, y, integrated) in as_completed(integrate_futures):
-
-                # get params file for injections for this timeshift
-                param_file = data_dir / shift / "injection" / "params.h5"
-                with h5py.File(param_file) as f:
-
-                    # TODO: we seem to be systematically off by 1.5 seconds;
-                    # need to find discrepancy
-                    event_times = f["geocent_time"][()] + 1.5
-
-                # restrict event times of interest
-                # to those within this segment, taking
-                # into account normalization
-                segment_event_times = [
-                    time
-                    for time in event_times
-                    if time < event_window[1] and time > event_window[0]
-                ]
-
+                # submit write job for the integrated output
                 shift_dir = get_write_dir(
                     write_dir, shift, "injection-integrated", norm
                 )
@@ -505,51 +444,68 @@ def analyze_injections(
                 write_future = thread_ex.submit(
                     write_timeseries,
                     shift_dir,
+                    prefix="integrated",
                     t=t,
                     y=y,
                     integrated=integrated,
                 )
 
-                write_futures.append(future)
                 write_future.add_done_callback(
                     lambda f: pbar.update(write_task_id, advance=1)
                 )
 
+                # get params file for injections for this timeshift
+                param_file = data_dir / shift / "injection" / "params.h5"
+                with h5py.File(param_file) as f:
+
+                    event_times = f["geocent_time"][()]
+                    event_mask = (event_times < event_window[1]) & (
+                        event_times > event_window[0]
+                    )
+
+                    # restrict event times of interest
+                    # to those within this segment, taking
+                    # into account those events that wont
+                    # be analyzed due to normalization
+                    # window length
+                    segment_event_times = event_times[event_mask]
+
+                    # append parameters of analyzed injections to master
+                    # dict
+                    for key in f.keys():
+                        data = f[key][()][event_mask]
+                        master_params[key].extend(data)
+
+                # characterize events in main thread
                 segment = (integrated, t)
 
-                characterize_future = process_ex.submit(
-                    characterize_events,
-                    background,
+                fars, latencies = background.characterize_events(
                     segment,
                     segment_event_times,
                     window_length=window_length,
                     metric=metric,
                 )
 
-                characterize_future.add_done_callback(
-                    lambda f: pbar.update(characterize_task_id, advance=1)
-                )
-                characterize_futures.append(characterize_future)
+                pbar.update(characterize_task_id, advance=1)
 
-            # as event characterizations are done,
-            # append results to master lists
-            for fars, latencies, times in as_completed(characterize_futures):
-
+                # append results
                 master_fars.append(fars)
                 master_latencies.append(latencies)
-                master_event_times.append(times)
 
-            master_fars = np.vstack(master_fars)
-            master_latencies = np.vstack(master_latencies)
-            master_event_times = np.vstack(master_event_times)
+                pbar.update(main_task_id, advance=1)
 
-            pbar.update(main_task_id, advance=1)
+        master_fars = np.vstack(master_fars)
+        master_latencies = np.vstack(master_latencies)
 
         logging.info(f"Saving analysis data to {results_dir}")
         with h5py.File(results_dir / f"injections-{norm}.h5", "w") as f:
             f.create_dataset("fars", data=master_fars)
             f.create_dataset("latencies", data=master_latencies)
             f.create_dataset("event_times", data=master_event_times)
+
+            # store all the corresponding injection parameters
+            for k, v in master_params.items():
+                f.create_dataset(k, data=v)
 
 
 @typeo
@@ -558,7 +514,8 @@ def main(
     write_dir: Path,
     results_dir: Path,
     t_clust: float,
-    window_length: float = 1.0,
+    kernel_length: float,
+    window_length: Optional[float] = None,
     norm_seconds: Optional[List[float]] = None,
     max_tb: Optional[float] = None,
     force: bool = False,
@@ -618,6 +575,8 @@ def main(
             or `DEBUG` (if not set)
     """
 
+    window_length = window_length or kernel_length
+
     results_dir.mkdir(parents=True, exist_ok=True)
     configure_logging(results_dir / log_file, verbose)
 
@@ -648,6 +607,7 @@ def main(
                 write_dir,
                 max_tb,
                 t_clust,
+                kernel_length,
                 window_length,
                 norm_seconds,
             )

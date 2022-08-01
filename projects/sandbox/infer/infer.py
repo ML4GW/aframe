@@ -48,6 +48,7 @@ def infer(
     write_dir: Path,
     stream_size: int,
     base_sequence_id: int,
+    fduration: Optional[float] = None,
 ):
     for timeslide in timeslides:
 
@@ -57,6 +58,14 @@ def infer(
 
         data_it = executor.imap(load, timeslide.segments)
         for i, (x, t) in enumerate(data_it):
+
+            # if using a whitening transform
+            # that crops off corrupted data on ends,
+            # take into account the fact that
+            # the cropped data isn't passed to the
+            # actual network
+            if fduration is not None:
+                t -= fduration / 2
             sequence_id = base_sequence_id + i
 
             # create a new timeseries entry to keep track of
@@ -121,6 +130,7 @@ def main(
     model_version: int = -1,
     base_sequence_id: int = 1001,
     log_file: Optional[Path] = None,
+    fduration: Optional[float] = None,
     verbose: bool = False,
 ):
     configure_logging(log_file, verbose)
@@ -161,6 +171,7 @@ def main(
                     write_dir,
                     stream_size,
                     base_sequence_id,
+                    fduration=fduration,
                 )
 
 

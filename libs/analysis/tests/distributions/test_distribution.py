@@ -119,25 +119,23 @@ def test_distribution(event_time, event_times, offset, sample_rate):
     distribution.update = update
 
     # test fitting on a single segment
-    segment.fnames = ["test1"]
     distribution.fit(segment)
 
     # fnames are right, backround time updated
-    assert distribution.fnames == ["test1"]
     assert distribution.Tb == SECONDS_IN_YEAR / 2 + 10
 
     # now create a list of segments to fit on
     segment2 = deepcopy(segment)
-    segment.fnames = ["test2", "test3"]
-    segment2.fnames = ["test4"]
     distribution.fit([segment, segment2])
 
     # same checks
-    assert distribution.fnames == [f"test{i + 1}" for i in range(4)]
     assert distribution.Tb == SECONDS_IN_YEAR / 2 + 30
 
     # now fit on the list but without warm starting,
     # which should reset `fnames` and `Tb`
     distribution.fit([segment, segment2], warm_start=False)
-    assert distribution.fnames == [f"test{i + 2}" for i in range(3)]
     assert distribution.Tb == 20
+
+    # now test fitting by passing a tuple
+    distribution.fit((y, t))
+    assert distribution.Tb == 30

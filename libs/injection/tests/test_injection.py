@@ -97,9 +97,9 @@ def test_generate_gw(mock_filter):
 
 
 @pytest.mark.parametrize(
-    "ifos,sample_rate,spacing,file_length,fmin,prior",
+    "ifos,sample_rate,spacing,jitter,file_length,fmin,prior",
     [
-        (["H1", "L1"], 2048, 60, 4096, 32, "nonspin_BBH.prior"),
+        (["H1", "L1"], 2048, 60, 10, 4096, 32, "nonspin_BBH.prior"),
     ],
 )
 def test_inject_signals_into_timeslide(
@@ -108,6 +108,7 @@ def test_inject_signals_into_timeslide(
     ifos,
     sample_rate,
     spacing,
+    jitter,
     file_length,
     fmin,
     prior,
@@ -131,6 +132,7 @@ def test_inject_signals_into_timeslide(
             ifos,
             prior_file,
             spacing,
+            jitter,
             sample_rate,
             file_length,
             fmin,

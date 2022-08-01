@@ -28,7 +28,6 @@ class ClusterDistribution(Distribution):
         """Load distribution information from an HDF5 file"""
         with h5py.File(path, "r") as f:
             self.events = f["events"][:]
-            self.fnames = list(f["fnames"][:])
             self.Tb = f["Tb"]
             t_clust = f.attrs["t_clust"]
             if t_clust != self.t_clust:
@@ -41,7 +40,6 @@ class ClusterDistribution(Distribution):
         """Write the distribution's data to an HDF5 file"""
         with h5py.File(path, "w") as f:
             f["events"] = self.events
-            f["fnames"] = list(map(str, self.fnames))
             f["Tb"] = self.Tb
             f.attrs.update({"t_clust": self.t_clust})
 

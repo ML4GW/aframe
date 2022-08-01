@@ -40,7 +40,6 @@ class DiscreteDistribution(Distribution):
         with h5py.File(path, "w") as f:
             f["bins"] = self.bins
             f["histogram"] = self.histogram
-            f["fnames"] = list(map(str, self.fnames))
             f["Tb"] = self.Tb
 
     def load(self, path: Path):
@@ -48,7 +47,6 @@ class DiscreteDistribution(Distribution):
         with h5py.File(path, "r") as f:
             self.bins = f["bins"][:]
             self.histogram = f["histogram"][:]
-            self.fnames = list(f["fnames"][:])
             self.Tb = f["Tb"]
 
     @classmethod

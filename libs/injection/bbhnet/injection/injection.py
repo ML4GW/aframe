@@ -147,6 +147,7 @@ def inject_into_segment(
     waveform_generator: bilby.gw.waveform_generator.WaveformGenerator,
     buffer_: float,
     spacing: float,
+    jitter: float,
     priors: bilby.gw.prior.BBHPriorDict,
     sample_rate: float,
     fftlength: float = 2,
@@ -156,8 +157,14 @@ def inject_into_segment(
     to assist in parallelization
     """
 
-    start = segment.t0
-    stop = segment.tf
+    if jitter > spacing:
+        raise ValueError(
+            "Cannot have jitter greater than spacing: "
+            "allows possibility of overlapping signals"
+        )
+
+    start = segment.t0 + buffer_
+    stop = segment.tf - buffer_
 
     # determine signal times
     # based on length of segment and spacing;
@@ -166,7 +173,12 @@ def inject_into_segment(
     # not to be confused with the t0, which should
     # be the middle sample
 
-    signal_times = np.arange(start + buffer_, stop - buffer_, spacing)
+    signal_times = np.arange(start, stop, spacing)
+
+    # add random jitter to signal times
+    jitter = np.random.uniform(-jitter, jitter, size=len(signal_times))
+    signal_times += jitter
+
     n_samples = len(signal_times)
 
     # sample prior for this segment
@@ -236,6 +248,7 @@ def inject_signals_into_timeslide(
     ifos: List[str],
     prior_file: Path,
     spacing: float,
+    jitter: float,
     sample_rate: float,
     file_length: int,
     fmin: float,
@@ -255,6 +268,7 @@ def inject_signals_into_timeslide(
         ifos: list of interferometers corresponding to timeseries
         prior_file: prior file for bilby to sample from
         spacing: seconds between each injection
+        jitter: maximum amplitude of random offset to add to signal times
         sample_rate: sampling rate
         file_length: length in seconds of each h5 file
         fmin: Minimum frequency for highpass filter
@@ -308,6 +322,7 @@ def inject_signals_into_timeslide(
                 waveform_generator,
                 buffer_,
                 spacing,
+                jitter,
                 priors,
                 sample_rate,
                 fftlength,

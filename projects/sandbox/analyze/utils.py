@@ -1,12 +1,7 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
-
-import numpy as np
+from typing import Iterable, Optional, Union
 
 from bbhnet.io.timeslides import Segment
-
-if TYPE_CHECKING:
-    from bbhnet.analysis.distributions.distribution import Distribution
 
 MAYBE_SEGMENTS = Union[Segment, Iterable[Segment]]
 
@@ -24,30 +19,10 @@ def load_segments(segments: MAYBE_SEGMENTS, dataset: str):
 
     if isinstance(segments, Segment):
         segments.load(dataset)
-
     else:
         for segment in segments:
             segment.load(dataset)
     return segments
-
-
-# TODO: Should characterize_events just be a function
-# and not a method for the Distirbution class?
-def characterize_events(
-    background: "Distribution",
-    segment: Union["Segment", Tuple[np.ndarray, np.ndarray]],
-    event_times: Union[float, Iterable[float]],
-    window_length: float = 1,
-    metric: str = "far",
-):
-    fars, latencies = background.characterize_events(
-        segment,
-        event_times,
-        window_length,
-        metric,
-    )
-
-    return fars, latencies, event_times
 
 
 def get_write_dir(

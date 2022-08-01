@@ -69,7 +69,7 @@ def test_integrate(
         )
     assert len(t_) == len(y_) == len(integrated) == expected_length
 
-    assert (t_ == (t[-len(t_) :] + kernel_length)).all()
+    assert (t_ == (t[-len(t_) :])).all()
     assert (y_ == (y[-len(y_) :])).all()
 
     window_size = window_length * sample_rate

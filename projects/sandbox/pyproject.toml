@@ -1,11 +1,11 @@
 [tool.pinto]
 steps = [
-    "generate_background:generate-background",
-    "generate_waveforms:generate-waveforms",
-    "generate_glitches:generate-glitches",
-    "train:train:resnet",
-    "export:export-model:resnet",
-    "timeslide_injections:timeslide_injections",
+    #"generate_background:generate-background",
+    #"generate_waveforms:generate-waveforms",
+    #"generate_glitches:generate-glitches",
+    #"train:train:resnet",
+    #"export:export-model:resnet",
+    #"timeslide_injections:timeslide_injections",
     "infer:infer",
     "analyze:analyze"
 ]
@@ -28,6 +28,7 @@ kernel_length = 2
 inference_sampling_rate = 16
 fmin = 32
 prior_file = "/home/ethan.marx/forks/BBHNet/projects/sandbox/generate_waveforms/priors/nonspin_BBH.prior"
+fduration = 1
 
 [tool.typeo.scripts.generate-background]
 datadir = "${base.datadir}"
@@ -84,7 +85,7 @@ valid_stride = 0.0625
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
 
-fduration = 1
+fduration = "${base.fduration}"
 trigger_distance_size = -0.5
 sample_rate = "${base.sample_rate}"
 waveform_frac = 0.5
@@ -147,6 +148,7 @@ model_version = -1
 base_sequence_id = 1001
 log_file = "${base.logdir}/infer.log"
 num_workers = 1
+fduration = "${base.fduration}"
 verbose = true
 
 [tool.typeo.scripts.analyze]
@@ -154,9 +156,10 @@ data_dir = "${base.basedir}/timeslide_injections/"
 write_dir = "${base.basedir}/timeslide_injections/"
 results_dir = "${base.basedir}/results/" 
 window_length = 1.0
-norm_seconds = [10, 100, 1000]
+kernel_length = 1.0 
+norm_seconds = [0, 10, 100, 1000]
 t_clust = 5
 max_tb = 20000
 force = false
 log_file = "${base.basedir}/log/analyze.log"
-verbose = true
+verbose = false

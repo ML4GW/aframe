@@ -69,7 +69,4 @@ def integrate(
         y = y[-len(integrated) :]
         t = t[-len(integrated) :]
 
-    # offset timesteps by kernel size so that they
-    # refer to the time at the front of the kernel
-    # rather than the back for comparison to trigger times
-    return t + kernel_length, y, integrated
+    return t, y, integrated
