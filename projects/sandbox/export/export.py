@@ -10,6 +10,14 @@ from bbhnet.data.transforms import WhiteningTransform
 from bbhnet.logging import configure_logging
 
 
+def scale_model(model, instances):
+    # TODO: should quiver handle this under the hood?
+    try:
+        model.config.scale_instance_group(instances)
+    except ValueError:
+        model.config.add_instance_group(count=instances)
+
+
 @architecturize
 def export(
     architecture: Callable,
@@ -19,6 +27,7 @@ def export(
     kernel_length: float,
     inference_sampling_rate: float,
     sample_rate: float,
+    batch_size: int,
     weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
     instances: Optional[int] = None,
@@ -121,32 +130,36 @@ def export(
         # a concurrent instance count, scale the existing
         # instance group to this value
         if instances is not None:
-            # TODO: should quiver handle this under the hood?
-            try:
-                bbhnet.config.scale_instance_group(instances)
-            except ValueError:
-                bbhnet.config.add_instance_group(count=instances)
+            scale_model(bbhnet, instances)
     except KeyError:
         # otherwise create the model using the indicated
         # platform and set up an instance group with the
         # indicated scale if one was provided
         bbhnet = repo.add("bbhnet", platform=platform)
         if instances is not None:
-            bbhnet.config.add_instance_group(count=instances)
-
-    # turn off graph optimization because of this error
-    # https://github.com/triton-inference-server/server/issues/3418
-    bbhnet.config.optimization.graph.level = -1
+            scale_model(bbhnet, instances)
 
     # export this version of the model (with its current
     # weights), to this entry in the model repository
-    input_shape = (1, num_ifos, int(kernel_length * sample_rate))
+    input_shape = (batch_size, num_ifos, int(kernel_length * sample_rate))
+
+    # TODO: hardcoding these kwargs for now, but worth
+    # thinking about a more robust way to handle this
+    kwargs = {}
+    if platform == qv.Platform.ONNX:
+        kwargs["opset_version"] = 13
+
+        # turn off graph optimization because of this error
+        # https://github.com/triton-inference-server/server/issues/3418
+        bbhnet.config.optimization.graph.level = -1
+    elif platform == qv.Platform.TENSORRT:
+        kwargs["use_fp16"] = True
 
     bbhnet.export_version(
         nn,
         input_shapes={"hoft": input_shape},
         output_names=["discriminator"],
-        opset_version=13,
+        **kwargs,
     )
 
     # now try to create an ensemble that has a snapshotter
@@ -157,10 +170,7 @@ def export(
     # see if we have an existing snapshot model up front,
     # since we'll make different choices later depending
     # on whether it already exists or not
-    try:
-        snapshotter = repo.models["snapshotter"]
-    except KeyError:
-        snapshotter = None
+    snapshotter = repo.models.get("snapshotter", None)
 
     try:
         # first see if we have an existing
@@ -185,6 +195,7 @@ def export(
             ensemble.add_streaming_inputs(
                 inputs=[bbhnet.inputs["hoft"]],
                 stream_size=stream_size,
+                batch_size=batch_size,
                 name="snapshotter",
                 streams_per_gpu=streams_per_gpu,
             )

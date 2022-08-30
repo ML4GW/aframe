@@ -45,13 +45,8 @@ class WhiteningTransform(Transform):
         # due to settling in of whitening filter
         # TODO: should this be a parameter?
         self.crop_samples = int((self.fduration / 2) * self.sample_rate)
-        self.crop_samples = torch.tensor(self.crop_samples, dtype=torch.long)
-
         self.ntaps = int(self.fduration * self.sample_rate)
-
-        self.kernel_size = self.add_parameter(
-            int(self.kernel_length * self.sample_rate), dtype=torch.long
-        )
+        self.kernel_size = int(kernel_length * sample_rate)
 
         # subtract one to make kernel_size odd since the last value
         # of the filter will be 0. anyway. TODO: should we check
@@ -64,9 +59,7 @@ class WhiteningTransform(Transform):
         )
 
         # TODO: does this need to be a parameter?
-        self.pad = self.add_parameter(
-            int(self.time_domain_filter.size(-1) // 2), dtype=torch.long
-        )
+        self.pad = int(self.time_domain_filter.size(-1) // 2)
         self.window = torch.hann_window(self.ntaps)
 
     def to(self, device: torch.device):
@@ -83,11 +76,7 @@ class WhiteningTransform(Transform):
         # and add these all as parameters, passing the
         # device along?
         super().to(device)
-        self.time_domain_filter = self.time_domain_filter.to(device)
         self.window = self.window.to(device)
-        self.pad = self.pad.to(device)
-        self.kernel_size = self.kernel_size.to(device)
-        self.crop_samples.to(device)
 
     def fit(self, X: torch.Tensor) -> None:
         """
@@ -156,9 +145,9 @@ class WhiteningTransform(Transform):
         if nfft >= self.kernel_size / 2:
             conv = torch.nn.functional.conv1d(
                 X,
-                self.time_domain_filter.data,
+                self.time_domain_filter,
                 groups=self.num_ifos,
-                padding=int(self.pad.data),
+                padding=int(self.pad),
             )
 
             # crop the beginning and ending fduration / 2

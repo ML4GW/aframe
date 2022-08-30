@@ -6,7 +6,7 @@ authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 # readme = "README.md"
 
 [tool.poetry.scripts]
-infer = "infer:main"
+infer = "infer.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"

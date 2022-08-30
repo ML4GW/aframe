@@ -80,6 +80,7 @@ def validate_repo(repo_dir):
         expected_num_ifos,
         expected_stream_size,
         expected_kernel_size,
+        expected_batch_size,
     ):
         for i, model in enumerate(repo_dir.iterdir()):
             config = load_config(model / "config.pbtxt")
@@ -100,13 +101,18 @@ def validate_repo(repo_dir):
                         )
                     assert instance_group.count == expected_snapshots
 
-                assert config.input[0].dims[1] == expected_num_ifos
-                assert config.input[0].dims[2] == expected_stream_size
+                assert config.input[0].dims == [
+                    1,
+                    expected_num_ifos,
+                    expected_stream_size * expected_batch_size,
+                ]
+                assert config.output[0].dims == [
+                    expected_batch_size,
+                    expected_num_ifos,
+                    expected_kernel_size,
+                ]
 
-                assert config.output[0].dims[1] == expected_num_ifos
-                assert config.output[0].dims[2] == expected_kernel_size
-
-                assert (model / "1" / "model.savedmodel").is_dir()
+                assert (model / "1" / "model.onnx").exists()
                 assert not (model / "2").is_dir()
             elif model.name == "bbhnet":
                 try:
@@ -125,9 +131,12 @@ def validate_repo(repo_dir):
                         )
                     assert instance_group.count == expected_instances
 
-                assert config.input[0].dims[1] == expected_num_ifos
-                assert config.input[0].dims[2] == expected_kernel_size
-                assert [j == 1 for j in config.output[0].dims]
+                assert config.input[0].dims == [
+                    expected_batch_size,
+                    expected_num_ifos,
+                    expected_kernel_size,
+                ]
+                assert config.output[0].dims == [expected_batch_size, 1]
 
                 for j in range(expected_versions):
                     assert (model / str(j + 1) / "model.onnx").is_file()
@@ -167,12 +176,18 @@ def kernel_length(request):
     return request.param
 
 
+@pytest.fixture(params=[1, 2, 8])
+def batch_size(request):
+    return request.param
+
+
 def test_export_for_shapes(
     repo_dir,
     output_dir,
     num_ifos,
     sample_rate,
     kernel_length,
+    batch_size,
     inference_sampling_rate,
     architecture,
     get_network_weights,
@@ -182,7 +197,7 @@ def test_export_for_shapes(
     get_network_weights(num_ifos, sample_rate, kernel_length, weights)
 
     # test fully from scratch behavior
-    if kernel_length < (1 / inference_sampling_rate):
+    if kernel_length < (batch_size / inference_sampling_rate):
         context = pytest.raises(ValueError)
     else:
         context = nullcontext()
@@ -196,6 +211,7 @@ def test_export_for_shapes(
             kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             sample_rate=sample_rate,
+            batch_size=batch_size,
             weights=weights,
             streams_per_gpu=1,
             instances=1,
@@ -207,6 +223,7 @@ def test_export_for_shapes(
             expected_num_ifos=num_ifos,
             expected_stream_size=int(sample_rate / inference_sampling_rate),
             expected_kernel_size=int(sample_rate * kernel_length),
+            expected_batch_size=batch_size,
         )
 
 
@@ -253,6 +270,7 @@ def test_export_for_weights(
         kernel_length=kernel_length,
         inference_sampling_rate=inference_sampling_rate,
         sample_rate=sample_rate,
+        batch_size=1,
         weights=weights,
         streams_per_gpu=1,
         instances=1,
@@ -264,6 +282,7 @@ def test_export_for_weights(
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_kernel_size=int(sample_rate * kernel_length),
+        expected_batch_size=1,
     )
 
 
@@ -313,6 +332,7 @@ def test_export_for_scaling(
             kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             sample_rate=sample_rate,
+            batch_size=1,
             weights=weights,
             streams_per_gpu=streams_per_gpu,
             instances=instances,
@@ -327,6 +347,7 @@ def test_export_for_scaling(
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_kernel_size=int(sample_rate * kernel_length),
+        expected_batch_size=1,
     )
 
     # now check what happens if the repo already exists
@@ -338,6 +359,7 @@ def test_export_for_scaling(
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_kernel_size=int(sample_rate * kernel_length),
+        expected_batch_size=1,
     )
 
     # now make sure if we change the scale
@@ -350,6 +372,7 @@ def test_export_for_scaling(
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_kernel_size=int(sample_rate * kernel_length),
+        expected_batch_size=1,
     )
 
     # now test to make sure an error gets raised if the
@@ -384,4 +407,5 @@ def test_export_for_scaling(
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_kernel_size=int(sample_rate * kernel_length),
+        expected_batch_size=1,
     )
