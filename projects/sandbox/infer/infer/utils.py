@@ -34,7 +34,7 @@ def load(
     x = x[:, : num_streams * stream_size].astype("float32")
     x = np.split(x, num_streams, axis=-1)
 
-    write_dir = write_dir / segment.shift / f"{segment.field}-out"
+    write_dir = write_dir / segment.shift_dir / f"{segment.field}-out"
     sequence = Sequence(t, x, write_dir, batch_size)
     return sequence
 

@@ -15,8 +15,8 @@ def t0():
 
 
 @pytest.fixture
-def shift():
-    return "dt-0.0"
+def shift_dir():
+    return "dt-H0.0-L4.0"
 
 
 @pytest.fixture
@@ -25,8 +25,8 @@ def field():
 
 
 @pytest.fixture
-def timeslide_dir(tmpdir, shift, field):
-    timeslide_dir = tmpdir / shift / field
+def timeslide_dir(tmpdir, shift_dir, field):
+    timeslide_dir = tmpdir / shift_dir / field
     timeslide_dir.mkdir(parents=True, exist_ok=False)
     return timeslide_dir
 
@@ -110,7 +110,7 @@ def test_filter_and_sort_files(
 
 
 def test_segment_basics(
-    tmpdir, shift, field, typed_segment_fnames, t0, file_length
+    tmpdir, shift_dir, field, typed_segment_fnames, t0, file_length
 ):
     segment = Segment(typed_segment_fnames)
 
@@ -128,12 +128,14 @@ def test_segment_basics(
         assert t in segment
 
     # make sure these properties check out
-    assert segment.root == tmpdir / shift / field
+    assert segment.root == tmpdir / shift_dir / field
     assert segment.field == field
-    assert segment.shift == shift
+    assert segment.shift_dir == shift_dir
+    assert segment.shifts == [0.0, 4.0]
+    assert segment.ifos == ["H", "L"]
 
 
-def test_segment_init_errors(tmpdir, shift, field, segment_fnames):
+def test_segment_init_errors(tmpdir, shift_dir, field, segment_fnames):
     # make sure a nonexistent file raises a ValueError
     new_fname = tmpdir / "dt-1.0" / field / segment_fnames[0].name
     with pytest.raises(ValueError) as exc_info:
@@ -210,7 +212,7 @@ def test_segment_loading(segment_fnames, t0, file_length, sample_rate):
 
 
 def test_append(
-    tmpdir, shift, field, t0, file_length, path_type, segment_fnames
+    tmpdir, shift_dir, field, t0, file_length, path_type, segment_fnames
 ):
     segment = Segment(segment_fnames[:-1])
     assert segment.length == (file_length * (len(segment_fnames) - 1))
@@ -229,7 +231,7 @@ def test_append(
     segment = Segment(segment_fnames[:-1])
 
     # test to make sure a mismatched root causes a problem
-    bad_fname = tmpdir / shift / "bad" / segment_fnames[-1].name
+    bad_fname = tmpdir / shift_dir / "bad" / segment_fnames[-1].name
     with pytest.raises(ValueError) as exc_info:
         segment.append(path_type(bad_fname))
     assert str(exc_info.value).startswith(
@@ -255,22 +257,22 @@ def test_append(
     )
 
 
-def test_segment_make_shift(tmpdir, shift, field, segment_fnames):
-    new_dir = tmpdir / "dt-4.0" / field
+def test_segment_make_shift(tmpdir, shift_dir, field, segment_fnames):
+    new_dir = tmpdir / "dt-H1.0-L2.0" / field
     new_dir.mkdir(parents=True)
     for fname in segment_fnames:
         shutil.copy(fname, new_dir / fname.name)
 
     segment = Segment(segment_fnames)
-    new_segment = segment.make_shift("dt-4.0")
+    new_segment = segment.make_shift("dt-H1.0-L2.0")
     assert new_segment.root == new_dir
-    assert new_segment.shift == "dt-4.0"
+    assert new_segment.shift_dir == "dt-H1.0-L2.0"
     assert new_segment.field == segment.field
     assert new_segment.t0 == segment.t0
     assert new_segment.length == segment.length
 
     with pytest.raises(ValueError):
-        segment.make_shift("dt-5.0")
+        segment.make_shift("dt-H0.0-L5.0")
 
 
 @pytest.fixture
@@ -292,10 +294,10 @@ def more_segment_fnames(timeslide_dir, t0, file_length, sample_rate):
     return fnames
 
 
-def test_timeslide(tmpdir, shift, more_segment_fnames):
-    ts = TimeSlide(tmpdir / shift, "nn")
-    assert ts.path == tmpdir / shift / "nn"
-    assert ts.shift == shift
+def test_timeslide(tmpdir, shift_dir, more_segment_fnames):
+    ts = TimeSlide(tmpdir / shift_dir, "nn")
+    assert ts.path == tmpdir / shift_dir / "nn"
+    assert ts.shift_dir == shift_dir
 
     assert len(ts.segments) == len(more_segment_fnames)
     for segment, fnames in zip(ts.segments, more_segment_fnames):
@@ -305,10 +307,10 @@ def test_timeslide(tmpdir, shift, more_segment_fnames):
             assert segment_f == f
 
 
-def test_create_timeslide(tmpdir, shift, more_segment_fnames):
-    ts = TimeSlide.create(tmpdir / shift, "nn")
-    assert ts.path == tmpdir / shift / "nn"
-    assert ts.shift == shift
+def test_create_timeslide(tmpdir, shift_dir, more_segment_fnames):
+    ts = TimeSlide.create(tmpdir / shift_dir, "nn")
+    assert ts.path == tmpdir / shift_dir / "nn"
+    assert ts.shift_dir == shift_dir
 
     assert len(ts.segments) == len(more_segment_fnames)
     for segment, fnames in zip(ts.segments, more_segment_fnames):

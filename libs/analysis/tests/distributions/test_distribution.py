@@ -43,7 +43,7 @@ def event_times(request, event_time, sample_rate):
 
 
 def test_distribution(event_time, event_times, offset, sample_rate):
-    distribution = Distribution("test")
+    distribution = Distribution("test", ["H", "L"])
     distribution.nb = nb
     distribution.Tb = SECONDS_IN_YEAR / 2
 
@@ -64,50 +64,6 @@ def test_distribution(event_time, event_times, offset, sample_rate):
     y = np.ones_like(t)
     segment = Mock(Segment)
     segment.load = MagicMock(return_value=(y, t))
-
-    for metric, expected in zip(["far", "significance"], [far, significance]):
-        characterization, times = distribution.characterize_events(
-            segment, event_times=event_times, window_length=1, metric=metric
-        )
-
-        # make sure the appropriate segment data got "loaded"
-        segment.load.assert_called_with("test")
-
-        # for a single event, make sure we have 1D
-        # timeseries of the appropriate length and content
-        if isinstance(event_times, float):
-            assert characterization.ndim == 1
-            assert len(characterization) == sample_rate
-
-            assert times.ndim == 1
-            start = int(len(t) // 2) + 1
-            if offset > 0:
-                start -= 1
-
-            t_expect = t[start : start + sample_rate] - event_time
-            assert np.isclose(times, t_expect, rtol=1e-9).all()
-        else:
-            # for 2D, make sure we have 3 events with the right
-            # length and content
-            assert characterization.shape == (3, sample_rate)
-            assert times.shape == (3, sample_rate)
-
-            assert times.ndim == 2
-            assert len(times) == 3
-            assert times.shape[-1] == sample_rate
-
-            for i, tc in enumerate(event_times):
-                start = int(len(t) // 2) + 1
-                if offset > 0:
-                    start -= 1
-                start += i * 10 * sample_rate
-
-                t_expect = t[start : start + sample_rate] - tc
-                assert np.isclose(times[i], t_expect, rtol=1e-9).all()
-
-        # characterization values will be constant since
-        # that's how we've set up `nb` to return things
-        assert np.isclose(characterization, expected, rtol=1e-7).all()
 
     # override the update method to make sure
     # it gets called appropriately and the right
@@ -139,3 +95,58 @@ def test_distribution(event_time, event_times, offset, sample_rate):
     # now test fitting by passing a tuple
     distribution.fit((y, t))
     assert distribution.Tb == 30
+
+    # test apply vetoes function
+    distribution = Distribution("test", ["H", "L"])
+    distribution.events = np.arange(10)
+    distribution.event_times = np.arange(10)
+
+    # first test with no shifts
+    shifts = [0, 0]
+    distribution.shifts = np.repeat([shifts], len(distribution.events), axis=0)
+
+    # should vetoe events 3,4,5,6,7
+    L_vetoes = [[2, 8]]
+    H_vetoes = [[2, 8]]
+    distribution.apply_vetoes(L=L_vetoes)
+    assert (distribution.event_times == [0, 1, 2, 8, 9]).all()
+    assert (distribution.events == [0, 1, 2, 8, 9]).all()
+    assert len(distribution.shifts) == 5
+
+    # now reapply vetoes on H;
+    # shouldn't vetoe any events
+    distribution.apply_vetoes(H=H_vetoes)
+    assert (distribution.event_times == [0, 1, 2, 8, 9]).all()
+    assert (distribution.events == [0, 1, 2, 8, 9]).all()
+    assert len(distribution.shifts) == 5
+
+    # now test with shifts
+    distribution = Distribution("test", ["H", "L"])
+    distribution.events = np.arange(20)
+    distribution.event_times = np.arange(20)
+    shifts = [0, 20]
+    distribution.shifts = np.repeat([shifts], len(distribution.events), axis=0)
+
+    # first five events
+    H_vetoes = [[-1, 4.5], [4.6, 5]]
+
+    # last five events
+    L_vetoes = [[-6, -2.9], [-2.8, 0]]
+
+    expected_events = np.arange(5, 15, 1)
+
+    distribution.apply_vetoes(H=H_vetoes)
+    distribution.apply_vetoes(L=L_vetoes)
+
+    print(distribution.event_times)
+    assert (distribution.event_times == expected_events).all()
+    assert (distribution.events == expected_events).all()
+    assert len(distribution.shifts) == 10
+
+    # re applying vetoes shouldn't change anything
+    distribution.apply_vetoes(H=H_vetoes)
+    distribution.apply_vetoes(L=L_vetoes)
+
+    assert (distribution.event_times == expected_events).all()
+    assert (distribution.events == expected_events).all()
+    assert len(distribution.shifts) == 10

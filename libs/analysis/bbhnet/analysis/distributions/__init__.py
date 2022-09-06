@@ -1,1 +1,1 @@
-from .discrete import DiscreteDistribution
+from .cluster import ClusterDistribution
