@@ -13,7 +13,7 @@ python = ">=3.8,<3.11"
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [tool.poetry.scripts]
-train = "train:main"
+train = "train.train:main"
 
 [build-system]
 requires = ["poetry-core"]

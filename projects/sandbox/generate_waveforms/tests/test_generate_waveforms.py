@@ -40,11 +40,9 @@ def sample_rate(request):
     return request.param
 
 
-@pytest.fixture(
-    params=["prior_files/nonspin_BBH.prior", "prior_files/precess_tides.prior"]
-)
+@pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
 def prior_file(request):
-    return str(Path(__file__).resolve().parent / request.param)
+    return Path("tests") / "prior_files" / request.param
 
 
 def test_check_file_contents(

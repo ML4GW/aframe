@@ -1,90 +1,44 @@
-from typing import Optional
-
-import h5py
 import numpy as np
 import torch
 
-from bbhnet.data.utils import sample_kernels
+from bbhnet.data.transforms.transform import Transform
+from ml4gw.utils.slicing import sample_kernels
 
 
 # TODO: generalize to arbitrary ifos
-class GlitchSampler:
+class GlitchSampler(Transform):
     def __init__(
-        self,
-        glitch_dataset: str,
-        deterministic: bool = False,
-        frac: Optional[float] = None,
+        self, prob: float, max_offset: int, **glitches: np.ndarray
     ) -> None:
-        # TODO: will these need to be resampled?
-        with h5py.File(glitch_dataset, "r") as f:
-            hanford_glitches = f["H1_glitches"][:]
-            livingston_glitches = f["L1_glitches"][:]
+        super().__init__()
+        self.glitches = torch.nn.ParameterList()
+        for ifo in glitches.values():
+            param = self.add_parameter(ifo)
+            self.glitches.append(param)
 
-        if frac is not None:
-            num_hanford_glitches = int(frac * len(hanford_glitches))
-            num_livingston_glitches = int(frac * len(livingston_glitches))
-            if frac < 0:
-                hanford_glitches = hanford_glitches[num_hanford_glitches:]
-                livingston_glitches = livingston_glitches[
-                    num_livingston_glitches:
-                ]
-            else:
-                hanford_glitches = hanford_glitches[:num_hanford_glitches]
-                livingston_glitches = livingston_glitches[
-                    :num_livingston_glitches
-                ]
+        self.prob = prob
+        self.max_offset = max_offset
 
-        self.hanford = torch.Tensor(hanford_glitches)
-        self.livingston = torch.Tensor(livingston_glitches)
-
-        self.deterministic = deterministic
-
-    def to(self, device: str) -> None:
-        self.hanford = self.hanford.to(device)
-        self.livingston = self.livingston.to(device)
-
-    def sample(self, N: int, size: int, offset: int = 0) -> np.ndarray:
-        """Sample glitches from each interferometer
-
-        If `self.deterministic` is `True`, this will grab the first
-        `N` glitches from each interferometer, with the center of
-        each kernel placed at the trigger time minus some specified
-        amount of offset.
-
-        If `self.deterministic` is `False`, this will sample _at most_
-        `N` kernels from each interferometer, with the _total_ glitches
-        sampled equal to `N`. The sampled glitches will be chosen at
-        random, and the kernel sampled from each glitch will be randomly
-        selected, with `offset` indicating the maximum distance the right
-        edge of the kernel can be from the trigger time, i.e. the default
-        value of 0 indicates that every kernel must contain the trigger.
-        """
-
-        if self.deterministic:
-            if N == -1:
-                N = len(self.hanford)
-
-            center = int(self.hanford.shape[-1] // 2)
-            left = int(center + offset - size // 2)
-            right = int(left + size)
-
-            hanford = self.hanford[:N, left:right]
-            livingston = self.livingston[:N, left:right]
-        else:
-            hanford = livingston = None
-            num_hanford = np.random.randint(N)
-            num_livingston = N - num_hanford
-
-            if num_hanford > 0:
-                hanford = sample_kernels(
-                    self.hanford, size, offset, num_hanford
+    def forward(self, X: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        if X.shape[1] < len(self.glitches):
+            raise ValueError(
+                "Can't insert glitches into tensor with {} channels "
+                "using glitches from {} ifos".format(
+                    X.shape[1], len(self.glitches)
                 )
-                hanford = torch.stack(hanford, axis=0)
+            )
 
-            if num_livingston > 0:
-                livingston = sample_kernels(
-                    self.livingston, size, offset, num_livingston
-                )
-                livingston = torch.stack(livingston, axis=0)
+        masks = torch.rand(size=(len(self.glitches), len(X))) < self.prob
+        for i, ifo in enumerate(self.glitches):
+            mask = masks[i]
+            N = mask.sum().item()
+            idx = torch.randint(len(ifo), size=(N,))
 
-        return hanford, livingston
+            glitches = ifo[idx]
+            glitches = sample_kernels(
+                glitches[:, None],
+                kernel_size=X.shape[-1],
+                max_center_offset=self.max_offset,
+            )
+            X[mask] = glitches
+        return X, y

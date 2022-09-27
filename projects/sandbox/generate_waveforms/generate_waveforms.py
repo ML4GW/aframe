@@ -26,7 +26,6 @@ def main(
     force_generation: bool = False,
     verbose: bool = False,
 ):
-
     """Simulates a set of raw BBH signals and saves them to an output file.
 
     Args:
@@ -51,8 +50,8 @@ def main(
 
     if signal_file.exists() and not force_generation:
         logging.info(
-            "Signal data already exists and forced generation is off."
-            " Not generating signals"
+            "Signal data already exists and forced generation is off. "
+            "Not generating signals."
         )
         return signal_file
 
@@ -81,13 +80,11 @@ def main(
     )
 
     # sample GW parameters from prior distribution
-    priors = bilby.gw.prior.PriorDict(prior_file)
+    priors = bilby.gw.prior.PriorDict(str(prior_file))
     sample_params = priors.sample(n_samples)
-
     signals = generate_gw(sample_params, waveform_generator=waveform_generator)
 
     # Write params and similar to output file
-
     if np.isnan(signals).any():
         raise ValueError("The signals contain NaN values")
 

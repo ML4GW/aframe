@@ -76,49 +76,66 @@ waveform_duration = 8
 force_generation = "${base.force_generation}"
 
 [tool.typeo.scripts.train]
+# input and output paths
 hanford_background = "${base.datadir}/H1_background.h5"
 livingston_background = "${base.datadir}/L1_background.h5"
 glitch_dataset = "${base.datadir}/glitches.h5"
-signal_dataset = "${base.datadir}/signals.h5"
-valid_frac = 0.025
-valid_stride = 0.0625
-
+waveform_dataset = "${base.datadir}/signals.h5"
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
 
-fduration = "${base.fduration}"
-trigger_distance_size = -0.5
+# data generation and processing parameters
 sample_rate = "${base.sample_rate}"
-waveform_frac = 0.5
-glitch_frac = 0.25
-min_snr = 4
-max_snr = 10000
+kernel_length = "${base.kernel_length}"
+fduration = "${base.fduration}"
 highpass = "${base.fmin}"
-kernel_length = "${base.kernel_length}" 
-batch_size = 64
-batches_per_epoch = 50
+trigger_distance = -0.5
+waveform_prob = 0.5
+glitch_prob = 0.25
+mean_snr = 10
+std_snr = 4
+min_snr = 2
+
+# optimization parameters
+batch_size = 512
+batches_per_epoch = 200
 max_epochs = 200
-lr = 1e-5
+lr = 4e-3
+min_lr = 1e-5
+decay_steps = 10000
 weight_decay = 1e-5
-patience = 10
-factor = 0.2
-early_stop = 100
+early_stop = 20
+valid_frac = 0.25
+valid_stride = 0.0625
+
+# misc params
 device = "cuda"
 profile = false
+use_amp = false
+
+# arch parameters
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.export-model]
+# paths
 repository_directory = "${base.repository_directory}" 
 outdir = "${base.logdir}"
+weights = "${base.basedir}/training/weights.pt"
+
+# input-output mapping info
 num_ifos = 2 
 kernel_length = "${base.kernel_length}" 
 inference_sampling_rate = "${base.inference_sampling_rate}"
 sample_rate = "${base.sample_rate}"
 batch_size = "${base.inference_sampling_rate}"
-weights = "${base.basedir}/training/weights.pt"
+
+# repo/triton parameters
 streams_per_gpu = 10
 platform = "tensorrt_plan"
-verbose = true
+verbose = false
+clean = true
+
+# arch parameters
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
@@ -158,7 +175,7 @@ log_file = "${base.logdir}/infer.log"
 streams_per_gpu = 8
 num_workers = 4
 fduration = "${base.fduration}"
-verbose = true
+verbose = false
 
 [tool.typeo.scripts.analyze]
 data_dir = "${base.basedir}/timeslide_injections/"

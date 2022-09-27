@@ -9,8 +9,7 @@ from export import export
 from google.protobuf import text_format
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
-from bbhnet.architectures import ResNet
-from bbhnet.data.transforms import WhiteningTransform
+from bbhnet.architectures import Preprocessor, ResNet
 
 
 # set up a directory for the entirety of the session
@@ -39,9 +38,7 @@ def get_network_weights(weights_dir, architecture):
     def fn(num_ifos, sample_rate, kernel_length, target):
         weights = weights_dir / f"{num_ifos}-{sample_rate}-{kernel_length}.pt"
         if not weights.exists():
-            preprocessor = WhiteningTransform(
-                num_ifos, sample_rate, kernel_length
-            )
+            preprocessor = Preprocessor(num_ifos, sample_rate, kernel_length)
             bbhnet = architecture(num_ifos)
             model = torch.nn.Sequential(preprocessor, bbhnet)
             torch.save(model.state_dict(prefix=""), weights)

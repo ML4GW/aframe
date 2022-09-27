@@ -1,3 +1,4 @@
+import h5py  # noqa
 import pytest
 import torch
 

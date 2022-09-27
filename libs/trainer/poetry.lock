@@ -16,14 +16,6 @@ docs = ["sphinx (<4)", "sphinx-astropy (>=1.3)", "pytest", "PyYAML (>=3.13)", "s
 test = ["pytest-astropy (>=0.8)", "pytest-xdist", "objgraph", "ipython (>=4.2)", "coverage", "skyfield (>=1.20)", "sgp4 (>=2.3)", "packaging"]
 
 [[package]]
-name = "atomicwrites"
-version = "1.4.1"
-description = "Atomic file writes."
-category = "dev"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-
-[[package]]
 name = "attrs"
 version = "22.1.0"
 description = "Classes Without Boilerplate"
@@ -47,6 +39,7 @@ python-versions = ">=3.8,<3.11"
 develop = true
 
 [package.dependencies]
+"bbhnet.data" = {path = "../data", develop = true}
 numpy = "^1.22.3"
 torch = "^1.0"
 
@@ -92,6 +85,7 @@ develop = true
 [package.dependencies]
 "bbhnet.injection" = {path = "../injection", develop = true}
 h5py = "^3.6"
+ml4gw = {path = "../../ml4gw", develop = true}
 
 [package.source]
 type = "directory"
@@ -162,7 +156,7 @@ url = "../parallelize"
 
 [[package]]
 name = "bilby"
-version = "1.2.0"
+version = "1.2.1"
 description = "A user-friendly Bayesian inference library"
 category = "main"
 optional = false
@@ -187,6 +181,14 @@ gw = ["astropy (>=5)", "lalsuite", "gwpy", "tables", "pyfftw"]
 mcmc = ["scikit-learn", "nflows"]
 
 [[package]]
+name = "certifi"
+version = "2022.9.24"
+description = "Python package for providing Mozilla's CA Bundle."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "cffi"
 version = "1.15.1"
 description = "Foreign Function Interface for Python calling C code."
@@ -198,12 +200,41 @@ python-versions = "*"
 pycparser = "*"
 
 [[package]]
+name = "charset-normalizer"
+version = "2.1.1"
+description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
+category = "main"
+optional = false
+python-versions = ">=3.6.0"
+
+[package.extras]
+unicode_backport = ["unicodedata2"]
+
+[[package]]
 name = "colorama"
 version = "0.4.5"
 description = "Cross-platform colored terminal text."
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+
+[[package]]
+name = "contourpy"
+version = "1.0.5"
+description = "Python library for calculating contours of 2D quadrilateral grids"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.16"
+
+[package.extras]
+test-no-codebase = ["pillow", "matplotlib", "pytest"]
+test-minimal = ["pytest"]
+test = ["isort", "flake8", "pillow", "matplotlib", "pytest"]
+docs = ["sphinx-rtd-theme", "sphinx", "docutils (<0.18)"]
+bokeh = ["selenium", "bokeh"]
 
 [[package]]
 name = "corner"
@@ -224,7 +255,7 @@ test = ["pytest (>=3.6)", "pytest-cov (>=2.6.1)", "black", "isort", "toml"]
 
 [[package]]
 name = "cryptography"
-version = "37.0.4"
+version = "38.0.1"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 category = "main"
 optional = false
@@ -237,7 +268,7 @@ cffi = ">=1.12"
 docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
 docstest = ["pyenchant (>=1.6.11)", "twine (>=1.12.0)", "sphinxcontrib-spelling (>=4.0.1)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
-sdist = ["setuptools_rust (>=0.11.4)"]
+sdist = ["setuptools-rust (>=0.11.4)"]
 ssh = ["bcrypt (>=3.1.5)"]
 test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-subtests", "pytest-xdist", "pretend", "iso8601", "pytz", "hypothesis (>=1.11.4,!=3.79.2)"]
 
@@ -259,6 +290,23 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, 
 
 [package.extras]
 graph = ["objgraph (>=1.7.2)"]
+
+[[package]]
+name = "dqsegdb2"
+version = "1.1.3"
+description = "Simplified python interface to DQSEGDB"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+igwn-auth-utils = ">=0.3.1"
+ligo-segments = ">=1.0.0"
+
+[package.extras]
+test = ["requests-mock (>=1.5.0)", "pytest-cov (>=2.5.1)", "pytest (>=2.9.2)"]
+lint = ["flake8-bandit", "flake8 (>=3.7.0)"]
+docs = ["sphinx-immaterial", "sphinx-automodapi", "sphinx"]
 
 [[package]]
 name = "dynesty"
@@ -291,7 +339,7 @@ tests = ["pytest", "pytest-cov", "coverage"]
 
 [[package]]
 name = "fonttools"
-version = "4.37.1"
+version = "4.37.3"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
@@ -310,6 +358,66 @@ type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
 unicode = ["unicodedata2 (>=14.0.0)"]
 woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
+
+[[package]]
+name = "gwdatafind"
+version = "1.1.1"
+description = "The GWDataFind data discovery client"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+igwn-auth-utils = {version = ">=0.2.0", extras = ["requests"]}
+ligo-segments = "*"
+
+[package.extras]
+test = ["requests-mock", "pytest-cov", "pytest (>=2.8.0)"]
+lint = ["radon", "flake8-docstrings", "flake8-bandit", "flake8"]
+docs = ["sphinx-tabs", "sphinx-rtd-theme", "sphinx-automodapi", "sphinx (>=1.8.0)", "numpydoc"]
+
+[[package]]
+name = "gwosc"
+version = "0.6.1"
+description = "A python interface to the GW Open Science data archive"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+requests = ">=1.0.0"
+
+[package.extras]
+docs = ["sphinx", "sphinx-automodapi", "sphinx-rtd-theme"]
+test = ["pytest (>=2.7.0)", "pytest-cov", "pytest-socket", "requests-mock (>=1.5.0)"]
+
+[[package]]
+name = "gwpy"
+version = "2.1.5"
+description = "A python package for gravitational-wave astrophysics"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+astropy = ">=4.0"
+dqsegdb2 = "*"
+gwdatafind = ">=1.1.0"
+gwosc = ">=0.5.3"
+h5py = ">=2.8.0"
+ligo-segments = ">=1.0.0"
+ligotimegps = ">=1.2.1"
+matplotlib = ">=3.3.0"
+numpy = ">=1.16"
+python-dateutil = "*"
+scipy = ">=1.2.0"
+tqdm = ">=4.10.0"
+
+[package.extras]
+conda = ["python-framel (>=8.40.1)", "python-nds2-client", "python-ldas-tools-framecpp"]
+dev = ["ciecplib", "maya", "pandas", "psycopg2", "pymysql", "pyrxp", "sqlalchemy", "uproot (>=3.11)", "uproot3", "astropy (<5.1a0)", "lalsuite", "lscsoft-glue", "pycbc (>=1.13.4)", "python-ligo-lw (>=1.7.0)"]
+docs = ["numpydoc (>=0.8.0)", "requests", "sphinx (>=4.0.0)", "sphinx-automodapi", "sphinx-material (>=0.0.32)", "sphinx-panels (>=0.6.0)", "sphinxcontrib-programoutput"]
+test = ["coverage[toml] (>=5.0)", "freezegun (>=0.3.12)", "pytest (>=3.9.1)", "pytest-cov (>=2.4.0)", "pytest-socket", "pytest-xdist", "requests-mock"]
 
 [[package]]
 name = "h5py"
@@ -334,6 +442,33 @@ python-versions = ">=3.8,<4.0"
 toml = ">=0.10.2,<0.11.0"
 
 [[package]]
+name = "idna"
+version = "3.4"
+description = "Internationalized Domain Names in Applications (IDNA)"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[[package]]
+name = "igwn-auth-utils"
+version = "0.3.1"
+description = "Authorisation utilities for IGWN"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cryptography = ">=2.3"
+requests = ">=2.14"
+safe-netrc = ">=1.0.0"
+scitokens = ">=1.7.0"
+
+[package.extras]
+test = ["safe-netrc (>=1.0.0)", "requests-mock", "requests (>=2.14)", "pytest-cov", "pytest (>=3.9.1)"]
+lint = ["flake8-bandit", "flake8 (>=3.7.0)"]
+docs = ["sphinx-immaterial-igwn", "sphinx (>=4.0.0)"]
+
+[[package]]
 name = "iniconfig"
 version = "1.1.1"
 description = "iniconfig: brain-dead simple config-ini parsing"
@@ -351,7 +486,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "lalsuite"
-version = "7.7"
+version = "7.8"
 description = "LIGO Scientific Collaboration Algorithm Library - minimal Python package"
 category = "main"
 optional = false
@@ -382,6 +517,14 @@ python-versions = "*"
 six = "*"
 
 [[package]]
+name = "ligotimegps"
+version = "2.0.1"
+description = "A pure-python version of lal.LIGOTimeGPS"
+category = "main"
+optional = false
+python-versions = ">=3.4"
+
+[[package]]
 name = "lscsoft-glue"
 version = "3.0.1"
 description = "Grid LSC User Engine"
@@ -398,22 +541,42 @@ six = "*"
 
 [[package]]
 name = "matplotlib"
-version = "3.5.3"
+version = "3.6.0"
 description = "Python plotting package"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
+contourpy = ">=1.0.1"
 cycler = ">=0.10"
 fonttools = ">=4.22.0"
 kiwisolver = ">=1.0.1"
-numpy = ">=1.17"
+numpy = ">=1.19"
 packaging = ">=20.0"
 pillow = ">=6.2.0"
 pyparsing = ">=2.2.1"
 python-dateutil = ">=2.7"
-setuptools_scm = ">=4,<7"
+setuptools_scm = ">=7"
+
+[[package]]
+name = "ml4gw"
+version = "0.0.1"
+description = "Tools for building training torch models on gravitational wave data"
+category = "main"
+optional = false
+python-versions = ">=3.8,<3.11"
+develop = true
+
+[package.dependencies]
+bilby = "^1.1"
+gwpy = "^2.1"
+torch = "^1.10"
+torchtyping = "^0.1"
+
+[package.source]
+type = "directory"
+url = "../../ml4gw"
 
 [[package]]
 name = "numpy"
@@ -436,7 +599,7 @@ pyparsing = ">=2.0.2"
 
 [[package]]
 name = "pandas"
-version = "1.4.3"
+version = "1.5.0"
 description = "Powerful data structures for data analysis, time series, and statistics"
 category = "main"
 optional = false
@@ -444,16 +607,14 @@ python-versions = ">=3.8"
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.18.5", markers = "platform_machine != \"aarch64\" and platform_machine != \"arm64\" and python_version < \"3.10\""},
-    {version = ">=1.19.2", markers = "platform_machine == \"aarch64\" and python_version < \"3.10\""},
-    {version = ">=1.20.0", markers = "platform_machine == \"arm64\" and python_version < \"3.10\""},
     {version = ">=1.21.0", markers = "python_version >= \"3.10\""},
+    {version = ">=1.20.3", markers = "python_version < \"3.10\""},
 ]
 python-dateutil = ">=2.8.1"
 pytz = ">=2020.1"
 
 [package.extras]
-test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
+test = ["pytest-xdist (>=1.31)", "pytest (>=6.0)", "hypothesis (>=5.5.3)"]
 
 [[package]]
 name = "pillow"
@@ -511,18 +672,32 @@ docs = ["sphinx-astropy (>=1.3)"]
 test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
+name = "pyjwt"
+version = "2.5.0"
+description = "JSON Web Token implementation in Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+crypto = ["cryptography (>=3.3.1)", "types-cryptography (>=3.3.21)"]
+dev = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface", "cryptography (>=3.3.1)", "types-cryptography (>=3.3.21)", "pytest (>=6.0.0,<7.0.0)", "coverage[toml] (==5.0.4)", "pre-commit"]
+docs = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
+tests = ["pytest (>=6.0.0,<7.0.0)", "coverage[toml] (==5.0.4)"]
+
+[[package]]
 name = "pyopenssl"
-version = "22.0.0"
+version = "22.1.0"
 description = "Python wrapper module around the OpenSSL library"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-cryptography = ">=35.0"
+cryptography = ">=38.0.0,<39"
 
 [package.extras]
-docs = ["sphinx", "sphinx-rtd-theme"]
+docs = ["sphinx (!=5.2.0,!=5.2.0.post0)", "sphinx-rtd-theme"]
 test = ["flaky", "pretend", "pytest (>=3.0.1)"]
 
 [[package]]
@@ -546,14 +721,13 @@ python-versions = ">=3.6, <4"
 
 [[package]]
 name = "pytest"
-version = "7.1.2"
+version = "7.1.3"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
 attrs = ">=19.2.0"
 colorama = {version = "*", markers = "sys_platform == \"win32\""}
 iniconfig = "*"
@@ -585,6 +759,32 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "requests"
+version = "2.28.1"
+description = "Python HTTP for Humans."
+category = "main"
+optional = false
+python-versions = ">=3.7, <4"
+
+[package.dependencies]
+certifi = ">=2017.4.17"
+charset-normalizer = ">=2,<3"
+idna = ">=2.5,<4"
+urllib3 = ">=1.21.1,<1.27"
+
+[package.extras]
+socks = ["PySocks (>=1.5.6,!=1.5.7)"]
+use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
+
+[[package]]
+name = "safe-netrc"
+version = "1.0.0"
+description = "Safe netrc file parser"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "scipy"
 version = "1.7.3"
 description = "SciPy: Scientific Library for Python"
@@ -596,8 +796,21 @@ python-versions = ">=3.7,<3.11"
 numpy = ">=1.16.5,<1.23.0"
 
 [[package]]
+name = "scitokens"
+version = "1.7.0"
+description = "SciToken reference implementation library"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+cryptography = "*"
+PyJWT = ">=1.6.1"
+six = "*"
+
+[[package]]
 name = "setuptools"
-version = "65.3.0"
+version = "65.4.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "main"
 optional = false
@@ -610,16 +823,17 @@ testing-integration = ["pytest", "pytest-xdist", "pytest-enabler", "virtualenv (
 
 [[package]]
 name = "setuptools-scm"
-version = "6.4.2"
+version = "7.0.5"
 description = "the blessed package to manage your versions by scm tags"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 packaging = ">=20.0"
 setuptools = "*"
 tomli = ">=1.0.0"
+typing-extensions = "*"
 
 [package.extras]
 test = ["pytest (>=6.2)", "virtualenv (>20)"]
@@ -661,8 +875,20 @@ python-versions = ">=3.7.0"
 typing-extensions = "*"
 
 [[package]]
+name = "torchtyping"
+version = "0.1.4"
+description = "Runtime type annotations for the shape, dtype etc. of PyTorch Tensors."
+category = "main"
+optional = false
+python-versions = ">=3.7.0"
+
+[package.dependencies]
+torch = ">=1.7.0"
+typeguard = ">=2.11.1"
+
+[[package]]
 name = "tqdm"
-version = "4.64.0"
+version = "4.64.1"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
@@ -678,12 +904,37 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
+name = "typeguard"
+version = "2.13.3"
+description = "Run-time type checker for Python"
+category = "main"
+optional = false
+python-versions = ">=3.5.3"
+
+[package.extras]
+doc = ["sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
+test = ["pytest", "typing-extensions", "mypy"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "urllib3"
+version = "1.26.12"
+description = "HTTP library with thread-safe connection pooling, file post, and more."
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <4"
+
+[package.extras]
+brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
+secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
+socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [metadata]
 lock-version = "1.1"
@@ -709,7 +960,6 @@ astropy = [
     {file = "astropy-4.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:434ab46e85f5406acc9f2d2084e5e36890abeaf615c8aa71178e835134b64726"},
     {file = "astropy-4.3.1.tar.gz", hash = "sha256:2d3951223b4eb7f368fcad8c8340d27374c5d8e3b635a636275acdb38f35cd51"},
 ]
-atomicwrites = []
 attrs = []
 "bbhnet.architectures" = []
 "bbhnet.base" = []
@@ -719,11 +969,14 @@ attrs = []
 "bbhnet.logging" = []
 "bbhnet.parallelize" = []
 bilby = []
+certifi = []
 cffi = []
+charset-normalizer = []
 colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
 ]
+contourpy = []
 corner = [
     {file = "corner-2.2.1-py3-none-any.whl", hash = "sha256:a187860e62e71e5be33088383314588edb98d1c6ac2614bf107561cb1f6581b3"},
     {file = "corner-2.2.1.tar.gz", hash = "sha256:d39f1d9ad31093bb2aa06d80b23573e51ad7130af4c4af0931fca745a64751e5"},
@@ -734,6 +987,7 @@ cycler = [
     {file = "cycler-0.11.0.tar.gz", hash = "sha256:9c87405839a19696e837b3b818fed3f5f69f16f1eec1a1ad77e043dcea9c772f"},
 ]
 dill = []
+dqsegdb2 = []
 dynesty = [
     {file = "dynesty-1.0.1-py2.py3-none-any.whl", hash = "sha256:98e381308f9a280bdb8d186b7dd333edf71583117a9f06605b845541d60dfb5b"},
     {file = "dynesty-1.0.1-py3.6.egg", hash = "sha256:5fcdfc522d7770ae2f33603b7cb4f4c585bb7f9d1882f6081daa09dcf464af5f"},
@@ -741,11 +995,19 @@ dynesty = [
 ]
 emcee = []
 fonttools = []
+gwdatafind = []
+gwosc = [
+    {file = "gwosc-0.6.1-py3-none-any.whl", hash = "sha256:387d47ec5b2b6ab74106a463e67e4270e58c6324dc5c75e1440a8768ee1e6f42"},
+    {file = "gwosc-0.6.1.tar.gz", hash = "sha256:cfe0d65aa92827e3d50652c9abcccc846449a42512b1a2a19007b30f98bf1e26"},
+]
+gwpy = []
 h5py = []
 "hermes.typeo" = [
     {file = "hermes.typeo-0.1.5-py3-none-any.whl", hash = "sha256:a1fff2eeb257fb6f4f4b4b397681f2eddee59a4b8b3dd275f0fd9dac38e3371b"},
     {file = "hermes.typeo-0.1.5.tar.gz", hash = "sha256:8bd1d97a698c0e99a7d2a6b3b082c8b8290aea1bf0e6a44548752ca178a8c73e"},
 ]
+idna = []
+igwn-auth-utils = []
 iniconfig = [
     {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
@@ -755,10 +1017,15 @@ lalsuite = []
 ligo-segments = [
     {file = "ligo-segments-1.4.0.tar.gz", hash = "sha256:e072a844713c5b02efdcaf5bfe4c3a8cd9ef225b08cfd3202a4e185e0f71f5dc"},
 ]
+ligotimegps = [
+    {file = "ligotimegps-2.0.1-py2.py3-none-any.whl", hash = "sha256:da8c1289ba1310337ef5177e7936e25ce47d4e8e6a269cbdd5e9abfc5b5db490"},
+    {file = "ligotimegps-2.0.1.tar.gz", hash = "sha256:88626c02ad9a464d1242a1147b40074792f424bafa2ab013eee629c7d1b6469c"},
+]
 lscsoft-glue = [
     {file = "lscsoft-glue-3.0.1.tar.gz", hash = "sha256:a242f29537f18957dbb07e6d9d20d7ebddc86c8325d4fa9e192cfa61a7c6ffbd"},
 ]
 matplotlib = []
+ml4gw = []
 numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:92bfa69cfbdf7dfc3040978ad09a48091143cffb778ec3b03fa170c494118d75"},
     {file = "numpy-1.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8251ed96f38b47b4295b1ae51631de7ffa8260b5b087808ef09a39a9d66c97ab"},
@@ -829,10 +1096,8 @@ pyerfa = [
     {file = "pyerfa-2.0.0.1-cp39-cp39-win_amd64.whl", hash = "sha256:63a83c35cea8c5d50d53c18089f1e625c0ffc59a7a5b8d44e0f1b3ec5288f183"},
     {file = "pyerfa-2.0.0.1.tar.gz", hash = "sha256:2fd4637ffe2c1e6ede7482c13f583ba7c73119d78bef90175448ce506a0ede30"},
 ]
-pyopenssl = [
-    {file = "pyOpenSSL-22.0.0-py2.py3-none-any.whl", hash = "sha256:ea252b38c87425b64116f808355e8da644ef9b07e429398bfece610f893ee2e0"},
-    {file = "pyOpenSSL-22.0.0.tar.gz", hash = "sha256:660b1b1425aac4a1bea1d94168a85d99f0b3144c869dd4390d27629d0087f1bf"},
-]
+pyjwt = []
+pyopenssl = []
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
@@ -889,6 +1154,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 pytz = []
+requests = []
+safe-netrc = []
 scipy = [
     {file = "scipy-1.7.3-1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:c9e04d7e9b03a8a6ac2045f7c5ef741be86727d8f49c45db45f244bdd2bcff17"},
     {file = "scipy-1.7.3-1-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:b0e0aeb061a1d7dcd2ed59ea57ee56c9b23dd60100825f98238c06ee5cc4467e"},
@@ -920,11 +1187,9 @@ scipy = [
     {file = "scipy-1.7.3-cp39-cp39-win_amd64.whl", hash = "sha256:3f78181a153fa21c018d346f595edd648344751d7f03ab94b398be2ad083ed3e"},
     {file = "scipy-1.7.3.tar.gz", hash = "sha256:ab5875facfdef77e0a47d5fd39ea178b58e60e454a4c85aa1e52fcb80db7babf"},
 ]
+scitokens = []
 setuptools = []
-setuptools-scm = [
-    {file = "setuptools_scm-6.4.2-py3-none-any.whl", hash = "sha256:acea13255093849de7ccb11af9e1fb8bde7067783450cee9ef7a93139bddf6d4"},
-    {file = "setuptools_scm-6.4.2.tar.gz", hash = "sha256:6833ac65c6ed9711a4d5d2266f8024cfa07c533a0e55f4c12f6eff280a5a9e30"},
-]
+setuptools-scm = []
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
@@ -938,5 +1203,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 torch = []
+torchtyping = []
 tqdm = []
+typeguard = []
 typing-extensions = []
+urllib3 = []
