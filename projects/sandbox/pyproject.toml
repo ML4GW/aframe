@@ -1,11 +1,11 @@
 [tool.pinto]
 steps = [
-    #"generate_background:generate-background",
-    #"generate_waveforms:generate-waveforms",
-    #"generate_glitches:generate-glitches",
-    #"train:train:resnet",
-    #"export:export-model:resnet",
-    #"timeslide_injections:timeslide_injections",
+    "generate_background:generate-background",
+    "generate_waveforms:generate-waveforms",
+    "generate_glitches:generate-glitches",
+    "train:train:resnet",
+    "export:export-model:resnet",
+    "timeslide_injections:timeslide_injections",
     "infer:infer",
     "analyze:analyze"
 ]
@@ -27,7 +27,9 @@ repository_directory = "${BASE_DIR}/model_repo/"
 force_generation = false
 kernel_length = 2
 inference_sampling_rate = 16
-fmin = 32
+minimum_frequency = 20 
+reference_frequency = 50
+highpass = 32
 prior_file = "priors/nonspin_BBH.prior"
 fduration = 1
 
@@ -52,7 +54,7 @@ stop = "${base.stop}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
-f_min = "${base.fmin}"
+f_min = "${base.highpass}"
 q_min = 3.3166
 q_max = 108
 cluster_dt = 0.5
@@ -67,6 +69,8 @@ logdir = "${base.logdir}"
 sample_rate = "${base.sample_rate}"
 
 [tool.typeo.scripts.generate-waveforms]
+minimum_frequency = "${base.minimum_frequency}" 
+reference_frequency = "${base.reference_frequency}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 n_samples = 10000
@@ -80,6 +84,7 @@ force_generation = "${base.force_generation}"
 hanford_background = "${base.datadir}/H1_background.h5"
 livingston_background = "${base.datadir}/L1_background.h5"
 glitch_dataset = "${base.datadir}/glitches.h5"
+
 waveform_dataset = "${base.datadir}/signals.h5"
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
@@ -88,6 +93,7 @@ outdir = "${base.basedir}/training"
 sample_rate = "${base.sample_rate}"
 kernel_length = "${base.kernel_length}"
 fduration = "${base.fduration}"
+
 highpass = "${base.fmin}"
 trigger_distance = -0.5
 waveform_prob = 0.5
@@ -127,6 +133,8 @@ num_ifos = 2
 kernel_length = "${base.kernel_length}" 
 inference_sampling_rate = "${base.inference_sampling_rate}"
 sample_rate = "${base.sample_rate}"
+fduration = "${base.fduration}"
+highpass = "${base.highpass}"
 batch_size = "${base.inference_sampling_rate}"
 
 # repo/triton parameters
@@ -144,15 +152,18 @@ stop = "${base.test_stop}"
 datadir = "${base.basedir}/timeslide_injections/"
 logdir = "${base.logdir}"
 prior_file = "${base.prior_file}"
+minimum_frequency = "${base.minimum_frequency}"
+reference_frequency = "${base.reference_frequency}"
+highpass = "${base.highpass}"
 spacing = 60
 buffer = 10
 n_slides = 10
 jitter = 2
 min_segment_length = 1024
+max_segment_length = 15000
 shifts = [0, 1]
 ifos = "${base.ifos}"
 file_length = 4096
-fmin = "${base.fmin}" 
 sample_rate = "${base.sample_rate}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}" 

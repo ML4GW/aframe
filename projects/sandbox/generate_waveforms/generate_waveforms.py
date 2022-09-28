@@ -7,8 +7,6 @@ from pathlib import Path
 import bilby
 import h5py
 import numpy as np
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
 
 from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging
@@ -21,8 +19,11 @@ def main(
     n_samples: int,
     logdir: Path,
     datadir: Path,
-    waveform_duration: float = 8,
-    sample_rate: float = 4096,
+    reference_frequency: float,
+    minimum_frequency: float,
+    sample_rate: float,
+    waveform_duration: float,
+    waveform_approximant: str = "IMRPhenomPv2",
     force_generation: bool = False,
     verbose: bool = False,
 ):
@@ -31,12 +32,17 @@ def main(
     Args:
         prior_file: prior file for bilby to sample from
         n_samples: number of signal to inject
-        outdir: output directory to which signals will be written
+        logdir: directory where log file will be written
+        datadir: output directory to which signals will be written
+        reference_frequency: reference frequency for waveform generation
+        minimum_frequency: minimum_frequency for waveform generation
+        sample_rate: rate at which to sample waveforms
         waveform_duration: length of injected waveforms
-        sample_rate: sample rate of the signal in Hz
+        waveform_approximant: which lalsimulation waveform approximant to use
         force_generation: if True, generate signals even if path already exists
+        verbose: log verbosely
     Returns:
-        path to output file
+        path to h5 output file containing signals
     """
 
     # make dirs
@@ -66,23 +72,18 @@ def main(
     logging.info("Sample rate [Hz]      : {}".format(sample_rate))
     logging.info("Prior file            : {}".format(prior_file))
 
-    # define a Bilby waveform generator
-    waveform_generator = bilby.gw.WaveformGenerator(
-        duration=waveform_duration,
-        sampling_frequency=sample_rate,
-        frequency_domain_source_model=lal_binary_black_hole,
-        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-        waveform_arguments={
-            "waveform_approximant": "IMRPhenomPv2",
-            "reference_frequency": 50,
-            "minimum_frequency": 20,
-        },
-    )
-
-    # sample GW parameters from prior distribution
+    # sample gw parameters from prior distribution
     priors = bilby.gw.prior.PriorDict(str(prior_file))
     sample_params = priors.sample(n_samples)
-    signals = generate_gw(sample_params, waveform_generator=waveform_generator)
+
+    signals = generate_gw(
+        sample_params,
+        minimum_frequency,
+        reference_frequency,
+        sample_rate,
+        waveform_duration,
+        waveform_approximant,
+    )
 
     # Write params and similar to output file
     if np.isnan(signals).any():
@@ -101,6 +102,9 @@ def main(
                 "size": n_samples,
                 "sample_rate": sample_rate,
                 "waveform_duration": waveform_duration,
+                "waveform_approximant": waveform_approximant,
+                "reference_frequency:": reference_frequency,
+                "minimum_frequency": minimum_frequency,
             }
         )
 

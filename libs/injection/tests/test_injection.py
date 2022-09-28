@@ -1,143 +1,99 @@
 #!/usr/bin/env python
 # coding: utf-8
 from pathlib import Path
-from unittest.mock import patch
 
+import bilby
 import numpy as np
 import pytest
-from gwpy.detector import Channel
-from gwpy.timeseries import TimeSeries
 
 import bbhnet.injection
-from bbhnet.parallelize import AsyncExecutor
 
 TEST_DIR = Path(__file__).resolve().parent
 
 
-def mock_frame(sample_rate, duration):
-    mock_data = np.random.random(int(sample_rate * duration))
-    return TimeSeries(
-        mock_data,
-        unit=None,
-        t0=0,
-        sample_rate=sample_rate,
-        channel=Channel("IFO:Strain", sample_rate=sample_rate, dtype="float"),
-        name="Strain",
-    )
+@pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
+def prior_file(request):
+    return TEST_DIR / "prior_files" / request.param
 
 
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        (dict(duration=16),),
-        (dict(sampling_frequency=128, waveform_approximant="TaylorF2"),),
-    ],
-)
-def test_get_waveform_generator(kwargs):
-    (kwargs,) = kwargs
-    waveform_generator = bbhnet.injection.injection.get_waveform_generator(
-        **kwargs
-    )
-    sampling_kwargs = {
-        "duration",
-        "sampling_frequency",
-        "frequency_domain_source_model",
-        "parameter_conversion",
-    }
-    waveform_kwargs = {
-        "waveform_approximant",
-        "reference_frequency",
-        "minimum_frequency",
-    }
-
-    for k in sampling_kwargs:
-        assert hasattr(waveform_generator, k)
-        if k in kwargs:
-            assert getattr(waveform_generator, k) == kwargs[k]
-
-    assert hasattr(waveform_generator, "waveform_arguments")
-
-    for k in waveform_kwargs:
-        assert waveform_generator.waveform_arguments.get(k)
-        if k in kwargs:
-            assert waveform_generator.waveform_arguments.get(k) == kwargs[k]
+@pytest.fixture(params=["IMRPhenomPv2"])
+def approximant(request):
+    return request.param
 
 
-@patch("bbhnet.injection.injection.apply_high_pass_filter")
-def test_generate_gw(mock_filter):
-    """Test generate_gw using supplied waveform generator, or
-    initializing generator
-    """
-    import bilby
-
-    sample_params = bilby.gw.prior.BBHPriorDict().sample(10)
-
-    with patch("bilby.gw.waveform_generator.WaveformGenerator") as mock_gen:
-        bbhnet.injection.injection.generate_gw(
-            sample_params,
-            waveform_generator=None,
-            waveform_approximant="TaylorF2",
-            sampling_frequency=128,
-        )
-
-    assert mock_gen.call_count == 1
-
-    dummy_waveform_generator = bilby.gw.waveform_generator.WaveformGenerator(
-        frequency_domain_source_model=bilby.gw.source.lal_binary_black_hole,
-        duration=1,
-        sampling_frequency=128,
-    )
-    mock_gen.reset_mock()
-    with patch("bilby.gw.waveform_generator.WaveformGenerator") as mock_gen:
-        bbhnet.injection.injection.generate_gw(
-            sample_params, waveform_generator=dummy_waveform_generator
-        )
-
-    assert mock_gen.call_count == 0
+@pytest.fixture(params=["20", "50"])
+def reference_frequency(request):
+    return request.param
 
 
-@pytest.mark.parametrize(
-    "ifos,sample_rate,spacing,jitter,file_length,fmin,prior",
-    [
-        (["H1", "L1"], 2048, 60, 10, 4096, 32, "nonspin_BBH.prior"),
-    ],
-)
-def test_inject_signals_into_timeslide(
-    raw_timeslide,
-    inj_timeslide,
-    ifos,
+@pytest.fixture(params=[10, 20])
+def minimum_frequency(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 100])
+def n_samples(request):
+    return request.param
+
+
+@pytest.fixture(params=[2048, 4096])
+def sample_rate(request):
+    return request.param
+
+
+@pytest.fixture(params=[2, 4, 8])
+def waveform_duration(request):
+    return request.param
+
+
+def test_generate_gw(
+    prior_file,
+    approximant,
     sample_rate,
-    spacing,
-    jitter,
-    file_length,
-    fmin,
-    prior,
+    waveform_duration,
+    minimum_frequency,
+    reference_frequency,
+    n_samples,
 ):
 
-    # create process and thread pools
-    thread_ex = AsyncExecutor(4, thread=True)
-    process_ex = AsyncExecutor(4, thread=False)
+    n_pols = 2
+    prior = bilby.gw.prior.PriorDict(str(prior_file))
+    sample_params = prior.sample(n_samples)
 
-    # TODO: why did we get rid of this fixture? just re using code
-    prior_file = Path(__file__).absolute().parent / "prior_files"
-    prior_file /= prior
-    prior_file = prior_file.as_posix()
+    waveforms = bbhnet.injection.injection.generate_gw(
+        sample_params,
+        minimum_frequency,
+        reference_frequency,
+        sample_rate,
+        waveform_duration,
+        approximant,
+    )
 
-    with process_ex, thread_ex:
-        out_timeslide = bbhnet.injection.inject_signals_into_timeslide(
-            process_ex,
-            thread_ex,
-            raw_timeslide,
-            inj_timeslide,
-            ifos,
-            prior_file,
-            spacing,
-            jitter,
-            sample_rate,
-            file_length,
-            fmin,
-        )
+    expected_waveform_size = waveform_duration * sample_rate
+    expected_num_waveforms = n_samples
 
-    param_file = out_timeslide.path / "params.h5"
-    assert out_timeslide.path.exists()
-    assert param_file.exists()
+    assert waveforms.shape == (
+        expected_num_waveforms,
+        n_pols,
+        expected_waveform_size,
+    )
+
+
+def test_inject_waveforms():
+    times = np.arange(1000)
+    background = np.zeros_like(times, dtype=np.float32)
+
+    waveform_size = 5
+    signal_times = np.arange(0, 1000, 10)
+    n_waveforms = len(signal_times)
+    waveforms = np.ones((n_waveforms, waveform_size), dtype=np.float32)
+
+    injected = bbhnet.injection.injection.inject_waveforms(
+        (times, background), waveforms, signal_times
+    )
+
+    assert len(background) == len(injected)
+
+    for i in range(n_waveforms):
+        slc = slice(i * 10, (i * 10) + waveform_size)
+        assert (injected[slc] == np.ones(waveform_size)).all()

@@ -32,7 +32,7 @@ def jitter(request):
 
 
 @pytest.fixture(params=[8])
-def buffer(request):
+def buffer_(request):
     return request.param
 
 
@@ -47,7 +47,12 @@ def file_length(request):
 
 
 @pytest.fixture(params=[32])
-def fmin(request):
+def highpass(request):
+    return request.param
+
+
+@pytest.fixture(params=[20])
+def minimum_frequency(request):
     return request.param
 
 
@@ -87,12 +92,13 @@ def test_timeslide_injections_no_segments(
     prior_file,
     spacing,
     jitter,
-    buffer,
+    buffer_,
     n_slides,
     shifts,
     file_length,
     ifos,
-    fmin,
+    minimum_frequency,
+    highpass,
     sample_rate,
     frame_type,
     channel,
@@ -116,12 +122,13 @@ def test_timeslide_injections_no_segments(
             prior_file,
             spacing,
             jitter,
-            buffer,
+            buffer_,
             n_slides,
             shifts,
             ifos,
             file_length,
-            fmin,
+            minimum_frequency,
+            highpass,
             sample_rate,
             frame_type,
             channel,
@@ -145,6 +152,7 @@ def test_timeslide_injections_no_segments(
         assert len(h) == len(l) == expected_size
 
         h_expected = np.arange(expected_size)
+        print(h)
         assert (h == h_expected).all()
 
         l_shift = float(slide.name.split("-L")[-1]) * sample_rate
@@ -160,12 +168,13 @@ def test_timeslide_injections_with_segments(
     prior_file,
     spacing,
     jitter,
-    buffer,
+    buffer_,
     n_slides,
     shifts,
     file_length,
     ifos,
-    fmin,
+    minimum_frequency,
+    highpass,
     sample_rate,
     frame_type,
     channel,
@@ -212,12 +221,13 @@ def test_timeslide_injections_with_segments(
             prior_file,
             spacing,
             jitter,
-            buffer,
+            buffer_,
             n_slides,
             shifts,
             ifos,
             file_length,
-            fmin,
+            minimum_frequency,
+            highpass,
             sample_rate,
             frame_type,
             channel,

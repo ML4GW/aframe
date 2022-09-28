@@ -219,7 +219,6 @@ def main(
         background,
         int(kernel_length * sample_rate),
         batch_size=batch_size,
-        stride=1,
         batches_per_epoch=batches_per_epoch,
         preprocessor=augmenter,
         coincident=False,
