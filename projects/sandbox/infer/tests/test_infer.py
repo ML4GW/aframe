@@ -127,18 +127,13 @@ def data_dir(tmpdir, sample_rate, fields):
     return data_dir
 
 
-def fake_init(obj, *args, **kwargs):
-    obj._instance = MagicMock()
-    obj._thread = MagicMock()
-    obj._response_queue = MagicMock()
+def fake_init(self, *args, **kwargs):
+    self.name = "dummy-instance"
 
 
-SINGULARITY_INSTANCE = "hermes.aeriel.serve.SingularityInstance"
-
-
-@patch(SINGULARITY_INSTANCE + ".__init__", new=fake_init)
-@patch(SINGULARITY_INSTANCE + ".run")
-@patch(SINGULARITY_INSTANCE + ".name", return_value="FAKE")
+@patch("spython.main.Client.execute")
+@patch("spython.instance.Instance.__init__", new=fake_init)
+@patch("spython.instance.Instance.stop")
 @patch(
     "tritonclient.grpc.InferenceServerClient.is_server_live", return_value=True
 )
@@ -146,12 +141,12 @@ SINGULARITY_INSTANCE = "hermes.aeriel.serve.SingularityInstance"
 @patch("hermes.stillwater.monitor.ServerMonitor.__enter__")
 @patch("hermes.stillwater.monitor.ServerMonitor.__exit__")
 def test_infer(
-    init_mock,
-    run_mock,
-    name_mock,
-    monitor_mock1,
-    monitor_mock2,
-    monitor_mock3,
+    exec_mock,
+    stop_mock,
+    is_live_mock,
+    monitor_init_mock,
+    monitor_enter_mock,
+    monitor_exit_mock,
     data_dir,
     tmpdir,
     fields,
