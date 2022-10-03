@@ -1,0 +1,84 @@
+# define filters for file changes
+# to trigger unit tests
+
+# filter for changes
+# to workflow
+workflow: &workflow
+  - '.github/filters.yaml'
+  - '.github/workflows/ci-tests.yaml'
+
+
+# use paths for filter names 
+# for simplicity in ci-test.yaml
+
+# cleaner way to run all jobs
+# if workflow file is changed?
+
+# libraries
+
+libs/io/:  
+  - *workflow
+  - 'libs/io/**' 
+libs/injection/:
+  - *workflow
+  - 'libs/injection/**'
+  - 'libs/base/**' 
+libs/data/:
+  - *workflow
+  - 'libs/data/**'
+  - 'libs/injection/**'
+  - 'ml4gw/**' 
+libs/architectures/:
+  - *workflow
+  - 'libs/architectures/**'
+  - 'libs/data/**'
+libs/analysis:
+  - *workflow
+  - 'libs/analysis/**'
+  - 'libs/io/**'
+  - 'libs/parallelize/**'
+  - 'libs/base/**'
+libs/parallelize/:
+  - *workflow
+  - 'libs/parallelize/**'
+libs/trainer/:
+  - *workflow
+  - 'libs/trainer/**'
+  - 'libs/data/**'   
+  - 'libs/architectures/**'
+  - 'libs/logging/**'
+
+
+# projects
+
+projects/sandbox/export/:
+  - *workflow 
+  - 'projects/sandbox/export/**'
+  - 'libs/architectures/**'
+  - 'libs/base/**'
+  - 'libs/data/**'
+  - 'libs/logging/**'
+  - 'ml4gw/**'
+  - 'hermes/hermes/hermes.quiver/**'
+
+projects/sandbox/generate_glitches/:
+  - *workflow
+  - 'projects/sandbox/generate_glitches/**'
+  - 'libs/base/**'
+  - 'libs/logging/**'
+projects/sandbox/generate_waveforms/:
+  - *workflow
+  - 'projects/sandbox/generate_waveforms/**'
+projects/sandbox/infer/:
+  - *workflow
+  - 'projects/sandbox/infer/**'
+  - 'hermes/hermes/hermes.stillwater/**'
+  - 'hermes/hermes/hermes.aerial/**'
+projects/sandbox/timeslide_injections/:
+  - *workflow
+  - 'projects/sandbox/timeslide_injections/**'
+  - 'libs/injection/**'
+  - 'libs/io/**'
+  - 'libs/logging/**' 
+  - 'libs/parallelize/**'
+  - 'ml4gw/**'

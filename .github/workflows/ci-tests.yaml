@@ -1,15 +1,45 @@
-name: ci-tests
-
+name: unit-tests
+ 
 on:
   pull_request:
+   types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   push:
     branches:
       - main
 
 jobs:
-  ci-tests:
-    # set up Pinto container permissions
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      libraries: ${{ steps.filter.outputs.changes }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: dorny/paths-filter@v2
+      id: filter 
+      with:
+        filters: .github/filters.yaml
+    if: github.event.pull_request.draft == false  
+  tests:
+    runs-on: ubuntu-latest
+    needs: changes
+    strategy:
+      fail-fast: true # is this desired behavior here?
+      matrix:
+        library: ${{ fromJSON(needs.changes.outputs.libraries) }}
+        # extra test flags for data library
+        include:
+          - library: 'libs/data/'
+            args: '-m "not gpu"'
+        exclude:
+          # don't run non-existent .github/workflow tests
+          - library: 'workflow'
+         
+         
+           
     permissions:
       packages: read
     container:
@@ -19,161 +49,28 @@ jobs:
         password: ${{ secrets.github_token }}
       volumes:
         - ${{ github.workspace }}:/github/workspace
+    
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      # create filters for each lib so that we
-      # only run the tests we absolutely need to
-      -
-        uses: dorny/paths-filter@v2.10.1
-        id: filter
-        with:
-          filters: |
-            architectures:
-              - 'libs/architectures/**'
-            io:
-              - 'libs/io/**'
-            analysis:
-              - 'libs/analysis/**'
-            injection:
-              - 'libs/injection/**'
-            data:
-              - 'libs/data/**'
-            parallelize:
-              - 'libs/parallelize/**'
-            trainer:
-                - 'libs/trainer/**'
-            generate_waveforms:
-              - 'projects/sandbox/generate_waveforms/**'
-            generate_glitches:
-              - 'projects/sandbox/generate_glitches/**'
-            export:
-              - 'projects/sandbox/export/**'
-            infer:
-              - 'projects/sandbox/infer/**'
-            timeslide_injections:
-              - 'projects/sandbox/timeslide_injections/**'
-
       # install gcc for bilby build
+      # TODO: not every library/project needs this
       -
         name: install gcc
         run: apt update && apt install -y build-essential
 
-      # run library tests
-      -
-        name: run architecture tests
-        if: steps.filter.outputs.architectures == 'true'
-        env:
-          test_dir: /github/workspace/libs/architectures
-        run: |
-          pinto -p $test_dir build -E wrapper
-          pinto -p $test_dir run pytest $test_dir/tests
-
-      # test injection library before the libraries that depend on it
-      -
-        name: run injection tests
-        if: steps.filter.outputs.injection == 'true'
-        env:
-          test_dir: /github/workspace/libs/injection
-        run: pinto -p $test_dir run pytest -x $test_dir/tests
-       
-      # run dataloader tests if dataloader library code changed
-      # _or_ if injection code (on which it depends) changed
-      # make sure we don't run GPU tests since our GitHub CI
-      # node won't have those (presumably)
-
-      -
-        name: run dataloader tests
-        if: |
-          (steps.filter.outputs.injection == 'true')
-          || (steps.filter.outputs.data == 'true')
-        env:
-          test_dir: /github/workspace/libs/data
-        run: pinto -p $test_dir run pytest $test_dir/tests -m "not gpu"
-
-      -
-        name: run parallelization tests
-        if: steps.filter.outputs.parallelize == 'true'
-        env:
-          test_dir: /github/workspace/libs/parallelize
-        run: pinto -p $test_dir run pytest $test_dir/tests
-
-      # run I/O tests then analysis tests that depend
-      # on them, adding I/O to analysis filter
-      -
-        name: run io tests
-        if: steps.filter.outputs.io == 'true'
-        env:
-          test_dir: /github/workspace/libs/io
-        run: pinto -p $test_dir run pytest $test_dir/tests
-
-      -
-        name: run analysis tests
-        if: |
-          (steps.filter.outputs.analysis == 'true')
-          || (steps.filter.outputs.io == 'true')
-        env:
-          test_dir: /github/workspace/libs/analysis
-        run: pinto -p $test_dir run pytest $test_dir/tests
-
-      # run trainer tests if architecture library has changed
-      # or if data library has changed
-      -
-        name: run trainer tests
-        if: |
-          (steps.filter.outputs.trainer == 'true')
-          || (steps.filter.outputs.data == 'true')
-          || (steps.filter.outputs.architectures == 'true')     
-        env:
-            test_dir: /github/workspace/libs/trainer
-        run: pinto -p $test_dir run pytest $test_dir/tests 
-
-      # test projects, and filter by both changes to
-      # project code and their dependent libraries
-      -
-        name: run waveform tests
-        if: |
-          (steps.filter.outputs.injection == 'true')
-          && (steps.filter.outputs.generate_waveforms == 'true')
-        env:
-          test_dir: /github/workspace/projects/sandbox/generate_waveforms
-        run: pinto -p $test_dir run pytest $test_dir/tests
         
-      - 
-        name: run glitch generation tests
-        if: |
-          (steps.filter.outputs.generate_glitches == 'true')
+      # run tests
+        
+      - name: run tests 
         env:
-          test_dir: /github/workspace/projects/sandbox/generate_glitches
-        run: pinto -p $test_dir run pytest -x $test_dir/tests
-
-      - 
-        name: run export tests
-        if: |
-          (steps.filter.outputs.architectures == 'true')
-          || (steps.filter.outputs.data == 'true')
-          || (steps.filter.outputs.export == 'true')
-        env:
-          test_dir: /github/workspace/projects/sandbox/export
-        run: pinto -p $test_dir run pytest $test_dir/tests
-
-      -
-        name: run infer tests
-        if: |
-          (steps.filter.outputs.io == 'true')
-          || (steps.filter.outputs.parallelize == 'true')
-          || (steps.filter.outputs.infer == 'true')
-        env:
-          test_dir: /github/workspace/projects/sandbox/infer
-        run: pinto -p $test_dir run pytest $test_dir/tests
-
-      - name: run timeslide injection tests
-        if: |
-          (steps.filter.outputs.timeslide_injections == 'true')
-          || (steps.filter.outputs.io == 'true')
-          || (steps.filter.outputs.injection == 'true')
-        env:
-          test_dir: /github/workspace/projects/sandbox/timeslide_injections
-        run: pinto -p $test_dir run pytest $test_dir/tests
+          test_dir: /github/workspace/${{ matrix.library }}
+        run: |
+            if [[ "${{matrix.library}}" == "libs/architectures/" ]]; then
+                pinto -p $test_dir build -E wrapper
+            fi    
+            pinto -p $test_dir run pytest $test_dir/tests ${{matrix.args}}
+        shell: bash
+        
