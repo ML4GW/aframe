@@ -123,9 +123,7 @@ def export(
     # instantiate a model repository at the
     # indicated location and see if a bbhnet
     # model already exists in this repository
-    if clean:
-        shutil.rmtree(repository_directory)
-    repo = qv.ModelRepository(repository_directory)
+    repo = qv.ModelRepository(repository_directory, clean)
     try:
         bbhnet = repo.models["bbhnet"]
     except KeyError:

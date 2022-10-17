@@ -88,7 +88,7 @@ def make_validation_dataset(
     # concatenate everything into a single tensor
     # and create the associated labels
     X = torch.concat([background, glitch_background, waveform_background])
-    y = torch.zeros((len(X),))
+    y = torch.zeros((len(X), 1))
     y[-len(waveform_background) :] = 1
 
     logging.info("Performing validation on:")

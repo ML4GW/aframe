@@ -94,7 +94,7 @@ sample_rate = "${base.sample_rate}"
 kernel_length = "${base.kernel_length}"
 fduration = "${base.fduration}"
 
-highpass = "${base.fmin}"
+highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
 waveform_prob = 0.5
 glitch_prob = 0.25
@@ -141,7 +141,7 @@ batch_size = "${base.inference_sampling_rate}"
 streams_per_gpu = 10
 platform = "tensorrt_plan"
 verbose = false
-clean = true
+clean = false
 
 # arch parameters
 commands.resnet = "${base.resnet}"
@@ -160,7 +160,7 @@ buffer = 10
 n_slides = 10
 jitter = 2
 min_segment_length = 1024
-max_segment_length = 15000
+# max_segment_length = 15000
 shifts = [0, 1]
 ifos = "${base.ifos}"
 file_length = 4096
