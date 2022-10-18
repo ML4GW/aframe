@@ -139,7 +139,7 @@ batch_size = "${base.inference_sampling_rate}"
 
 # repo/triton parameters
 streams_per_gpu = 10
-platform = "tensorrt_plan"
+platform = "onnxruntime_onnx"
 verbose = false
 clean = false
 
