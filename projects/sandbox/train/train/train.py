@@ -257,5 +257,3 @@ def main(
         )
     else:
         valid_dataset = None
-
-    return train_dataset, valid_dataset, preprocessor

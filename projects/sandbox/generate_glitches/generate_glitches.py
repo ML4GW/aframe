@@ -327,7 +327,6 @@ def main(
             "Glitch data already exists and forced generation is off. "
             "Not generating glitches"
         )
-        return
 
     # nyquist
     f_max = sample_rate / 2
@@ -399,8 +398,6 @@ def main(
         with h5py.File(glitch_file, "a") as f:
             f.create_dataset(f"{ifo}_glitches", data=glitches)
             f.create_dataset(f"{ifo}_snrs", data=snrs)
-
-    return glitch_file
 
 
 if __name__ == "__main__":

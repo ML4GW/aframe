@@ -41,8 +41,6 @@ def main(
         waveform_approximant: which lalsimulation waveform approximant to use
         force_generation: if True, generate signals even if path already exists
         verbose: log verbosely
-    Returns:
-        path to h5 output file containing signals
     """
 
     # make dirs
@@ -59,7 +57,6 @@ def main(
             "Signal data already exists and forced generation is off. "
             "Not generating signals."
         )
-        return signal_file
 
     # if prior file is a relative path,
     # make it relative to this script
@@ -107,8 +104,6 @@ def main(
                 "minimum_frequency": minimum_frequency,
             }
         )
-
-    return signal_file
 
 
 if __name__ == "__main__":

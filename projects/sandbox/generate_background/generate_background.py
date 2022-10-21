@@ -53,7 +53,6 @@ def main(
             "Background data already exists"
             " and forced generation is off. Not generating background"
         )
-        return
 
     # query segments for each ifo
     # I think a certificate is needed for this
