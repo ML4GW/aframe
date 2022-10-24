@@ -57,6 +57,7 @@ def main(
             "Signal data already exists and forced generation is off. "
             "Not generating signals."
         )
+        return signal_file
 
     # if prior file is a relative path,
     # make it relative to this script
@@ -104,6 +105,8 @@ def main(
                 "minimum_frequency": minimum_frequency,
             }
         )
+
+    return signal_file
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ license = "MIT"
 python = ">=3.8,<3.11"
 "hermes.typeo" = "^0.1.5"
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"bbhnet.base" = {path = "../../../libs/base", extras = ["numpy"], develop = true}
 
 [tool.typeo]
 start = 1263588390 
