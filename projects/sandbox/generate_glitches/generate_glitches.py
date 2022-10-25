@@ -259,6 +259,7 @@ def main(
     snr_thresh: float,
     start: int,
     stop: int,
+    test_stop: int,
     q_min: float,
     q_max: float,
     f_min: float,
@@ -337,9 +338,11 @@ def main(
         run_dir.mkdir(exist_ok=True)
 
         # launch omicron dag for ifo
+        # covering the entire training
+        # and testing range
         omicron_main_wrapper(
             start,
-            stop,
+            test_stop,
             q_min,
             q_max,
             f_min,
@@ -380,6 +383,7 @@ def main(
         trigger_file = list(trigger_dir.glob("*.h5"))[0]
 
         # generate glitches
+        # only over the training times
         glitches, snrs = generate_glitch_dataset(
             ifo,
             snr_thresh,
