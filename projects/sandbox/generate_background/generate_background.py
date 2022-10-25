@@ -35,7 +35,6 @@ def main(
         ifos: which ifos to query data for
         outdir: where to store data
     """
-
     # make logdir dir
     logdir.mkdir(exist_ok=True, parents=True)
     datadir.mkdir(exist_ok=True, parents=True)
@@ -114,3 +113,5 @@ def main(
         with h5py.File(datadir / f"{ifo}_background.h5", "w") as f:
             f.create_dataset("hoft", data=data)
             f.create_dataset("t0", data=float(segment[0]))
+
+    return datadir
