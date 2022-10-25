@@ -7,7 +7,8 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-"hermes.typeo" = "^0.1.4"
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
+
 "bbhnet.injection" = {path="../../../libs/injection", develop = true}
 "bbhnet.logging" = {path="../../../libs/logging", develop = true}
 
