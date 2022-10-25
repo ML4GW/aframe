@@ -259,6 +259,7 @@ def main(
     snr_thresh: float,
     start: int,
     stop: int,
+    test_stop: int,
     q_min: float,
     q_max: float,
     f_min: float,
