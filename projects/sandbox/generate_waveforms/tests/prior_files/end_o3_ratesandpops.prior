@@ -1,0 +1,21 @@
+# Priors and parameters taken from https://git.ligo.org/RatesAndPopulations/lvc-rates-and-pop/-/blob/master/bin/endo3_distributions.py
+# and https://git.ligo.org/RatesAndPopulations/lvc-rates-and-pop/-/blob/master/share/O3/bbh_allo3pop_injections.ini
+
+mass_1 = PowerLaw(name="mass_1", alpha=-2.35, minimum=2, maximum=100, unit='$M_{\odot}$')
+
+condition_func = (alpha=reference_params["alpha"], minimum=reference_params["minimum"], maximum=mass_1)
+mass_2 = ConditionalPowerLaw(condition_func=condition_func, name="mass_2", alpha=1, minimum=2, maximum=100, unit='$M_{\odot}$')
+
+luminosity_distance = bilby.gw.prior.UniformComovingVolume(name='luminosity_distance', minimum=100, maximum=15000, unit='Mpc', boundary=None)
+dec = Cosine(name='dec')
+ra = Uniform(name='ra', minimum=0, maximum=2 * np.pi, boundary='periodic')
+theta_jn = 0
+psi = 0
+phase = 0
+a_1 = Uniform(name="a_1", minimum=-0.998, maximum=0.998)
+a_2 = Uniform(name="a_2", minimum=-0.998, maximum=0.998)
+tilt_1 = Sine(name="tilt_1", unit="rad")
+tilt_2 = Sine(name="tilt_2", unit="rad")
+phi_12 = Uniform(name='phi_12', minimum=0, maximum=2 * np.pi, unit="rad", boundary='periodic')
+phi_jl = 0
+

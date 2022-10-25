@@ -71,7 +71,7 @@ def main(
     logging.info("Prior file            : {}".format(prior_file))
 
     # sample gw parameters from prior distribution
-    priors = bilby.gw.prior.PriorDict(str(prior_file))
+    priors = bilby.gw.prior.ConditionalPriorDict(str(prior_file))
     sample_params = priors.sample(n_samples)
 
     signals = generate_gw(
