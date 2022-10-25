@@ -66,9 +66,19 @@ projects/sandbox/generate_glitches/:
   - 'projects/sandbox/generate_glitches/**'
   - 'libs/base/**'
   - 'libs/logging/**'
+
 projects/sandbox/generate_waveforms/:
   - *workflow
   - 'projects/sandbox/generate_waveforms/**'
+  - 'libs/logging/**'
+  - 'libs/injection/**'
+
+projects/sandbox/generate_background/:
+  - *workflow
+  - 'projects/sandbox/generate_background/**'
+  - 'libs/logging/**'
+  - 'libs/base/**'
+
 projects/sandbox/infer/:
   - *workflow
   - 'projects/sandbox/infer/**'
