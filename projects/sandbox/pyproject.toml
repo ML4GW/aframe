@@ -149,13 +149,12 @@ clean = false
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
-start = "${base.stop}" 
-stop = "${base.test_stop}"
+# paths and what not
 datadir = "${base.basedir}/timeslide_injections/"
 logdir = "${base.logdir}"
 
 # background parameters
-start = "${base.stop}" 
+start = "${base.stop}"
 stop = "${base.test_stop}"
 sample_rate = "${base.sample_rate}"
 ifos = "${base.ifos}"
@@ -177,15 +176,8 @@ highpass = "${base.highpass}"
 spacing = 60
 buffer = 10
 jitter = 2
-min_segment_length = 1024
-# max_segment_length = 15000
-shifts = [0, 1]
-ifos = "${base.ifos}"
-file_length = 4096
-sample_rate = "${base.sample_rate}"
-channel = "${base.channel}"
-frame_type = "${base.frame_type}" 
-state_flag = "${base.state_flag}"
+
+# misc parameters
 verbose = true
 
 [tool.typeo.scripts.infer]
