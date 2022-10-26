@@ -84,12 +84,6 @@ def prepare_augmentation(
     # inject those resposnes into the input data
     with h5py.File(waveform_dataset, "r") as f:
         signals = f["signals"][:]
-
-        # TODO: right now signals are prepared such that the
-        # coalescence time is at the end of the window, so roll
-        # them to put them in the middle as expected. Do we want
-        # to do this here or in the generate_waveforms project?
-        signals = np.roll(signals, -signals.shape[-1] // 2, axis=-1)
         if valid_frac is not None:
             signals, valid_signals = split(signals, 1 - valid_frac, 0)
             valid_plus, valid_cross = valid_signals.transpose(1, 0, 2)

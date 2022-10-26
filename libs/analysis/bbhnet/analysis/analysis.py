@@ -12,8 +12,7 @@ if TYPE_CHECKING:
 def integrate(
     y: np.ndarray,
     t: np.ndarray,
-    kernel_length: float = 1,
-    window_length: Optional[float] = None,
+    window_length: float,
     integrator: "Integrator" = boxcar_filter,
     normalizer: Optional["Normalizer"] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -30,14 +29,10 @@ def integrate(
     Args:
         y: Array of network outputs to integrate
         t: timestamps of network outputs
-        kernel_length:
-            The length of time, in seconds, of the input kernel
-            to BBHNet used to produce the outputs being analyzed
         window_length:
             The length of time, in seconds, over which previous
             network outputs should be averaged to produce
-            "matched filter" outputs. If left as `None`, it will
-            default to the same length as the kernel length.
+            "matched filter" outputs
         integrator:
             Callable which maps from an array of raw neural network
             and a integer window size to an array of integrated
@@ -55,10 +50,7 @@ def integrate(
         Array of matched filter outputs for each timestamp
     """
 
-    # read in all the data for a given segment
-    # TODO: should we make the dataset name an argument?
     sample_rate = 1 / (t[1] - t[0])
-    window_length = window_length or kernel_length
     window_size = int(window_length * sample_rate)
 
     # integrate the neural network outputs over a sliding window
@@ -68,5 +60,4 @@ def integrate(
         integrated = normalizer(integrated, window_size)
         y = y[-len(integrated) :]
         t = t[-len(integrated) :]
-
     return t, y, integrated

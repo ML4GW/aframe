@@ -2,11 +2,11 @@
 name = "analyze"
 version = "0.1.0"
 description = "Project for analyzing the output of timeslides and injections"
-authors = ["ethan.marx <ethan.marx@ligo.org>"]
+authors = ["ethan.marx <ethan.marx@ligo.org>", "Alec Gunny <alecg@.mit.edu"]
 license = "MIT"
 
 [tool.poetry.scripts]
-analyze = "analyze:main"
+analyze = "analyze.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"

@@ -1,3 +1,4 @@
+from tempfile import NamedTemporaryFile
 from unittest.mock import MagicMock, Mock
 
 import numpy as np
@@ -7,7 +8,6 @@ from bbhnet.io.timeslides import Segment
 
 
 def test_cluster_distribution():
-
     t_clust = 2
     distribution = ClusterDistribution("test", ["H", "L"], t_clust)
 
@@ -73,8 +73,7 @@ def test_cluster_distribution():
 
     assert (distribution.events == [9]).all()
 
-    # now test fitting with segments
-    # from scratch
+    # now test fitting with segments from scratch
     t = np.array([1, 2, 3])
     y = np.array([1, 2, 1])
 
@@ -93,3 +92,11 @@ def test_cluster_distribution():
     assert distribution.Tb == 6
     assert (distribution.events == [2, 2]).all()
     assert len(distribution.shifts) == len(distribution.events)
+
+    with NamedTemporaryFile() as f:
+        distribution.write(f.name)
+
+        # TODO: should these just be included in the dataset
+        reloaded = ClusterDistribution.from_file("test", ["H", "L"], f.name)
+    assert reloaded.Tb == 6
+    assert (reloaded.events == [2, 2]).all()
