@@ -1,7 +1,7 @@
 import itertools
 import logging
 import time
-from concurrent.futures import TimeoutError
+from concurrent.futures import FIRST_EXCEPTION, TimeoutError, wait
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -329,9 +329,7 @@ def main(
                     "Projecting and computing snrs for {} waveforms"
                     " on timeslide {}".format(len(waveforms), shift_str)
                 )
-                # project raw waveforms
-                # onto ifos to produce
-                # observed strain
+                # project raw waveforms onto ifos to produce observed strain
                 signals = compute_observed_strain(
                     torch.Tensor(parameters["dec"]),
                     torch.Tensor(parameters["psi"]),
@@ -346,20 +344,15 @@ def main(
                 # and pack up into tensors
                 # compatible with ml4gw compute_ifo_snr
                 df = 1 / (signals.shape[-1] / sample_rate)
-                psds = torch.stack(
-                    [
-                        torch.tensor(
-                            background[ifo]
-                            .psd(fftlength)
-                            .interpolate(df)
-                            .value
-                        )
-                        for ifo in ifos
-                    ]
-                )
+                psds = []
+                for ifo in ifos:
+                    psd = background[ifo].psd(fftlength).interpolate(df)
+                    psd = torch.tensor(psd.value, dtype=torch.float64)
+                    psds.append(psd)
+                psds = torch.stack(psds)
 
                 snrs = compute_ifo_snr(
-                    torch.tensor(signals, dtype=torch.float64),
+                    signals.type(torch.float64),
                     psds,
                     sample_rate,
                     highpass=highpass,
@@ -380,7 +373,6 @@ def main(
                 signals = signals.numpy()
 
                 # inject projected waveforms into background data
-
                 injected_data = {}
                 for i, ifo in enumerate(ifos):
                     injected_data[ifo] = inject_waveforms(
@@ -394,8 +386,7 @@ def main(
                     "timeslide {}".format(len(waveforms), shift_str)
                 )
 
-                # submit this injected data as a
-                # write job to the process pool
+                # submit this injected data as a write job to the process pool
                 future = process_pool.submit(
                     h5.write_timeseries,
                     injection_ts.path,
@@ -410,16 +401,24 @@ def main(
                 )
                 futures.append(future)
 
-                with h5py.File(injection_ts.path / "params.h5", "w") as f:
+                with h5py.File(injection_ts.path / "params.h5", "a") as f:
                     for k, v in parameters.items():
-                        f.create_dataset(k, data=v)
+                        if k not in f:
+                            max_shape = (None,)
+                            if v.ndim > 1:
+                                max_shape += v.shape[1:]
+                            f.create_dataset(k, data=v, maxshape=max_shape)
+                        else:
+                            dataset = f[k]
+                            dataset.resize(len(dataset) + len(v), axis=0)
+                            dataset[-len(v) :] = v
 
             # don't move on until we've finished writing
             # everything so that we don't accidentally
             # go out of memory. TODO: this is still possible
             # if one segment is so big that all its slides
             # go OOM. How to monitor and prevent this?
-            [_ for _ in as_completed(futures)]
+            wait(futures, return_when=FIRST_EXCEPTION)
 
 
 if __name__ == "__main__":
