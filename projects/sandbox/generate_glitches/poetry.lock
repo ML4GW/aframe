@@ -210,10 +210,9 @@ safe-netrc = ">=1.0.0"
 scitokens = ">=1.7.0"
 
 [package.extras]
-test = ["safe-netrc (>=1.0.0)", "requests-mock", "requests (>=2.14)", "pytest-cov", "pytest (>=3.9.1)"]
-requests = ["safe-netrc (>=1.0.0)", "requests (>=2.14)"]
-lint = ["flake8-bandit", "flake8 (>=3.7.0)"]
-docs = ["sphinx-immaterial-igwn", "sphinx (>=4.0.0)"]
+docs = ["sphinx (>=4.0.0)", "sphinx-immaterial-igwn"]
+lint = ["flake8 (>=3.7.0)", "flake8-bandit"]
+test = ["pytest (>=3.9.1)", "pytest-cov", "requests (>=2.14)", "requests-mock", "safe-netrc (>=1.0.0)"]
 
 [[package]]
 name = "iniconfig"
