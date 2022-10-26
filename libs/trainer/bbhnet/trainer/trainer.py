@@ -290,5 +290,6 @@ def train(
     weights_path = os.path.join(outdir, "weights.pt")
     torch.save(model.state_dict(), weights_path)
 
+    # TODO: Make it so that return statements don't break things
     # return the training results
-    return history
+    # return history

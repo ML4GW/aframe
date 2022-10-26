@@ -23,7 +23,7 @@ from bbhnet.io import h5
 from bbhnet.io.timeslides import TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
-from hermes.typeo import typeo
+from typeo import scriptify
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 
@@ -91,7 +91,7 @@ def generate_waveforms(
     return signals, parameters
 
 
-@typeo
+@scriptify
 def main(
     start: int,
     stop: int,

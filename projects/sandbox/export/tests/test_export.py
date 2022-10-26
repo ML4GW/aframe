@@ -320,6 +320,10 @@ def test_export_for_scaling(
     weights = output_dir / "weights.pt"
     get_network_weights(num_ifos, sample_rate, kernel_length, weights)
 
+    if clean:
+        p = repo_dir / "dummy_file.txt"
+        p.write_text("dummy text")
+
     def run_export(instances=instances, clean=clean):
         export(
             architecture,

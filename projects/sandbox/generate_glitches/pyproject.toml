@@ -14,6 +14,7 @@ typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 "bbhnet.base" = {path = "../../../libs/base", extras = ["numpy"], develop = true}
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

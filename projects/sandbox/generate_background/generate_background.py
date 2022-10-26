@@ -10,6 +10,7 @@ from gwpy.timeseries import TimeSeries
 from typeo import scriptify
 
 from bbhnet.logging import configure_logging
+from typeo import scriptify
 
 
 @scriptify
