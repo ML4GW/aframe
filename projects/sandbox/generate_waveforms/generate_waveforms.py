@@ -7,6 +7,7 @@ from pathlib import Path
 import bilby
 import h5py
 import numpy as np
+from typeo import scriptify
 
 from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging

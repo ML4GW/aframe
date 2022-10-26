@@ -7,6 +7,7 @@ import numpy as np
 from gwdatafind import find_urls
 from gwpy.segments import DataQualityDict
 from gwpy.timeseries import TimeSeries
+from typeo import scriptify
 
 from bbhnet.logging import configure_logging
 from typeo import scriptify

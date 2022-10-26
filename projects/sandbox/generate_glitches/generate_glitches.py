@@ -10,6 +10,7 @@ from gwpy.segments import Segment, SegmentList
 from gwpy.timeseries import TimeSeries
 from omicron.cli.process import main as omicron_main
 from tqdm import tqdm
+from typeo import scriptify
 
 from bbhnet.logging import configure_logging
 from typeo import scriptify
