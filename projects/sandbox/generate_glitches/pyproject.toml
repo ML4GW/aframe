@@ -29,12 +29,12 @@ force_generation= true
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-"hermes.typeo" = "^0.1.4"
 htcondor = "^9.8.1"
 dqsegdb2="<1.1.0"
 pre-commit = "^2.19.0"
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 "bbhnet.base" = {path = "../../../libs/base", extras = ["numpy"], develop = true}
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

@@ -10,7 +10,6 @@ analyze = "analyze:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-"hermes.typeo" = "^0.1.5"
 "bbhnet.injection" = {path="../../../libs/injection", develop=true}
 "bbhnet.io" = {path = "../../../libs/io/", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging/", develop = true}
@@ -18,6 +17,7 @@ python = ">=3.9,<3.11"
 "bbhnet.analysis" = {path = "../../../libs/analysis/", develop = true}
 rich = "^12.4.4"
 bokeh = "^2.4.3"
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 
 [build-system]

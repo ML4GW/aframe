@@ -10,10 +10,10 @@ import numpy as np
 
 from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging
-from hermes.typeo import typeo
+from typeo import scriptify
 
 
-@typeo
+@scriptify
 def main(
     prior_file: Path,
     n_samples: int,

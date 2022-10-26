@@ -9,10 +9,10 @@ from gwpy.segments import DataQualityDict
 from gwpy.timeseries import TimeSeries
 
 from bbhnet.logging import configure_logging
-from hermes.typeo import typeo
+from typeo import scriptify
 
 
-@typeo
+@scriptify
 def main(
     start: float,
     stop: float,

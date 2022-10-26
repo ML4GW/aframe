@@ -12,7 +12,7 @@ from omicron.cli.process import main as omicron_main
 from tqdm import tqdm
 
 from bbhnet.logging import configure_logging
-from hermes.typeo import typeo
+from typeo import scriptify
 
 """
 Script that generates a dataset of glitches from omicron triggers.
@@ -254,7 +254,7 @@ def omicron_main_wrapper(
     omicron_main(omicron_args)
 
 
-@typeo
+@scriptify
 def main(
     snr_thresh: float,
     start: int,
