@@ -10,13 +10,14 @@ infer = "infer.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
+
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 "hermes.stillwater" = {path = "../../../hermes/hermes/hermes.stillwater", develop = true}
 "hermes.aeriel" = {path = "../../../hermes/hermes/hermes.aeriel", extras = ["serve"], develop = true}
-typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

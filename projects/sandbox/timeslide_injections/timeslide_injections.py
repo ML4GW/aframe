@@ -17,13 +17,13 @@ from gwpy.segments import (
     SegmentListDict,
 )
 from gwpy.timeseries import TimeSeries, TimeSeriesDict
+from typeo import scriptify
 
 from bbhnet.injection import generate_gw, inject_waveforms
 from bbhnet.io import h5
 from bbhnet.io.timeslides import TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
-from typeo import scriptify
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 

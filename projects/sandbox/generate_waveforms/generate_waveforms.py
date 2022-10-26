@@ -11,7 +11,6 @@ from typeo import scriptify
 
 from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging
-from typeo import scriptify
 
 
 @scriptify

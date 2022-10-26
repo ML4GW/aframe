@@ -13,7 +13,6 @@ from tqdm import tqdm
 from typeo import scriptify
 
 from bbhnet.logging import configure_logging
-from typeo import scriptify
 
 """
 Script that generates a dataset of glitches from omicron triggers.

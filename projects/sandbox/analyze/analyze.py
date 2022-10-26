@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 from rich.progress import Progress
 from utils import get_write_dir, load_segments
+from typeo import scriptify
 
 from bbhnet.analysis.analysis import integrate
 from bbhnet.analysis.distributions.cluster import ClusterDistribution
@@ -16,7 +17,6 @@ from bbhnet.io.h5 import write_timeseries
 from bbhnet.io.timeslides import Segment, TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
-from hermes.typeo import typeo
 
 if TYPE_CHECKING:
     from bbhnet.analysis.distributions.distribution import Distribution
@@ -508,7 +508,7 @@ def analyze_injections(
                 f.create_dataset(k, data=v)
 
 
-@typeo
+@scriptify
 def main(
     data_dir: Path,
     write_dir: Path,
