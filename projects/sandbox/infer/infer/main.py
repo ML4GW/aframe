@@ -2,6 +2,7 @@ import logging
 import time
 from pathlib import Path
 from typing import Iterable, Optional
+from typeo import scriptify
 
 from infer.utils import SequenceManager
 
@@ -9,14 +10,13 @@ from bbhnet.logging import configure_logging
 from hermes.aeriel.client import InferenceClient
 from hermes.aeriel.serve import serve
 from hermes.stillwater import ServerMonitor
-from hermes.typeo import typeo
 
 # turn off debugging messages from request libraries
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
 
-@typeo
+@scriptify
 def main(
     model_repo_dir: str,
     model_name: str,

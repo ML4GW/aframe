@@ -18,7 +18,6 @@ sample_rate = 2048
 ifos = ['H1', 'L1']
 start = 1262607622
 stop = 1262620622
-test_stop = 1262751694
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
@@ -94,7 +93,7 @@ sample_rate = "${base.sample_rate}"
 kernel_length = "${base.kernel_length}"
 fduration = "${base.fduration}"
 
-highpass = "${base.fmin}"
+highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
 waveform_prob = 0.5
 glitch_prob = 0.25
@@ -139,16 +138,16 @@ batch_size = "${base.inference_sampling_rate}"
 
 # repo/triton parameters
 streams_per_gpu = 10
-platform = "tensorrt_plan"
+platform = "onnxruntime_onnx"
 verbose = false
-clean = true
+clean = false
 
 # arch parameters
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
-start = "${base.stop}" 
-stop = "${base.test_stop}"
+start = "${base.start}" 
+stop = "${base.stop}"
 datadir = "${base.basedir}/timeslide_injections/"
 logdir = "${base.logdir}"
 prior_file = "${base.prior_file}"
@@ -160,7 +159,7 @@ buffer = 10
 n_slides = 10
 jitter = 2
 min_segment_length = 1024
-max_segment_length = 15000
+# max_segment_length = 15000
 shifts = [0, 1]
 ifos = "${base.ifos}"
 file_length = 4096
