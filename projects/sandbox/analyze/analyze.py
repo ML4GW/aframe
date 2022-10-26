@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 import h5py
 import numpy as np
 from rich.progress import Progress
-from utils import get_write_dir, load_segments
 from typeo import scriptify
+from utils import get_write_dir, load_segments
 
 from bbhnet.analysis.analysis import integrate
 from bbhnet.analysis.distributions.cluster import ClusterDistribution

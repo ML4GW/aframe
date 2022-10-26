@@ -23,7 +23,7 @@ from bbhnet.injection import generate_gw, inject_waveforms
 from bbhnet.io import h5
 from bbhnet.io.timeslides import TimeSlide
 from bbhnet.logging import configure_logging
-from bbhnet.parallelize import AsyncExecutor, as_completed
+from bbhnet.parallelize import AsyncExecutor
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 

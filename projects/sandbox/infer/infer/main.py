@@ -2,9 +2,9 @@ import logging
 import time
 from pathlib import Path
 from typing import Iterable, Optional
-from typeo import scriptify
 
 from infer.utils import SequenceManager
+from typeo import scriptify
 
 from bbhnet.logging import configure_logging
 from hermes.aeriel.client import InferenceClient
