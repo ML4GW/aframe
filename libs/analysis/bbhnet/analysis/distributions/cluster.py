@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
+from typing import Iterable, Union
 
 import h5py
 import numpy as np
@@ -31,7 +31,7 @@ class ClusterDistribution(Distribution):
             self.events = f["events"][:]
             self.event_times = f["event_times"][:]
             self.shifts = f["shifts"][:]
-            self.Tb = f["Tb"]
+            self.Tb = f["Tb"][()]
 
     def write(self, path: Path):
         """Write the distribution's data to an HDF5 file"""
@@ -43,12 +43,12 @@ class ClusterDistribution(Distribution):
             f.attrs.update({"t_clust": self.t_clust})
 
     @classmethod
-    def from_file(cls, dataset: str, path: Path):
+    def from_file(cls, dataset: str, ifos: Iterable[str], path: Path):
         """Create a new distribution with data loaded from an HDF5 file"""
         with h5py.File(path, "r") as f:
             t_clust = f.attrs["t_clust"]
 
-        obj = cls(dataset, t_clust)
+        obj = cls(dataset, ifos, t_clust)
         obj._load(path)
         return obj
 

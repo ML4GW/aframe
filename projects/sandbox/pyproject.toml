@@ -32,6 +32,7 @@ reference_frequency = 50
 highpass = 32
 prior_file = "priors/nonspin_BBH.prior"
 fduration = 1
+valid_frac = 0.25
 
 [tool.typeo.scripts.generate-background]
 datadir = "${base.datadir}"
@@ -112,7 +113,7 @@ min_lr = 1e-5
 decay_steps = 10000
 weight_decay = 1e-5
 early_stop = 20
-valid_frac = 0.25
+valid_frac = "${base.valid_frac}"
 valid_stride = 0.0625
 
 # misc params
@@ -152,13 +153,29 @@ start = "${base.stop}"
 stop = "${base.test_stop}"
 datadir = "${base.basedir}/timeslide_injections/"
 logdir = "${base.logdir}"
+
+# background parameters
+start = "${base.stop}" 
+stop = "${base.test_stop}"
+sample_rate = "${base.sample_rate}"
+ifos = "${base.ifos}"
+channel = "${base.channel}"
+frame_type = "${base.frame_type}"
+state_flag = "${base.state_flag}"
+file_length = 4096
+min_segment_length = 1024
+
+# timeslide parameters
+shifts = [0, 1]
+n_slides = 10
+
+# injection parameters
 prior_file = "${base.prior_file}"
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
 spacing = 60
 buffer = 10
-n_slides = 10
 jitter = 2
 min_segment_length = 1024
 # max_segment_length = 15000
@@ -194,10 +211,16 @@ data_dir = "${base.basedir}/timeslide_injections/"
 write_dir = "${base.basedir}/timeslide_injections/"
 results_dir = "${base.basedir}/results/" 
 window_length = 1.0
-kernel_length = 1.0 
 norm_seconds = [0, 10, 100, 1000]
 t_clust = 5
-max_tb = 20000
+max_tb = 604800
 force = false
-log_file = "${base.basedir}/log/analyze.log"
+log_file = "${base.logdir}/analyze.log"
 verbose = false
+
+[tool.typeo.scripts.vizapp]
+timeslides_dir = "${base.basedir}/timeslide_injections/"
+data_dir = "${base.datadir}"
+sample_rate = "${base.sample_rate}"
+fduration = "${base.fduration}"
+valid_frac = "${base.valid_frac}"

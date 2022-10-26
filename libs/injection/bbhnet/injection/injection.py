@@ -109,12 +109,13 @@ def inject_waveforms(
 
     sample_rate = 1 / (times[1] - times[0])
     # create matrix of indices of waveform_size for each waveform
-    idx = np.arange(waveforms.shape[-1])[None]
+    num_waveforms, waveform_size = waveforms.shape
+    idx = np.arange(waveform_size)[None] - int(waveform_size // 2)
     idx = np.repeat(idx, len(waveforms), axis=0)
 
     # offset the indices of each waveform corresponding to their time offset
     time_diffs = signal_times - times[0]
-    idx_diffs = (time_diffs / sample_rate).astype("int64")
+    idx_diffs = (time_diffs * sample_rate).astype("int64")
     idx += idx_diffs[:, None]
 
     # flatten these indices and the signals out to 1D

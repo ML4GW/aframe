@@ -235,6 +235,24 @@ test-minimal = ["pytest"]
 test-no-codebase = ["Pillow", "matplotlib", "pytest"]
 
 [[package]]
+name = "contourpy"
+version = "1.0.5"
+description = "Python library for calculating contours of 2D quadrilateral grids"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.16"
+
+[package.extras]
+test-no-codebase = ["pillow", "matplotlib", "pytest"]
+test-minimal = ["pytest"]
+test = ["isort", "flake8", "pillow", "matplotlib", "pytest"]
+docs = ["sphinx-rtd-theme", "sphinx", "docutils (<0.18)"]
+bokeh = ["selenium", "bokeh"]
+
+[[package]]
 name = "corner"
 version = "2.2.1"
 description = "Make some beautiful corner plots"
@@ -453,6 +471,66 @@ docs = ["numpydoc (>=0.8.0)", "requests", "sphinx (>=4.0.0)", "sphinx-automodapi
 test = ["coverage[toml] (>=5.0)", "freezegun (>=0.3.12)", "pytest (>=3.9.1)", "pytest-cov (>=2.4.0)", "pytest-socket", "pytest-xdist", "requests-mock"]
 
 [[package]]
+name = "gwdatafind"
+version = "1.1.2"
+description = "The GWDataFind data discovery client"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+igwn-auth-utils = ">=0.3.1"
+ligo-segments = "*"
+
+[package.extras]
+test = ["requests-mock", "pytest-cov", "pytest (>=2.8.0)"]
+lint = ["radon", "flake8-docstrings", "flake8-bandit", "flake8"]
+docs = ["sphinx-tabs", "sphinx-rtd-theme", "sphinx-automodapi", "sphinx (>=1.8.0)", "numpydoc"]
+
+[[package]]
+name = "gwosc"
+version = "0.6.1"
+description = "A python interface to the GW Open Science data archive"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+requests = ">=1.0.0"
+
+[package.extras]
+docs = ["sphinx", "sphinx-automodapi", "sphinx-rtd-theme"]
+test = ["pytest (>=2.7.0)", "pytest-cov", "pytest-socket", "requests-mock (>=1.5.0)"]
+
+[[package]]
+name = "gwpy"
+version = "2.1.5"
+description = "A python package for gravitational-wave astrophysics"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+astropy = ">=4.0"
+dqsegdb2 = "*"
+gwdatafind = ">=1.1.0"
+gwosc = ">=0.5.3"
+h5py = ">=2.8.0"
+ligo-segments = ">=1.0.0"
+ligotimegps = ">=1.2.1"
+matplotlib = ">=3.3.0"
+numpy = ">=1.16"
+python-dateutil = "*"
+scipy = ">=1.2.0"
+tqdm = ">=4.10.0"
+
+[package.extras]
+conda = ["python-framel (>=8.40.1)", "python-nds2-client", "python-ldas-tools-framecpp"]
+dev = ["ciecplib", "maya", "pandas", "psycopg2", "pymysql", "pyrxp", "sqlalchemy", "uproot (>=3.11)", "uproot3", "astropy (<5.1a0)", "lalsuite", "lscsoft-glue", "pycbc (>=1.13.4)", "python-ligo-lw (>=1.7.0)"]
+docs = ["numpydoc (>=0.8.0)", "requests", "sphinx (>=4.0.0)", "sphinx-automodapi", "sphinx-material (>=0.0.32)", "sphinx-panels (>=0.6.0)", "sphinxcontrib-programoutput"]
+test = ["coverage[toml] (>=5.0)", "freezegun (>=0.3.12)", "pytest (>=3.9.1)", "pytest-cov (>=2.4.0)", "pytest-socket", "pytest-xdist", "requests-mock"]
+
+[[package]]
 name = "h5py"
 version = "3.7.0"
 description = "Read and write HDF5 files from Python"
@@ -489,6 +567,33 @@ scitokens = ">=1.7.0"
 docs = ["sphinx (>=4.0.0)", "sphinx-immaterial-igwn"]
 lint = ["flake8 (>=3.7.0)", "flake8-bandit"]
 test = ["pytest (>=3.9.1)", "pytest-cov", "requests (>=2.14)", "requests-mock", "safe-netrc (>=1.0.0)"]
+
+[[package]]
+name = "idna"
+version = "3.4"
+description = "Internationalized Domain Names in Applications (IDNA)"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[[package]]
+name = "igwn-auth-utils"
+version = "0.3.1"
+description = "Authorisation utilities for IGWN"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cryptography = ">=2.3"
+requests = ">=2.14"
+safe-netrc = ">=1.0.0"
+scitokens = ">=1.7.0"
+
+[package.extras]
+test = ["safe-netrc (>=1.0.0)", "requests-mock", "requests (>=2.14)", "pytest-cov", "pytest (>=3.9.1)"]
+lint = ["flake8-bandit", "flake8 (>=3.7.0)"]
+docs = ["sphinx-immaterial-igwn", "sphinx (>=4.0.0)"]
 
 [[package]]
 name = "iniconfig"
@@ -805,7 +910,7 @@ python-dateutil = ">=2.8.1"
 pytz = ">=2020.1"
 
 [package.extras]
-test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
+test = ["pytest-xdist (>=1.31)", "pytest (>=6.0)", "hypothesis (>=5.5.3)"]
 
 [[package]]
 name = "parso"
@@ -1316,10 +1421,7 @@ python-versions = ">=3.9,<3.11"
 content-hash = "a12399fbf8e42a1ec1d0de444c68d5e031485c7fdd1af36782ba18c70113bf09"
 
 [metadata.files]
-appnope = [
-    {file = "appnope-0.1.3-py2.py3-none-any.whl", hash = "sha256:265a455292d0bd8a72453494fa24df5a11eb18373a60c7c0430889f22548605e"},
-    {file = "appnope-0.1.3.tar.gz", hash = "sha256:02bd91c4de869fbb1e1c50aafc4098827a7a54ab2f39d9dcba6c9547ed920e24"},
-]
+appnope = []
 astropy = [
     {file = "astropy-4.3.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:a0764d7f68034c584dda8d1c9cc4357ade05cec4c1134db43bce804fcf656ff1"},
     {file = "astropy-4.3.1-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:ce1095e385ec74c655866eacd1853535fbc2dd2c42a8188503fe9a68b8a98ea0"},
@@ -1510,6 +1612,7 @@ contourpy = [
     {file = "contourpy-1.0.5-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:a30e95274f5c0e007ccc759ec258aa5708c534ec058f153ee25ac700a2f1438b"},
     {file = "contourpy-1.0.5.tar.gz", hash = "sha256:896631cd40222aef3697e4e51177d14c3709fda49d30983269d584f034acc8a4"},
 ]
+contourpy = []
 corner = [
     {file = "corner-2.2.1-py3-none-any.whl", hash = "sha256:a187860e62e71e5be33088383314588edb98d1c6ac2614bf107561cb1f6581b3"},
     {file = "corner-2.2.1.tar.gz", hash = "sha256:d39f1d9ad31093bb2aa06d80b23573e51ad7130af4c4af0931fca745a64751e5"},
@@ -1640,6 +1743,8 @@ igwn-auth-utils = [
     {file = "igwn-auth-utils-0.3.1.tar.gz", hash = "sha256:9698bbd9c46eddf4fe65d157c16a2ee185e4ccf5f98ecc24b08d4bd79378ccae"},
     {file = "igwn_auth_utils-0.3.1-py3-none-any.whl", hash = "sha256:e0ac5433410aaca5916479b3d61ee221235dcb451b05ef2272818a7fde437d41"},
 ]
+idna = []
+igwn-auth-utils = []
 iniconfig = [
     {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
@@ -1800,6 +1905,7 @@ line-profiler = [
     {file = "line_profiler-3.5.1-cp39-cp39-win_amd64.whl", hash = "sha256:0c717a9c08255da9f79595330f20502a32806ba96823716b8a42b26ee7b0f183"},
     {file = "line_profiler-3.5.1.tar.gz", hash = "sha256:77400208bfbd5d4341938a9a3a4fb5194f5af7fc23b2d496c913755f8310e8b8"},
 ]
+line-profiler = []
 lscsoft-glue = [
     {file = "lscsoft-glue-3.0.1.tar.gz", hash = "sha256:a242f29537f18957dbb07e6d9d20d7ebddc86c8325d4fa9e192cfa61a7c6ffbd"},
 ]
@@ -1890,7 +1996,6 @@ numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8251ed96f38b47b4295b1ae51631de7ffa8260b5b087808ef09a39a9d66c97ab"},
     {file = "numpy-1.22.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:48a3aecd3b997bf452a2dedb11f4e79bc5bfd21a1d4cc760e703c31d57c84b3e"},
     {file = "numpy-1.22.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3bae1a2ed00e90b3ba5f7bd0a7c7999b55d609e0c54ceb2b076a25e345fa9f4"},
-    {file = "numpy-1.22.3-cp310-cp310-win32.whl", hash = "sha256:f950f8845b480cffe522913d35567e29dd381b0dc7e4ce6a4a9f9156417d2430"},
     {file = "numpy-1.22.3-cp310-cp310-win_amd64.whl", hash = "sha256:08d9b008d0156c70dc392bb3ab3abb6e7a711383c3247b410b39962263576cd4"},
     {file = "numpy-1.22.3-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:201b4d0552831f7250a08d3b38de0d989d6f6e4658b709a02a73c524ccc6ffce"},
     {file = "numpy-1.22.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:f8c1f39caad2c896bc0018f699882b345b2a63708008be29b1f355ebf6f933fe"},
@@ -2062,10 +2167,7 @@ ptyprocess = [
     {file = "ptyprocess-0.7.0-py2.py3-none-any.whl", hash = "sha256:4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35"},
     {file = "ptyprocess-0.7.0.tar.gz", hash = "sha256:5c5d0a3b48ceee0b48485e0c26037c0acd7d29765ca3fbb5cb3831d347423220"},
 ]
-pure-eval = [
-    {file = "pure_eval-0.2.2-py3-none-any.whl", hash = "sha256:01eaab343580944bc56080ebe0a674b39ec44a945e6d09ba7db3cb8cec289350"},
-    {file = "pure_eval-0.2.2.tar.gz", hash = "sha256:2b45320af6dfaa1750f543d714b6d1c520a1688dec6fd24d339063ce0aaa9ac3"},
-]
+pure-eval = []
 py = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
     {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},

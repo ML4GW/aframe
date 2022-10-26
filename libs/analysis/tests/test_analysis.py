@@ -27,11 +27,6 @@ def t(length, sample_rate):
 
 
 @pytest.fixture(params=[1, 1.5, 2])
-def kernel_length(request):
-    return request.param
-
-
-@pytest.fixture(params=[None, 1])
 def window_length(request):
     return request.param
 
@@ -46,7 +41,6 @@ def normalizer(request, sample_rate):
 def test_integrate(
     y,
     t,
-    kernel_length,
     window_length,
     normalizer,
     sample_rate,
@@ -58,10 +52,9 @@ def test_integrate(
         normalizer.fit(y)
 
     t_, y_, integrated = integrate(
-        y, t, kernel_length, window_length, boxcar_filter, normalizer
+        y, t, window_length, boxcar_filter, normalizer
     )
 
-    window_length = window_length or kernel_length
     expected_length = len(y)
     if normalizer is not None:
         expected_length -= (
