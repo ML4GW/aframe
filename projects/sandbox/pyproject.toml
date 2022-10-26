@@ -18,6 +18,7 @@ sample_rate = 2048
 ifos = ['H1', 'L1']
 start = 1262607622
 stop = 1262620622
+test_stop = 1262751694
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
@@ -50,6 +51,7 @@ snr_thresh = 5
 window = 2
 start = "${base.start}"
 stop = "${base.stop}"
+test_stop = "${base.test_stop}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
@@ -146,8 +148,8 @@ clean = false
 commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
-start = "${base.start}" 
-stop = "${base.stop}"
+start = "${base.stop}" 
+stop = "${base.test_stop}"
 datadir = "${base.basedir}/timeslide_injections/"
 logdir = "${base.logdir}"
 prior_file = "${base.prior_file}"

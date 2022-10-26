@@ -259,6 +259,7 @@ def main(
     snr_thresh: float,
     start: int,
     stop: int,
+    test_stop: int,
     q_min: float,
     q_max: float,
     f_min: float,
@@ -292,7 +293,8 @@ def main(
 
     - snr_thresh: snr threshold above which to keep as glitch
     - start: start gpstime
-    - stop: stop gpstime
+    - stop: training stop gpstime
+    - test_stop: testing stop gpstime
     - q_min: minimum q value of tiles for omicron
     - q_max: maximum q value of tiles for omicron
     - f_min: lowest frequency for omicron to consider
@@ -340,7 +342,7 @@ def main(
             # launch omicron dag for ifo
             omicron_main_wrapper(
                 start,
-                stop,
+                test_stop,
                 q_min,
                 q_max,
                 f_min,
