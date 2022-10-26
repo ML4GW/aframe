@@ -2,7 +2,6 @@
 # coding: utf-8
 from pathlib import Path
 
-import bilby
 import numpy as np
 import pytest
 
@@ -14,6 +13,11 @@ TEST_DIR = Path(__file__).resolve().parent
 @pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
 def prior_file(request):
     return TEST_DIR / "prior_files" / request.param
+
+
+@pytest.fixture(params=["nonspin_bbh", "end_o3_ratesandpops"])
+def prior_name(request):
+    return request.param
 
 
 @pytest.fixture(params=["IMRPhenomPv2"])
@@ -47,7 +51,7 @@ def waveform_duration(request):
 
 
 def test_generate_gw(
-    prior_file,
+    prior_name,
     approximant,
     sample_rate,
     waveform_duration,
@@ -57,7 +61,7 @@ def test_generate_gw(
 ):
 
     n_pols = 2
-    prior = bilby.gw.prior.PriorDict(str(prior_file))
+    prior = bbhnet.injection.prior_selector(prior_name)
     sample_params = prior.sample(n_samples)
 
     waveforms = bbhnet.injection.injection.generate_gw(
