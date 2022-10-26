@@ -1,5 +1,6 @@
 import logging
 import os
+import pickle
 import time
 from typing import Callable, Iterable, Optional, Tuple
 
@@ -285,10 +286,8 @@ def train(
                     )
                     break
 
-    # TODO: remove me; here b/c
-    # we don't have validation yet
-    weights_path = os.path.join(outdir, "weights.pt")
-    torch.save(model.state_dict(), weights_path)
+    with open(os.path.join(outdir, "history.pkl"), "wb") as f:
+        pickle.dump(history, f)
 
     # TODO: Make it so that return statements don't break things
     # return the training results

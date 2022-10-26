@@ -1,3 +1,5 @@
+import os
+import pickle
 import sys
 
 import pytest
@@ -104,13 +106,15 @@ def test_wrapper(data_fn, preprocess, outdir, unique_args):
 
     # call function passing keyword args
     # for train function
-    result = fn(
+    fn(
         4,
         outdir=outdir,
         max_epochs=1,
         arch="resnet",
         layers=[2, 2, 2],
     )
+    with open(os.path.join(outdir, "history.pkl"), "rb") as f:
+        result = pickle.load(f)
     assert len(result["train_loss"]) == 1
 
     sys.argv = [
@@ -130,7 +134,9 @@ def test_wrapper(data_fn, preprocess, outdir, unique_args):
     # since trainify wraps function w/ typeo
     # looks for args from command line
     # i.e. from sys.argv
-    result = fn()
+    fn()
+    with open(os.path.join(outdir, "history.pkl"), "rb") as f:
+        result = pickle.load(f)
     assert len(result["train_loss"]) == 1
 
     # TODO: check that if preprocess, there's
