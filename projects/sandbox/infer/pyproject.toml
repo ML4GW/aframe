@@ -10,7 +10,7 @@ infer = "infer.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-"hermes.typeo" = "^0.1.5"
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
 
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}

@@ -11,7 +11,8 @@ timeslide_injections = "timeslide_injections:main"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 bilby = "<1.2"
-"hermes.typeo" = "^0.1.4"
+typeo = {git = "https://github.com/ML4GW/typeo.git"}
+
 "bbhnet.injection" = {path="../../../libs/injection", develop=true}
 "bbhnet.io" = {path = "../../../libs/io/", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging/", develop = true}

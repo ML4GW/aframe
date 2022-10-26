@@ -1,6 +1,4 @@
 import logging
-import os
-import shutil
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -124,9 +122,7 @@ def export(
     # instantiate a model repository at the
     # indicated location and see if a bbhnet
     # model already exists in this repository
-    if clean and os.path.exists(repository_directory):
-        shutil.rmtree(repository_directory)
-    repo = qv.ModelRepository(repository_directory)
+    repo = qv.ModelRepository(repository_directory, clean)
     try:
         bbhnet = repo.models["bbhnet"]
     except KeyError:

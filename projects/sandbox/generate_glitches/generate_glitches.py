@@ -10,9 +10,9 @@ from gwpy.segments import Segment, SegmentList
 from gwpy.timeseries import TimeSeries
 from omicron.cli.process import main as omicron_main
 from tqdm import tqdm
+from typeo import scriptify
 
 from bbhnet.logging import configure_logging
-from hermes.typeo import typeo
 
 """
 Script that generates a dataset of glitches from omicron triggers.
@@ -254,7 +254,7 @@ def omicron_main_wrapper(
     omicron_main(omicron_args)
 
 
-@typeo
+@scriptify
 def main(
     snr_thresh: float,
     start: int,
@@ -293,7 +293,8 @@ def main(
 
     - snr_thresh: snr threshold above which to keep as glitch
     - start: start gpstime
-    - stop: stop gpstime
+    - stop: training stop gpstime
+    - test_stop: testing stop gpstime
     - q_min: minimum q value of tiles for omicron
     - q_max: maximum q value of tiles for omicron
     - f_min: lowest frequency for omicron to consider
@@ -333,74 +334,71 @@ def main(
     # nyquist
     f_max = sample_rate / 2
 
-    for ifo in ifos:
-        run_dir = datadir / ifo
-        run_dir.mkdir(exist_ok=True)
+    with h5py.File(glitch_file, "w") as f:
+        for ifo in ifos:
+            run_dir = datadir / ifo
+            run_dir.mkdir(exist_ok=True)
 
-        # launch omicron dag for ifo
-        # covering the entire training
-        # and testing range
-        omicron_main_wrapper(
-            start,
-            test_stop,
-            q_min,
-            q_max,
-            f_min,
-            f_max,
-            sample_rate,
-            cluster_dt,
-            chunk_duration,
-            segment_duration,
-            overlap,
-            mismatch_max,
-            snr_thresh,
-            frame_type,
-            channel,
-            state_flag,
-            ifo,
-            run_dir,
-        )
+            # launch omicron dag for ifo
+            omicron_main_wrapper(
+                start,
+                test_stop,
+                q_min,
+                q_max,
+                f_min,
+                f_max,
+                sample_rate,
+                cluster_dt,
+                chunk_duration,
+                segment_duration,
+                overlap,
+                mismatch_max,
+                snr_thresh,
+                frame_type,
+                channel,
+                state_flag,
+                ifo,
+                run_dir,
+            )
 
-        # load in vetoes and convert to gwpy SegmentList object
-        if veto_files is not None:
-            veto_file = veto_files[ifo]
+            # load in vetoes and convert to gwpy SegmentList object
+            if veto_files is not None:
+                veto_file = veto_files[ifo]
 
-            logging.info(f"Applying vetoes to {ifo} times")
+                logging.info(f"Applying vetoes to {ifo} times")
 
-            # load in vetoes
-            vetoes = np.loadtxt(veto_file)
+                # load in vetoes
+                vetoes = np.loadtxt(veto_file)
 
-            # convert arrays to gwpy Segment objects
-            vetoes = [Segment(seg[0], seg[1]) for seg in vetoes]
+                # convert arrays to gwpy Segment objects
+                vetoes = [Segment(seg[0], seg[1]) for seg in vetoes]
 
-            # create SegmentList object
-            vetoes = SegmentList(vetoes).coalesce()
-        else:
-            vetoes = None
+                # create SegmentList object
+                vetoes = SegmentList(vetoes).coalesce()
+            else:
+                vetoes = None
 
-        # get the path to the omicron triggers
-        trigger_dir = run_dir / "triggers" / f"{ifo}:{channel}"
-        trigger_file = list(trigger_dir.glob("*.h5"))[0]
+            # get the path to the omicron triggers
+            trigger_dir = run_dir / "triggers" / f"{ifo}:{channel}"
+            trigger_file = list(trigger_dir.glob("*.h5"))[0]
 
-        # generate glitches
-        # only over the training times
-        glitches, snrs = generate_glitch_dataset(
-            ifo,
-            snr_thresh,
-            start,
-            stop,
-            window,
-            sample_rate,
-            channel,
-            frame_type,
-            trigger_file,
-            vetoes=vetoes,
-        )
+            # generate glitches
+            glitches, snrs = generate_glitch_dataset(
+                ifo,
+                snr_thresh,
+                start,
+                stop,
+                window,
+                sample_rate,
+                channel,
+                frame_type,
+                trigger_file,
+                vetoes=vetoes,
+            )
 
-        if np.isnan(glitches).any():
-            raise ValueError("The glitch data contains NaN values")
+            if np.isnan(glitches).any():
+                raise ValueError("The glitch data contains NaN values")
 
-        with h5py.File(glitch_file, "a") as f:
             f.create_dataset(f"{ifo}_glitches", data=glitches)
             f.create_dataset(f"{ifo}_snrs", data=snrs)
 
