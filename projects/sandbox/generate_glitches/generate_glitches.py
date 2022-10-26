@@ -259,6 +259,7 @@ def main(
     snr_thresh: float,
     start: int,
     stop: int,
+    test_stop: int,
     q_min: float,
     q_max: float,
     f_min: float,
@@ -340,7 +341,7 @@ def main(
             # launch omicron dag for ifo
             omicron_main_wrapper(
                 start,
-                stop,
+                test_stop,
                 q_min,
                 q_max,
                 f_min,
