@@ -3,7 +3,7 @@ import logging
 import time
 from concurrent.futures import FIRST_EXCEPTION, TimeoutError, wait
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional
 
 import bilby
 import gwdatafind
@@ -97,7 +97,7 @@ def main(
     stop: int,
     logdir: Path,
     datadir: Path,
-    prior_file: Path,
+    prior: Callable,
     spacing: float,
     jitter: float,
     buffer_: float,
@@ -127,7 +127,7 @@ def main(
         start: starting GPS time of time period to analyze
         stop: ending GPS time of time period to analyze
         outdir: base directory where all timeslide directories will be created
-        prior_file: a .prior file containing the priors for the GW simulation
+        prior: a prior function defined in prior.py script in the injection lib
         spacing: spacing between consecutive injections
         n_slides: number of timeslides
         shift:
@@ -181,9 +181,7 @@ def main(
         )
     )
 
-    if not prior_file.is_absolute():
-        prior_file = Path(__file__).resolve().parent / prior_file
-    priors = bilby.gw.prior.BBHPriorDict(str(prior_file))
+    priors = prior()
 
     min_segment_length = min_segment_length or 0
     total_slides = n_slides ** (len([i for i in shifts if i]))

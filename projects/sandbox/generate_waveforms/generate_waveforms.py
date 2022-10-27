@@ -1,17 +1,18 @@
 import logging
 from pathlib import Path
+from typing import Callable
 
 import h5py
 import numpy as np
 from typeo import scriptify
 
-from bbhnet.injection import generate_gw, prior_selector
+from bbhnet.injection import generate_gw
 from bbhnet.logging import configure_logging
 
 
 @scriptify
 def main(
-    prior_name: str,
+    prior: Callable,
     n_samples: int,
     logdir: Path,
     datadir: Path,
@@ -59,10 +60,10 @@ def main(
     logging.info("Simulation parameters")
     logging.info("Number of samples     : {}".format(n_samples))
     logging.info("Sample rate [Hz]      : {}".format(sample_rate))
-    logging.info("Prior name            : {}".format(prior_name))
+    logging.info("Prior name            : {}".format(prior.__name__))
 
     # sample gw parameters from prior distribution
-    priors = prior_selector(prior_name)
+    priors = prior()
     sample_params = priors.sample(n_samples)
 
     signals = generate_gw(

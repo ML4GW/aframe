@@ -24,13 +24,13 @@ frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [3, 3, 3]}
 repository_directory = "${BASE_DIR}/model_repo/" 
-force_generation = false
+force_generation = true
 kernel_length = 2
 inference_sampling_rate = 16
 minimum_frequency = 20 
 reference_frequency = 50
 highpass = 32
-prior_name = "nonspin_bbh"
+prior = "bbhnet.injection.priors.nonspin_bbh"
 fduration = 1
 valid_frac = 0.25
 
@@ -76,7 +76,7 @@ reference_frequency = "${base.reference_frequency}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 n_samples = 10000
-prior_name = "${base.prior_name}"
+prior = "${base.prior}"
 sample_rate = "${base.sample_rate}" 
 waveform_duration = 8
 force_generation = "${base.force_generation}"
@@ -169,7 +169,7 @@ shifts = [0, 1]
 n_slides = 10
 
 # injection parameters
-prior_name = "${base.prior_name}"
+prior = "${base.prior}"
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"

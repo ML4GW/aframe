@@ -12,16 +12,6 @@ from bilby.core.prior import (
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
 
 
-def prior_selector(prior_name):
-
-    if prior_name == "nonspin_bbh":
-        return nonspin_bbh()
-    elif prior_name == "end_o3_ratesandpops":
-        return end_o3_ratesandpops()
-    else:
-        raise ValueError(f"Prior name {prior_name} is not an option")
-
-
 def nonspin_bbh():
 
     prior_dict = PriorDict()
