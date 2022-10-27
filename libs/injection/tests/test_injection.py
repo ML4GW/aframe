@@ -6,17 +6,13 @@ import numpy as np
 import pytest
 
 import bbhnet.injection
+from bbhnet.injection import end_o3_ratesandpops, nonspin_bbh
 
 TEST_DIR = Path(__file__).resolve().parent
 
 
-@pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
-def prior_file(request):
-    return TEST_DIR / "prior_files" / request.param
-
-
-@pytest.fixture(params=["nonspin_bbh", "end_o3_ratesandpops"])
-def prior_name(request):
+@pytest.fixture(params=[nonspin_bbh, end_o3_ratesandpops])
+def prior(request):
     return request.param
 
 
@@ -51,7 +47,7 @@ def waveform_duration(request):
 
 
 def test_generate_gw(
-    prior_name,
+    prior,
     approximant,
     sample_rate,
     waveform_duration,
@@ -61,7 +57,7 @@ def test_generate_gw(
 ):
 
     n_pols = 2
-    prior = bbhnet.injection.prior_selector(prior_name)
+    prior = prior()
     sample_params = prior.sample(n_samples)
 
     waveforms = bbhnet.injection.injection.generate_gw(
