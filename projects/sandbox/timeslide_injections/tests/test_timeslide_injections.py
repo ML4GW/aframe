@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -12,13 +11,13 @@ from gwpy.segments import (
 from gwpy.timeseries import TimeSeries
 from timeslide_injections import main
 
+from bbhnet.injection import nonspin_bbh
 from bbhnet.io.timeslides import TimeSlide
 
 
-@pytest.fixture(params=["priors/nonspin_BBH.prior"])
-def prior_file(request):
-    # TODO: verify absolute behavior as well
-    return Path(request.param)
+@pytest.fixture(params=[nonspin_bbh])
+def prior(request):
+    return request.param
 
 
 @pytest.fixture(params=[60])
@@ -89,7 +88,7 @@ def state_flag(request):
 def test_timeslide_injections_no_segments(
     logdir,
     outdir,
-    prior_file,
+    prior,
     spacing,
     jitter,
     buffer_,
@@ -119,7 +118,7 @@ def test_timeslide_injections_no_segments(
             stop,
             logdir,
             outdir,
-            prior_file,
+            prior,
             spacing,
             jitter,
             buffer_,
@@ -165,7 +164,7 @@ def test_timeslide_injections_no_segments(
 def test_timeslide_injections_with_segments(
     logdir,
     outdir,
-    prior_file,
+    prior,
     spacing,
     jitter,
     buffer_,
@@ -218,7 +217,7 @@ def test_timeslide_injections_with_segments(
             stop,
             logdir,
             outdir,
-            prior_file,
+            prior,
             spacing,
             jitter,
             buffer_,

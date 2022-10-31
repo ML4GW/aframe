@@ -6,6 +6,8 @@ import h5py
 import pytest
 from generate_waveforms import main
 
+from bbhnet.injection import end_o3_ratesandpops, nonspin_bbh
+
 
 @pytest.fixture
 def data_dir():
@@ -50,9 +52,9 @@ def sample_rate(request):
     return request.param
 
 
-@pytest.fixture(params=["nonspin_BBH.prior", "precess_tides.prior"])
-def prior_file(request):
-    return Path("tests") / "prior_files" / request.param
+@pytest.fixture(params=[nonspin_bbh, end_o3_ratesandpops])
+def prior(request):
+    return request.param
 
 
 def test_check_file_contents(
@@ -61,7 +63,7 @@ def test_check_file_contents(
     n_samples,
     waveform_duration,
     sample_rate,
-    prior_file,
+    prior,
     minimum_frequency,
     reference_frequency,
 ):
@@ -69,7 +71,7 @@ def test_check_file_contents(
     signal_length = waveform_duration * sample_rate
 
     signal_file = main(
-        prior_file,
+        prior,
         n_samples,
         log_dir,
         data_dir,

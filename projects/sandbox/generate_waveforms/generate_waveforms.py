@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
+from typing import Callable
 
-import bilby
 import h5py
 import numpy as np
 from typeo import scriptify
@@ -12,7 +12,7 @@ from bbhnet.logging import configure_logging
 
 @scriptify
 def main(
-    prior_file: Path,
+    prior: Callable,
     n_samples: int,
     logdir: Path,
     datadir: Path,
@@ -56,19 +56,14 @@ def main(
         )
         return signal_file
 
-    # if prior file is a relative path,
-    # make it relative to this script
-    if not prior_file.is_absolute():
-        prior_file = Path(__file__).resolve().parent / prior_file
-
     # log and print out some simulation parameters
     logging.info("Simulation parameters")
     logging.info("Number of samples     : {}".format(n_samples))
     logging.info("Sample rate [Hz]      : {}".format(sample_rate))
-    logging.info("Prior file            : {}".format(prior_file))
+    logging.info("Prior name            : {}".format(prior.__name__))
 
     # sample gw parameters from prior distribution
-    priors = bilby.gw.prior.ConditionalPriorDict(str(prior_file))
+    priors = prior()
     sample_params = priors.sample(n_samples)
 
     signals = generate_gw(
