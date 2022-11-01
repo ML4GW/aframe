@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import h5py
@@ -16,15 +17,21 @@ class VizApp:
         fduration: float,
         valid_frac: float,
     ) -> None:
+        self.logger = logging.getLogger("vizapp")
+
         self.timeslides_dir = timeslides_dir
         train_frac = 1 - valid_frac
 
+        self.logger.debug("Loading analyzed distributions")
         self.distributions = load_results(timeslides_dir)
+
+        self.logger.debug("Structuring distribution events")
         self.foregrounds = {}
         for norm, results in self.distributions.items():
             foreground = get_foreground(results, timeslides_dir, norm)
             self.foregrounds[norm] = foreground
 
+        self.logger.debug("Configuring plots")
         self.configure_widgets()
         self.configure_plots(sample_rate, fduration, train_frac, data_dir)
         self.update(None, None, self.norm_select.options[0])
@@ -41,7 +48,7 @@ class VizApp:
             value = options[0]
         self.norm_select = Select(
             title="Normalization period [s]",
-            value=value,
+            value=str(value),
             options=list(map(str, options)),
         )
         self.norm_select.on_change("value", self.update)
@@ -83,6 +90,8 @@ class VizApp:
 
     def update(self, attr, old, new):
         norm = None if new == "None" else float(new)
+
+        self.logger.debug(f"Updating plots with normalization value {norm}")
         foreground = self.foregrounds[norm]
         background = self.distributions[norm].background
 

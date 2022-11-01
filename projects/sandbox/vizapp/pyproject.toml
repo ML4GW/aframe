@@ -17,6 +17,7 @@ h5py = "^3.5"
 "hermes.typeo" = "^0.1.5"
 
 "bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

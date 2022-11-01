@@ -1,33 +1,166 @@
 import logging
-from concurrent.futures import FIRST_EXCEPTION, wait
+import re
+from collections import defaultdict
+from concurrent.futures import Future
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
+import numpy as np
 from analyze.utils import (
-    CallbackFactory,
+    AnalysisProgress,
     find_shift_and_foreground,
     load_segments,
 )
+from typeo import scriptify
 
 from bbhnet.analysis.analysis import integrate
+from bbhnet.analysis.distributions import ClusterDistribution
 from bbhnet.analysis.normalizers import GaussianNormalizer
+from bbhnet.io.h5 import write_timeseries
 from bbhnet.io.timeslides import Segment, TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor, as_completed
-from hermes.typeo import typeo
+
+shift_pattern = re.compile(r"(?<=[HLKV])[0-9\.]+")
+
+
+def fit_distribution(
+    y: np.ndarray, t: np.ndarray, shifts: List, t_clust: float
+) -> ClusterDistribution:
+    dist = ClusterDistribution("integrated", ["H", "L"], t_clust)
+    dist.fit((y, t), shifts)
+    return dist
+
+
+def get_write_field(distribution: str, norm: Optional[float]) -> str:
+    field = f"{distribution}-integrated"
+    if norm is not None:
+        field += f"_norm-seconds={norm}"
+    return field
+
+
+def integrate_segments(
+    pool: AsyncExecutor,
+    write_dir: Path,
+    yb: np.ndarray,
+    yf: Optional[np.ndarray],
+    t: np.ndarray,
+    shift: str,
+    t_clust: float,
+    window_length: float,
+    norm: Optional[float],
+):
+    shift_values = list(map(float, shift_pattern.findall(shift)))
+
+    # build a normalizer for the given normalization window length
+    norm = norm or None
+    if norm is not None:
+        sample_rate = 1 / (t[1] - t[0])
+        normalizer = GaussianNormalizer(norm * sample_rate)
+        normalizer.fit(yb)
+    else:
+        normalizer = None
+
+    # integrate the nn outputs and use them
+    # to fit a background distribution
+    tb, yb, integrated = integrate(
+        yb, t, window_length=window_length, normalizer=normalizer
+    )
+
+    # do the background fitting in parallel since
+    # this will take the longest
+    background_future = pool.submit(
+        fit_distribution, integrated, tb, shift_values, t_clust
+    )
+
+    # write the integrated timeseries in this process
+    field = get_write_field("background", norm)
+    field_dir = write_dir / shift / field
+    field_dir.mkdir(parents=True, exist_ok=True)
+    write_timeseries(
+        field_dir,
+        prefix="integrated",
+        t=tb,
+        y=yb,
+        integrated=integrated,
+    )
+
+    # repeat these steps for any foreground data
+    if yf is not None:
+        tf, yf, integrated = integrate(
+            yf, t, window_length=window_length, normalizer=normalizer
+        )
+        foreground_future = pool.submit(
+            fit_distribution, integrated, tf, shift_values, t_clust
+        )
+        field = get_write_field("foreground", norm)
+        field_dir = write_dir / shift / field
+        field_dir.mkdir(parents=True, exist_ok=True)
+        write_timeseries(
+            field_dir,
+            prefix="integrated",
+            t=tf,
+            y=yf,
+            integrated=integrated,
+        )
+    else:
+        foreground_future = None
+
+    return background_future, foreground_future
+
+
+def aggregate_distributions(
+    dist_type: str,
+    futures: Dict[str, List[Future]],
+    write_dir: Path,
+    t_clust: float,
+) -> None:
+    def distribution_factory():
+        return ClusterDistribution("integrated", ["H", "L"], t_clust)
+
+    distributions = defaultdict(distribution_factory)
+    for norm, mini_dist in as_completed(futures):
+        distribution = distributions[norm]
+
+        # update all the attributes of the global
+        # distribution for this normalization value
+        # with the attributes for one of the sub-
+        # distributions fit on a single segment
+        distribution.Tb += mini_dist.Tb
+        distribution.events = np.append(distribution.events, mini_dist.events)
+        distribution.event_times = np.append(
+            distribution.event_times, mini_dist.event_times
+        )
+        distribution.shifts = np.append(
+            distribution.shifts, mini_dist.shifts, axis=0
+        )
+
+    for norm, distribution in distributions.items():
+        fname = dist_type
+        if norm is not None:
+            fname = fname + f"_norm-seconds={norm}"
+        fname = fname + ".h5"
+        distribution.write(write_dir / fname)
 
 
 def fit_distributions(
     pool: AsyncExecutor,
-    pbar: CallbackFactory,
+    pbar: AnalysisProgress,
     background_segments: Iterable[Segment],
     foreground_field: str,
     data_dir: Path,
+    write_dir: Path,
     max_tb: float,
+    t_clust: float,
     window_length: float,
     norm_seconds: Optional[Iterable[float]] = None,
-):
+) -> None:
     norm_seconds = norm_seconds or [norm_seconds]
+    fit_futures = {
+        "foreground": defaultdict(list),
+        "background": defaultdict(list),
+    }
+
     background_segments = iter(background_segments)
     while pbar.Tb < max_tb:
         try:
@@ -56,11 +189,15 @@ def fit_distributions(
         # create progress bar tasks for each one
         # of the subprocesses involved for analyzing
         # this set of timeslide ClusterDistributions
-        load_cb, analyze_cb, write_cb = pbar.get_task_cbs(
+        load_task_id, analyze_task_id, write_task_id = pbar.get_tasks(
             len(load_futures),
             analysis_jobs * len(norm_seconds),
             segment.length,
         )
+
+        load_cb = pbar.get_task_cb(load_task_id)
+        analyze_cb = pbar.get_task_cb(analyze_task_id)
+
         for f in load_futures.values():
             f[0].add_done_callback(load_cb)
 
@@ -69,54 +206,36 @@ def fit_distributions(
         # the specified normalization values and fit distributions
         # to the integrated values
         for shift, (yf, yb, t) in as_completed(load_futures):
-            sample_rate = 1 / (t[1] - t[0])
             for norm in norm_seconds:
-                # treat 0 the same as no normalization
-                norm = norm or None
-
-                # build a normalizer for the given normalization window length
-                if norm is not None:
-                    normalizer = GaussianNormalizer(norm * sample_rate)
-                    normalizer.fit(yb)
-                else:
-                    normalizer = None
-
-                # integrate the nn outputs and use them to fit
-                # a background distribution. The `distributions`
-                # dict will create a new distribution if one doesn't
-                # already exist for this normalization value
-                future = pool.submit(
-                    integrate,
-                    yb,
-                    t,
+                background_future, foreground_future = integrate_segments(
+                    pool,
+                    write_dir=write_dir,
+                    yb=yb,
+                    yf=yf,
+                    t=t,
+                    shift=shift,
+                    t_clust=t_clust,
                     window_length=window_length,
-                    normalizer=normalizer,
+                    norm=norm,
                 )
-                cb = pbar.get_cb("background", norm, shift, write_cb)
-                future.add_done_callback(cb)
-                future.add_done_callback(analyze_cb)
+                background_future.add_done_callback(analyze_cb)
+                fit_futures["background"][norm].append(background_future)
+                pbar.update(write_task_id, advance=1)
 
-                if yf is not None:
-                    future = pool.submit(
-                        integrate,
-                        yf,
-                        t,
-                        window_length=window_length,
-                        normalizer=normalizer,
-                    )
-                    cb = pbar.get_cb("foreground", norm, shift, write_cb)
-                    future.add_done_callback(cb)
-                    future.add_done_callback(analyze_cb)
+                if foreground_future is not None:
+                    foreground_future.add_done_callback(analyze_cb)
+                    fit_futures["foreground"][norm].append(foreground_future)
+                    pbar.update(write_task_id, advance=1)
 
             advance = t[-1] - t[0] + t[1] - t[0]
             pbar.update(pbar.main_task_id, advance=advance)
 
     logging.info(f"Accumulated {pbar.Tb}s of background")
-    pbar.write_distributions()
-    return pbar.distributions, pbar.write_futures
+    for dist_type, futures in fit_futures.items():
+        aggregate_distributions(dist_type, futures, write_dir, t_clust)
 
 
-@typeo
+@scriptify
 def main(
     data_dir: Path,
     write_dir: Path,
@@ -191,25 +310,20 @@ def main(
     background_segments = background_ts.segments
 
     pool = AsyncExecutor(4, thread=False)
-    pbar = CallbackFactory(
-        ["H1", "L1"],
-        t_clust=t_clust,
-        max_tb=max_tb,
-        write_dir=write_dir,
-        pool=pool,
-    )
+    pbar = AnalysisProgress(max_tb)
     with pool, pbar:
-        backgrounds, write_futures = fit_distributions(
+        fit_distributions(
             pool,
             pbar,
             background_segments,
             foreground_field="injection-out",
             data_dir=data_dir,
+            write_dir=write_dir,
             max_tb=max_tb,
+            t_clust=t_clust,
             window_length=window_length,
             norm_seconds=norm_seconds,
         )
-        wait(write_futures, return_when=FIRST_EXCEPTION)
 
 
 if __name__ == "__main__":

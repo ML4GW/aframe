@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Optional
 
 from bokeh.server.server import Server
 
+from bbhnet.logging import configure_logging
 from hermes.typeo import typeo
 
 from .app import VizApp
@@ -15,7 +17,10 @@ def main(
     fduration: float,
     valid_frac: float,
     port: int = 5005,
+    logdir: Optional[Path] = None,
+    verbose: bool = False,
 ) -> None:
+    configure_logging(logdir / "vizapp.log", verbose)
     bkapp = VizApp(
         timeslides_dir=timeslides_dir,
         data_dir=data_dir,

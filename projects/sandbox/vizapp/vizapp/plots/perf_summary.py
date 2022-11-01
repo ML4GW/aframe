@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Legend, Select
@@ -50,6 +52,8 @@ class PerfSummaryPlot:
         widgets = column(self.x_axis_select, self.hist_type_select)
         self.layout = row(widgets, self.p)
         self.fars = self.snrs = self.distances = None
+
+        self.logger = logging.getLogger("perf summary")
 
     def update(self, foreground):
         self.snrs = foreground.snrs
@@ -123,6 +127,7 @@ class PerfSummaryPlot:
                         efficiency = (np.arange(len(x)) + 1)[::-1] / len(fars)
                         label = f"FAR <= {vals} / year, N={len(x)}"
 
+            self.logger.debug(f"{len(x)} events with {label}")
             xs.append(x)
             efficiencies.append(efficiency)
             colors.append(color)
@@ -133,15 +138,17 @@ class PerfSummaryPlot:
     def switch_hist_type(self, attr, old, new):
         # histogram type doesn't effect FAR x-axis plot
         if self.x_axis_select.value == "FAR":
+            self.logger.debug(
+                "Histogram type set to {} but x-axis is FAR, "
+                "so no changes to be made".format(new)
+            )
             return
-        else:
 
-            self.p.title.text = (
-                f"Efficiency vs. SNR ({self.hist_type_select.value})"
-            )
-            xs, efficiencies, colors, labels = self.calc_efficiencies(
-                new, self.x_axis_select.value
-            )
+        self.logger.debug(f"Setting histogram type to {new}")
+        self.p.title.text = f"Efficiency vs. SNR ({new})"
+        xs, efficiencies, colors, labels = self.calc_efficiencies(
+            new, self.x_axis_select.value
+        )
 
         self.source.data = {
             "x": xs,
@@ -151,6 +158,7 @@ class PerfSummaryPlot:
         }
 
     def switch_x_axis(self, attr, old, new):
+        self.logger.debug(f"Setting x-axis type to {new}")
         if new == "FAR":
             self.p.title.text = "Efficiency vs. FAR (Cumulative)"
             self.p.xaxis.axis_label = "False Alarm Rate [yr^-1]"
@@ -175,8 +183,12 @@ class PerfSummaryPlot:
             "color": colors,
             "label": labels,
         }
+        self.logger.debug("Data source updated")
 
-        self.p.x_range.start = 0.5 * min([x[x > 0].min() for x in xs])
+        xs = [x for x in xs if len(x) > 0]
+        x_gt_0 = [x[x > 0] for x in xs]
+        mins = [x.min() for x in x_gt_0 if len(x) > 0]
+        self.p.x_range.start = 0.5 * min(mins)
         self.p.x_range.end = 1.5 * max([max(x) for x in xs])
         self.p.y_range.start = 0
         self.p.y_range.end = 1.02

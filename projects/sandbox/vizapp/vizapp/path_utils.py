@@ -23,7 +23,7 @@ def get_strain_dirname(event_type: str) -> str:
 
 def get_response_dirname(event_type: str, norm: Optional[float] = None) -> str:
     int_dirname = f"{event_type}-integrated"
-    if norm is not None:
+    if norm is not None and float(norm) > 0:
         return int_dirname + f"_norm-seconds={float(norm)}"
     return int_dirname
 

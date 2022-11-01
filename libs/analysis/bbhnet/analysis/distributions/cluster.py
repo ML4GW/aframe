@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Union
@@ -99,9 +98,4 @@ class ClusterDistribution(Distribution):
             nb = [np.sum(self.events >= thresh) for thresh in threshold]
         else:
             nb = np.sum(self.events >= threshold)
-
-        logging.debug(
-            "Threshold {} has {} events greater than it "
-            "in distribution {}".format(threshold, nb, self)
-        )
         return np.array(nb)
