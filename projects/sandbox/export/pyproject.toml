@@ -5,6 +5,8 @@ description = "Export BBHNet for IaaS inference"
 authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 # readme = "README.md"
 
+[tool.pinto]
+cuda-version = "11.2"
 
 [tool.poetry.scripts]
 export-model = "export:export"

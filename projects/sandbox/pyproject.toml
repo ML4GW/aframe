@@ -24,7 +24,7 @@ frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [3, 3, 3]}
 repository_directory = "${BASE_DIR}/model_repo/" 
-force_generation = true
+force_generation = false
 kernel_length = 2
 inference_sampling_rate = 16
 minimum_frequency = 20 
@@ -141,7 +141,7 @@ batch_size = "${base.inference_sampling_rate}"
 
 # repo/triton parameters
 streams_per_gpu = 10
-platform = "onnxruntime_onnx"
+platform = "tensorrt_plan"
 verbose = false
 clean = false
 
