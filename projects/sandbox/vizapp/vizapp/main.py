@@ -11,8 +11,9 @@ from .app import VizApp
 
 @typeo
 def main(
-    timeslides_dir: Path,
-    data_dir: Path,
+    timeslides_results_dir: Path,
+    timeslides_strain_dir: Path,
+    train_data_dir: Path,
     sample_rate: float,
     fduration: float,
     valid_frac: float,
@@ -22,8 +23,9 @@ def main(
 ) -> None:
     configure_logging(logdir / "vizapp.log", verbose)
     bkapp = VizApp(
-        timeslides_dir=timeslides_dir,
-        data_dir=data_dir,
+        timeslides_results_dir=timeslides_results_dir,
+        timeslides_strain_dir=timeslides_strain_dir,
+        train_data_dir=train_data_dir,
         sample_rate=sample_rate,
         fduration=fduration,
         valid_frac=valid_frac,

@@ -150,7 +150,7 @@ commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.timeslide_injections]
 # paths and what not
-datadir = "${base.basedir}/timeslide_injections/"
+datadir = "${base.datadir}/timeslide_injections/"
 logdir = "${base.logdir}"
 
 # background parameters
@@ -183,7 +183,7 @@ verbose = true
 [tool.typeo.scripts.infer]
 model_repo_dir = "${base.repository_directory}"
 model_name = "bbhnet-stream"
-data_dir = "${base.basedir}/timeslide_injections/" 
+data_dir = "${base.datadir}/timeslide_injections/" 
 write_dir = "${base.basedir}/timeslide_injections/"
 fields = ["injection", "background"]
 inference_sampling_rate = "${base.inference_sampling_rate}"
@@ -211,8 +211,9 @@ log_file = "${base.logdir}/analyze.log"
 verbose = false
 
 [tool.typeo.scripts.vizapp]
-timeslides_dir = "${base.basedir}/timeslide_injections/"
-data_dir = "${base.datadir}"
+timeslides_results_dir = "${base.basedir}/timeslide_injections/"
+timeslides_strain_dir = "${base.datadir}/timeslide_injections"
+train_data_dir = "${base.datadir}"
 sample_rate = "${base.sample_rate}"
 fduration = "${base.fduration}"
 valid_frac = "${base.valid_frac}"

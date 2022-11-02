@@ -11,30 +11,38 @@ from vizapp.plots import BackgroundPlot, EventInspectorPlot, PerfSummaryPlot
 class VizApp:
     def __init__(
         self,
-        timeslides_dir: Path,
-        data_dir: Path,
+        timeslides_results_dir: Path,
+        timeslides_strain_dir: Path,
+        train_data_dir: Path,
         sample_rate: float,
         fduration: float,
         valid_frac: float,
     ) -> None:
         self.logger = logging.getLogger("vizapp")
-
-        self.timeslides_dir = timeslides_dir
-        train_frac = 1 - valid_frac
-
         self.logger.debug("Loading analyzed distributions")
-        self.distributions = load_results(timeslides_dir)
+        self.distributions = load_results(timeslides_results_dir)
 
         self.logger.debug("Structuring distribution events")
         self.foregrounds = {}
         for norm, results in self.distributions.items():
-            foreground = get_foreground(results, timeslides_dir, norm)
+            foreground = get_foreground(
+                results, timeslides_strain_dir, timeslides_results_dir, norm
+            )
             self.foregrounds[norm] = foreground
 
         self.logger.debug("Configuring plots")
         self.configure_widgets()
-        self.configure_plots(sample_rate, fduration, train_frac, data_dir)
+        self.configure_plots(
+            sample_rate,
+            fduration,
+            1 - valid_frac,
+            train_data_dir,
+            timeslides_strain_dir,
+            timeslides_results_dir,
+        )
         self.update(None, None, self.norm_select.options[0])
+
+        self.logger.info("Application ready!")
 
     def configure_widgets(self):
         header = Div(text="<h1>BBHNet Performance Dashboard</h1>", width=500)
@@ -54,12 +62,20 @@ class VizApp:
         self.norm_select.on_change("value", self.update)
         self.widgets = row(header, self.norm_select)
 
-    def configure_plots(self, sample_rate, fduration, train_frac, data_dir):
+    def configure_plots(
+        self,
+        sample_rate,
+        fduration,
+        train_frac,
+        train_data_dir,
+        timeslides_strain_dir,
+        timeslides_results_dir,
+    ):
         self.perf_summary_plot = PerfSummaryPlot(300, 800)
 
         backgrounds = {}
         for ifo in ["H1", "L1"]:
-            with h5py.File(data_dir / f"{ifo}_background.h5", "r") as f:
+            with h5py.File(train_data_dir / f"{ifo}_background.h5", "r") as f:
                 bkgd = f["hoft"][:]
                 bkgd = bkgd[: int(train_frac * len(bkgd))]
                 backgrounds[ifo] = bkgd
@@ -67,7 +83,8 @@ class VizApp:
         self.event_inspector = EventInspectorPlot(
             height=300,
             width=1500,
-            data_dir=self.timeslides_dir,
+            response_dir=timeslides_results_dir,
+            strain_dir=timeslides_strain_dir,
             fduration=fduration,
             sample_rate=sample_rate,
             freq_low=30,

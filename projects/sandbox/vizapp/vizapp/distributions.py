@@ -43,6 +43,7 @@ def load_results(data_dir: Path) -> Dict[Optional[float], AnalysisResults]:
 
 @dataclass
 class Foreground:
+    injection_times: np.ndarray
     detection_statistics: np.ndarray
     event_times: np.ndarray
     shifts: np.ndarray
@@ -59,12 +60,15 @@ class Foreground:
 
 
 def get_foreground(
-    results: AnalysisResults, data_dir: Path, norm: Optional[float] = None
+    results: AnalysisResults,
+    strain_dir: Path,
+    results_dir: Path,
+    norm: Optional[float] = None,
 ) -> Foreground:
     int_dirname = path_utils.get_response_dirname("foreground", norm)
 
     events = defaultdict(list)
-    for shift in data_dir.iterdir():
+    for shift in strain_dir.iterdir():
         if not (shift.is_dir() and shift.name.startswith("dt")):
             continue
 
@@ -81,7 +85,8 @@ def get_foreground(
             network_snrs = (h1_snrs**2 + l1_snrs**2) ** 0.5
 
         if norm is not None:
-            segments = path_utils.get_segments(shift / int_dirname)
+            results_shift = results_dir / shift.name / int_dirname
+            segments = path_utils.get_segments(results_shift)
 
         # for each injection, find the event in the
         # foreground which is closest to it
@@ -121,6 +126,7 @@ def get_foreground(
             snr = network_snrs[i]
             distance = distances[i]
 
+            events["injection_times"].append(t)
             events["detection_statistics"].append(event)
             events["time_deltas"].append(diff)
             events["fars"].append(far)

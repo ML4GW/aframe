@@ -166,6 +166,7 @@ class BackgroundPlot:
 
         self.foreground_source = ColumnDataSource(
             dict(
+                injection_time=[],
                 detection_statistic=[],
                 event_time=[],
                 shift=[],
@@ -225,6 +226,7 @@ class BackgroundPlot:
 
         self.update_source(
             self.foreground_source,
+            injection_time=foreground.injection_times,
             detection_statistic=foreground.detection_statistics,
             event_time=foreground.event_times,
             shift=foreground.shifts,
@@ -310,10 +312,13 @@ class BackgroundPlot:
             return
 
         idx = new[0]
-        event_time = self.foreground_source.data["event_time"][idx]
+        event_time = self.foreground_source.data["injection_time"][idx]
         shift = self.foreground_source.data["shift"][idx]
         snr = self.foreground_source.data["snr"][idx]
         chirp_mass = self.foreground_source.data["chirp_mass"][idx]
+
+        # don't need to subtract 1 from the event time here
+        # since we're using the actual known injection time
         self.event_inspector.update(
             event_time,
             "foreground",
@@ -326,9 +331,15 @@ class BackgroundPlot:
     def inspect_glitch(self, attr, old, new):
         if len(new) != 1:
             return
+
+        # subtract one from the event time since the event
+        # itself will occur one second before when it gets
+        # recorded in the distribution due to integration
+        # TODO: this is hardcoded to a kernel length of 1,
+        # make it more general
         idx = new[0]
         event_time = self.background_source.data["event_time"][idx]
         shift = self.background_source.data["shift"][idx][0]
         self.event_inspector.update(
-            event_time, "background", [0.0, shift], self.norm
+            event_time - 1, "background", [0.0, shift], self.norm
         )

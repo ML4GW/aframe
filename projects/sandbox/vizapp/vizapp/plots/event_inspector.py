@@ -81,14 +81,17 @@ class EventInspectorPlot:
         self,
         height: int,
         width: int,
-        data_dir: Path,
+        response_dir: Path,
+        strain_dir: Path,
         sample_rate: float,
         fduration: float = 1,
         freq_low: Optional[float] = None,
         freq_high: Optional[float] = None,
         **backgrounds: np.ndarray,
     ) -> None:
-        self.data_dir = data_dir
+        self.response_dir = response_dir
+        self.strain_dir = strain_dir
+
         self.fduration = fduration
         self.preprocessor = Preprocessor(
             sample_rate, fduration, freq_low, freq_high, **backgrounds
@@ -98,14 +101,12 @@ class EventInspectorPlot:
         self.configure_plots(height, width)
 
     def configure_sources(self):
-
         self.strain_source = ColumnDataSource(dict(H1=[], L1=[], t=[]))
         self.response_source = ColumnDataSource(
             dict(nn=[], integrated=[], t=[])
         )
 
     def configure_plots(self, height: int, width: int) -> None:
-
         self.timeseries_plot = figure(
             title="Click on an event to inspect",
             height=height,
@@ -186,14 +187,13 @@ class EventInspectorPlot:
         self, event_time: float, event_type: str, shift: str, pad: float = 4
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         strain_dirname = path_utils.get_strain_dirname(event_type)
-        strain_dir = self.data_dir / shift / strain_dirname
+        strain_dir = self.strain_dir / shift / strain_dirname
         strain_fname = path_utils.get_event_fname(strain_dir, event_time)
 
         pad = pad + self.fduration
         with h5py.File(strain_fname, "r") as f:
-            # decrease our read time by figuring out which
-            # indices from the strain arrays we need to slice
-            # beforehand
+            # decrease our read time by figuring out which indices
+            # from the strain arrays we need to slice beforehand
             t = f["GPSstart"][:]
             start, stop = get_indices(t, event_time - pad, event_time + pad)
 
@@ -216,7 +216,7 @@ class EventInspectorPlot:
         pad: float = 4,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         response_dirname = path_utils.get_response_dirname(event_type, norm)
-        response_dir = self.data_dir / shift / response_dirname
+        response_dir = self.response_dir / shift / response_dirname
         response_fname = path_utils.get_event_fname(response_dir, event_time)
         with h5py.File(response_fname, "r") as f:
             t = f["GPSstart"][:]
