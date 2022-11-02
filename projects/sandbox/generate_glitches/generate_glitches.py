@@ -246,7 +246,6 @@ def omicron_main_wrapper(
         "request_disk=100",
         "--output-dir",
         str(run_dir),
-        "--skip-ligolw_add",
         "--skip-gzip",
     ]
 
@@ -379,8 +378,10 @@ def main(
                 vetoes = None
 
             # get the path to the omicron triggers
-            trigger_dir = run_dir / "triggers" / f"{ifo}:{channel}"
-            trigger_file = list(trigger_dir.glob("*.h5"))[0]
+            trigger_dir = run_dir / "merge" / f"{ifo}:{channel}"
+
+            # only use the first segment for training
+            trigger_file = sorted(list(trigger_dir.glob("*.h5")))[0]
 
             # generate glitches
             glitches, snrs = generate_glitch_dataset(
