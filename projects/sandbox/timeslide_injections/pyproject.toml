@@ -6,7 +6,7 @@ authors = ["Will Benoit <william.benoit@ligo.org>",]
 license = "MIT"
 
 [tool.poetry.scripts]
-timeslide_injections = "timeslide_injections:main"
+timeslide_injections = "timeslide_injections.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"

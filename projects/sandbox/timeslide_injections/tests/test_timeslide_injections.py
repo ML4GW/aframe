@@ -9,7 +9,7 @@ from gwpy.segments import (
     SegmentList,
 )
 from gwpy.timeseries import TimeSeries
-from timeslide_injections import main
+from timeslide_injections.main import main
 
 from bbhnet.injection import nonspin_bbh
 from bbhnet.io.timeslides import TimeSlide
