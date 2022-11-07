@@ -1,5 +1,9 @@
 from math import pi
 
+import numpy as np
+import pytest
+from scipy import optimize
+
 from bbhnet.data import distributions
 
 # TODO: for all tests, how to validate that
@@ -57,3 +61,23 @@ def test_log_normal():
     samples = sampler(10000)
     mean = samples.mean().item()
     assert (abs(mean - 10) / 10) < (2 * 2 / 10000**0.5)
+
+
+def test_volume_distributed_snr():
+    """Test PowerLaw distribution against expected distribution of SNRs"""
+    ref_snr = 8
+    sampler = distributions.PowerLaw(
+        x_min=ref_snr, x_max=float("inf"), alpha=4
+    )
+    samples = sampler(10000).numpy()
+    # check 1/rho^4 behavior
+    counts, ebins = np.histogram(samples, bins=100)
+    bins = ebins[1:] + ebins[:-1]
+    bins *= 0.5
+
+    def foo(x, a, b):
+        return a * x ** (-b)
+
+    popt, pcov = optimize.curve_fit(foo, bins, counts, (20, 3))
+    # popt[1] is the index
+    assert popt[1] == pytest.approx(4, rel=1e-1)

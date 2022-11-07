@@ -71,3 +71,40 @@ class LogNormal:
         if self.low is not None:
             x = torch.clip(x, self.low)
         return x
+
+
+class PowerLaw:
+    """
+    Sample from a power law distribution,
+    .. math::
+        p(x) \approx x^{-\alpha}.
+
+    Index alpha must be greater than 1.
+    This could be used, for example, as a universal distribution of
+    signal-to-noise ratios (SNRs) from uniformly volume distributed
+    sources
+    .. math::
+
+       p(\rho) = 3*\rho_0^3 / \rho^4
+
+    where :math:`\rho_0` is a representative minimum SNR
+    considered for detection. See, for example,
+    `Schutz (2011) <https://arxiv.org/abs/1102.5421>`_.
+    """
+
+    def __init__(
+        self, x_min: float, x_max: float = float("inf"), alpha: float = 2
+    ) -> None:
+        self.x_min = x_min
+        self.x_max = x_max
+        self.alpha = alpha
+
+        self.normalization = x_min ** (-self.alpha + 1)
+        self.normalization -= x_max ** (-self.alpha + 1)
+
+    def __call__(self, N: int) -> torch.Tensor:
+        u = torch.rand(N)
+        u *= self.normalization
+        samples = self.x_min ** (-self.alpha + 1) - u
+        samples = torch.pow(samples, -1.0 / (self.alpha - 1))
+        return samples
