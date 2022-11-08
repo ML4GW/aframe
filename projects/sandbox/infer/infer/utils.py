@@ -82,9 +82,10 @@ class SequenceManager:
         write_dir: Path,
         fields: Iterable[str],
         client,
-        stride_size: int,
+        inference_sampling_rate: float,
+        sample_rate: float,
         batch_size: int,
-        inference_rate: float,
+        throughput: float,
         num_io_workers: int,
         max_streams: int,
         max_seconds: float,
@@ -95,11 +96,11 @@ class SequenceManager:
         self.client.callback = self.callback
 
         self.write_dir = write_dir
-        self.stride_size = stride_size
+        self.stride_size = int(sample_rate // inference_sampling_rate)
         self.batch_size = batch_size
         self.fduration = fduration
-        self.inference_rate = inference_rate
         self.base_sequence_id = base_sequence_id
+        self.sleep = batch_size / inference_sampling_rate / throughput
 
         # do reading and writing of segments using multiprocessing
         self.io_pool = AsyncExecutor(num_io_workers, thread=False)
@@ -164,7 +165,7 @@ class SequenceManager:
             except Exception as e:
                 logging.error(str(e))
                 raise e
-            time.sleep(1 / self.inference_rate)
+            time.sleep(len(self.sequences) * self.sleep)
 
             # let the first request complete before we
             # send anymore to make sure that the request

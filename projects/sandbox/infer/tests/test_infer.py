@@ -168,7 +168,7 @@ def test_infer(
             batch_size=batch_size,
             streams_per_gpu=streams_per_gpu,
             log_file=tmpdir / "infer.log",
-            inference_rate=5000,
+            throughput_per_gpu=5000,
             num_workers=2,
         )
 

@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Iterable, Optional
@@ -25,9 +26,9 @@ def main(
     fields: Iterable[str],
     sample_rate: float,
     inference_sampling_rate: float,
-    inference_rate: float,
     batch_size: int,
     num_workers: int,
+    throughput_per_gpu: float,
     streams_per_gpu: int,
     model_version: int = -1,
     max_seconds: float = 131072,
@@ -37,12 +38,13 @@ def main(
     verbose: bool = False,
 ):
     configure_logging(log_file, verbose)
-    stride_size = int(sample_rate // inference_sampling_rate)
-
     if log_file is not None:
         server_log_file = log_file.parent / "server.log"
     else:
         server_log_file = None
+
+    gpus = os.getenv("CUDA_VISIBLE_DEVICES")
+    num_gpus = len(gpus.split(",")) if gpus is not None else 1
 
     # spin up a triton server and don't move on until it's ready
     with serve(model_repo_dir, wait=True, log_file=server_log_file):
@@ -52,12 +54,13 @@ def main(
             write_dir,
             fields,
             client,
-            stride_size=stride_size,
+            inference_sampling_rate=inference_sampling_rate,
+            sample_rate=sample_rate,
             batch_size=batch_size,
             fduration=fduration,
-            inference_rate=inference_rate,
+            throughput=throughput_per_gpu * num_gpus,
             num_io_workers=num_workers,
-            max_streams=streams_per_gpu,  # * len(gpus),
+            max_streams=streams_per_gpu * num_gpus,
             max_seconds=max_seconds,
             base_sequence_id=base_sequence_id,
         )
@@ -70,6 +73,7 @@ def main(
             filename=log_file.parent / "server-stats.csv",
             model_version=model_version,
             name="monitor",
+            rate=10,
         )
 
         # enter all of these objects as contexts
