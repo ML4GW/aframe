@@ -285,5 +285,11 @@ class EventInspectorPlot:
 
     def reset(self):
         self.configure_sources()
+        for r in self.strain_renderers:
+            r.data_source.data = dict(H1=[], L1=[], t=[])
+
+        for r in self.output_renderers:
+            r.data_source.data = dict(nn=[], integrated=[], t=[])
+
         self.timeseries_plot.title.text = "Click on an event to inspect"
         self.timeseries_plot.xaxis.axis_label = "Time [s]"

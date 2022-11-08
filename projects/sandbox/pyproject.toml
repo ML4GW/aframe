@@ -213,6 +213,11 @@ verbose = false
 [tool.typeo.scripts.vizapp]
 timeslides_results_dir = "${base.basedir}/timeslide_injections/"
 timeslides_strain_dir = "${base.datadir}/timeslide_injections"
+ifos = "${base.ifos}"
+start = "${base.stop}"
+stop = "${base.test_stop}"
+veto_definer_file = "./vetoes/H1L1-HOFT_C01_O3_CBC.xml"
+gate_paths = {"H1" = "./vetoes/H1-O3_GATES_1238166018-31197600.txt" , "L1" = "./vetoes/L1-O3_GATES_1238166018-31197600.txt"}
 train_data_dir = "${base.datadir}"
 sample_rate = "${base.sample_rate}"
 fduration = "${base.fduration}"

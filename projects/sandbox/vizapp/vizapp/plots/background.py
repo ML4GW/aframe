@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from bokeh.layouts import row
 from bokeh.models import (
@@ -36,7 +38,9 @@ class BackgroundPlot:
     ) -> None:
         self.configure_sources()
         self.configure_plots(height, width)
+
         self.event_inspector = event_inspector
+        self.logger = logging.getLogger("Background Plot")
 
     def configure_plots(self, height: int, width: int):
         bckgd_color = palette[4]
@@ -83,9 +87,9 @@ class BackgroundPlot:
         )
         self.distribution_plot.add_layout(axis, "right")
 
-        r = self.distribution_plot.circle(
-            "detection_statistic",
-            "snr",
+        injection_renderer = self.distribution_plot.circle(
+            x="detection_statistic",
+            y="snr",
             size="size",
             fill_color=frgd_color,
             line_color=frgd_color,
@@ -108,7 +112,7 @@ class BackgroundPlot:
                 ("Detection statistic", "@{detection_statistic}"),
                 ("Chirp Mass", "@{chirp_mass}"),
             ],
-            renderers=[r],
+            renderers=[injection_renderer],
         )
         self.distribution_plot.add_tools(hover)
 
@@ -159,7 +163,7 @@ class BackgroundPlot:
         )
         self.background_plot.add_tools(tap)
 
-        self.layout = row([self.distribution_plot, self.background_plot])
+        self.layout = row(self.distribution_plot, self.background_plot)
 
     def configure_sources(self):
         self.bar_source = ColumnDataSource(dict(center=[], top=[], width=[]))
@@ -172,6 +176,9 @@ class BackgroundPlot:
                 shift=[],
                 snr=[],
                 chirp_mass=[],
+                distances=[],
+                m1s=[],
+                m2s=[],
                 size=[],
             )
         )
@@ -204,7 +211,8 @@ class BackgroundPlot:
             background.Tb / 3600 / 24,
             len(foreground.event_times),
         )
-        self.distribution_plot.title = title
+        self.logger.debug(title)
+        self.distribution_plot.title.text = title
         self.distribution_plot.extra_y_ranges["SNR"].start = (
             0.5 * foreground.snrs.min()
         )
@@ -232,6 +240,9 @@ class BackgroundPlot:
             shift=foreground.shifts,
             snr=foreground.snrs,
             chirp_mass=foreground.chirps,
+            distances=foreground.distances,
+            m1s=foreground.m1s,
+            m2s=foreground.m2s,
             size=foreground.chirps / 8,
         )
 

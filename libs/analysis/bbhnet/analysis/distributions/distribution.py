@@ -115,18 +115,20 @@ class Distribution:
             vetoes:
                 np.ndarray of shape (n_segments, 2) corresponding to segments
                 that should be vetoed.
+
         """
 
         for ifo, vetoes in vetoes.items():
-            if ifo not in self.ifos:
+
+            # find shifts corresponding to this ifo
+            # and calculate event times for this ifo
+            try:
+                shift_arg = self.ifos.index(ifo)
+            except ValueError:
                 raise ValueError(
                     f"Attempting to apply vetoes to ifo {ifo},"
                     f"but {ifo} is not an ifo in this distribution"
                 )
-
-            # find shifts corresponding to this ifo
-            # and calculate event times for this ifo
-            shift_arg = np.where(np.array(self.ifos) == ifo)[0][0]
             times = self.event_times - self.shifts[:, shift_arg]
 
             # determine event times that are in vetoed segments
@@ -135,9 +137,13 @@ class Distribution:
                 mask &= (t0 >= times) | (times >= tf)
 
             # apply mask
-            self.event_times = self.event_times[mask]
-            self.shifts = self.shifts[mask]
-            self.events = self.events[mask]
+            event_times = self.event_times[mask]
+            shifts = self.shifts[mask]
+            events = self.events[mask]
+
+            self.event_times = event_times
+            self.shifts = shifts
+            self.events = events
 
     def __str__(self):
         return f"{self.__class__.__name__}('{self.dataset}', Tb={self.Tb})"

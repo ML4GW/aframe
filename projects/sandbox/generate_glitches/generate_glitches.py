@@ -247,6 +247,7 @@ def omicron_main_wrapper(
         "--output-dir",
         str(run_dir),
         "--skip-gzip",
+        "--skip-rm",
     ]
 
     # create and launch omicron dag
