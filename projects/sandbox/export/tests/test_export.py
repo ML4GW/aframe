@@ -194,7 +194,7 @@ def test_export_for_shapes(
     get_network_weights(num_ifos, sample_rate, kernel_length, weights)
 
     # test fully from scratch behavior
-    if kernel_length < (batch_size / inference_sampling_rate):
+    if (kernel_length * inference_sampling_rate) <= 1:
         context = pytest.raises(ValueError)
     else:
         context = nullcontext()
