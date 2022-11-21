@@ -11,7 +11,7 @@ from bbhnet.data.distributions import Cosine, LogNormal, Uniform
 from bbhnet.data.glitch_sampler import GlitchSampler
 from bbhnet.data.waveform_injection import BBHNetWaveformInjection
 
-Tensor = TypeVar("T", np.ndarray, torch.Tensor)
+Tensor = TypeVar("Tensor", np.ndarray, torch.Tensor)
 
 
 class MultiInputSequential(torch.nn.Sequential):
@@ -94,7 +94,7 @@ def prepare_augmentation(
                 dec=f["dec"][slc],
                 psi=f["psi"][slc],
                 phi=f["ra"][slc],  # no geocent_time recorded, so just use ra
-                snr=lambda N: torch.ones((N,)) * mean_snr,
+                snr=None,
                 sample_rate=sample_rate,
                 highpass=highpass,
                 trigger_offset=0,

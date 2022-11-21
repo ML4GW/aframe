@@ -13,7 +13,7 @@ def make_mlp(input_dim, hidden_dims):
         layers.append(torch.nn.ReLU())
         input_dim = hidden_dim
     layers.append(torch.nn.Linear(input_dim, 1))
-    return torch.nn.Sequential(*layers)
+    return torch.nn.Sequential(*layers).to("cpu")
 
 
 def make_hastie(num_samples, batch_size, shuffle):
@@ -60,14 +60,24 @@ def test_train_one_epoch_with_hastie():
     optimizer = torch.optim.Adam(mlp.parameters(), lr=1e-3)
     train_data = make_hastie(10000, 128, True)
     valid_data = make_hastie(2000, 256, False)
+    criterion = torch.nn.functional.binary_cross_entropy_with_logits
+
+    @torch.no_grad()
+    def validator(model, train_loss):
+        loss = 0
+        for X, y in valid_data:
+            y_hat = model(X)
+            err = criterion(y_hat, y)
+            loss += err.mean().item()
+        return loss
 
     for i in range(20):
-        train_loss, valid_loss, _, __ = train_for_one_epoch(
+        _ = train_for_one_epoch(
             mlp,
             optimizer,
-            torch.nn.functional.binary_cross_entropy_with_logits,
+            criterion,
             train_data,
-            valid_data,
+            validator,
         )
 
         label = (mlp(valid_data.X) > 0.5).type(torch.float32)

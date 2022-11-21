@@ -12,6 +12,9 @@ python = ">=3.8,<3.11"
 "bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^6.2"
+
 [tool.poetry.scripts]
 train = "train.train:main"
 

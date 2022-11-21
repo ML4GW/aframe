@@ -72,7 +72,7 @@ def trainify(f):
         # use the passed function `f` to return data files
         # f returns training and validation
         # glitch, signal and background dataset files
-        train_dataset, valid_dataset, preprocessor = f(*args, **kwargs)
+        train_dataset, validator, preprocessor = f(*args, **kwargs)
 
         # pass any args passed to this wrapper that
         # `train` needs into the `train_kwargs` dictionary
@@ -87,7 +87,7 @@ def trainify(f):
 
         # add in the parsed data to our training kwargs
         train_kwargs["train_dataset"] = train_dataset
-        train_kwargs["valid_dataset"] = valid_dataset
+        train_kwargs["validator"] = validator
         train_kwargs["preprocessor"] = preprocessor
 
         # allow wrapper functionality to be utilized if
@@ -113,13 +113,12 @@ def trainify(f):
             # hood with the arguments we populated into
             # `train_kwargs`
 
-            result = arch_fn(**arch_kwargs)
+            arch_fn(**arch_kwargs)
+            return None
         else:
             # otherwise just return the train and valid datasets, equivalent
             # to running `f` without any wrapper functionality
-            result = train_dataset, valid_dataset, preprocessor
-
-        return result
+            return train_dataset, validator, preprocessor
 
     # create the appropriate signature, name, and documentation
     # for the wrapper function we just created

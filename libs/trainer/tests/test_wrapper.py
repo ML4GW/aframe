@@ -36,6 +36,7 @@ class dataset:
     def __next__(self):
         if self.i == self.batches:
             raise StopIteration
+
         x = torch.randn(8, 2, 512).type(torch.float32)
         y = torch.randint(0, 2, size=(8, 1)).type(torch.float32)
         self.i += 1
@@ -49,7 +50,6 @@ class Preprocessor(Transform):
     def __init__(self):
         super().__init__()
         self.factor = self.add_parameter(10.0)
-        print(self.factor)
 
     def forward(self, x):
         return self.factor * x
@@ -60,10 +60,20 @@ class Preprocessor(Transform):
 
 
 @pytest.fixture
-def get_data(validate, preprocess):
+def get_data(validate, preprocess, outdir):
+    class Validator:
+        def __init__(self):
+            self.losses = []
+
+        def __call__(self, model, train_loss):
+            self.losses.append(train_loss)
+            with open(outdir / "history.pkl", "wb") as f:
+                pickle.dump({"loss": self.losses}, f)
+            return False
+
     def fn(batches: int):
         train_dataset = dataset(batches)
-        valid_dataset = dataset(batches) if validate else None
+        valid_dataset = Validator() if validate else None
         preprocessor = Preprocessor() if preprocess else None
         return train_dataset, valid_dataset, preprocessor
 
@@ -115,7 +125,7 @@ def test_wrapper(data_fn, preprocess, outdir, unique_args):
     )
     with open(os.path.join(outdir, "history.pkl"), "rb") as f:
         result = pickle.load(f)
-    assert len(result["train_loss"]) == 1
+    assert len(result["loss"]) == 1
 
     sys.argv = [
         None,
@@ -137,7 +147,7 @@ def test_wrapper(data_fn, preprocess, outdir, unique_args):
     fn()
     with open(os.path.join(outdir, "history.pkl"), "rb") as f:
         result = pickle.load(f)
-    assert len(result["train_loss"]) == 1
+    assert len(result["loss"]) == 1
 
     # TODO: check that if preprocess, there's
     # an extra parameter in the model. use a

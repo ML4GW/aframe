@@ -84,6 +84,7 @@ projects/sandbox/infer/:
   - 'projects/sandbox/infer/**'
   - 'hermes/hermes/hermes.stillwater/**'
   - 'hermes/hermes/hermes.aerial/**'
+
 projects/sandbox/timeslide_injections/:
   - *workflow
   - 'projects/sandbox/timeslide_injections/**'
@@ -91,4 +92,12 @@ projects/sandbox/timeslide_injections/:
   - 'libs/io/**'
   - 'libs/logging/**' 
   - 'libs/parallelize/**'
+  - 'ml4gw/**'
+
+projects/sandbox/train/:
+  - *workflow
+  - 'projects/sandbox/train/**'
+  - 'libs/trainer/**'
+  - 'libs/logging/**'
+  - 'libs/data/**'
   - 'ml4gw/**'

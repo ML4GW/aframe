@@ -113,9 +113,14 @@ lr = 4e-3
 min_lr = 1e-5
 decay_steps = 10000
 weight_decay = 1e-5
-early_stop = 20
+
+# validation parameters
 valid_frac = "${base.valid_frac}"
 valid_stride = 0.0625
+early_stop = 20
+monitor_metric = "glitch"
+threshold = 1.0
+checkpoint_every = 5
 
 # misc params
 device = "cuda"

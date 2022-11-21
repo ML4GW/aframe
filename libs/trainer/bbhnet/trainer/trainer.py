@@ -1,6 +1,5 @@
 import logging
 import os
-import pickle
 import time
 from typing import Callable, Iterable, Optional, Tuple
 
@@ -14,7 +13,7 @@ def train_for_one_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: torch.nn.Module,
     train_dataset: Iterable[Tuple[np.ndarray, np.ndarray]],
-    valid_dataset: Iterable[Tuple[np.ndarray, np.ndarray]] = None,
+    validator: Optional[Callable] = None,
     profiler: Optional[torch.profiler.profile] = None,
     scaler: Optional[torch.cuda.amp.GradScaler] = None,
     scheduler: Optional[Callable] = None,
@@ -25,7 +24,6 @@ def train_for_one_epoch(
     samples_seen = 0
     start_time = time.time()
     model.train()
-    device = next(model.parameters()).device
 
     for samples, targets in train_dataset:
         optimizer.zero_grad(set_to_none=True)  # reset gradient
@@ -64,34 +62,11 @@ def train_for_one_epoch(
             duration, throughput
         )
     )
-    msg = f"Train Loss: {train_loss:.4e}"
-
     # Evaluate performance on validation set if given
-    if valid_dataset is not None:
-        valid_loss = 0
-        samples_seen = 0
-
+    if validator is not None:
         model.eval()
-
-        # reason mixed precision is not used here?
-        # since no gradient calculation that requires
-        # higher precision?
-        with torch.no_grad():
-            for samples, targets in valid_dataset:
-                samples, targets = samples.to(device), targets.to(device)
-                predictions = model(samples)
-                loss = criterion(predictions, targets)
-
-                valid_loss += loss.item()
-                samples_seen += len(samples)
-
-        valid_loss /= samples_seen
-        msg += f", Valid Loss: {valid_loss:.4e}"
-    else:
-        valid_loss = None
-
-    logging.info(msg)
-    return train_loss, valid_loss, duration, throughput
+        return validator(model, train_loss)
+    return False
 
 
 def train(
@@ -99,7 +74,7 @@ def train(
     outdir: str,
     # data params
     train_dataset: Iterable[Tuple[np.ndarray, np.ndarray]],
-    valid_dataset: Iterable[Tuple[np.ndarray, np.ndarray]] = None,
+    validator: Optional[Callable] = None,
     preprocessor: Optional[torch.nn.Module] = None,
     # optimization params
     max_epochs: int = 40,
@@ -108,12 +83,11 @@ def train(
     min_lr: float = 1e-5,
     decay_steps: int = 10000,
     weight_decay: float = 0.0,
-    early_stop: int = 20,
     # misc params
     device: Optional[str] = None,
     use_amp: bool = False,
     profile: bool = False,
-) -> float:
+) -> None:
     """Train BBHnet model on in-memory data
     Args:
         architecture:
@@ -222,10 +196,6 @@ def train(
     elif use_amp:
         logging.warning("'use_amp' flag set but no cuda device, ignoring")
 
-    best_valid_loss = np.inf
-    since_last_improvement = 0
-    history = {"train_loss": [], "valid_loss": []}
-
     logging.info("Beginning training loop")
     for epoch in range(max_epochs):
         if epoch == 0 and profile:
@@ -240,55 +210,15 @@ def train(
             profiler = None
 
         logging.info(f"=== Epoch {epoch + 1}/{max_epochs} ===")
-        train_loss, valid_loss, duration, throughput = train_for_one_epoch(
+        stop = train_for_one_epoch(
             model,
             optimizer,
             criterion,
             train_dataset,
-            valid_dataset,
+            validator,
             profiler,
             scaler,
             lr_scheduler,
         )
-
-        history["train_loss"].append(train_loss)
-
-        # do some house cleaning with our
-        # validation loss if we have one
-        if valid_loss is not None:
-            history["valid_loss"].append(valid_loss)
-
-            # update our learning rate scheduler if we
-            # indicated a schedule with `patience`
-            # if patience is not None:
-            #     lr_scheduler.step(valid_loss)
-
-            # save this version of the model weights if
-            # we achieved a new best loss, otherwise check
-            # to see if we need to early stop based on
-            # plateauing validation loss
-            if valid_loss < best_valid_loss:
-                logging.debug(
-                    "Achieved new lowest validation loss, "
-                    "saving model weights"
-                )
-                best_valid_loss = valid_loss
-
-                weights_path = os.path.join(outdir, "weights.pt")
-                torch.save(model.state_dict(), weights_path)
-                since_last_improvement = 0
-            else:
-                since_last_improvement += 1
-                if since_last_improvement >= early_stop:
-                    logging.info(
-                        "No improvement in validation loss in {} "
-                        "epochs, halting training early".format(early_stop)
-                    )
-                    break
-
-    with open(os.path.join(outdir, "history.pkl"), "wb") as f:
-        pickle.dump(history, f)
-
-    # TODO: Make it so that return statements don't break things
-    # return the training results
-    # return history
+        if stop:
+            break
