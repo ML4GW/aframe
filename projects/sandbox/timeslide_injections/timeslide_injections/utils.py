@@ -209,3 +209,20 @@ def check_segment(
                 break
 
     return segment_shifts
+
+
+def chunk_segments(segments: List[tuple], chunk_size: float):
+    out_segments = []
+    for segment in segments:
+        start, stop = segment
+        duration = stop - start
+        if duration > chunk_size:
+            num_segments = int((duration - 1) // chunk_size) + 1
+            logging.info(f"Chunking segment into {num_segments} parts")
+            for i in range(num_segments):
+                end = min(start + (i + 1) * chunk_size, stop)
+                seg = (start + i * chunk_size, end)
+                out_segments.append(seg)
+        else:
+            out_segments.append(segment)
+    return out_segments
