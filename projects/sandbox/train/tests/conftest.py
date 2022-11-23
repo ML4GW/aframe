@@ -36,11 +36,6 @@ def log_dir():
     shutil.rmtree(tmpdir)
 
 
-@pytest.fixture(params=[1024])
-def sample_rate(request):
-    return request.param
-
-
 @pytest.fixture
 def arange_background(data_dir, sample_rate):
     def func(data_dir, sample_rate, length, ifo):
