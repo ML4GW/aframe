@@ -36,7 +36,7 @@ def log_dir():
     shutil.rmtree(tmpdir)
 
 
-@pytest.fixture(params=[1024, 2048])
+@pytest.fixture(params=[1024])
 def sample_rate(request):
     return request.param
 

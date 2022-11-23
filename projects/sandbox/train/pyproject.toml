@@ -9,8 +9,9 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 "bbhnet.data" = {path = "../../../libs/data", develop  = true}
-"bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
+"bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^6.2"

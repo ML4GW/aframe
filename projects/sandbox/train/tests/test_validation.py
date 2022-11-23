@@ -22,9 +22,9 @@ def test_background_recall():
     assert len(scores) == 3
     assert all([i == j for i, j in zip(scores, metric.values)])
 
-    assert pytest.approx(scores[0], 0.25)
-    assert pytest.approx(scores[1], 0.5)
-    assert pytest.approx(scores[2], 0.85)
+    assert scores[0] == pytest.approx(0.25)
+    assert scores[1] == pytest.approx(0.5)
+    assert scores[2] == pytest.approx(0.85)
 
 
 def test_glitch_recall():
@@ -36,9 +36,9 @@ def test_glitch_recall():
     assert len(scores) == 3
     assert all([i == j for i, j in zip(scores, metric.values)])
 
-    assert pytest.approx(scores[0], 7 / 8)
-    assert pytest.approx(scores[1], 4 / 8)
-    assert pytest.approx(scores[2], 1 / 8)
+    assert scores[0] == pytest.approx(7 / 8)
+    assert scores[1] == pytest.approx(4 / 8)
+    assert scores[2] == pytest.approx(2 / 8)
 
 
 def test_make_background():
