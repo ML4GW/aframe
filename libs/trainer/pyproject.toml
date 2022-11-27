@@ -2,7 +2,7 @@
 name = "bbhnet.trainer"
 version = "0.0.1"
 description = "BBHNet training helper functions"
-authors = ["Ethan Marx"]
+authors = ["Ethan Marx", "Alec Gunny"]
 license = "MIT"
 packages = [
     {include = "bbhnet"}
@@ -11,14 +11,22 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
+torch = {version = "^1.12", source = "torch"}
+"hermes.typeo" = "^0.1.5"
+
 "bbhnet.data" = {path = "../data", develop = true}
 "bbhnet.architectures" = {path = "../architectures", develop = true}
 "bbhnet.logging" = {path = "../logging", develop = true}
-"hermes.typeo" = "^0.1.5"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu116"
+secondary = true
+default = false
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.1.2"
+pytest = "^6.2"
 
 [build-system]
-requires = ["poetry>=1.1"]
+requires = ["poetry>=1.2"]
 build-backend = "poetry.masonry.api"

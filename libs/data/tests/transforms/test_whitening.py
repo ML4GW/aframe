@@ -42,7 +42,7 @@ def test_whitening_transform_agrees_with_gwpy(
     for ifo in background.cpu().numpy():
         ts = TimeSeries(ifo, dt=1 / sample_rate)
         asd = ts.asd(
-            fftlength=DEFAULT_FFTLENGTH, method="median", window="hanning"
+            fftlength=DEFAULT_FFTLENGTH, method="median", window="hann"
         )
         asds.append(asd)
 
@@ -52,7 +52,7 @@ def test_whitening_transform_agrees_with_gwpy(
             target = ts.whiten(
                 fflength=DEFAULT_FFTLENGTH,
                 method="median",
-                window="hanning",
+                window="hann",
                 asd=asd,
                 fduration=fduration,
             )

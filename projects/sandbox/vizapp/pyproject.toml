@@ -9,17 +9,16 @@ license = "MIT"
 vizapp = "vizapp.main:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 bokeh = "^2.4.3"
 scipy = "^1.7"
 h5py = "^3.5"
-
-"hermes.typeo" = "^0.1.5"
-"bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
-"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
-"bbhnet.base" = {path = "../../../libs/base", develop = true, extras = ["numpy", "gwpy"]}
 lalsuite = "^7.10"
 python-ligo-lw = "<1.8"
+typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
+
+"bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
+"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

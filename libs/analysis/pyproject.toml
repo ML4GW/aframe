@@ -13,8 +13,6 @@ packages = [
 python = ">=3.8,<3.11"
 scipy = "^1.7.3"
 "bbhnet.io" = {path = "../io", develop = true}
-"bbhnet.parallelize" = {path = "../parallelize", develop = true}
-"bbhnet.base" = {path = "../base", develop = true, extras = ["numpy"]}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

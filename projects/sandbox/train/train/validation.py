@@ -234,6 +234,7 @@ class Recorder:
             fname = self.logdir / "weights.pt"
             torch.save(model.state_dict(), fname)
             self._since_last = 0
+            self.best = self.monitor[self.threshold]
         elif self.early_stop is not None:
             self._since_last += 1
             if self._since_last >= self.early_stop:

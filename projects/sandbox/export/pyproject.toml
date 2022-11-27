@@ -14,19 +14,16 @@ export-model = "export:export"
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 gwpy = "^2.1"
-"hermes.typeo" = "^0.1.5"
 nvidia-tensorrt = {version = "<8.2.4", source = "ngc" }
+torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 
 "bbhnet.architectures" = {path = "../../../libs/architectures", extras = ["wrapper"], develop = true}
-"bbhnet.base" = {path = "../../../libs/base", develop = true}
-"bbhnet.data" = {path = "../../../libs/data", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 [tool.poetry.dependencies."hermes.quiver"]
 path = "../../../hermes/hermes/hermes.quiver"
 develop = true
-extras = ["torch", "tensorrt"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
@@ -35,6 +32,10 @@ pytest = "^6.2"
 # NVIDIA pypi repo for tensorrt install
 name = "ngc"
 url = "https://pypi.ngc.nvidia.com"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cpu"
 
 [build-system]
 requires = ["poetry>=1.2"]
