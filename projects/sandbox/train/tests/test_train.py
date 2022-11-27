@@ -9,7 +9,7 @@ def glitch_prob(request):
     return request.param
 
 
-@pytest.fixture(params=[1024, 2048])
+@pytest.fixture(params=[1024])
 def sample_rate(request):
     return request.param
 
