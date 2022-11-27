@@ -9,8 +9,8 @@ authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 infer = "infer.main:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
-typeo = {git = "https://github.com/ML4GW/typeo.git"}
+python = ">=3.8,<3.11"
+typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}

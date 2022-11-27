@@ -2,15 +2,15 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from bokeh.server.server import Server
+from typeo import scriptify
 
 from bbhnet.logging import configure_logging
-from hermes.typeo import typeo
 
 from .app import VizApp
 from .vetoes import VetoParser
 
 
-@typeo
+@scriptify
 def main(
     ifos: List[str],
     veto_definer_file: Path,

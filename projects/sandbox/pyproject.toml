@@ -1,11 +1,11 @@
 [tool.pinto]
 steps = [
-    "generate_background:generate-background",
-    "generate_waveforms:generate-waveforms",
-    "generate_glitches:generate-glitches",
+    "datagen:generate-background",
+    "datagen:generate-waveforms",
+    "datagen:generate-glitches",
     "train:train:resnet",
     "export:export-model:resnet",
-    "timeslide_injections:timeslide_injections",
+    "datagen:generate-timeslides",
     "infer:infer",
     "analyze:analyze"
 ]
@@ -31,7 +31,7 @@ inference_batch_size = 128
 minimum_frequency = 20
 reference_frequency = 50
 highpass = 32
-prior = "bbhnet.injection.priors.nonspin_bbh"
+prior = "datagen.utils.priors.nonspin_bbh"
 fduration = 1
 valid_frac = 0.25
 
@@ -155,7 +155,7 @@ clean = true
 # arch parameters
 commands.resnet = "${base.resnet}"
 
-[tool.typeo.scripts.timeslide_injections]
+[tool.typeo.scripts.generate-timeslides]
 # paths and what not
 datadir = "${base.datadir}/timeslide_injections/"
 logdir = "${base.logdir}"
@@ -168,7 +168,6 @@ ifos = "${base.ifos}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
-file_length = 4096
 min_segment_length = 1024
 
 # timeslide parameters

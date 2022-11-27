@@ -102,7 +102,7 @@ class WhiteningTransform(Transform):
         for x in X:
             ts = TimeSeries(x, dt=1 / self.sample_rate)
             asd = ts.asd(
-                fftlength=self.fftlength, window="hanning", method="median"
+                fftlength=self.fftlength, window="hann", method="median"
             )
             asd = asd.interpolate(self.df).value
             if (asd == 0).any():
@@ -110,7 +110,7 @@ class WhiteningTransform(Transform):
             tdf = fir_from_transfer(
                 1 / asd,
                 ntaps=self.ntaps,
-                window="hanning",
+                window="hann",
                 ncorner=self.ncorner,
             )
             tdfs.append(tdf)

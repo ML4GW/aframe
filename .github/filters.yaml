@@ -15,18 +15,12 @@ workflow: &workflow
 # if workflow file is changed?
 
 # libraries
-
 libs/io/:  
   - *workflow
   - 'libs/io/**' 
-libs/injection/:
-  - *workflow
-  - 'libs/injection/**'
-  - 'libs/base/**' 
 libs/data/:
   - *workflow
   - 'libs/data/**'
-  - 'libs/injection/**'
   - 'ml4gw/**' 
 libs/architectures/:
   - *workflow
@@ -50,7 +44,6 @@ libs/trainer/:
 
 
 # projects
-
 projects/sandbox/export/:
   - *workflow 
   - 'projects/sandbox/export/**'
@@ -61,38 +54,17 @@ projects/sandbox/export/:
   - 'ml4gw/**'
   - 'hermes/hermes/hermes.quiver/**'
 
-projects/sandbox/generate_glitches/:
+projects/sandbox/datagen/:
   - *workflow
-  - 'projects/sandbox/generate_glitches/**'
-  - 'libs/base/**'
+  - 'projects/sandbox/datagen/**'
   - 'libs/logging/**'
-
-projects/sandbox/generate_waveforms/:
-  - *workflow
-  - 'projects/sandbox/generate_waveforms/**'
-  - 'libs/logging/**'
-  - 'libs/injection/**'
-
-projects/sandbox/generate_background/:
-  - *workflow
-  - 'projects/sandbox/generate_background/**'
-  - 'libs/logging/**'
-  - 'libs/base/**'
+  - 'ml4gw/**'
 
 projects/sandbox/infer/:
   - *workflow
   - 'projects/sandbox/infer/**'
   - 'hermes/hermes/hermes.stillwater/**'
   - 'hermes/hermes/hermes.aerial/**'
-
-projects/sandbox/timeslide_injections/:
-  - *workflow
-  - 'projects/sandbox/timeslide_injections/**'
-  - 'libs/injection/**'
-  - 'libs/io/**'
-  - 'libs/logging/**' 
-  - 'libs/parallelize/**'
-  - 'ml4gw/**'
 
 projects/sandbox/train/:
   - *workflow

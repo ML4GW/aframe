@@ -12,6 +12,12 @@ python = ">=3.8,<3.11"
 "bbhnet.trainer" = {path = "../../../libs/trainer", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu116"
+secondary = true
+default = false
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^6.2"
 

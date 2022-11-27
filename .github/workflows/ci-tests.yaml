@@ -12,6 +12,8 @@ on:
       - main
 
 jobs:
+  # first job users filters to output which libraries
+  # and projects have updates that need testing
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -22,7 +24,10 @@ jobs:
       id: filter 
       with:
         filters: .github/filters.yaml
-    if: github.event.pull_request.draft == false  
+    if: github.event.pull_request.draft == false
+
+  # second job takes those outputs and runs
+  # unit tests on these libs and projects
   tests:
     runs-on: ubuntu-latest
     needs: changes
@@ -37,9 +42,6 @@ jobs:
         exclude:
           # don't run non-existent .github/workflow tests
           - library: 'workflow'
-         
-         
-           
     permissions:
       packages: read
     container:
@@ -61,16 +63,27 @@ jobs:
         name: install gcc
         run: apt update && apt install -y build-essential
 
-        
-      # run tests
-        
-      - name: run tests 
+      # build the project's environment
+      -
+        name: build environment
         env:
           test_dir: /github/workspace/${{ matrix.library }}
+          CONDA_PREFIX: /opt/conda
+        # TODO: use case statement here, or add separate matrix.build_args
         run: |
             if [[ "${{matrix.library}}" == "libs/architectures/" ]]; then
-                pinto -p $test_dir build -E wrapper
-            fi    
-            pinto -p $test_dir run pytest $test_dir/tests ${{matrix.args}}
+                FLAGS="-E wrapper"
+            else
+                FLAGS=""
+            fi
+            pinto -p $test_dir build $FLAGS
         shell: bash
-        
+
+      # run its unit tests inside that environment
+      - 
+        name: run tests 
+        env:
+          test_dir: /github/workspace/${{ matrix.library }}
+          CONDA_PREFIX: /opt/conda
+        run: pinto -p $test_dir run pytest $test_dir/tests ${{matrix.args}}
+        shell: bash
