@@ -1,16 +1,76 @@
-import h5py
+import logging
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pytest
 from train.train import main as train
 
 
-@pytest.fixture(params=[0.25, 0.67])
-def glitch_prob(request):
+@pytest.fixture(params=[1024])
+def sample_rate(request):
     return request.param
 
 
-@pytest.fixture(params=[1024])
-def sample_rate(request):
+@pytest.fixture
+def num_non_background():
+    return 500
+
+
+@pytest.fixture
+def non_background_length():
+    return 4
+
+
+@pytest.fixture
+def background(sample_rate):
+    length = 10000
+    times = np.arange(1, length * sample_rate, 1)
+    background = np.random.normal(size=len(times))
+    return background, times
+
+
+@pytest.fixture
+def glitches(sample_rate, num_non_background, non_background_length):
+    size = sample_rate * non_background_length
+    glitches = np.arange(size * num_non_background)
+    glitches = glitches.reshape(num_non_background, size)
+    return glitches
+
+
+@pytest.fixture
+def waveforms(sample_rate, num_non_background, non_background_length):
+    size = sample_rate * non_background_length
+    waveforms = np.arange(2 * size * num_non_background)
+    waveforms = waveforms.reshape(num_non_background, 2, size)
+    return waveforms
+
+
+@pytest.fixture
+def h5py_mock(background, glitches, waveforms):
+    def mock(fname, _):
+        if "background" in fname:
+            hoft, times = background
+            value = {"hoft": hoft, "t": times}
+        elif "glitches" in fname:
+            value = {"H1_glitches": glitches, "L1_glitches": -glitches}
+        elif "signals" in fname:
+            zeros = np.zeros((len(waveforms),))
+            value = {i: zeros for i in ["dec", "ra", "psi"]}
+            value["signals"] = waveforms
+        else:
+            raise ValueError(fname)
+
+        obj = Mock()
+        obj.__enter__ = lambda obj: value
+        obj.__exit__ = Mock()
+        return obj
+
+    with patch("h5py.File", new=mock):
+        yield mock
+
+
+@pytest.fixture(params=[0.25, 0.67])
+def glitch_prob(request):
     return request.param
 
 
@@ -19,44 +79,37 @@ def valid_frac(request):
     return request.param
 
 
+@pytest.fixture
+def outdir(tmp_path):
+    outdir = tmp_path / "out"
+    outdir.mkdir()
+    yield outdir
+    logging.shutdown()
+
+
 def test_train(
-    data_dir,
-    out_dir,
-    log_dir,
-    arange_background,
-    arange_waveforms,
-    arange_glitches,
+    outdir,
+    background,
+    h5py_mock,
     sample_rate,
     glitch_prob,
     valid_frac,
+    num_non_background,
+    non_background_length,
 ):
-
+    num_waveforms = num_glitches = num_non_background
     duration = 10000
     num_ifos = 2
     kernel_length = 2
     fduration = 1
-    num_glitches = 500
-    num_waveforms = 500
-
-    hanford_background_path = arange_background(
-        data_dir, sample_rate, duration, "H1"
-    )
-    livingston_background_path = arange_background(
-        data_dir, sample_rate, duration, "L1"
-    )
-
-    glitch_dataset = arange_glitches(data_dir, sample_rate, 4, num_glitches)
-    waveform_dataset = arange_waveforms(
-        data_dir, sample_rate, 4, num_waveforms
-    )
 
     train_dataset, validator, preprocessor = train(
-        hanford_background_path,
-        livingston_background_path,
-        glitch_dataset,
-        waveform_dataset,
-        out_dir,
-        log_dir,
+        "H1_background.h5",
+        "L1_background.h5",
+        "glitches.h5",
+        "signals.h5",
+        outdir,
+        outdir,
         glitch_prob=glitch_prob,
         waveform_prob=0.5,
         kernel_length=kernel_length,
@@ -75,16 +128,13 @@ def test_train(
         valid_stride=1,
     )
 
-    with h5py.File(hanford_background_path) as f:
-        hanford_background = f["hoft"][:]
-
-    with h5py.File(livingston_background_path) as f:
-        livingston_background = f["hoft"][:]
+    background, _ = background
+    background = np.stack([background] * 2)
 
     # Check that the training background is what it should be
-    train_background = np.stack((hanford_background, livingston_background))[
-        :, : int(duration * (1 - valid_frac) * sample_rate - 1)
-    ]
+    train_frac = 1 - valid_frac
+    train_length = int(duration * train_frac * sample_rate - 1)
+    train_background = background[:, :train_length]
     assert train_dataset.X.numpy() == pytest.approx(train_background)
 
     # Check that the shapes of the DataLoaders in validator are the right shape
