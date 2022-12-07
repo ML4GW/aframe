@@ -20,7 +20,8 @@ def test_cluster_distribution():
 
     distribution.fit((y, t), shifts)
     assert distribution.Tb == 3
-    assert (distribution.events == [2]).all()
+    assert len(distribution.events) == 1
+    assert (distribution.events == 2).all()
     assert len(distribution.shifts) == len(distribution.events)
 
     # expect no clustering

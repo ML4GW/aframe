@@ -18,7 +18,7 @@ def sample_rate(request):
 
 @pytest.fixture
 def y(length, sample_rate):
-    return np.arange(int(length * sample_rate))
+    return np.arange(int(length * sample_rate)) + 1
 
 
 @pytest.fixture

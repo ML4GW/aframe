@@ -61,26 +61,23 @@ class ClusterDistribution(Distribution):
         # update background time
         self.Tb += t[-1] - t[0] + t[1] - t[0]
 
-        remove_indices = []
-
         # infer number of samples in half window
         sample_rate = 1 / (t[1] - t[0])
         half_window_size = int((self.t_clust / 2) * sample_rate)
-
-        # for each sample, if there
-        # is another sample within a half window
-        # length with a greater output,
-        # delete the sample
-        for i in range(len(t)):
-
-            left = max(0, i - half_window_size)
-            right = min(len(t), i + half_window_size) + 1
-
-            if any(x[left:right] > x[i]):
-                remove_indices.append(i)
-
-        events = np.delete(x, remove_indices)
-        times = np.delete(t, remove_indices)
+        if half_window_size == 0:
+            events, times = x, t
+        else:
+            i = np.argmax(x[:half_window_size])
+            events, times = [], []
+            while i < len(t):
+                val = x[i]
+                window = x[i + 1 : i + 1 + half_window_size]
+                if any(val <= window):
+                    i += np.argmax(window) + 1
+                else:
+                    events.append(val)
+                    times.append(t[i])
+                    i += half_window_size + 1
 
         self.events = np.append(self.events, events)
         self.event_times = np.append(self.event_times, times)
