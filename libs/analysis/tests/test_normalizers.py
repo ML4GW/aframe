@@ -29,12 +29,18 @@ def test_gaussian_normalizer(
     assert normalizer.norm_size == int(norm_size)
     norm_size = int(norm_size)
 
+    # test to make sure we enforce fitting
     y = np.arange(1000)
     with pytest.raises(ValueError) as exc_info:
         normalizer(y, window_size)
     assert str(exc_info.value) == "GaussianNormalizer hasn't been fit"
 
-    normalizer.fit(y)
+    # test to make sure we don't allow 0 scale values
+    with pytest.raises(ValueError) as exc_info:
+        normalizer.fit(y)
+    assert str(exc_info.value) == "Encountered 0s in scale parameter"
+
+    normalizer.fit(y + 1)
     boxcar_integration_test_fn(norm_size, normalizer.shifts)
 
     # check the scale values manually
@@ -43,17 +49,17 @@ def test_gaussian_normalizer(
         if i < norm_size:
             mu = normalizer.shifts[i]
             expected = (norm_size - i - 1) * mu**2
-            expected += sum([(j - mu) ** 2 for j in range(i + 1)])
+            expected += sum([(j + 1 - mu) ** 2 for j in range(i + 1)])
             expected /= norm_size
         else:
             expected = (norm_size**2 - 1) / 12
-        assert isclose(value, expected, rel_tol=1e-9)
+        assert isclose(value, expected, rel_tol=1e-9), i
 
     with pytest.raises(ValueError) as exc_info:
         normalizer(y[:-1], window_size)
     assert str(exc_info.value).startswith("Can't normalize")
 
-    normalized = normalizer(y, window_size)
+    normalized = normalizer(y + 1, window_size)
     assert len(normalized) == (len(y) - window_size - norm_size)
 
     # all the normalized values should be equal to a constant
