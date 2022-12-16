@@ -1,7 +1,8 @@
 import sys
 from typing import Callable
+from unittest.mock import Mock
 
-from torch import nn
+import torch
 
 from bbhnet.architectures import architecturize
 from bbhnet.architectures.wrapper import architectures
@@ -12,13 +13,34 @@ def set_argv(*args):
 
 
 def test_resnet_wrappers():
+    mock = Mock()
+
     def func(architecture: Callable, learning_rate: float):
         nn = architecture(2)
 
         # arch will be defined in the dict loop later
         assert isinstance(nn, arch)
+        assert len(nn.residual_layers) == 3
+        assert learning_rate == 1e-3
 
-        return nn.residual_layers, learning_rate
+        # iterate through each residual layer and
+        # make sure things look right
+        for layer in nn.residual_layers:
+            for block in layer:
+                # make sure all the blocks are the right type
+                # (i.e. we have the correct architecture)
+                assert isinstance(block, arch.block)
+
+                # make sure all the convolutional kernels
+                # have the appropriate shape (1 is allowed
+                # because that's what we use when downsampling)
+                for module in block.modules():
+                    if isinstance(module, torch.nn.Conv1d):
+                        assert module.weight.shape[-1] in (1, 7)
+
+        # call this at end to make sure all the
+        # above code got called outside
+        mock()
 
     wrapped = architecturize(func)
 
@@ -39,23 +61,5 @@ def test_resnet_wrappers():
             "--kernel-size",
             "7",
         )
-        layers, lr = wrapped()
-
-        # make sure the parameters that got passed are correct
-        assert lr == 1e-3
-        assert len(layers) == 3
-
-        # iterate through each residual layer and
-        # make sure things look right
-        for layer in layers:
-            for block in layer:
-                # make sure all the blocks are the right type
-                # (i.e. we have the correct architecture)
-                assert isinstance(block, arch.block)
-
-                # make sure all the convolutional kernels
-                # have the appropriate shape (1 is allowed
-                # because that's what we use when downsampling)
-                for module in block.modules():
-                    if isinstance(module, nn.Conv1d):
-                        assert module.weight.shape[-1] in (1, 7)
+        wrapped()
+        mock.assert_called()
