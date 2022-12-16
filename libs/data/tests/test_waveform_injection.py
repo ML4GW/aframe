@@ -5,7 +5,7 @@ import torch
 from bbhnet.data.waveform_injection import BBHNetWaveformInjection
 
 
-def sample(obj, N):
+def sample(obj, N, _):
     return torch.ones((N, 2, 128 * 2)), None
 
 
