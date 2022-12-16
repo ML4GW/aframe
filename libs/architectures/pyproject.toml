@@ -10,17 +10,25 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-torch = "^1.0"
 
-"hermes.typeo" = { version="^0.1.4", optional = true}
+# restricting <1.13 since CPU source
+# doesn't have 1.13 candidate for some
+# reason, and using CPU source to make
+# local install and testing easier
+torch = {version = ">1.10,<1.13", source = "torch"}
+typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main", optional = true}
 "bbhnet.data" = {path = "../data", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 
 [tool.poetry.extras]
-wrapper = ["hermes.typeo"]
+wrapper = ["typeo"]
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cpu"
 
 [build-system]
-requires = ["poetry>=1.2"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry>=1.2.0a2"]
+build-backend = "poetry.core.masonry.api"

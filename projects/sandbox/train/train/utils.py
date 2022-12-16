@@ -7,9 +7,9 @@ import h5py
 import numpy as np
 import torch
 
-from bbhnet.data.distributions import Cosine, LogNormal, Uniform
 from bbhnet.data.glitch_sampler import GlitchSampler
 from bbhnet.data.waveform_injection import BBHNetWaveformInjection
+from ml4gw.distributions import Cosine, LogNormal, Uniform
 
 Tensor = TypeVar("Tensor", np.ndarray, torch.Tensor)
 

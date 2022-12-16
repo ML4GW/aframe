@@ -91,8 +91,11 @@ develop = true
 
 [package.dependencies]
 "bbhnet.data" = {path = "../data", develop = true}
-"hermes.typeo" = {version = "^0.1.4", optional = true}
-torch = "^1.0"
+torch = [
+    "^1.0",
+    ">1.10,<1.13",
+]
+typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main", optional = true}
 
 [package.extras]
 wrapper = ["hermes.typeo (>=0.1.4,<0.2.0)"]
@@ -514,17 +517,6 @@ tensorrt = ["nvidia-tensorrt (>=8.0,<9.0)"]
 [package.source]
 type = "directory"
 url = "../../../hermes/hermes/hermes.quiver"
-
-[[package]]
-name = "hermes-typeo"
-version = "0.1.5"
-description = "Utilities for running functions as scripts"
-category = "main"
-optional = false
-python-versions = ">=3.8,<4.0"
-
-[package.dependencies]
-toml = ">=0.10.2,<0.11.0"
 
 [[package]]
 name = "idna"
@@ -1052,7 +1044,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "torch"
-version = "1.13.0+cpu"
+version = "1.12.1+cpu"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
 optional = false
@@ -1060,9 +1052,6 @@ python-versions = ">=3.7.0"
 
 [package.dependencies]
 typing-extensions = "*"
-
-[package.extras]
-opt-einsum = ["opt-einsum (>=3.3)"]
 
 [package.source]
 type = "legacy"
@@ -1130,6 +1119,24 @@ python-versions = ">=3.5.3"
 [package.extras]
 doc = ["sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
 test = ["pytest", "typing-extensions", "mypy"]
+
+[[package]]
+name = "typeo"
+version = "0.1.6"
+description = "Utilities for running functions as scripts"
+category = "main"
+optional = false
+python-versions = "^3.8"
+develop = false
+
+[package.dependencies]
+toml = "^0.10.2"
+
+[package.source]
+type = "git"
+url = "https://github.com/ML4GW/typeo.git"
+reference = "main"
+resolved_reference = "bd2429d484a3c4c3d49bfab62811b57f905573f1"
 
 [[package]]
 name = "typing-extensions"
@@ -1986,10 +1993,6 @@ h5py = [
     {file = "h5py-3.7.0.tar.gz", hash = "sha256:3fcf37884383c5da64846ab510190720027dca0768def34dd8dcb659dbe5cbf3"},
 ]
 hermes-quiver = []
-hermes-typeo = [
-    {file = "hermes.typeo-0.1.5-py3-none-any.whl", hash = "sha256:a1fff2eeb257fb6f4f4b4b397681f2eddee59a4b8b3dd275f0fd9dac38e3371b"},
-    {file = "hermes.typeo-0.1.5.tar.gz", hash = "sha256:8bd1d97a698c0e99a7d2a6b3b082c8b8290aea1bf0e6a44548752ca178a8c73e"},
-]
 idna = [
     {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
     {file = "idna-3.4.tar.gz", hash = "sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4"},
@@ -2538,15 +2541,14 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 torch = [
-    {file = "torch-1.13.0+cpu-cp310-cp310-linux_x86_64.whl", hash = "sha256:b37a1a701fa00bcb9d508ebc509c3137df5f1cb9287548ee674893ac9561fbae"},
-    {file = "torch-1.13.0+cpu-cp310-cp310-win_amd64.whl", hash = "sha256:6fe6a7b8c7fcb4ba5f9d20854ecd4d6a8644c5cb12ff9b72d1523c6dcf543606"},
-    {file = "torch-1.13.0+cpu-cp311-cp311-linux_x86_64.whl", hash = "sha256:c48cf9d76c017cd5f6a015fee1c082a57236f44e7c289060ea207a50ca9e66f1"},
-    {file = "torch-1.13.0+cpu-cp37-cp37m-linux_x86_64.whl", hash = "sha256:c55ca981cf3f1ce8db0fc95327fe2b8092386425d83d6ad02fe1b8d1bfae5eab"},
-    {file = "torch-1.13.0+cpu-cp37-cp37m-win_amd64.whl", hash = "sha256:40616584c171a2562480b788da29e6ae0a35e1aae2e5dc55bd2cc9bbedc847dd"},
-    {file = "torch-1.13.0+cpu-cp38-cp38-linux_x86_64.whl", hash = "sha256:4adafbcc43d2e7fa0b661a3c36c85f0ed35f69ab5fc88f4b245ad55174776183"},
-    {file = "torch-1.13.0+cpu-cp38-cp38-win_amd64.whl", hash = "sha256:0a46a7170bbdca7eb71a595bd499d3bc4b5862aa756120c55383111ceeffe09e"},
-    {file = "torch-1.13.0+cpu-cp39-cp39-linux_x86_64.whl", hash = "sha256:c7531242830606713a32a3c0047e19ec7d718c971a8a9482de7f3c38a05a97a7"},
-    {file = "torch-1.13.0+cpu-cp39-cp39-win_amd64.whl", hash = "sha256:8df18dacc5b3b5739fa86b133329abb2f63932104e5a0e57ce01133dff754eb7"},
+    {file = "torch-1.12.1+cpu-cp310-cp310-linux_x86_64.whl", hash = "sha256:0105f0af872fbc8b66ae2ec7ff69674a3b3d0d70bfa5017d65a840577428f6a7"},
+    {file = "torch-1.12.1+cpu-cp310-cp310-win_amd64.whl", hash = "sha256:4466dae89c7476718be8171b0d286cdd0f7f92a805f0d6bc5c6f9463477ea53c"},
+    {file = "torch-1.12.1+cpu-cp37-cp37m-linux_x86_64.whl", hash = "sha256:42d21b8b73f97e2e3735b8529b27c900c3c5f4c9443c2a1ebc18e7f78f8d5096"},
+    {file = "torch-1.12.1+cpu-cp37-cp37m-win_amd64.whl", hash = "sha256:169308925a6d7c56467b28c17f1c3f9a178672072f1a4e6e9512d5cf380624c3"},
+    {file = "torch-1.12.1+cpu-cp38-cp38-linux_x86_64.whl", hash = "sha256:42b7d500629c9e99d875cb204a1a1f5b3f65f6743823b21de9b4cba5962300d8"},
+    {file = "torch-1.12.1+cpu-cp38-cp38-win_amd64.whl", hash = "sha256:ea90068d81b797ebba683a81a52e9bee8527af63fd80ba03c2debf326baa2e7b"},
+    {file = "torch-1.12.1+cpu-cp39-cp39-linux_x86_64.whl", hash = "sha256:870bc47b880fb0488ea5b665bf76fc8df76a55a5cd48917501bf4597e1af6b2e"},
+    {file = "torch-1.12.1+cpu-cp39-cp39-win_amd64.whl", hash = "sha256:86259ad190338860d98552568f3baef0b075cb6da8ff24f76598fa5730bacf06"},
 ]
 torchtyping = [
     {file = "torchtyping-0.1.4-py3-none-any.whl", hash = "sha256:485fb6ef3965c39b0de15f00d6f49373e0a3a6993e9733942a63c5e207d35390"},
@@ -2564,6 +2566,7 @@ typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},
     {file = "typeguard-2.13.3.tar.gz", hash = "sha256:00edaa8da3a133674796cf5ea87d9f4b4c367d77476e185e80251cc13dfbb8c4"},
 ]
+typeo = []
 typing-extensions = [
     {file = "typing_extensions-4.4.0-py3-none-any.whl", hash = "sha256:16fa4864408f655d35ec496218b85f79b3437c829e93320c7c9215ccfd92489e"},
     {file = "typing_extensions-4.4.0.tar.gz", hash = "sha256:1511434bb92bf8dd198c12b1cc812e800d4181cfcb867674e0f8279cc93087aa"},
