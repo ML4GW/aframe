@@ -96,6 +96,7 @@ def test_train(
     valid_frac,
     num_non_background,
     non_background_length,
+    waveforms,
 ):
     num_waveforms = num_glitches = num_non_background
     duration = 10000
@@ -150,11 +151,11 @@ def test_train(
         background_loader.shape
         == np.array((num_kernels, num_ifos, kernel_size))
     ).all()
-    # Check that each kernel has mean 0
+    # Check that each kernel has mean 0. atol is ~5 sigma
     np.testing.assert_allclose(
         np.mean(background_loader, axis=2),
         np.zeros((num_kernels, num_ifos)),
-        atol=1e-01,
+        atol=1.1e-01,
     )
 
     # Glitch DataLoader
@@ -208,13 +209,14 @@ def test_train(
     np.testing.assert_allclose(
         np.mean(glitch_loader[:h1_glitches, 1, :], axis=1),
         np.zeros(h1_glitches),
-        atol=1e-01,
+        atol=1.1e-01,
     )
     np.testing.assert_allclose(
         np.mean(glitch_loader[h1_glitches:num_non_coinc, 0, :], axis=1),
         np.zeros(h1_glitches),
-        atol=1e-01,
+        atol=1.1e-01,
     )
+    print(num_kernels, h1_glitches)
 
     # Signal DataLoader
     # Check shape
@@ -225,24 +227,27 @@ def test_train(
         == np.array((num_valid_waveforms, num_ifos, kernel_size))
     ).all()
 
-    # Check content
+    # Can't check signal content directly without knowing how the waveforms
+    # will be projected onto the ifos. But the polarizations are linear, so
+    # the ifo responses should also be linear, at least over a time frame of
+    # a couple seconds.
     actual_signals = signal_loader - background_loader[: len(signal_loader)]
+    slopes = (actual_signals[:, :, -1] - actual_signals[:, :, 0]) / kernel_size
+    mean_slopes = np.mean(slopes, axis=0)
+    intercepts = actual_signals[:, :, 0]
+
     expected_h1_signals = np.array(
-        [
-            np.arange(start, start + kernel_size)
-            for start in actual_signals[:, 0, 0]
-        ]
+        [b + mean_slopes[0] * np.arange(kernel_size) for b in intercepts[:, 0]]
     )
     expected_l1_signals = np.array(
-        [
-            np.arange(start, start + kernel_size)
-            for start in actual_signals[:, 1, 0]
-        ]
+        [b + mean_slopes[1] * np.arange(kernel_size) for b in intercepts[:, 1]]
     )
     expected_signals = np.stack(
         (expected_h1_signals, expected_l1_signals), axis=1
     )
-    assert (actual_signals == expected_signals).all()
+
+    # There's no precise reaoson for this tolerance
+    np.testing.assert_allclose(actual_signals, expected_signals, rtol=1e-6)
 
     # Preprocessor
     # Check that the whitening filter is the correct shape
