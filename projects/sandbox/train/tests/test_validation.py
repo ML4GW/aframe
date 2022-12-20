@@ -1,4 +1,4 @@
-import pytest
+import numpy as np
 import torch
 from train import validation
 
@@ -22,9 +22,7 @@ def test_background_recall():
     assert len(scores) == 3
     assert all([i == j for i, j in zip(scores, metric.values)])
 
-    assert pytest.approx(scores[0], 0.25)
-    assert pytest.approx(scores[1], 0.5)
-    assert pytest.approx(scores[2], 0.85)
+    np.testing.assert_allclose(scores, [0.25, 0.5, 0.85])
 
 
 def test_glitch_recall():
@@ -36,9 +34,7 @@ def test_glitch_recall():
     assert len(scores) == 3
     assert all([i == j for i, j in zip(scores, metric.values)])
 
-    assert pytest.approx(scores[0], 7 / 8)
-    assert pytest.approx(scores[1], 4 / 8)
-    assert pytest.approx(scores[2], 1 / 8)
+    np.testing.assert_allclose(scores, [7 / 8, 4 / 8, 2 / 8])
 
 
 def test_make_background():
