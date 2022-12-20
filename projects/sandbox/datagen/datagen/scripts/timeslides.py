@@ -146,7 +146,6 @@ def main(
     # set up some pools for doing our data IO/injection
     with AsyncExecutor(4, thread=False) as pool:
         for segment_start, segment_stop in segments:
-            print(segment_start, segment_stop)
             dur = segment_stop - segment_start - max_shift
             seg_str = f"{segment_start}-{segment_stop}"
 
@@ -174,10 +173,11 @@ def main(
                 priors,
                 segment_start,
                 segment_stop,
-                buffer_,
+                waveform_duration,
                 max_shift,
-                spacing,
                 jitter,
+                buffer_,
+                spacing,
             )
             waveform_it = waveform_iterator(
                 pool, sampler, waveform_generator, num_shifts

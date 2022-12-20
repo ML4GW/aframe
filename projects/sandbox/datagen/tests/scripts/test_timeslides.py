@@ -21,17 +21,17 @@ def prior(request):
     return request.param
 
 
-@pytest.fixture(params=[60])
+@pytest.fixture(params=[0, 60])
 def spacing(request):
     return request.param
 
 
-@pytest.fixture(params=[10])
+@pytest.fixture(params=[2])
 def jitter(request):
     return request.param
 
 
-@pytest.fixture(params=[8])
+@pytest.fixture(params=[0, 10])
 def buffer_(request):
     return request.param
 
@@ -234,7 +234,7 @@ def test_timeslide_injections_chunked_segments(
             prior=prior,
             spacing=spacing,
             jitter=1,
-            buffer_=2,
+            buffer_=buffer_,
             n_slides=n_slides,
             shifts=shifts,
             ifos=ifos,

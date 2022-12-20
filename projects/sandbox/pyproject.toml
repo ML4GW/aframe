@@ -180,8 +180,8 @@ prior = "${base.prior}"
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
-spacing = 60
-buffer = 10
+spacing = 48
+buffer = 4
 jitter = 2
 
 # misc parameters
