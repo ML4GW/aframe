@@ -10,12 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-
-# restricting <1.13 since CPU source
-# doesn't have 1.13 candidate for some
-# reason, and using CPU source to make
-# local install and testing easier
-torch = {version = ">1.10,<1.13", source = "torch"}
+torch = {version = "^1.10", source = "torch"}
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main", optional = true}
 "bbhnet.data" = {path = "../data", develop = true}
 

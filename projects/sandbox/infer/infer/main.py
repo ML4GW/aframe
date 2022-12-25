@@ -23,6 +23,7 @@ def main(
     model_name: str,
     data_dir: Path,
     write_dir: Path,
+    triton_image: str,
     fields: Iterable[str],
     sample_rate: float,
     inference_sampling_rate: float,
@@ -47,7 +48,9 @@ def main(
     num_gpus = len(gpus.split(",")) if gpus is not None else 1
 
     # spin up a triton server and don't move on until it's ready
-    with serve(model_repo_dir, wait=True, log_file=server_log_file):
+    with serve(
+        model_repo_dir, triton_image, wait=True, log_file=server_log_file
+    ):
         client = InferenceClient("localhost:8001", model_name, model_version)
         manager = SequenceManager(
             data_dir,

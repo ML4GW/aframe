@@ -192,6 +192,8 @@ model_repo_dir = "${base.repository_directory}"
 model_name = "bbhnet-stream"
 data_dir = "${base.datadir}/timeslide_injections/" 
 write_dir = "${base.basedir}/timeslide_injections/"
+triton_image = "hermes/tritonserver:22.07"
+
 fields = ["injection", "background"]
 inference_sampling_rate = "${base.inference_sampling_rate}"
 sample_rate = "${base.sample_rate}"

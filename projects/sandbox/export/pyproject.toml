@@ -6,7 +6,7 @@ authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 # readme = "README.md"
 
 [tool.pinto]
-cuda-version = "11.2"
+cuda-version = "11.7"
 
 [tool.poetry.scripts]
 export-model = "export:export"
@@ -14,7 +14,29 @@ export-model = "export:export"
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 gwpy = "^2.1"
-nvidia-tensorrt = {version = "<8.2.4", source = "ngc" }
+
+# TODO: this cryptography constraint seems to be
+# necessary for cross-platform builds, though it
+# remains to be seen if this is specifically
+# because of the TRT dependency or not.
+# Related:
+# https://github.com/jpadilla/pyjwt/issues/800#issuecomment-1267444575
+# Longer term solution outlined here
+# https://github.com/pyca/cryptography/issues/6391#issuecomment-1110124861
+# but would require some poetry installation
+# equivalent of --only-binary :all:, see
+# https://github.com/python-poetry/poetry/issues/365
+# Internal solution could be to add pinto
+# functionality to do a force re-installation of
+# desired libraries using pip inside the
+# environment, something like the solution outlined here
+# https://github.com/python-poetry/poetry/issues/365#issuecomment-759643473
+cryptography = "<38.0"
+
+# hard-pin the tensorrt version for compatability with
+# Triton. This corresponds to Triton container 22.07-py3
+nvidia-tensorrt = {version = "8.4.1.5", source = "ngc" }
+
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 

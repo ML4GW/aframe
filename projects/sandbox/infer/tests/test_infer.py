@@ -162,6 +162,7 @@ def test_infer(
             "",
             data_dir=data_dir,
             write_dir=data_dir,
+            triton_image="",
             fields=fields,
             sample_rate=sample_rate,
             inference_sampling_rate=inference_sampling_rate,
