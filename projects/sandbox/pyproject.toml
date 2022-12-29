@@ -16,7 +16,7 @@ datadir = "${DATA_DIR}"
 logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 ifos = ['H1', 'L1']
-glitch_start = 1262507622
+glitch_start = 1262607622
 train_start = 1262607622
 train_stop = 1262620622
 test_stop = 1262751694  
@@ -71,6 +71,7 @@ ifos = "${base.ifos}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 sample_rate = "${base.sample_rate}"
+analyze_testing_set = false
 
 [tool.typeo.scripts.generate-waveforms]
 minimum_frequency = "${base.minimum_frequency}" 
