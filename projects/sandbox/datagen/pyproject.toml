@@ -17,6 +17,12 @@ generate-timeslides = "datagen.scripts.timeslides:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
+
+# Constraining scipy due to an incompatability
+# with astropy which should be fixed once this PR gets
+# into a release https://github.com/astropy/astropy/pull/14232
+scipy = "<1.10"
+
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
