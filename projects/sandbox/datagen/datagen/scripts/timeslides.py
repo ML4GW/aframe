@@ -68,7 +68,7 @@ def main(
         start: starting GPS time of time period to analyze
         stop: ending GPS time of time period to analyze
         outdir: base directory where all timeslide directories will be created
-        prior: a prior function defined in prior.py script in the injection lib
+        prior: a prior function defined in prior.py script in datagen/utils
         spacing: spacing between consecutive injections
         n_slides: number of timeslides
         shifts:
@@ -129,7 +129,6 @@ def main(
 
     # grab some parameters we'll need for waveform injection
     stride = 1 / sample_rate
-    priors = prior()
     waveform_generator = WaveformGenerator(
         minimum_frequency,
         reference_frequency,
@@ -170,7 +169,7 @@ def main(
             # create an iterator which will generate raw
             # waveforms in a separate process
             sampler = Sampler(
-                priors,
+                prior,
                 segment_start,
                 segment_stop,
                 waveform_duration,

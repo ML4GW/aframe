@@ -13,7 +13,7 @@ from bbhnet.logging import configure_logging
 @scriptify
 def main(
     prior: Callable,
-    n_samples: int,
+    num_signals: int,
     logdir: Path,
     datadir: Path,
     reference_frequency: float,
@@ -28,7 +28,7 @@ def main(
 
     Args:
         prior_file: prior file for bilby to sample from
-        n_samples: number of signal to inject
+        num_signals: number of signal to inject
         logdir: directory where log file will be written
         datadir: output directory to which signals will be written
         reference_frequency: reference frequency for waveform generation
@@ -58,16 +58,15 @@ def main(
 
     # log and print out some simulation parameters
     logging.info("Simulation parameters")
-    logging.info("Number of samples     : {}".format(n_samples))
+    logging.info("Number of samples     : {}".format(num_signals))
     logging.info("Sample rate [Hz]      : {}".format(sample_rate))
     logging.info("Prior name            : {}".format(prior.__name__))
 
-    # sample gw parameters from prior distribution
-    priors = prior()
-    sample_params = priors.sample(n_samples)
+    # sample gw parameters
+    params = prior().sample(num_signals)
 
     signals = generate_gw(
-        sample_params,
+        params,
         minimum_frequency,
         reference_frequency,
         sample_rate,
@@ -81,7 +80,7 @@ def main(
 
     with h5py.File(signal_file, "w") as f:
         # write signals attributes, snr, and signal parameters
-        for k, v in sample_params.items():
+        for k, v in params.items():
             f.create_dataset(k, data=v)
 
         f.create_dataset("signals", data=signals)
@@ -89,7 +88,7 @@ def main(
         # write attributes
         f.attrs.update(
             {
-                "size": n_samples,
+                "size": num_signals,
                 "sample_rate": sample_rate,
                 "waveform_duration": waveform_duration,
                 "waveform_approximant": waveform_approximant,

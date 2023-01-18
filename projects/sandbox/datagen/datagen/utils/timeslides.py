@@ -3,9 +3,8 @@ import logging
 from concurrent.futures import Future
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
-import bilby
 import gwdatafind
 import numpy as np
 from datagen.utils.injection import generate_gw
@@ -19,7 +18,7 @@ from bbhnet.parallelize import AsyncExecutor
 class Sampler:
     def __init__(
         self,
-        priors: bilby.gw.prior.PriorDict,
+        prior: Callable,
         start: float,
         stop: float,
         waveform_duration: float,
@@ -28,7 +27,7 @@ class Sampler:
         buffer: float = 0,
         spacing: float = 0,
     ) -> None:
-        self.priors = priors
+        self.prior = prior()
         self.jitter = jitter
         buffer = waveform_duration // 2 + jitter + buffer
         spacing = waveform_duration + 2 * jitter + spacing
@@ -44,7 +43,7 @@ class Sampler:
         jitter = np.random.uniform(-1, 1, self.num_signals) * self.jitter
         times = self.signal_times + jitter
 
-        params = self.priors.sample(self.num_signals)
+        params = self.prior.sample(self.num_signals)
         params["geocent_time"] = times
         return params
 
