@@ -51,7 +51,9 @@ jobs:
         password: ${{ secrets.github_token }}
       volumes:
         - ${{ github.workspace }}:/github/workspace
-    
+    env: 
+      CONDA_PREFIX: /opt/conda
+      CONDA_DEFAULT_ENV: base
     steps:
       - uses: actions/checkout@v2
         with:
