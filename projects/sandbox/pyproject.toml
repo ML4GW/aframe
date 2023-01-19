@@ -32,7 +32,7 @@ inference_batch_size = 128
 minimum_frequency = 20
 reference_frequency = 50
 highpass = 32
-prior = "datagen.utils.priors.nonspin_bbh"
+prior = "bbhnet.priors.priors.nonspin_bbh"
 fduration = 1
 valid_frac = 0.25
 
@@ -221,6 +221,7 @@ log_file = "${base.logdir}/analyze.log"
 verbose = false
 
 [tool.typeo.scripts.vizapp]
+source_prior = "bbhnet.priors.priors.nonspin_bbh"
 timeslides_results_dir = "${base.basedir}/timeslide_injections/"
 timeslides_strain_dir = "${base.datadir}/timeslide_injections"
 ifos = "${base.ifos}"

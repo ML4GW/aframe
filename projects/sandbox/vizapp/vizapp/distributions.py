@@ -52,7 +52,10 @@ class Foreground:
     distances: np.ndarray
     m1s: np.ndarray
     m2s: np.ndarray
+    ras: np.ndarray
+    decs: np.ndarray
     time_deltas: np.ndarray
+    livetime: float
 
     @property
     def chirps(self) -> np.ndarray:
@@ -79,9 +82,11 @@ def get_foreground(
             event_times = f["geocent_time"][:]
             h1_snrs = f["H1_snr"][:]
             l1_snrs = f["L1_snr"][:]
-            m1s = f["mass_1"][:]
-            m2s = f["mass_2"][:]
+            m1s = np.maximum(f["mass_1"][:], f["mass_2"][:])
+            m2s = np.minimum(f["mass_1"][:], f["mass_2"][:])
             distances = f["luminosity_distance"][:]
+            ras = f["ra"][:]
+            decs = f["dec"][:]
             network_snrs = (h1_snrs**2 + l1_snrs**2) ** 0.5
 
         if norm is not None:
@@ -125,6 +130,8 @@ def get_foreground(
             m2 = m2s[i]
             snr = network_snrs[i]
             distance = distances[i]
+            ra = ras[i]
+            dec = decs[i]
 
             events["injection_times"].append(t)
             events["detection_statistics"].append(event)
@@ -136,6 +143,9 @@ def get_foreground(
             events["m1s"].append(m1)
             events["m2s"].append(m2)
             events["distances"].append(distance)
+            events["ras"].append(ra)
+            events["decs"].append(dec)
+            events["livetime"] = results.foreground.Tb
 
     events = {k: np.array(v) for k, v in events.items()}
     return Foreground(**events)

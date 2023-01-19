@@ -4,7 +4,6 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from datagen.scripts import generate_timeslides
-from datagen.utils.priors import nonspin_bbh
 from gwpy.segments import (
     DataQualityDict,
     DataQualityFlag,
@@ -14,6 +13,7 @@ from gwpy.segments import (
 from gwpy.timeseries import TimeSeries
 
 from bbhnet.io.timeslides import TimeSlide
+from bbhnet.priors.priors import nonspin_bbh
 
 
 @pytest.fixture(params=[nonspin_bbh])

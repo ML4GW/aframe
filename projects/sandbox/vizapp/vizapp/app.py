@@ -4,12 +4,18 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
+import bilby
 import h5py
 import numpy as np
 from bokeh.layouts import column, row
 from bokeh.models import Div, MultiChoice, Panel, Select, Tabs
 from vizapp.distributions import get_foreground, load_results
-from vizapp.plots import BackgroundPlot, EventInspectorPlot, PerfSummaryPlot
+from vizapp.plots import (
+    BackgroundPlot,
+    EventInspectorPlot,
+    PerfSummaryPlot,
+    VolumeTimeVsFAR,
+)
 
 if TYPE_CHECKING:
     from vizapp.vetoes import VetoParser
@@ -18,19 +24,21 @@ if TYPE_CHECKING:
 class VizApp:
     def __init__(
         self,
+        source_prior: "bilby.core.prior.PriorDict",
         timeslides_results_dir: Path,
         timeslides_strain_dir: Path,
         train_data_dir: Path,
-        veto_parser: "VetoParser",
         ifos: List[str],
         sample_rate: float,
         fduration: float,
         valid_frac: float,
+        veto_parser: "VetoParser",
     ) -> None:
         self.logger = logging.getLogger("vizapp")
         self.logger.debug("Loading analyzed distributions")
         self.veto_parser = veto_parser
         self.ifos = ifos
+        self.source_prior = source_prior
 
         # load in foreground and background distributions
         self.distributions = load_results(timeslides_results_dir)
@@ -47,7 +55,6 @@ class VizApp:
         self.logger.debug("Configuring widgets")
         self.configure_widgets()
 
-        # create version with vetoes
         self.logger.debug("Calculating all veto combinations")
         self.calculate_veto_distributions()
 
@@ -82,12 +89,11 @@ class VizApp:
         )
         self.norm_select.on_change("value", self.update_norm)
 
-        self.veto_labels = ["CAT1", "CAT2", "CAT3", "GATES"]
+        self.veto_labels = ["CAT1"]  # ["CAT1", "CAT2", "CAT3", "GATES"]
         self.veto_choices = MultiChoice(
             title="Applied Vetoes", value=[], options=self.veto_labels
         )
         self.veto_choices.on_change("value", self.update_vetoes)
-
         self.widgets = row(header, self.norm_select, self.veto_choices)
 
     # Calculate all combinations of vetoes for each norm up front
@@ -139,6 +145,9 @@ class VizApp:
         timeslides_results_dir,
     ):
         self.perf_summary_plot = PerfSummaryPlot(300, 800)
+        self.volume_time_vs_far = VolumeTimeVsFAR(
+            300, 800, source_prior=self.source_prior
+        )
 
         backgrounds = {}
         for ifo in self.ifos:
@@ -161,9 +170,10 @@ class VizApp:
 
         self.background_plot = BackgroundPlot(300, 1200, self.event_inspector)
 
-        summary_tab = Panel(
-            child=self.perf_summary_plot.layout, title="Summary"
+        summary_layout = column(
+            [self.perf_summary_plot.layout, self.volume_time_vs_far.layout]
         )
+        summary_tab = Panel(child=summary_layout, title="Summary")
 
         analysis_layout = column(
             self.background_plot.layout, self.event_inspector.layout
@@ -181,6 +191,7 @@ class VizApp:
         foreground = self.vetoed_foregrounds[current_veto_label][norm]
 
         self.perf_summary_plot.update(foreground)
+        self.volume_time_vs_far.update(foreground)
         self.background_plot.update(foreground, background, norm)
         self.event_inspector.reset()
 
@@ -203,6 +214,7 @@ class VizApp:
         )
         # update plots
         self.perf_summary_plot.update(foreground)
+        self.volume_time_vs_far.update(foreground)
         self.background_plot.update(foreground, background, current_norm)
         self.event_inspector.reset()
 

@@ -1,7 +1,8 @@
 import h5py
 import pytest
 from datagen.scripts import generate_waveforms
-from datagen.utils.priors import end_o3_ratesandpops, nonspin_bbh
+
+from bbhnet.priors.priors import end_o3_ratesandpops, nonspin_bbh
 
 
 @pytest.fixture(params=[0, 10, 100])

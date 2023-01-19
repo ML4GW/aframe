@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from bokeh.server.server import Server
 from typeo import scriptify
@@ -13,6 +13,7 @@ from .vetoes import VetoParser
 @scriptify
 def main(
     ifos: List[str],
+    source_prior: Callable,
     veto_definer_file: Path,
     gate_paths: Dict[str, Path],
     timeslides_results_dir: Path,
@@ -45,15 +46,18 @@ def main(
         ifos,
     )
 
+    source_prior = source_prior()
+
     bkapp = VizApp(
+        source_prior=source_prior,
         timeslides_results_dir=timeslides_results_dir,
         timeslides_strain_dir=timeslides_strain_dir,
         train_data_dir=train_data_dir,
-        veto_parser=veto_parser,
         ifos=ifos,
         sample_rate=sample_rate,
         fduration=fduration,
         valid_frac=valid_frac,
+        veto_parser=veto_parser,
     )
 
     server = Server({"/": bkapp}, num_procs=1, port=port, address="0.0.0.0")

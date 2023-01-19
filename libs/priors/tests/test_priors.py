@@ -2,8 +2,9 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from datagen.utils.priors import read_priors_from_file
 from scipy.stats import ks_2samp
+
+from bbhnet.priors.priors import read_priors_from_file
 
 
 @pytest.fixture

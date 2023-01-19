@@ -13,6 +13,8 @@ packages = [
 python = ">=3.8,<3.11"
 scipy = "^1.7.3"
 "bbhnet.io" = {path = "../io", develop = true}
+astropy = "^5.2.1"
+bilby = "^1.4.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

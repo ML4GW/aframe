@@ -32,6 +32,7 @@ bilby = "<1.2"  # set this so ml4gw doesn't update it on accident
 "bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"bbhnet.priors" = {path = "../../../libs/priors", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"

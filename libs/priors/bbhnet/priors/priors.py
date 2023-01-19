@@ -6,6 +6,7 @@ import numpy as np
 from bilby.core.prior import (
     Constraint,
     Cosine,
+    Gaussian,
     Interped,
     PowerLaw,
     Sine,
@@ -92,7 +93,7 @@ def read_priors_from_file(event_file: Path, *parameters: str) -> BBHPriorDict:
     return prior
 
 
-def uniform_extrinsic():
+def uniform_extrinsic() -> BBHPriorDict:
     prior = BBHPriorDict()
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
@@ -102,11 +103,11 @@ def uniform_extrinsic():
     return prior
 
 
-def nonspin_bbh():
+def nonspin_bbh() -> BBHPriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
-    prior["mass_ratio"] = Constraint(0.2, 5)
+    prior["mass_ratio"] = Constraint(0, 1)
     prior["redshift"] = UniformSourceFrame(0, 0.5, unit=mpc, name="redshift")
     prior["psi"] = 0
     prior["a_1"] = 0
@@ -119,7 +120,7 @@ def nonspin_bbh():
     return prior
 
 
-def end_o3_ratesandpops():
+def end_o3_ratesandpops() -> BBHPriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
@@ -143,3 +144,27 @@ def power_law_dip_break():
     prior |= read_priors_from_file(event_file)
 
     return prior
+
+
+def gaussian_masses(m1: float, m2: float, sigma: float = 2):
+    """
+    Constructs a gaussian bilby prior for masses.
+    Args:
+        m1: mean of the Gaussian distribution for mass 1
+        m2: mean of the Gaussian distribution for mass 2
+        sigma: standard deviation of the Gaussian distribution for both masses
+
+    Returns a BBHpriorDict
+    """
+    prior_dict = BBHPriorDict()
+    prior_dict["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
+    prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m1, sigma=sigma)
+    prior_dict["luminosity_distance"] = UniformSourceFrame(
+        name="luminosity_distance", minimum=100, maximum=3000, unit="Mpc"
+    )
+    prior_dict["dec"] = Cosine(name="dec")
+    prior_dict["ra"] = Uniform(
+        name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
+    )
+
+    return prior_dict

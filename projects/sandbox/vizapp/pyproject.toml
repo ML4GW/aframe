@@ -19,6 +19,7 @@ typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 
 "bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"bbhnet.priors" = {path = "../../../libs/priors", develop = true}
 
 [build-system]
 requires = ["poetry-core"]
