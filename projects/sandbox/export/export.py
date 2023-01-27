@@ -146,7 +146,7 @@ def export(
         # https://github.com/triton-inference-server/server/issues/3418
         bbhnet.config.optimization.graph.level = -1
     elif platform == qv.Platform.TENSORRT:
-        kwargs["use_fp16"] = True
+        kwargs["use_fp16"] = False  # True  TODOD: fix this
 
     bbhnet.export_version(
         nn,

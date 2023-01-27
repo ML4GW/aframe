@@ -11,6 +11,18 @@ import torch.nn as nn
 from torch import Tensor
 
 
+def get_norm_layer(groups: int) -> nn.Module:
+    class GroupNorm(nn.GroupNorm):
+        def __init__(self, num_channels: int) -> None:
+            if groups == -1:
+                num_groups = num_channels
+            else:
+                num_groups = min(num_channels, groups)
+            super().__init__(num_groups, num_channels)
+
+    return GroupNorm
+
+
 def convN(
     in_planes: int,
     out_planes: int,
@@ -220,10 +232,11 @@ class ResNet(nn.Module):
             used at each layer. Otherwise, `stride_type` should
             be one element shorter than `layers` and indicate either
             `stride` or `dilation` for each layer after the first.
-        norm_layer:
-            The layer type to use for normalization after each
-            convolution. If left as `None`, defaults to 1D batch norm
-            (`torch.nn.BatchNorm1d`).
+        norm_groups:
+            The number of groups to use in GroupNorm layers
+            throughout the model. If left as `-1`, the number
+            of groups will be equal to the number of channels,
+            making this equilavent to LayerNorm
     """
 
     block = BasicBlock
@@ -238,12 +251,10 @@ class ResNet(nn.Module):
         width_per_group: int = 64,
         # TODO: use Literal["stride", "dilation"] once typeo fix is in
         stride_type: Optional[List[str]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        norm_groups: int = -1,
     ) -> None:
         super().__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm1d
-        self._norm_layer = norm_layer
+        self._norm_layer = get_norm_layer(norm_groups)
 
         self.inplanes = 64
         self.dilation = 1
@@ -274,7 +285,7 @@ class ResNet(nn.Module):
             padding=3,
             bias=False,
         )
-        self.bn1 = norm_layer(self.inplanes)
+        self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
 

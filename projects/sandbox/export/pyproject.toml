@@ -34,8 +34,8 @@ gwpy = "^2.1"
 cryptography = "<38.0"
 
 # hard-pin the tensorrt version for compatability with
-# Triton. This corresponds to Triton container 22.07-py3
-nvidia-tensorrt = {version = "8.4.1.5", source = "ngc" }
+# Triton. This corresponds to Triton container 22.12-py3
+tensorrt = "8.5.1.7"
 
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
@@ -49,11 +49,6 @@ develop = true
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
-
-[[tool.poetry.source]]
-# NVIDIA pypi repo for tensorrt install
-name = "ngc"
-url = "https://pypi.ngc.nvidia.com"
 
 [[tool.poetry.source]]
 name = "torch"

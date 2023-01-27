@@ -10,7 +10,6 @@ from typing import Iterable, List
 
 import h5py
 import numpy as np
-from mldatafind.find import find_data
 from omicron.cli.process import main as omicron_main
 from typeo import scriptify
 
@@ -42,6 +41,12 @@ def generate_glitch_dataset(
         frame_type: frame type for data discovery w/ gwdatafind
         trigger_files: List of h5 files of omicron triggers
     """
+    # importing here due to issues with ciecplib
+    # setting logging. See
+    # https://github.com/ML4GW/mldatafind/issues/30
+    # TODO: move back to top once this is fixed
+    from mldatafind import find_data
+
     logging.info(f"Generating glitch dataset for {ifo}")
 
     glitches = []
@@ -252,7 +257,6 @@ def main(
     datadir.mkdir(exist_ok=True, parents=True)
 
     log_file = logdir / "glitches.log"
-
     configure_logging(log_file, verbose)
 
     # output file

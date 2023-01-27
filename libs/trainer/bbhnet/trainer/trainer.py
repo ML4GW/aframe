@@ -79,9 +79,8 @@ def train(
     # optimization params
     max_epochs: int = 40,
     init_weights: Optional[str] = None,
-    lr: float = 1e-3,
-    min_lr: float = 1e-5,
-    decay_steps: int = 10000,
+    max_lr: float = 1e-3,
+    lr_ramp_epochs: Optional[int] = None,
     weight_decay: float = 0.0,
     # misc params
     device: Optional[str] = None,
@@ -110,12 +109,13 @@ def train(
             left as `None`, network will be randomly initialized.
             If `init_weights` is a directory, it will be assumed
             that this directory contains a file called `weights.pt`.
-        lr:
-            Learning rate to use during training.
-        min_lr:
-            Minimum learning rate to decay to throughout training.
-        decay_steps:
-            The number of steps over which to decay from lr to min_lr.
+        max_lr:
+            The max learning rate to ramp up to during training
+            before cosine decaying towards 0
+        lr_ramp_epochs:
+            The number of epochs to spend ramping up the learning
+            rate to `max_lr`. If left as `None`, defaults to
+            the torch default of 30% of `max_epochs`.
         weight_decay:
             Amount of regularization to apply during training.
         early_stop:
@@ -180,10 +180,17 @@ def train(
     # TODO: Allow different loss functions or optimizers to be passed?
     criterion = torch.nn.functional.binary_cross_entropy_with_logits
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=lr, weight_decay=weight_decay
+        model.parameters(), lr=max_lr, weight_decay=weight_decay
     )
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=decay_steps, eta_min=min_lr
+
+    lr_ramp_epochs = lr_ramp_epochs or int(0.3 * max_epochs)
+    lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=max_lr,
+        epochs=max_epochs,
+        pct_start=lr_ramp_epochs / max_epochs,
+        steps_per_epoch=len(train_dataset),
+        anneal_strategy="cos",
     )
 
     # start training

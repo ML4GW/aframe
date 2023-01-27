@@ -33,6 +33,9 @@ class dataset:
         self.i = 0
         return self
 
+    def __len__(self):
+        return self.batches
+
     def __next__(self):
         if self.i == self.batches:
             raise StopIteration

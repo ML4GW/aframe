@@ -70,6 +70,8 @@ def prepare_augmentation(
         h1_glitches, valid_h1_glitches = split(h1_glitches, 1 - valid_frac, 0)
         l1_glitches, valid_l1_glitches = split(l1_glitches, 1 - valid_frac, 0)
         valid_glitches = [valid_h1_glitches, valid_l1_glitches]
+    else:
+        valid_glitches = None
 
     augmentation_layers["glitch_inserter"] = GlitchSampler(
         prob=glitch_prob,
@@ -86,7 +88,7 @@ def prepare_augmentation(
         signals = f["signals"][:]
         if valid_frac is not None:
             signals, valid_signals = split(signals, 1 - valid_frac, 0)
-            valid_plus, valid_cross = valid_signals.transpose(1, 0, 2)
+            valid_cross, valid_plus = valid_signals.transpose(1, 0, 2)
 
             slc = slice(-len(valid_signals), None)
             valid_injector = BBHNetWaveformInjection(
@@ -101,8 +103,10 @@ def prepare_augmentation(
                 plus=valid_plus,
                 cross=valid_cross,
             )
+        else:
+            valid_injector = None
 
-    plus, cross = signals.transpose(1, 0, 2)
+    cross, plus = signals.transpose(1, 0, 2)
 
     # instantiate source parameters as callable
     # distributions which will produce samples
@@ -125,7 +129,4 @@ def prepare_augmentation(
     # be called at data-loading time (i.e. won't be
     # used on validation data).
     augmenter = MultiInputSequential(augmentation_layers)
-
-    if valid_frac is not None:
-        return augmenter, valid_glitches, valid_injector
-    return augmenter, None, None
+    return augmenter, valid_glitches, valid_injector

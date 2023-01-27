@@ -7,7 +7,8 @@ steps = [
     "export:export-model:resnet",
     "datagen:generate-timeslides",
     "infer:infer",
-    "analyze:analyze"
+    "analyze:analyze",
+    "vizapp:vizapp"
 ]
 
 [tool.typeo.base]
@@ -16,14 +17,14 @@ datadir = "${DATA_DIR}"
 logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 ifos = ['H1', 'L1']
-glitch_start = 1262607622
-train_start = 1262607622
-train_stop = 1262620622
-test_stop = 1262751694  
+glitch_start = 1262653854
+train_start = 1262653854
+train_stop = 1262686622 # 32768 s segment
+test_stop = 1262945822 # 3 day window for test
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
-resnet = {layers = [3, 3, 3]}
+resnet = {layers = [2, 2, 2, 2], norm_groups = 8}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
 kernel_length = 2
@@ -78,7 +79,7 @@ minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
-n_samples = 10000
+num_signals = 50000
 prior = "${base.prior}"
 sample_rate = "${base.sample_rate}" 
 waveform_duration = 8
@@ -103,17 +104,16 @@ highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
 waveform_prob = 0.5
 glitch_prob = 0.25
-mean_snr = 10
-std_snr = 4
-min_snr = 2
+mean_snr = 15
+std_snr = 15
+min_snr = 1
 
 # optimization parameters
 batch_size = 512
 batches_per_epoch = 200
 max_epochs = 200
-lr = 4e-3
-min_lr = 1e-5
-decay_steps = 10000
+max_lr = 4e-3
+lr_ramp_epochs = 75 
 weight_decay = 1e-5
 
 # validation parameters
@@ -193,7 +193,7 @@ model_repo_dir = "${base.repository_directory}"
 model_name = "bbhnet-stream"
 data_dir = "${base.datadir}/timeslide_injections/" 
 write_dir = "${base.basedir}/timeslide_injections/"
-triton_image = "hermes/tritonserver:22.07"
+triton_image = "hermes/tritonserver:22.12"
 
 fields = ["injection", "background"]
 inference_sampling_rate = "${base.inference_sampling_rate}"
