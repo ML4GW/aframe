@@ -8,6 +8,7 @@ from bilby.core.prior import (
     Cosine,
     Gaussian,
     Interped,
+    LogNormal,
     PowerLaw,
     Sine,
     Uniform,
@@ -158,7 +159,31 @@ def gaussian_masses(m1: float, m2: float, sigma: float = 2):
     """
     prior_dict = BBHPriorDict()
     prior_dict["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
-    prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m1, sigma=sigma)
+    prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
+    prior_dict["luminosity_distance"] = UniformSourceFrame(
+        name="luminosity_distance", minimum=100, maximum=3000, unit="Mpc"
+    )
+    prior_dict["dec"] = Cosine(name="dec")
+    prior_dict["ra"] = Uniform(
+        name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
+    )
+
+    return prior_dict
+
+
+def log_normal_masses(m1: float, m2: float, sigma: float = 2):
+    """
+    Constructs a log normal bilby prior for masses.
+    Args:
+        m1: mean of the Log Normal distribution for mass 1
+        m2: mean of the Log Normal distribution for mass 2
+        sigma: standard deviation for m1 and m2
+
+    Returns a BBHpriorDict
+    """
+    prior_dict = BBHPriorDict()
+    prior_dict["mass_1"] = LogNormal(name="mass_1", mu=m1, sigma=sigma)
+    prior_dict["mass_2"] = LogNormal(name="mass_2", mu=m2, sigma=sigma)
     prior_dict["luminosity_distance"] = UniformSourceFrame(
         name="luminosity_distance", minimum=100, maximum=3000, unit="Mpc"
     )

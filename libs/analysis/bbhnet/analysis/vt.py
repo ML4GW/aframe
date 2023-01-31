@@ -6,7 +6,7 @@ from astropy import cosmology as cosmo
 from astropy import units as u
 
 if TYPE_CHECKING:
-    from astropy.quantity import Quantity
+    from astropy.units import Quantity
     from astropy.cosmology import Cosmology
     import bilby
 
