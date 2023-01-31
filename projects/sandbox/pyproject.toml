@@ -36,6 +36,7 @@ highpass = 32
 prior = "bbhnet.priors.priors.nonspin_bbh"
 fduration = 1
 valid_frac = 0.25
+cosmology = "bbhnet.priors.cosmologies.planck"
 
 [tool.typeo.scripts.generate-background]
 datadir = "${base.datadir}"
@@ -174,7 +175,7 @@ min_segment_length = 1024
 
 # timeslide parameters
 shifts = [0, 1]
-n_slides = 10
+n_slides = 30
 
 # injection parameters
 prior = "${base.prior}"
@@ -184,6 +185,7 @@ highpass = "${base.highpass}"
 spacing = 48
 buffer = 4
 jitter = 2
+cosmology = "${base.cosmology}"
 
 # misc parameters
 verbose = true
@@ -233,5 +235,6 @@ train_data_dir = "${base.datadir}"
 sample_rate = "${base.sample_rate}"
 fduration = "${base.fduration}"
 valid_frac = "${base.valid_frac}"
-logdir = "${base.basedir}"
+logdir = "./"#"${base.basedir}"
+cosmology = "${base.cosmology}"
 verbose = true

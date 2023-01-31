@@ -4,6 +4,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     import bilby
+    from astropy.cosmology import Cosmology
 
 import logging
 
@@ -19,11 +20,16 @@ MPC3_TO_GPC3 = 1e-9
 
 class VolumeTimeVsFAR:
     def __init__(
-        self, height, width, source_prior: "bilby.core.prior.PriorDict"
+        self,
+        height,
+        width,
+        source_prior: "bilby.core.prior.PriorDict",
+        cosmology: "Cosmology",
     ):
         self.height = height
         self.width = width
         self.source_prior = source_prior
+        self.cosmology = cosmology
         self.keys = self.source_prior.keys()
 
         self.fars = np.logspace(0, 7, 7)
@@ -140,6 +146,7 @@ class VolumeTimeVsFAR:
                 recovered_parameters=recovered_parameters,
                 n_injections=self.n_injections,
                 livetime=self.foreground.livetime,
+                cosmology=self.cosmology,
             )
 
             vt, uncertainty, n_eff = volume_time_integral.calculate_vt(

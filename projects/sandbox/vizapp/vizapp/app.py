@@ -18,12 +18,14 @@ from vizapp.plots import (
 )
 
 if TYPE_CHECKING:
+    from astropy.cosmology import Cosmology
     from vizapp.vetoes import VetoParser
 
 
 class VizApp:
     def __init__(
         self,
+        cosmology: "Cosmology",
         source_prior: "bilby.core.prior.PriorDict",
         timeslides_results_dir: Path,
         timeslides_strain_dir: Path,
@@ -146,7 +148,7 @@ class VizApp:
     ):
         self.perf_summary_plot = PerfSummaryPlot(300, 800)
         self.volume_time_vs_far = VolumeTimeVsFAR(
-            300, 800, source_prior=self.source_prior
+            300, 800, source_prior=self.source_prior, cosmology=self.cosmology
         )
 
         backgrounds = {}

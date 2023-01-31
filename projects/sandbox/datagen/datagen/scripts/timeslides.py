@@ -3,6 +3,7 @@ from concurrent.futures import FIRST_EXCEPTION, wait
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+import astropy.cosmology as cosmo
 import h5py
 import numpy as np
 import torch
@@ -49,6 +50,7 @@ def main(
     sample_rate: float,
     frame_type: str,
     channel: str,
+    cosmology: Callable,
     min_segment_length: Optional[float] = None,
     chunk_length: Optional[float] = None,
     waveform_duration: float = 8,
@@ -86,6 +88,7 @@ def main(
         reference_frequency: reference frequency for generating waveforms
         waveform_approximant: waveform model to inject
         fftlength: fftlength for calculating psd
+        cosmology: Callable that returns an astropy.cosmology object
         state_flag: name of segments to query from segment database
     """
 
@@ -304,6 +307,19 @@ def main(
                 # the corresponding injection directory
                 future = submit_write(pool, injection_ts, t, **injected_data)
                 futures.append(future)
+
+                # infer redshift based on injected luminosity distance and
+                # cosmology use redshift to calculate source frame masses
+                parameters["redshift"] = cosmo.z_at_value(
+                    cosmology.luminosity_distance,
+                    parameters["luminosity_distance"],
+                )
+                parameters["m1_source"] = parameters["m1"] / (
+                    1 + parameters["redshift"]
+                )
+                parameters["m2_source"] = parameters["m2"] / (
+                    1 + parameters["redshift"]
+                )
 
                 # 7. Write the injection parameters to the injection
                 # directory as metadata for downstream processes
