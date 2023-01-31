@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence, Tuple
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
 
 import h5py
 import numpy as np
@@ -103,7 +103,7 @@ def uniform_extrinsic() -> BBHPriorDict:
     return prior
 
 
-def nonspin_bbh(cosmology: "Cosmology") -> BBHPriorDict:
+def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
@@ -151,7 +151,7 @@ def power_law_dip_break():
 
 
 def gaussian_masses(
-    m1: float, m2: float, sigma: float, cosmology: "Cosmology"
+    m1: float, m2: float, sigma: float, cosmology: Optional["Cosmology"] = None
 ):
     """
     Constructs a gaussian bilby prior for masses.

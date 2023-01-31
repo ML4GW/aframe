@@ -3,7 +3,7 @@ import logging
 from concurrent.futures import Future
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple
 
 import gwdatafind
 import numpy as np
@@ -14,11 +14,14 @@ from bbhnet.io import h5
 from bbhnet.io.timeslides import TimeSlide
 from bbhnet.parallelize import AsyncExecutor
 
+if TYPE_CHECKING:
+    import bilby.core.prior.PriorDict
+
 
 class Sampler:
     def __init__(
         self,
-        prior: Callable,
+        prior: "bilby.core.prior.PriorDict",
         start: float,
         stop: float,
         waveform_duration: float,
@@ -27,7 +30,6 @@ class Sampler:
         buffer: float = 0,
         spacing: float = 0,
     ) -> None:
-        self.prior = prior()
         self.jitter = jitter
         buffer = waveform_duration // 2 + jitter + buffer
         spacing = waveform_duration + 2 * jitter + spacing

@@ -47,8 +47,8 @@ def main(
         ifos,
     )
 
-    source_prior = source_prior()
     cosmology = cosmology()
+    source_prior = source_prior(cosmology)
 
     bkapp = VizApp(
         source_prior=source_prior,

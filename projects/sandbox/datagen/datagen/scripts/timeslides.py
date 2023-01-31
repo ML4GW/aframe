@@ -145,6 +145,8 @@ def main(
     if chunk_length is not None:
         segments = chunk_segments(segments, chunk_length)
 
+    prior = prior(cosmology)
+
     # set up some pools for doing our data IO/injection
     with AsyncExecutor(4, thread=False) as pool:
         for segment_start, segment_stop in segments:
