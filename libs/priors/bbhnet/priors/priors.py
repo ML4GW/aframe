@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Sequence, Tuple
+from typing import TYPE_CHECKING, Sequence, Tuple
 
 import h5py
 import numpy as np
@@ -13,11 +13,10 @@ from bilby.core.prior import (
     Sine,
     Uniform,
 )
-from bilby.gw.prior import (
-    BBHPriorDict,
-    UniformComovingVolume,
-    UniformSourceFrame,
-)
+from bilby.gw.prior import BBHPriorDict, UniformSourceFrame
+
+if TYPE_CHECKING:
+    from astropy.cosmology import Cosmology
 
 # Unit names
 msun = r"$M_{\odot}$"
@@ -104,12 +103,14 @@ def uniform_extrinsic() -> BBHPriorDict:
     return prior
 
 
-def nonspin_bbh() -> BBHPriorDict:
+def nonspin_bbh(cosmology: "Cosmology") -> BBHPriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
     prior["mass_ratio"] = Constraint(0, 1)
-    prior["redshift"] = UniformSourceFrame(0, 0.5, unit=mpc, name="redshift")
+    prior["redshift"] = UniformSourceFrame(
+        0, 2, name="redshift", cosmology=cosmology
+    )
     prior["psi"] = 0
     prior["a_1"] = 0
     prior["a_2"] = 0
@@ -121,12 +122,14 @@ def nonspin_bbh() -> BBHPriorDict:
     return prior
 
 
-def end_o3_ratesandpops() -> BBHPriorDict:
+def end_o3_ratesandpops(cosmology: "Cosmology") -> BBHPriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
     prior["mass_ratio"] = Constraint(0.02, 1)
-    prior["redshift"] = UniformComovingVolume(0, 2, unit=mpc, name="redshift")
+    prior["redshift"] = UniformSourceFrame(
+        0, 2, name="redshift", cosmology=cosmology
+    )
     prior["psi"] = 0
     prior["a_1"] = Uniform(0, 0.998)
     prior["a_2"] = Uniform(0, 0.998)
@@ -147,7 +150,9 @@ def power_law_dip_break():
     return prior
 
 
-def gaussian_masses(m1: float, m2: float, sigma: float = 2):
+def gaussian_masses(
+    m1: float, m2: float, sigma: float, cosmology: "Cosmology"
+):
     """
     Constructs a gaussian bilby prior for masses.
     Args:
@@ -160,8 +165,8 @@ def gaussian_masses(m1: float, m2: float, sigma: float = 2):
     prior_dict = BBHPriorDict()
     prior_dict["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
     prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
-    prior_dict["luminosity_distance"] = UniformSourceFrame(
-        name="luminosity_distance", minimum=100, maximum=3000, unit="Mpc"
+    prior_dict["redshift"] = UniformSourceFrame(
+        name="redshift", minimum=0, maximum=2, cosmology=cosmology
     )
     prior_dict["dec"] = Cosine(name="dec")
     prior_dict["ra"] = Uniform(
