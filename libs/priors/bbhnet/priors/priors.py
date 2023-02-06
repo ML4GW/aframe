@@ -108,8 +108,8 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
     prior["mass_ratio"] = Constraint(0, 1)
-    prior["redshift"] = UniformSourceFrame(
-        0, 2, name="redshift", cosmology=cosmology
+    prior["luminosity_distance"] = UniformSourceFrame(
+        0, 2, unit=mpc, name="redshift", cosmology=cosmology
     )
     prior["psi"] = 0
     prior["a_1"] = 0
@@ -123,6 +123,9 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
 
 
 def end_o3_ratesandpops(cosmology: "Cosmology") -> BBHPriorDict:
+    """
+    `population prior`
+    """
     prior = uniform_extrinsic()
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
@@ -178,6 +181,8 @@ def gaussian_masses(
 
 def log_normal_masses(m1: float, m2: float, sigma: float = 2):
     """
+    `Population prior`
+
     Constructs a log normal bilby prior for masses.
     Args:
         m1: mean of the Log Normal distribution for mass 1

@@ -14,7 +14,6 @@ import numpy as np
 from scipy.integrate import quad
 
 PI_OVER_TWO = math.pi / 2
-YEARS_PER_SECOND = 1 / (60 * 60 * 24 * 365)
 
 
 def calculate_astrophysical_volume(
@@ -65,9 +64,9 @@ def calculate_astrophysical_volume(
 
 
 @dataclass
-class VolumeTimeIntegral:
+class SensitiveVolumeCalculator:
     """
-    Class for calculating VT metrics using importance sampling.
+    Class for calculating sensitive volume metrics using importance sampling.
 
     Args:
         source:
@@ -77,8 +76,6 @@ class VolumeTimeIntegral:
             Dictionary of recovered parameters
         n_injections:
             Number of total injections
-        livetime:
-            Livetime in seconds over which injections were performed
         cosmology:
             Astropy Cosmology object used for volume calculation
     """
@@ -86,7 +83,6 @@ class VolumeTimeIntegral:
     source: "bilby.core.prior.PriorDict"
     recovered_parameters: Dict[str, np.ndarray]
     n_injections: int
-    livetime: float
     cosmology: "Cosmology" = cosmo.Planck15
 
     def __post_init__(self):
@@ -137,7 +133,7 @@ class VolumeTimeIntegral:
 
         return np.array(weights)
 
-    def calculate_vt(
+    def calculate_sensitive_volume(
         self,
         target: Optional["bilby.core.prior.PriorDict"] = None,
     ):
@@ -156,7 +152,7 @@ class VolumeTimeIntegral:
         weights = self.weights(target)
         mu = np.sum(weights) / self.n_injections
 
-        v0 = self.livetime * YEARS_PER_SECOND * self.volume
+        v0 = self.volume
         vt = mu * v0
 
         variance = np.sum(weights**2) / self.n_injections**2
