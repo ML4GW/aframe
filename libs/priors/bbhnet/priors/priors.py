@@ -99,8 +99,8 @@ def end_o3_ratesandpops(
     `population prior`
     """
     prior = PriorDict(dictionary=uniform_extrinsic(), source_frame=True)
-    prior["mass_1"] = PowerLaw(alpha=-3.35, minimum=2, maximum=100, unit=msun)
-    prior["mass_2"] = PowerLaw(alpha=0, minimum=2, maximum=100, unit=msun)
+    prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
+    prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
     prior["mass_ratio"] = Constraint(0.02, 1)
     prior["redshift"] = UniformComovingVolume(
         0, 2, name="redshift", cosmology=cosmology
