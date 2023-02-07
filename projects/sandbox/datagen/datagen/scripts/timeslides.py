@@ -310,12 +310,12 @@ def main(
                 future = submit_write(pool, injection_ts, t, **injected_data)
                 futures.append(future)
 
-                # infer redshift based on injected luminosity distance and
-                # cosmology use redshift to calculate source frame masses
-                parameters["redshift"] = cosmo.z_at_value(
-                    cosmology.luminosity_distance,
-                    parameters["luminosity_distance"],
+                # infer luminosity distance based on redshift and cosmology
+                parameters["luminosity_distance"] = cosmo.luminosity_distance(
+                    parameters["redshift"]
                 )
+
+                # Use redshift to convert sampled masses to source frame
                 parameters["m1_source"] = parameters["m1"] / (
                     1 + parameters["redshift"]
                 )
