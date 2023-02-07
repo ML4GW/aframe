@@ -153,12 +153,12 @@ class SensitiveVolumeCalculator:
         mu = np.sum(weights) / self.n_injections
 
         v0 = self.volume
-        vt = mu * v0
+        v = mu * v0
 
         variance = np.sum(weights**2) / self.n_injections**2
         variance -= mu**2 / self.n_injections
-        variance *= v0**2
+        variance *= v**2
 
         std = np.sqrt(variance)
-        n_eff = vt**2 / variance
-        return vt.value, std.value, n_eff.value
+        n_eff = v**2 / variance
+        return v.value, std.value, n_eff.value
