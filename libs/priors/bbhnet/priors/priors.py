@@ -10,7 +10,11 @@ from bilby.core.prior import (
     Sine,
     Uniform,
 )
-from bilby.gw.prior import BBHPriorDict, UniformSourceFrame
+from bilby.gw.prior import (
+    BBHPriorDict,
+    UniformComovingVolume,
+    UniformSourceFrame,
+)
 
 from bbhnet.priors.utils import read_priors_from_file
 
@@ -88,15 +92,17 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     return prior
 
 
-def end_o3_ratesandpops(cosmology: "Cosmology") -> BBHPriorDict:
+def end_o3_ratesandpops(
+    cosmology: Optional["Cosmology"] = None,
+) -> BBHPriorDict:
     """
     `population prior`
     """
     prior = PriorDict(dictionary=uniform_extrinsic(), source_frame=True)
-    prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
-    prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
+    prior["mass_1"] = PowerLaw(alpha=-3.35, minimum=2, maximum=100, unit=msun)
+    prior["mass_2"] = PowerLaw(alpha=0, minimum=2, maximum=100, unit=msun)
     prior["mass_ratio"] = Constraint(0.02, 1)
-    prior["redshift"] = UniformSourceFrame(
+    prior["redshift"] = UniformComovingVolume(
         0, 2, name="redshift", cosmology=cosmology
     )
     prior["psi"] = 0
