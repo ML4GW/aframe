@@ -32,7 +32,7 @@ class PriorDict(BBHPriorDict):
     def sample(self, n: Optional[int] = None, source_frame: bool = False):
         samples = super().sample(n)
         # only rescale if requested frame is different from defined frame
-        rescale = self._source_frame != source_frame
+        rescale = self._source_frame or source_frame
         if not rescale:
             return samples
 
@@ -43,10 +43,20 @@ class PriorDict(BBHPriorDict):
         samples["mass_2"] *= factor
         return samples
 
-    # TODO: implement prob method that accounts for jacobian
-    # which will be used during importance sampling
-    def prob(self):
-        raise NotImplementedError
+    def prob(self, samples, source_frame: bool = False):
+        """
+        Override the default prob method to account for the jacobian
+        between detector frame and source frame masses.
+        See equation 7) in https://arxiv.org/pdf/1712.00482.pdf
+        """
+        prob = super().prob(samples)
+        rescale = self._source_frame or source_frame
+        if not rescale:
+            return prob
+
+        factor = (1 + samples["redshift"]) ** 2
+        jacobian = factor if source_frame else (1 / factor)
+        return prob * jacobian
 
 
 def uniform_extrinsic(source_frame: bool = False) -> PriorDict:

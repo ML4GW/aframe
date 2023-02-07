@@ -27,3 +27,5 @@ def test_prior_dict():
     samples = prior.sample(10, source_frame=True)
     assert all(samples["mass_1"] == 1 / (1 + 3))
     assert all(samples["mass_2"] == 2 / (1 + 3))
+
+    # TODO: test prob method
