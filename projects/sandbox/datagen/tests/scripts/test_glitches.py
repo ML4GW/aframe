@@ -44,13 +44,7 @@ def trigger_files(ifo):
 
 
 def test_generate_glitch_dataset(
-    ifo,
-    window,
-    sample_rate,
-    snr_thresh,
-    trigger_files,
-    channel,
-    frame_type,
+    ifo, window, sample_rate, snr_thresh, trigger_files, channel
 ):
     start = 1263588390
     stop = 1263592390
@@ -78,4 +72,4 @@ def test_generate_glitch_dataset(
 
     assert glitches.shape[-1] == glitch_len
     assert len(glitches) == len(snrs)
-    assert all(snrs > snr_thresh)
+    assert all(np.array(snrs) > snr_thresh)
