@@ -155,7 +155,7 @@ class VolumeTimeVsFAR:
                 n_eff,
             ) = sensitive_volume_calc.calculate_sensitive_volume(target=target)
 
-            # convert volume into Gpc^3 yr
+            # convert volume into Gpc^3
             volume *= MPC3_TO_GPC3
             uncertainty *= MPC3_TO_GPC3
             fars.append(far)

@@ -45,7 +45,7 @@ class Sampler:
         jitter = np.random.uniform(-1, 1, self.num_signals) * self.jitter
         times = self.signal_times + jitter
 
-        params = self.prior.sample(self.num_signals)
+        params = self.prior.sample(self.num_signals, source_frame=False)
         params["geocent_time"] = times
         return params
 

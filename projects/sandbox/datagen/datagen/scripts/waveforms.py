@@ -63,7 +63,7 @@ def main(
     logging.info("Prior name            : {}".format(prior.__name__))
 
     # sample gw parameters
-    params = prior().sample(num_signals)
+    params = prior().sample(num_signals, source_frame=False)
 
     signals = generate_gw(
         params,
