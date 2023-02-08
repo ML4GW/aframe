@@ -50,7 +50,6 @@ def test_generate_glitch_dataset(
     snr_thresh,
     trigger_files,
     channel,
-    frame_type,
 ):
     start = 1263588390
     stop = 1263592390
@@ -78,4 +77,4 @@ def test_generate_glitch_dataset(
 
     assert glitches.shape[-1] == glitch_len
     assert len(glitches) == len(snrs)
-    assert all(snrs > snr_thresh)
+    assert all(np.array(snrs) > snr_thresh)
