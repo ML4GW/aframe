@@ -138,8 +138,9 @@ class VolumeTimeVsFAR:
             # parse foreground statistics into a dictionary
             # compatible with bilbys prior.prob method
             recovered_parameters = {
-                "mass_1": self.foreground.m1s[indices],
-                "mass_2": self.foreground.m2s[indices],
+                "mass_1": self.foreground.m1_source[indices],
+                "mass_2": self.foreground.m2_source[indices],
+                "redshift": self.foreground.redshifts[indices],
             }
 
             sensitive_volume_calc = SensitiveVolumeCalculator(

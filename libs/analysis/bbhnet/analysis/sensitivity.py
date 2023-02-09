@@ -17,8 +17,8 @@ PI_OVER_TWO = math.pi / 2
 
 
 def calculate_astrophysical_volume(
-    dl_min: float,
-    dl_max: float,
+    zmin: float,
+    zmax: float,
     dec_min: float = -PI_OVER_TWO,
     dec_max: float = PI_OVER_TWO,
     cosmology: "Cosmology" = cosmo.Planck15,
@@ -36,12 +36,6 @@ def calculate_astrophysical_volume(
 
     Returns astropy.Quantity of volume in Mpc^3
     """
-
-    # given passed cosmology, calculate the comoving distance
-    # at the minimum and maximum distance of injections
-    zmin, zmax = cosmo.z_at_value(
-        cosmology.luminosity_distance, [dl_min, dl_max] * u.Mpc
-    )
 
     # calculate the angular volume of the sky
     # over which injections have been made
@@ -91,8 +85,8 @@ class SensitiveVolumeCalculator:
             dict(zip(self.recovered_parameters, col))
             for col in zip(*self.recovered_parameters.values())
         ]
-        dl_prior = self.source["luminosity_distance"]
-        dl_min, dl_max = [dl_prior.minimum, dl_prior.maximum]
+        z_prior = self.source["redshift"]
+        zmin, zmax = [z_prior.minimum, z_prior.maximum]
 
         # if the source distribution has a dec prior,
         # use it to calculate the area on the sky
@@ -107,8 +101,8 @@ class SensitiveVolumeCalculator:
         # calculate the astrophysical volume over
         # which injections have been made.
         self.volume = calculate_astrophysical_volume(
-            dl_min=dl_min,
-            dl_max=dl_max,
+            zmin=zmin,
+            zmax=zmax,
             dec_min=dec_min,
             dec_max=dec_max,
             cosmology=self.cosmology,
@@ -128,7 +122,9 @@ class SensitiveVolumeCalculator:
         for sample in self.recovered_parameters:
             # calculate the weight for each sample
             # using the source and target distributions
-            weight = target.prob(sample) / self.source.prob(sample)
+            weight = target.prob(sample, source_frame=True) / self.source.prob(
+                sample, source_frame=True
+            )
             weights.append(weight)
 
         return np.array(weights)
