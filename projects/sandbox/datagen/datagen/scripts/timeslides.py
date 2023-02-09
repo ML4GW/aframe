@@ -162,6 +162,7 @@ def main(
                 min_segment_length,
                 force_generation,
             )
+
             if segment_shifts is None:
                 logging.info(f"Segment {seg_str} too short, skipping")
                 continue
@@ -174,6 +175,7 @@ def main(
 
             # create an iterator which will generate raw
             # waveforms in a separate process
+
             sampler = Sampler(
                 prior,
                 segment_start,
@@ -198,12 +200,16 @@ def main(
                 segment_start,
                 segment_stop,
             )
+
             logging.debug(f"Completed download of segment {seg_str}")
 
             # set up array of times for all shifts
+
             t = np.arange(segment_start, segment_start + dur, stride)
+
             futures = []
             it = zip(waveform_it, segment_shifts)
+
             for (waveforms, parameters), shift in it:
                 logging.debug(
                     "Creating timeslide for segment {} "

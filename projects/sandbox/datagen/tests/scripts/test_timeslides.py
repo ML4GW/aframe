@@ -200,6 +200,7 @@ def test_timeslide_injections_chunked_segments(
     frame_type,
     channel,
     cosmology,
+    state_flag,
 ):
     chunk_length = 100
     start = 1000000000
@@ -263,7 +264,6 @@ def test_timeslide_injections_chunked_segments(
     timeslides = datadir.iterdir()
     timeslides = [slide.name for slide in timeslides if slide.is_dir()]
     timeslides = list(timeslides)
-
     # create timeslide
     injection_ts = TimeSlide(datadir / "dt-H0.0-L0.0", field="injection")
     background_ts = TimeSlide(datadir / "dt-H0.0-L0.0", field="background")
