@@ -18,7 +18,7 @@ import torch
 from train.utils import split
 
 if TYPE_CHECKING:
-    from bbhnet.data.waveform_injection import BBHNetWaveformInjection
+    from train.waveform_injection import BBHNetWaveformInjection
 
 
 class Metric(torch.nn.Module):
