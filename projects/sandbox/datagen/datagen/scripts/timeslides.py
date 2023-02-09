@@ -3,7 +3,6 @@ from concurrent.futures import FIRST_EXCEPTION, wait
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
-import astropy.cosmology as cosmo
 import h5py
 import numpy as np
 import torch
@@ -145,6 +144,8 @@ def main(
     if chunk_length is not None:
         segments = chunk_segments(segments, chunk_length)
 
+    # extract cosmology and instantiate prior with it
+    cosmology = cosmology()
     prior = prior(cosmology)
 
     # set up some pools for doing our data IO/injection
@@ -311,15 +312,15 @@ def main(
                 futures.append(future)
 
                 # infer luminosity distance based on redshift and cosmology
-                parameters["luminosity_distance"] = cosmo.luminosity_distance(
-                    parameters["redshift"]
-                )
+                parameters[
+                    "luminosity_distance"
+                ] = cosmology.luminosity_distance(parameters["redshift"])
 
                 # Use redshift to convert sampled masses to source frame
-                parameters["m1_source"] = parameters["m1"] / (
+                parameters["mass1_source"] = parameters["mass_1"] / (
                     1 + parameters["redshift"]
                 )
-                parameters["m2_source"] = parameters["m2"] / (
+                parameters["mass2_source"] = parameters["mass_2"] / (
                     1 + parameters["redshift"]
                 )
 
