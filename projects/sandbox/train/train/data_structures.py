@@ -97,31 +97,32 @@ class GlitchSampler(torch.nn.Module):
         self.max_offset = max_offset
 
     def forward(self, X: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        if X.shape[1] < len(self.glitches):
+        glitch_channels = len(list(self.buffers()))
+        if X.shape[1] < glitch_channels:
             raise ValueError(
                 "Can't insert glitches into tensor with {} channels "
                 "using glitches from {} ifos".format(
-                    X.shape[1], len(self.glitches)
+                    X.shape[1], glitch_channels
                 )
             )
 
         # sample batch indices which will be replaced with
         # a glitch independently from each interferometer
-        masks = torch.rand(size=(len(self.glitches), len(X))) < self.prob
-        for i, ifo in enumerate(self.glitches):
+        masks = torch.rand(size=(glitch_channels, len(X))) < self.prob
+        for i, glitches in enumerate(self.buffers()):
             mask = masks[i]
 
             # now sample from our bank of glitches for this
             # interferometer the number we want to insert
             N = mask.sum().item()
-            idx = torch.randint(len(ifo), size=(N,))
+            idx = torch.randint(len(glitches), size=(N,))
 
             # finally sample kernels from the selected glitches.
             # Add a dummy dimension so that sample_kernels
             # doesn't think this is a single multi-channel
             # timeseries, but rather a batch of single
             # channel timeseries
-            glitches = ifo[idx, None]
+            glitches = glitches[idx, None]
             glitches = sample_kernels(
                 glitches,
                 kernel_size=X.shape[-1],
