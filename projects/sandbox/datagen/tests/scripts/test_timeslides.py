@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
+from astropy.cosmology import Planck15
 from datagen.scripts import generate_timeslides
 from gwpy.segments import (
     DataQualityDict,
@@ -81,6 +82,14 @@ def state_flag(request):
     return request.param
 
 
+@pytest.fixture()
+def cosmology():
+    def f():
+        return Planck15
+
+    return f
+
+
 def submit_mock(f, *args, **kwargs):
     result = Mock()
     result.result = Mock(return_value=f(*args, **kwargs))
@@ -111,7 +120,7 @@ def test_timeslide_injections_no_segments(
     sample_rate,
     frame_type,
     channel,
-    state_flag,
+    cosmology,
 ):
     start = 1123456789
     stop = 1123457789
@@ -141,6 +150,7 @@ def test_timeslide_injections_no_segments(
             sample_rate=sample_rate,
             frame_type=frame_type,
             channel=channel,
+            cosmology=cosmology,
         )
 
     timeslides = datadir.iterdir()
@@ -189,6 +199,7 @@ def test_timeslide_injections_chunked_segments(
     sample_rate,
     frame_type,
     channel,
+    cosmology,
 ):
     chunk_length = 100
     start = 1000000000
@@ -243,6 +254,7 @@ def test_timeslide_injections_chunked_segments(
             sample_rate=sample_rate,
             frame_type=frame_type,
             channel=channel,
+            cosmology=cosmology,
             state_flag=state_flag,
             chunk_length=chunk_length,
         )
@@ -297,6 +309,7 @@ def test_timeslide_injections_with_segments(
     frame_type,
     channel,
     state_flag,
+    cosmology,
 ):
     start = 1000000000
     stop = 1000001000
@@ -348,6 +361,7 @@ def test_timeslide_injections_with_segments(
             sample_rate=sample_rate,
             frame_type=frame_type,
             channel=channel,
+            cosmology=cosmology,
             state_flag=state_flag,
         )
 
