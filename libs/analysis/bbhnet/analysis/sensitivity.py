@@ -122,9 +122,7 @@ class SensitiveVolumeCalculator:
         for sample in self.recovered_parameters:
             # calculate the weight for each sample
             # using the source and target distributions
-            weight = target.prob(sample, source_frame=True) / self.source.prob(
-                sample, source_frame=True
-            )
+            weight = target.prob(sample) / self.source.prob(sample)
             weights.append(weight)
 
         return np.array(weights)

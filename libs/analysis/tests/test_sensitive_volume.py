@@ -17,9 +17,7 @@ def prior():
         dict(
             m1=bilby.core.prior.Uniform(0, 1, "m1", "Msol"),
             m2=bilby.core.prior.Uniform(0, 1, "m2", "Msol"),
-            luminosity_distance=bilby.core.prior.Uniform(
-                100, 1000, "luminosity_distance", "Mpc"
-            ),
+            redshift=bilby.core.prior.Uniform(100, 1000, "redshift"),
             dec=bilby.core.prior.analytical.Cosine(name="dec"),
             ra=bilby.core.prior.Uniform(
                 minimum=0, maximum=2 * math.pi, name="ra"
