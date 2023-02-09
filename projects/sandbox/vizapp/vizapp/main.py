@@ -13,6 +13,7 @@ from .vetoes import VetoParser
 @scriptify
 def main(
     ifos: List[str],
+    cosmology: Callable,
     source_prior: Callable,
     veto_definer_file: Path,
     gate_paths: Dict[str, Path],
@@ -46,7 +47,8 @@ def main(
         ifos,
     )
 
-    source_prior = source_prior()
+    cosmology = cosmology()
+    source_prior = source_prior(cosmology)
 
     bkapp = VizApp(
         source_prior=source_prior,
@@ -58,6 +60,7 @@ def main(
         fduration=fduration,
         valid_frac=valid_frac,
         veto_parser=veto_parser,
+        cosmology=cosmology,
     )
 
     server = Server({"/": bkapp}, num_procs=1, port=port, address="0.0.0.0")

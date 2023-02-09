@@ -4,6 +4,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     import bilby
+    from astropy.cosmology import Cosmology
 
 import logging
 
@@ -11,7 +12,7 @@ from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, HoverTool, NumericInput
 from bokeh.plotting import figure
 
-from bbhnet.analysis.vt import VolumeTimeIntegral
+from bbhnet.analysis.sensitivity import SensitiveVolumeCalculator
 from bbhnet.priors.priors import gaussian_masses
 
 MPC3_TO_GPC3 = 1e-9
@@ -19,18 +20,23 @@ MPC3_TO_GPC3 = 1e-9
 
 class VolumeTimeVsFAR:
     def __init__(
-        self, height, width, source_prior: "bilby.core.prior.PriorDict"
+        self,
+        height,
+        width,
+        source_prior: "bilby.core.prior.PriorDict",
+        cosmology: "Cosmology",
     ):
         self.height = height
         self.width = width
         self.source_prior = source_prior
+        self.cosmology = cosmology
         self.keys = self.source_prior.keys()
 
         self.fars = np.logspace(0, 7, 7)
         self.configure_sources()
         self.configure_widgets()
         self.configure_plots()
-        self.logger = logging.getLogger("VT vs FAR")
+        self.logger = logging.getLogger("V vs FAR")
         self.logger.debug(self.fars)
 
     def configure_plots(self):
@@ -40,7 +46,7 @@ class VolumeTimeVsFAR:
             x_axis_type="log",
             y_axis_type="log",
             x_axis_label="FAR (yr ^-1)",
-            y_axis_label="<VT> Gpc^3 yr",
+            y_axis_label="<V> Gpc^3",
         )
 
         self.figure.line(
@@ -96,7 +102,7 @@ class VolumeTimeVsFAR:
         self.source = ColumnDataSource(
             data=dict(
                 far=[],
-                vt=[],
+                volume=[],
                 error_low=[],
                 error_high=[],
                 uncertainty=[],
@@ -108,6 +114,7 @@ class VolumeTimeVsFAR:
         m2_mean = self.m2_selector.value
         sigma = self.sd_selector.value
 
+        # TODO: handle this better
         if m1_mean < m2_mean:
             self.logger.error("m1 must be greater than m2")
             return
@@ -115,10 +122,10 @@ class VolumeTimeVsFAR:
         self.logger.debug(
             f"Calculating VT for m1 = {m1_mean}, m2 = {m2_mean}, sd = {sigma}"
         )
-        target = gaussian_masses(m1_mean, m2_mean, sigma)
+        target = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
 
         fars = []
-        vts = []
+        volumes = []
         uncertainties = []
         n_effs = []
         for far in self.fars:
@@ -131,38 +138,41 @@ class VolumeTimeVsFAR:
             # parse foreground statistics into a dictionary
             # compatible with bilbys prior.prob method
             recovered_parameters = {
-                "mass_1": self.foreground.m1s[indices],
-                "mass_2": self.foreground.m2s[indices],
+                "mass_1": self.foreground.m1_source[indices],
+                "mass_2": self.foreground.m2_source[indices],
+                "redshift": self.foreground.redshifts[indices],
             }
 
-            volume_time_integral = VolumeTimeIntegral(
+            sensitive_volume_calc = SensitiveVolumeCalculator(
                 source=self.source_prior,
                 recovered_parameters=recovered_parameters,
                 n_injections=self.n_injections,
-                livetime=self.foreground.livetime,
+                cosmology=self.cosmology,
             )
 
-            vt, uncertainty, n_eff = volume_time_integral.calculate_vt(
-                target=target
-            )
+            (
+                volume,
+                uncertainty,
+                n_eff,
+            ) = sensitive_volume_calc.calculate_sensitive_volume(target=target)
 
-            # convert vt into Gpc^3 yr
-            vt *= MPC3_TO_GPC3
+            # convert volume into Gpc^3
+            volume *= MPC3_TO_GPC3
             uncertainty *= MPC3_TO_GPC3
             fars.append(far)
-            vts.append(vt)
+            volumes.append(volume)
             uncertainties.append(uncertainty)
             n_effs.append(n_eff)
 
-        vts = np.array(vts)
+        volumes = np.array(volumes)
         uncertainties = np.array(uncertainties)
         n_eff = np.array(n_effs)
         self.logger.debug(uncertainties)
         self.source.data = {
             "far": fars,
-            "vt": vts,
-            "error_low": vts - uncertainties,
-            "error_high": vts + uncertainties,
+            "volume": volumes,
+            "error_low": volumes - uncertainties,
+            "error_high": volumes + uncertainties,
             "n_eff": n_effs,
             "uncertainty": uncertainties,
         }
@@ -170,7 +180,7 @@ class VolumeTimeVsFAR:
         # Add hover tool
         hover = HoverTool(
             tooltips=[
-                ("VT", "@vt"),
+                ("Volume", "@volume"),
                 ("N_eff", "@n_eff"),
                 ("Uncertainty", "@uncertainty"),
             ]

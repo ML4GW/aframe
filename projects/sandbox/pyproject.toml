@@ -33,9 +33,11 @@ inference_batch_size = 128
 minimum_frequency = 20
 reference_frequency = 50
 highpass = 32
-prior = "bbhnet.priors.priors.nonspin_bbh"
+training_prior = "bbhnet.priors.priors.nonspin_bbh"
+testing_prior = "bbhnet.priors.priors.end_o3_ratesandpops"
 fduration = 1
 valid_frac = 0.25
+cosmology = "bbhnet.priors.cosmologies.planck"
 
 [tool.typeo.scripts.generate-background]
 datadir = "${base.datadir}"
@@ -80,7 +82,7 @@ reference_frequency = "${base.reference_frequency}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 num_signals = 50000
-prior = "${base.prior}"
+prior = "${base.training_prior}"
 sample_rate = "${base.sample_rate}" 
 waveform_duration = 8
 force_generation = "${base.force_generation}"
@@ -177,13 +179,14 @@ shifts = [0, 1]
 n_slides = 10
 
 # injection parameters
-prior = "${base.prior}"
+prior = "${base.testing_prior}"
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
 spacing = 48
 buffer = 4
 jitter = 2
+cosmology = "${base.cosmology}"
 
 # misc parameters
 verbose = true
@@ -221,7 +224,7 @@ log_file = "${base.logdir}/analyze.log"
 verbose = false
 
 [tool.typeo.scripts.vizapp]
-source_prior = "bbhnet.priors.priors.nonspin_bbh"
+source_prior = "${base.testing_prior}"
 timeslides_results_dir = "${base.basedir}/timeslide_injections/"
 timeslides_strain_dir = "${base.datadir}/timeslide_injections"
 ifos = "${base.ifos}"
@@ -234,4 +237,5 @@ sample_rate = "${base.sample_rate}"
 fduration = "${base.fduration}"
 valid_frac = "${base.valid_frac}"
 logdir = "${base.basedir}"
+cosmology = "${base.cosmology}"
 verbose = true
