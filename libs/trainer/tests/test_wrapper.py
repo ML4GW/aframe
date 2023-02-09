@@ -5,7 +5,6 @@ import sys
 import pytest
 import torch
 
-from bbhnet.data.transforms.transform import Transform
 from bbhnet.trainer.wrapper import trainify
 
 
@@ -49,10 +48,11 @@ class dataset:
         return
 
 
-class Preprocessor(Transform):
+class Preprocessor(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.factor = self.add_parameter(10.0)
+        value = torch.tensor([10.0], dtype=torch.float32)
+        self.factor = torch.nn.Parameter(value, requires_grad=False)
 
     def forward(self, x):
         return self.factor * x

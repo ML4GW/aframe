@@ -11,7 +11,7 @@ To start contributing, create a [fork](https://docs.github.com/en/get-started/qu
 git clone git@github.com:johnny-tsunami/BBHNet.git
 ```
 
-or add your fork as a remote reference to an existing clone of the repo (in this case, a common practice is to rename this remote `upstream`)
+(replacing your GitHub username for `johnny-tsunami`) or add your fork as a remote reference to an existing clone of the repo (in this case, a common practice is to rename this remote `upstream`)
 
 ```console
 git remote add upstream git@github.com:ML4GW/BBHNet.git
@@ -44,12 +44,12 @@ In practice, this means structuring libraries like:
 |    |    | poetry.lock
 ```
 
-For code that either executes some specific experiment or application, it should probably be implemented as a `project`. For good examples of projects, see the [DeepClean repo](https://github.com/ML4GW/DeepClean).
+Code that produces _artifacts_ of some specific experiment (training data, optimized models, analysis plots, etc.) should be implemented as a project in the `projects` directory. Projects should be kept modular and specific to the artifact they are designed to generate, with light-weight environments.
+
+If multiple projects are meant to be executed in serial with some shared configuration, consider organizing them as a pipeline like the [`sandbox` experiment](./projects/sandbox). See this experiment's `pyproject.toml` and `README` for more information on how to organize a pipeline.
 
 ### Testing
-For any code that you contribute, make sure to add unit tests to form and validate explicit expectations about the behavior of your code. Tests should be placed in a `tests` subdirectory of each library and project, and should be structured similarly to the library code itself but with `test_` prepended to all the names.
-
-Once [#13](/../../issues/13) has been addressed, make sure you to a CI check for your unit tests to ensure that future PRs won't break the code you've worked so hard on!
+For any code that you contribute, make sure to add unit tests which explicitly state and validate expectations about the behavior of your code. Tests should be placed in a `tests` subdirectory of each library and project, and should be structured similarly to the library code itself but with `test_` prepended to all the names.
 
 ### Pre-commit hooks
 To keep the code style consistent and neat throughout the repo, we implement [pre-commit hooks](https://pre-commit.com/) to statically lint and style-check any code that wants to get added to the upstream `main` branch. You can install these hooks to run locally by installing `pre-commit` either via Poetry from the root directory

@@ -3,6 +3,7 @@ from typing import Literal, Optional
 
 import h5py
 import numpy as np
+from train.data_structures import BBHInMemoryDataset
 from train.utils import prepare_augmentation, split
 from train.validation import (
     BackgroundRecall,
@@ -12,7 +13,6 @@ from train.validation import (
 )
 
 from bbhnet.architectures import Preprocessor
-from bbhnet.data.dataloader import BBHInMemoryDataset
 from bbhnet.logging import configure_logging
 from bbhnet.trainer import trainify
 
@@ -287,7 +287,7 @@ def main(
 
     # fit our waveform injector to this background
     # to facilitate the SNR remapping
-    augmenter._modules["injector"].fit(H1=background[0], L1=background[1])
+    augmenter._modules["injector"].fit(*background)
     for module in augmenter._modules.values():
         module.to(device)
 
@@ -316,6 +316,6 @@ def main(
 
     # fit the whitening module to the background then
     # move eveyrthing to the desired device
-    preprocessor.whitener.fit(background)
+    preprocessor.whitener.fit(kernel_length, *background)
     preprocessor.whitener.to(device)
     return train_dataset, validator, preprocessor
