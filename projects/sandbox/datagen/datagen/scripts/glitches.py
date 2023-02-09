@@ -64,8 +64,8 @@ def generate_glitch_dataset(
             triggers = triggers[mask]
 
         # re-set 'start' and 'stop' so we aren't querying unnecessary data
-        file_start = np.min(triggers["time"]) - 2 * window
-        file_stop = np.max(triggers["time"]) + 2 * window
+        file_start = np.min(triggers["time"]) - window
+        file_stop = np.max(triggers["time"]) + window
 
         logging.debug(
             f"Querying {file_stop - file_start} seconds of data "
@@ -86,8 +86,8 @@ def generate_glitch_dataset(
             # restrict to triggers within current data chunk
             data = data[channel]
             times = data.times.value
-            mask = (triggers["time"] > times[0]) & (
-                triggers["time"] < times[-1]
+            mask = (triggers["time"] > times[0] + window) & (
+                triggers["time"] < times[-1] - window
             )
             chunk_triggers = triggers[mask]
             # query data for each trigger
@@ -102,11 +102,10 @@ def generate_glitch_dataset(
                     continue
                 else:
                     glitch_ts = glitch_ts.resample(sample_rate)
-                    glitches.append(glitch_ts)
+                    glitches.append(list(glitch_ts.value))
                     snrs.append(trigger["snr"])
 
-    glitches = np.array(glitches)
-    snrs = np.array(snrs)
+    glitches = np.stack(glitches)
     return glitches, snrs
 
 

@@ -18,14 +18,9 @@ workflow: &workflow
 libs/io/:  
   - *workflow
   - 'libs/io/**' 
-libs/data/:
-  - *workflow
-  - 'libs/data/**'
-  - 'ml4gw/**' 
 libs/architectures/:
   - *workflow
   - 'libs/architectures/**'
-  - 'libs/data/**'
 libs/analysis:
   - *workflow
   - 'libs/analysis/**'
@@ -38,7 +33,6 @@ libs/parallelize/:
 libs/trainer/:
   - *workflow
   - 'libs/trainer/**'
-  - 'libs/data/**'   
   - 'libs/architectures/**'
   - 'libs/logging/**'
 libs/priors:
@@ -51,7 +45,6 @@ projects/sandbox/export/:
   - 'projects/sandbox/export/**'
   - 'libs/architectures/**'
   - 'libs/base/**'
-  - 'libs/data/**'
   - 'libs/logging/**'
   - 'ml4gw/**'
   - 'hermes/hermes/hermes.quiver/**'
@@ -73,5 +66,4 @@ projects/sandbox/train/:
   - 'projects/sandbox/train/**'
   - 'libs/trainer/**'
   - 'libs/logging/**'
-  - 'libs/data/**'
   - 'ml4gw/**'

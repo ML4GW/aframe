@@ -14,7 +14,6 @@ python = ">=3.8,<3.11"
 torch = {version = "^1.12", source = "torch"}
 "hermes.typeo" = "^0.1.5"
 
-"bbhnet.data" = {path = "../data", develop = true}
 "bbhnet.architectures" = {path = "../architectures", develop = true}
 "bbhnet.logging" = {path = "../logging", develop = true}
 

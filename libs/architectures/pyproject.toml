@@ -12,7 +12,7 @@ packages = [
 python = ">=3.8,<3.11"
 torch = {version = "^1.10", source = "torch"}
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main", optional = true}
-"bbhnet.data" = {path = "../data", develop = true}
+ml4gw = {path = "../../ml4gw", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

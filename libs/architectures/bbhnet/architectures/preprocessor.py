@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from bbhnet.data.transforms import WhiteningTransform
+from ml4gw.transforms import Whitening
 
 
 class Preprocessor(torch.nn.Module):
@@ -22,11 +22,9 @@ class Preprocessor(torch.nn.Module):
         highpass: Optional[float] = None,
     ) -> None:
         super().__init__()
-        self.whitener = WhiteningTransform(
+        self.whitener = Whitening(
             num_ifos,
             sample_rate,
-            kernel_length,
-            highpass=highpass,
             fduration=fduration,
         )
 
