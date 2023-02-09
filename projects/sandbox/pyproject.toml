@@ -1,8 +1,8 @@
 [tool.pinto]
 steps = [
-    #"datagen:generate-background",
-    #"datagen:generate-waveforms",
-    #"datagen:generate-glitches",
+    "datagen:generate-background",
+    "datagen:generate-waveforms",
+    "datagen:generate-glitches",
     "train:train:resnet",
     "export:export-model:resnet",
     "datagen:generate-timeslides",
@@ -121,7 +121,7 @@ weight_decay = 1e-5
 # validation parameters
 valid_frac = "${base.valid_frac}"
 valid_stride = 0.0625
-early_stop = 50
+early_stop = 20
 monitor_metric = "glitch"
 threshold = 1.0
 checkpoint_every = 5
@@ -176,7 +176,7 @@ min_segment_length = 1024
 
 # timeslide parameters
 shifts = [0, 1]
-n_slides = 30
+n_slides = 10
 
 # injection parameters
 prior = "${base.testing_prior}"
