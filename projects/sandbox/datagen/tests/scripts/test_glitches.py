@@ -44,12 +44,7 @@ def trigger_files(ifo):
 
 
 def test_generate_glitch_dataset(
-    ifo,
-    window,
-    sample_rate,
-    snr_thresh,
-    trigger_files,
-    channel,
+    ifo, window, sample_rate, snr_thresh, trigger_files, channel
 ):
     start = 1263588390
     stop = 1263592390
