@@ -86,7 +86,7 @@ class SensitiveVolumeCalculator:
             for col in zip(*self.recovered_parameters.values())
         ]
         z_prior = self.source["redshift"]
-        zmin, zmax = [z_prior.minimum, z_prior.maximum]
+        zmin, zmax = z_prior.minimum, z_prior.maximum
 
         # if the source distribution has a dec prior,
         # use it to calculate the area on the sky
