@@ -48,7 +48,7 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     prior["mass_2"] = Uniform(5, 100, unit=msun)
     prior["mass_ratio"] = Constraint(0, 1)
     prior["redshift"] = UniformSourceFrame(
-        0, 0.5, unit=mpc, name="redshift", cosmology=cosmology
+        0, 0.5, name="redshift", cosmology=cosmology
     )
     prior["psi"] = 0
     prior["a_1"] = 0
@@ -67,7 +67,7 @@ def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     prior["mass_2"] = Uniform(5, 100, unit=msun)
     prior["mass_ratio"] = Constraint(0, 1)
     prior["redshift"] = UniformSourceFrame(
-        0, 0.5, unit=mpc, name="redshift", cosmology=cosmology
+        0, 0.5, name="redshift", cosmology=cosmology
     )
     prior["psi"] = 0
     prior["a_1"] = Uniform(0, 0.998)
