@@ -7,10 +7,11 @@ from bilby.core.prior import (
     Gaussian,
     LogNormal,
     PowerLaw,
+    PriorDict,
     Sine,
     Uniform,
 )
-from bilby.gw.prior import BBHPriorDict, UniformSourceFrame
+from bilby.gw.prior import UniformSourceFrame
 
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
@@ -23,8 +24,16 @@ mpc = "Mpc"
 rad = "rad"
 
 
-def uniform_extrinsic() -> BBHPriorDict:
-    prior = BBHPriorDict()
+def mass_ratio_constraint(samples):
+    if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
+        raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
+    out_samples = samples
+    out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
+    return out_samples
+
+
+def uniform_extrinsic() -> PriorDict:
+    prior = PriorDict(conversion_function=mass_ratio_constraint)
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
     prior["theta_jn"] = 0
@@ -33,7 +42,7 @@ def uniform_extrinsic() -> BBHPriorDict:
     return prior
 
 
-def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
+def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
@@ -52,9 +61,28 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
     return prior
 
 
+def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+    prior = uniform_extrinsic()
+    prior["mass_1"] = Uniform(5, 100, unit=msun)
+    prior["mass_2"] = Uniform(5, 100, unit=msun)
+    prior["mass_ratio"] = Constraint(0, 1)
+    prior["redshift"] = UniformSourceFrame(
+        0, 0.5, unit=mpc, name="redshift", cosmology=cosmology
+    )
+    prior["psi"] = 0
+    prior["a_1"] = Uniform(0, 0.998)
+    prior["a_2"] = Uniform(0, 0.998)
+    prior["tilt_1"] = Sine(unit=rad)
+    prior["tilt_2"] = Sine(unit=rad)
+    prior["phi_12"] = 0
+    prior["phi_jl"] = 0
+
+    return prior
+
+
 def end_o3_ratesandpops(
     cosmology: Optional["Cosmology"] = None,
-) -> BBHPriorDict:
+) -> PriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
@@ -97,7 +125,7 @@ def gaussian_masses(
 
     Returns a BBHpriorDict
     """
-    prior_dict = BBHPriorDict()
+    prior_dict = PriorDict()
     prior_dict["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
     prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
     prior_dict["redshift"] = UniformSourceFrame(
@@ -126,7 +154,7 @@ def log_normal_masses(
 
     Returns a BBHpriorDict
     """
-    prior_dict = BBHPriorDict()
+    prior_dict = PriorDict()
     prior_dict["mass_1"] = LogNormal(name="mass_1", mu=m1, sigma=sigma)
     prior_dict["mass_2"] = LogNormal(name="mass_2", mu=m2, sigma=sigma)
     prior_dict["redshift"] = UniformSourceFrame(
