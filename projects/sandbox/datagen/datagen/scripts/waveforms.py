@@ -21,6 +21,7 @@ def main(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str = "IMRPhenomPv2",
+    detector_frame_prior: bool = True,
     force_generation: bool = False,
     verbose: bool = False,
 ):
@@ -36,6 +37,7 @@ def main(
         sample_rate: rate at which to sample waveforms
         waveform_duration: length of injected waveforms
         waveform_approximant: which lalsimulation waveform approximant to use
+        detector_frame_prior: if False, converts parameters to detector frame
         force_generation: if True, generate signals even if path already exists
         verbose: log verbosely
     """
@@ -72,6 +74,7 @@ def main(
         sample_rate,
         waveform_duration,
         waveform_approximant,
+        detector_frame_prior,
     )
 
     # Write params and similar to output file

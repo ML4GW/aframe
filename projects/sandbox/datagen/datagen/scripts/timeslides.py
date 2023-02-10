@@ -55,6 +55,7 @@ def main(
     waveform_duration: float = 8,
     reference_frequency: float = 20,
     waveform_approximant: str = "IMRPhenomPv2",
+    detector_frame_prior: bool = False,
     fftlength: float = 2,
     state_flag: Optional[str] = None,
     force_generation: bool = False,
@@ -84,6 +85,7 @@ def main(
         frame_type: frame type for data discovery
         channel: strain channel to analyze
         waveform_duration: length of injected waveforms
+        detector_frame_prior: if False, converts parameters to detector frame
         reference_frequency: reference frequency for generating waveforms
         waveform_approximant: waveform model to inject
         fftlength: fftlength for calculating psd
@@ -137,6 +139,7 @@ def main(
         sample_rate,
         waveform_duration,
         waveform_approximant,
+        detector_frame_prior,
     )
     tensors, vertices = get_ifo_geometry(*ifos)
 

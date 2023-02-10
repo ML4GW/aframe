@@ -6,6 +6,13 @@ from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
 
 
+def convert_to_detector_frame(samples):
+    for key in ["mass_1", "mass_2", "chirp_mass", "total_mass"]:
+        if key in samples:
+            samples[key] = samples[key] * (1 + samples["redshift"])
+    return samples
+
+
 def generate_gw(
     sample_params: Dict[List, str],
     minimum_frequency: float,
@@ -13,6 +20,7 @@ def generate_gw(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str,
+    detector_frame_prior: bool = False,
 ):
     """Generate raw gravitational-wave signals, pre-interferometer projection.
     Args:
@@ -30,12 +38,17 @@ def generate_gw(
             Duration of waveform
         waveform_approximant:
             Name of waveform approximant to use.
+        detector_frame_prior:
+            if False, converts parameters to detector frame
     Returns:
         An (n_samples, 2, waveform_size) array, containing both polarizations
         for each of the desired number of samples.
         The waveforms are shifted such that
         the coalescence time lies at the center of the sample
     """
+
+    if not detector_frame_prior:
+        sample_params = convert_to_detector_frame(sample_params)
 
     sample_params = [
         dict(zip(sample_params, col)) for col in zip(*sample_params.values())
