@@ -3,8 +3,15 @@ from typing import Sequence, Tuple
 
 import h5py
 import numpy as np
-from bilby.core.prior import Interped
-from bilby.gw.prior import BBHPriorDict
+from bilby.core.prior import Interped, PriorDict
+
+
+def mass_ratio_constraint(samples):
+    if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
+        raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
+    out_samples = samples
+    out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
+    return out_samples
 
 
 def pdf_from_events(
@@ -51,7 +58,7 @@ def pdf_from_events(
     return grid, pdf
 
 
-def read_priors_from_file(event_file: Path, *parameters: str) -> BBHPriorDict:
+def read_priors_from_file(event_file: Path, *parameters: str) -> PriorDict:
     """
     Reads in a file containing sets of GW parameters and
     returns a set of interpolated priors
@@ -63,9 +70,9 @@ def read_priors_from_file(event_file: Path, *parameters: str) -> BBHPriorDict:
         parameters: Optional, a list of parameters to read from the file
 
     Returns:
-        prior: A BBHPriorDict with priors based on the event file
+        prior: A PriorDict with priors based on the event file
     """
-    prior = BBHPriorDict()
+    prior = PriorDict()
     with h5py.File(event_file, "r") as f:
         events = f["events"]
         field_names = parameters or events.dtype.names

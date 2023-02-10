@@ -16,20 +16,12 @@ from bilby.gw.prior import UniformSourceFrame
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
 
-from bbhnet.priors.utils import read_priors_from_file
+from bbhnet.priors.utils import mass_ratio_constraint, read_priors_from_file
 
 # Unit names
 msun = r"$M_{\odot}$"
 mpc = "Mpc"
 rad = "rad"
-
-
-def mass_ratio_constraint(samples):
-    if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
-        raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
-    out_samples = samples
-    out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
-    return out_samples
 
 
 def uniform_extrinsic() -> PriorDict:
