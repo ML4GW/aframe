@@ -9,7 +9,7 @@ from bilby.core.prior import Interped, PriorDict
 def mass_ratio_constraint(samples):
     if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
         raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
-    out_samples = samples
+    out_samples = samples.copy()
     out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
     return out_samples
 
