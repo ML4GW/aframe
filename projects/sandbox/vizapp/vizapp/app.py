@@ -41,6 +41,7 @@ class VizApp:
         self.veto_parser = veto_parser
         self.ifos = ifos
         self.source_prior = source_prior
+        self.cosmology = cosmology
 
         # load in foreground and background distributions
         self.distributions = load_results(timeslides_results_dir)

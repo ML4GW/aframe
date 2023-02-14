@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 import logging
 
+from bilby.gw.conversion import luminosity_distance_to_redshift
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, HoverTool, NumericInput
 from bokeh.plotting import figure
@@ -109,6 +110,9 @@ class VolumeTimeVsFAR:
             )
         )
 
+    def _to_redshift(self, x):
+        return luminosity_distance_to_redshift(x, self.cosmology)
+
     def calculate_vt(self, event):
         m1_mean = self.m1_selector.value
         m2_mean = self.m2_selector.value
@@ -137,12 +141,15 @@ class VolumeTimeVsFAR:
 
             # parse foreground statistics into a dictionary
             # compatible with bilbys prior.prob method
+            distances = self.foreground.distances[indices]
+            redshifts = np.array(list(map(self._to_redshift, distances)))
             recovered_parameters = {
-                "mass_1": self.foreground.m1_source[indices],
-                "mass_2": self.foreground.m2_source[indices],
-                "redshift": self.foreground.redshifts[indices],
+                "mass_1": self.foreground.m1s[indices],
+                "mass_2": self.foreground.m2s[indices],
+                "redshift": redshifts,
             }
 
+            logging.debug(f"Computing V for FAR {far}")
             sensitive_volume_calc = SensitiveVolumeCalculator(
                 source=self.source_prior,
                 recovered_parameters=recovered_parameters,
