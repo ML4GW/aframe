@@ -40,11 +40,6 @@ def waveform_duration(request):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
-def detector_frame_prior(request):
-    return request.param
-
-
 def test_generate_gw(
     prior,
     approximant,
@@ -53,11 +48,10 @@ def test_generate_gw(
     minimum_frequency,
     reference_frequency,
     n_samples,
-    detector_frame_prior,
 ):
 
     n_pols = 2
-    prior = prior()
+    prior, detector_frame_prior = prior()
     sample_params = prior.sample(n_samples)
 
     waveforms = injection.generate_gw(

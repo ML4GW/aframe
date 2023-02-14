@@ -85,7 +85,6 @@ num_signals = 50000
 prior = "${base.training_prior}"
 sample_rate = "${base.sample_rate}" 
 waveform_duration = 8
-detector_frame_prior = false
 force_generation = "${base.force_generation}"
 
 [tool.typeo.scripts.train]
@@ -181,7 +180,6 @@ n_slides = 10
 
 # injection parameters
 prior = "${base.testing_prior}"
-detector_frame_prior = false
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"

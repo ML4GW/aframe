@@ -55,7 +55,6 @@ def main(
     waveform_duration: float = 8,
     reference_frequency: float = 20,
     waveform_approximant: str = "IMRPhenomPv2",
-    detector_frame_prior: bool = False,
     fftlength: float = 2,
     state_flag: Optional[str] = None,
     force_generation: bool = False,
@@ -85,7 +84,6 @@ def main(
         frame_type: frame type for data discovery
         channel: strain channel to analyze
         waveform_duration: length of injected waveforms
-        detector_frame_prior: if False, converts parameters to detector frame
         reference_frequency: reference frequency for generating waveforms
         waveform_approximant: waveform model to inject
         fftlength: fftlength for calculating psd
@@ -131,6 +129,10 @@ def main(
     max_shift = max(shifts) * n_slides
     shifts = make_shifts(ifos, shifts, n_slides)
 
+    # extract cosmology and instantiate prior with it
+    cosmology = cosmology()
+    prior, detector_frame_prior = prior(cosmology)
+
     # grab some parameters we'll need for waveform injection
     stride = 1 / sample_rate
     waveform_generator = WaveformGenerator(
@@ -146,10 +148,6 @@ def main(
     segments = [tuple(segment) for segment in intersection]
     if chunk_length is not None:
         segments = chunk_segments(segments, chunk_length)
-
-    # extract cosmology and instantiate prior with it
-    cosmology = cosmology()
-    prior = prior(cosmology)
 
     # set up some pools for doing our data IO/injection
     with AsyncExecutor(4, thread=False) as pool:
