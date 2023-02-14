@@ -63,7 +63,8 @@ def main(
     logging.info("Prior name            : {}".format(prior.__name__))
 
     # sample gw parameters
-    params = prior().sample(num_signals)
+    prior, detector_frame_prior = prior()
+    params = prior.sample(num_signals)
 
     signals = generate_gw(
         params,
@@ -72,6 +73,7 @@ def main(
         sample_rate,
         waveform_duration,
         waveform_approximant,
+        detector_frame_prior,
     )
 
     # Write params and similar to output file

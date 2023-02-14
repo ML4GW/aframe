@@ -7,15 +7,16 @@ from bilby.core.prior import (
     Gaussian,
     LogNormal,
     PowerLaw,
+    PriorDict,
     Sine,
     Uniform,
 )
-from bilby.gw.prior import BBHPriorDict, UniformSourceFrame
+from bilby.gw.prior import UniformSourceFrame
 
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
 
-from bbhnet.priors.utils import read_priors_from_file
+from bbhnet.priors.utils import mass_ratio_constraint, read_priors_from_file
 
 # Unit names
 msun = r"$M_{\odot}$"
@@ -23,8 +24,8 @@ mpc = "Mpc"
 rad = "rad"
 
 
-def uniform_extrinsic() -> BBHPriorDict:
-    prior = BBHPriorDict()
+def uniform_extrinsic() -> PriorDict:
+    prior = PriorDict(conversion_function=mass_ratio_constraint)
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
     prior["theta_jn"] = 0
@@ -33,13 +34,13 @@ def uniform_extrinsic() -> BBHPriorDict:
     return prior
 
 
-def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
+def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
     prior["mass_ratio"] = Constraint(0, 1)
     prior["redshift"] = UniformSourceFrame(
-        0, 0.5, unit=mpc, name="redshift", cosmology=cosmology
+        0, 0.5, name="redshift", cosmology=cosmology
     )
     prior["psi"] = 0
     prior["a_1"] = 0
@@ -49,12 +50,33 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> BBHPriorDict:
     prior["phi_12"] = 0
     prior["phi_jl"] = 0
 
-    return prior
+    detector_frame_prior = True
+    return prior, detector_frame_prior
+
+
+def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+    prior = uniform_extrinsic()
+    prior["mass_1"] = Uniform(5, 100, unit=msun)
+    prior["mass_2"] = Uniform(5, 100, unit=msun)
+    prior["mass_ratio"] = Constraint(0, 1)
+    prior["redshift"] = UniformSourceFrame(
+        0, 0.5, name="redshift", cosmology=cosmology
+    )
+    prior["psi"] = 0
+    prior["a_1"] = Uniform(0, 0.998)
+    prior["a_2"] = Uniform(0, 0.998)
+    prior["tilt_1"] = Sine(unit=rad)
+    prior["tilt_2"] = Sine(unit=rad)
+    prior["phi_12"] = 0
+    prior["phi_jl"] = 0
+
+    detector_frame_prior = True
+    return prior, detector_frame_prior
 
 
 def end_o3_ratesandpops(
     cosmology: Optional["Cosmology"] = None,
-) -> BBHPriorDict:
+) -> PriorDict:
     prior = uniform_extrinsic()
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
@@ -70,7 +92,8 @@ def end_o3_ratesandpops(
     prior["phi_12"] = Uniform(0, 2 * np.pi)
     prior["phi_jl"] = 0
 
-    return prior
+    detector_frame_prior = False
+    return prior, detector_frame_prior
 
 
 def power_law_dip_break():
@@ -79,7 +102,8 @@ def power_law_dip_break():
         O1O2O3all_mass_h_iid_mag_iid_tilt_powerlaw_redshift_maxP_events_bbh.h5"
     prior |= read_priors_from_file(event_file)
 
-    return prior
+    detector_frame_prior = False
+    return prior, detector_frame_prior
 
 
 def gaussian_masses(
@@ -95,20 +119,21 @@ def gaussian_masses(
         m2: mean of the Gaussian distribution for mass 2
         sigma: standard deviation of the Gaussian distribution for both masses
 
-    Returns a BBHpriorDict
+    Returns a PriorDict
     """
-    prior_dict = BBHPriorDict()
-    prior_dict["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
-    prior_dict["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
-    prior_dict["redshift"] = UniformSourceFrame(
+    prior = PriorDict()
+    prior["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
+    prior["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
+    prior["redshift"] = UniformSourceFrame(
         name="redshift", minimum=0, maximum=2, cosmology=cosmology
     )
-    prior_dict["dec"] = Cosine(name="dec")
-    prior_dict["ra"] = Uniform(
+    prior["dec"] = Cosine(name="dec")
+    prior["ra"] = Uniform(
         name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
     )
 
-    return prior_dict
+    detector_frame_prior = True
+    return prior, detector_frame_prior
 
 
 def log_normal_masses(
@@ -124,17 +149,18 @@ def log_normal_masses(
         m2: mean of the Log Normal distribution for mass 2
         sigma: standard deviation for m1 and m2
 
-    Returns a BBHpriorDict
+    Returns a PriorDict
     """
-    prior_dict = BBHPriorDict()
-    prior_dict["mass_1"] = LogNormal(name="mass_1", mu=m1, sigma=sigma)
-    prior_dict["mass_2"] = LogNormal(name="mass_2", mu=m2, sigma=sigma)
-    prior_dict["redshift"] = UniformSourceFrame(
+    prior = PriorDict()
+    prior["mass_1"] = LogNormal(name="mass_1", mu=m1, sigma=sigma)
+    prior["mass_2"] = LogNormal(name="mass_2", mu=m2, sigma=sigma)
+    prior["redshift"] = UniformSourceFrame(
         name="redshift", minimum=0, maximum=2, cosmology=cosmology
     )
-    prior_dict["dec"] = Cosine(name="dec")
-    prior_dict["ra"] = Uniform(
+    prior["dec"] = Cosine(name="dec")
+    prior["ra"] = Uniform(
         name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
     )
 
-    return prior_dict
+    detector_frame_prior = True
+    return prior, detector_frame_prior

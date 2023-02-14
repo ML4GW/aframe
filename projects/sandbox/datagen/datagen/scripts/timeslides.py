@@ -129,6 +129,10 @@ def main(
     max_shift = max(shifts) * n_slides
     shifts = make_shifts(ifos, shifts, n_slides)
 
+    # extract cosmology and instantiate prior with it
+    cosmology = cosmology()
+    prior, detector_frame_prior = prior(cosmology)
+
     # grab some parameters we'll need for waveform injection
     stride = 1 / sample_rate
     waveform_generator = WaveformGenerator(
@@ -137,16 +141,13 @@ def main(
         sample_rate,
         waveform_duration,
         waveform_approximant,
+        detector_frame_prior,
     )
     tensors, vertices = get_ifo_geometry(*ifos)
 
     segments = [tuple(segment) for segment in intersection]
     if chunk_length is not None:
         segments = chunk_segments(segments, chunk_length)
-
-    # extract cosmology and instantiate prior with it
-    cosmology = cosmology()
-    prior = prior(cosmology)
 
     # set up some pools for doing our data IO/injection
     with AsyncExecutor(4, thread=False) as pool:

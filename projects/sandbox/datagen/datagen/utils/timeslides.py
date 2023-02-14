@@ -58,6 +58,7 @@ class WaveformGenerator:
     sample_rate: float
     waveform_duration: float
     waveform_approximant: float
+    detector_frame_prior: bool
 
     def __call__(self, parameters):
         return generate_gw(
@@ -67,6 +68,7 @@ class WaveformGenerator:
             self.sample_rate,
             self.waveform_duration,
             self.waveform_approximant,
+            self.detector_frame_prior,
         )
 
 
