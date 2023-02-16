@@ -11,14 +11,61 @@ import torch.nn as nn
 from torch import Tensor
 
 
-def get_norm_layer(groups: int) -> nn.Module:
-    class GroupNorm(nn.GroupNorm):
+class ChannelNorm(torch.nn.Module):
+    def __init__(
+        self,
+        num_channels: int,
+        num_groups: Optional[int] = None,
+        eps: float = 1e-5,
+    ):
+        super().__init__()
+        num_groups = num_groups or num_channels
+        if num_channels % num_groups:
+            raise ValueError("num_groups must be a factor of num_channels")
+
+        self.num_channels = num_channels
+        self.num_groups = num_groups
+        self.channels_per_group = self.num_channels // self.num_groups
+        self.eps = eps
+
+        shape = (self.num_channels, 1)
+        self.weight = torch.nn.Parameter(torch.ones(shape))
+        self.bias = torch.nn.Parameter(torch.zeros(shape))
+
+    def forward(self, x):
+        keepdims = self.num_groups == self.num_channels
+
+        # compute group variance via the E[x**2] - E**2[x] trick
+        mean = x.mean(-1, keepdims=keepdims)
+        sq_mean = (x**2).mean(-1, keepdims=keepdims)
+
+        # if we have groups, do some reshape magic
+        # to calculate group level stats then
+        # reshape back to full channel dimension
+        if self.num_groups != self.num_channels:
+            mean = torch.stack([mean, sq_mean], dim=1)
+            mean = mean.reshape(
+                -1, 2, self.num_groups, self.channels_per_group
+            )
+            mean = mean.mean(-1, keepdims=True)
+            mean = mean.expand(-1, -1, -1, self.channels_per_group)
+            mean = mean.reshape(-1, 2, self.num_channels, 1)
+            mean, sq_mean = mean[:, 0], mean[:, 1]
+
+        # roll the mean and variance into the
+        # weight and bias so that we have to do
+        # fewer computations along the full time axis
+        std = (sq_mean - mean**2 + self.eps) ** 0.5
+        scale = self.weight / std
+        shift = self.bias - scale * mean
+        return shift + x * scale
+
+
+def get_norm_layer(groups: Optional[int] = None) -> nn.Module:
+    class GroupNorm(ChannelNorm):
         def __init__(self, num_channels: int) -> None:
-            if groups == -1:
-                num_groups = num_channels
-            else:
-                num_groups = min(num_channels, groups)
-            super().__init__(num_groups, num_channels)
+            num_groups = None if groups is None else min(num_channels, groups)
+            super().__init__(num_channels, num_groups)
 
     return GroupNorm
 
@@ -251,7 +298,7 @@ class ResNet(nn.Module):
         width_per_group: int = 64,
         # TODO: use Literal["stride", "dilation"] once typeo fix is in
         stride_type: Optional[List[str]] = None,
-        norm_groups: int = -1,
+        norm_groups: Optional[int] = None,
     ) -> None:
         super().__init__()
         self._norm_layer = get_norm_layer(norm_groups)

@@ -6,6 +6,7 @@ from bbhnet.architectures.resnet import (
     BasicBlock,
     Bottleneck,
     BottleneckResNet,
+    ChannelNorm,
     ResNet,
     conv1,
 )
@@ -118,3 +119,49 @@ def test_resnet(
         nn = architecture(
             num_ifos, layers, kernel_size, stride_type=stride_type
         )
+
+
+@pytest.fixture(params=[None, 2])
+def num_groups(request):
+    return request.param
+
+
+@pytest.fixture(params=[2, 4])
+def num_channels(request):
+    return request.param
+
+
+def test_channel_norm(num_groups, num_channels):
+    with pytest.raises(ValueError):
+        ChannelNorm(num_channels, 3)
+
+    norm = ChannelNorm(num_channels, num_groups)
+    assert norm.num_groups == (num_groups or num_channels)
+
+    # update the norm layers weights so that
+    # we have something interesting to compare
+    optim = torch.optim.SGD(norm.parameters(), lr=1e-1)
+    for i in range(10):
+        optim.zero_grad()
+        x, y = [torch.randn(8, num_channels, 128) for _ in range(2)]
+        y = 0.2 + 0.5 * y
+        y_hat = norm(x)
+        loss = ((y_hat - y) ** 2).mean()
+        loss.backward()
+        optim.step()
+
+    # copy learned parameters into normal groupnorm
+    # and verify that outputs are similar
+    ref = torch.nn.GroupNorm(norm.num_groups, norm.num_channels)
+    ref.weight.requires_grad = False
+    ref.bias.requires_grad = False
+    ref.weight.copy_(norm.weight.data[:, 0])
+    ref.bias.copy_(norm.bias.data[:, 0])
+
+    x = torch.randn(1024, num_channels, 128)
+    y_ref = ref(x)
+    y = norm(x)
+
+    close = torch.isclose(y, y_ref, rtol=1e-6)
+    num_wrong = (~close).sum()
+    assert (num_wrong / y.numel()) < 0.01

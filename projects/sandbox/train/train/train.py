@@ -307,11 +307,7 @@ def main(
     # we just expose this as an arg? How will this fit in
     # to the broader-generalization scheme?
     preprocessor = Preprocessor(
-        2,
-        sample_rate,
-        kernel_length,
-        highpass=highpass,
-        fduration=fduration,
+        2, sample_rate=sample_rate, fduration=fduration
     )
 
     # fit the whitening module to the background then

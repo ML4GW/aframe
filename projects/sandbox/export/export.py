@@ -23,15 +23,14 @@ def export(
     repository_directory: str,
     outdir: Path,
     num_ifos: int,
-    kernel_length: float,
     inference_sampling_rate: float,
     sample_rate: float,
     batch_size: int,
     fduration: Optional[float] = None,
-    highpass: Optional[float] = None,
     weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
-    instances: Optional[int] = None,
+    bbhnet_instances: Optional[int] = None,
+    preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.ONNX,
     clean: bool = False,
     verbose: bool = False,
@@ -55,8 +54,6 @@ def export(
         num_ifos:
             The number of interferometers contained along the
             channel dimension used to train BBHNet
-        kernel_length:
-            The length, in seconds, of the input to DeepClean
         inference_sampling_rate:
             The rate at which kernels are sampled from the
             h(t) timeseries. This, along with the `sample_rate`,
@@ -90,7 +87,6 @@ def export(
     """
 
     # make relevant directories
-    logging.info(architecture)
     outdir.mkdir(exist_ok=True, parents=True)
 
     # if we didn't specify a weights filename, assume
@@ -103,39 +99,63 @@ def export(
 
     configure_logging(outdir / "export.log", verbose)
 
-    # instantiate the architecture and initialize
-    # its weights with the trained values
-    logging.info(f"Creating model and loading weights from {weights}")
+    # instantiate a new, randomly initialized version
+    # of the network architecture, including preprocessor
+    logging.info("Initializing model architecture")
     nn = architecture(num_ifos)
-    preprocessor = Preprocessor(
-        num_ifos,
-        sample_rate,
-        kernel_length,
-        fduration=fduration,
-        highpass=highpass,
-    )
+    preprocessor = Preprocessor(num_ifos, sample_rate, fduration=fduration)
     nn = torch.nn.Sequential(preprocessor, nn)
-    nn.load_state_dict(torch.load(weights, map_location=torch.device("cpu")))
+    logging.info(f"Initialize:\n{nn}")
+
+    # load in a set of trained weights and use the
+    # preprocessor's kernel_length parameter to infer
+    # the expected input dimension along the time axis
+    logging.info(f"Loading parameters from {weights}")
+    state_dict = torch.load(weights, map_location="cpu")
+    nn.load_state_dict(state_dict)
+    kernel_length = preprocessor.whitener.kernel_length.item()
+    logging.info(
+        f"Model will be exported with input kernel length of {kernel_length}s"
+    )
     nn.eval()
 
     # instantiate a model repository at the
-    # indicated location and see if a bbhnet
-    # model already exists in this repository
+    # indicated location. Split up the preprocessor
+    # and the neural network (which we'll call bbhnet)
+    # to export/scale them separately, and start by
+    # seeing if either already exists in the model repo
     repo = qv.ModelRepository(repository_directory, clean)
     try:
         bbhnet = repo.models["bbhnet"]
     except KeyError:
         bbhnet = repo.add("bbhnet", platform=platform)
 
-    # if we specified a number of bbhnet instances
-    # we want per-gpu at inference time, scale it now
-    if instances is not None:
-        scale_model(bbhnet, instances)
+    # do the same for preprocessor
+    try:
+        preproc = repo.models["preproc"]
+    except KeyError:
+        preproc = repo.add("preproc", platform=platform)
 
-    # export this version of the model (with its current
-    # weights), to this entry in the model repository
-    input_shape = (batch_size, num_ifos, int(kernel_length * sample_rate))
+    # if we specified a number of instances we want per-gpu
+    # for each model at inference time, scale them now
+    if bbhnet_instances is not None:
+        scale_model(bbhnet, bbhnet_instances)
+    if preproc_instances is not None:
+        scale_model(preproc, preproc_instances)
 
+    # start by exporting the preprocessor, then  use
+    # its inferred output shape to export the network
+    input_dim = int(kernel_length * sample_rate)
+    input_shape = (batch_size, num_ifos, input_dim)
+    preproc.export_version(
+        nn._modules["0"],
+        input_shapes={"hoft": input_shape},
+        output_names=["whitened"],
+    )
+
+    # the network will have some different keyword
+    # arguments required for export depending on
+    # the target inference platform
     # TODO: hardcoding these kwargs for now, but worth
     # thinking about a more robust way to handle this
     kwargs = {}
@@ -146,11 +166,12 @@ def export(
         # https://github.com/triton-inference-server/server/issues/3418
         bbhnet.config.optimization.graph.level = -1
     elif platform == qv.Platform.TENSORRT:
-        kwargs["use_fp16"] = False  # True  TODOD: fix this
+        kwargs["use_fp16"] = True
 
+    input_shape = tuple(preproc.config.output[0].dims)
     bbhnet.export_version(
-        nn,
-        input_shapes={"hoft": input_shape},
+        nn._modules["1"],
+        input_shapes={"whitened": input_shape},
         output_names=["discriminator"],
         **kwargs,
     )
@@ -181,18 +202,22 @@ def export(
         if snapshotter is not None:
             ensemble.add_input(snapshotter.inputs["stream"])
             ensemble.pipe(
-                snapshotter.outputs["snapshotter"], bbhnet.inputs["hoft"]
+                snapshotter.outputs["snapshotter"], preproc.inputs["hoft"]
             )
         else:
             # there's no snapshotter, so make one
             ensemble.add_streaming_inputs(
-                inputs=[bbhnet.inputs["hoft"]],
+                inputs=[preproc.inputs["hoft"]],
                 stream_size=stream_size,
                 batch_size=batch_size,
                 name="snapshotter",
                 streams_per_gpu=streams_per_gpu,
             )
             snapshotter = repo.models["snapshotter"]
+
+        # now send the outputs of the preprocessing module
+        # to the inputs of the neural network
+        ensemble.pipe(preproc.outputs["whitened"], bbhnet.inputs["whitened"])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry

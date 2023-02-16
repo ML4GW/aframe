@@ -17,9 +17,7 @@ class Preprocessor(torch.nn.Module):
         self,
         num_ifos: int,
         sample_rate: float,
-        kernel_length: float,
         fduration: Optional[float] = None,
-        highpass: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.whitener = Whitening(
