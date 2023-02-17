@@ -5,8 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple
 
+import torch
+
+from ml4gw.gw import compute_network_snr
+
 if TYPE_CHECKING:
     import bilby.core.prior.PriorDict
+
+from collections import defaultdict
 
 import gwdatafind
 import numpy as np
@@ -72,10 +78,43 @@ class WaveformGenerator:
         )
 
 
-def _generate_waveforms(sampler, generator):
-    params = sampler()
-    waveforms = generator(params)
-    return waveforms, params
+def _generate_waveforms(
+    sampler: Sampler,
+    generator: WaveformGenerator,
+    hopeless_snr_threshold: float,
+    psds: "torch.Tensor",
+    sample_rate: float,
+    highpass: float,
+):
+
+    waveforms = []
+    parameters = defaultdict(list)
+    n_rejected = 0
+    while len(waveforms) < sampler.num_signals:
+        params = sampler()
+        signals = torch.Tensor(generator(params))
+
+        # crude estimate of snrs using hplus and hcross
+        # as a proxy for H1 and L1 signals.
+        # Using full network snr would require refactoring
+        # that is not worth it at this moment given we will be
+        # rewriting this code soon. (also, this was good enough
+        # for the rates and pops group, so good enough for me)
+        snrs = compute_network_snr(signals, psds, sample_rate, highpass)
+        snrs = snrs.numpy()
+        mask = snrs > hopeless_snr_threshold
+        signals = signals[mask]
+        n_rejected += np.sum(~mask)
+        waveforms.append(signals)
+        for key, value in params.items():
+            parameters[key].extend(list(value[mask]))
+
+    waveforms = torch.cat(waveforms)
+    waveforms = waveforms[: sampler.num_signals]
+    for key, value in params.items():
+        parameters[key] = value[: sampler.num_signals]
+
+    return waveforms, parameters, n_rejected
 
 
 def waveform_iterator(
@@ -83,12 +122,32 @@ def waveform_iterator(
     sampler: Sampler,
     generator: WaveformGenerator,
     n_slides: int,
+    hopeless_snr_threshold: float,
+    psds: "torch.Tensor",
+    sample_rate: float,
+    highpass: float,
 ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
-    future = pool.submit(_generate_waveforms, sampler, generator)
+    future = pool.submit(
+        _generate_waveforms,
+        sampler,
+        generator,
+        hopeless_snr_threshold,
+        psds,
+        sample_rate,
+        highpass,
+    )
     for _ in range(n_slides - 1):
-        waveforms, params = future.result()
-        future = pool.submit(_generate_waveforms, sampler, generator)
-        yield waveforms, params
+        waveforms, params, n_rejected = future.result()
+        future = pool.submit(
+            _generate_waveforms,
+            sampler,
+            generator,
+            hopeless_snr_threshold,
+            psds,
+            sample_rate,
+            highpass,
+        )
+        yield waveforms, params, n_rejected
     yield future.result()
 
 

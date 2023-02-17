@@ -1,10 +1,10 @@
 [tool.pinto]
 steps = [
-    "datagen:generate-background",
-    "datagen:generate-waveforms",
-    "datagen:generate-glitches",
-    "train:train:resnet",
-    "export:export-model:resnet",
+    #"datagen:generate-background",
+    #"datagen:generate-waveforms",
+    #"datagen:generate-glitches",
+    #"train:train:resnet",
+    #"export:export-model:resnet",
     "datagen:generate-timeslides",
     "infer:infer",
     "analyze:analyze",
@@ -186,7 +186,7 @@ spacing = 48
 buffer = 4
 jitter = 2
 cosmology = "${base.cosmology}"
-
+hopeless_snr_threshold = 6
 # misc parameters
 verbose = true
 

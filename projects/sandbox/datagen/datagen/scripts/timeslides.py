@@ -6,6 +6,7 @@ from typing import Callable, Iterable, Optional
 import h5py
 import numpy as np
 import torch
+from bilby.core.utils.log import setup_logger
 from datagen.utils.injection import inject_waveforms
 from datagen.utils.timeslides import (
     Sampler,
@@ -29,6 +30,10 @@ from bbhnet.io.timeslides import TimeSlide
 from bbhnet.logging import configure_logging
 from bbhnet.parallelize import AsyncExecutor
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
+from ml4gw.spectral import normalize_psd
+
+# suppress annoying bilby log when calling .sample
+setup_logger(log_level="WARNING")
 
 
 @scriptify
@@ -56,6 +61,7 @@ def main(
     reference_frequency: float = 20,
     waveform_approximant: str = "IMRPhenomPv2",
     fftlength: float = 2,
+    hopeless_snr_threshold: float = 0.0,
     state_flag: Optional[str] = None,
     force_generation: bool = False,
     verbose: bool = False,
@@ -187,9 +193,6 @@ def main(
                 buffer_,
                 spacing,
             )
-            waveform_it = waveform_iterator(
-                pool, sampler, waveform_generator, num_shifts
-            )
 
             # begin the download of data in a separate thread
             logging.debug(f"Beginning download of segment {seg_str}")
@@ -202,7 +205,28 @@ def main(
                 segment_stop,
             )
 
+            psds = []
+            df = 1 / waveform_duration
+            for ifo in ifos:
+                psd = normalize_psd(
+                    background[ifo], df, sample_rate, sample_rate, fftlength
+                )
+                psds.append(psd)
+
+            psds = torch.tensor(np.stack(psds), dtype=torch.float64)
+
             logging.debug(f"Completed download of segment {seg_str}")
+
+            waveform_it = waveform_iterator(
+                pool,
+                sampler,
+                waveform_generator,
+                num_shifts,
+                hopeless_snr_threshold,
+                psds,
+                sample_rate,
+                highpass,
+            )
 
             # set up array of times for all shifts
 
@@ -210,8 +234,10 @@ def main(
 
             futures = []
             it = zip(waveform_it, segment_shifts)
+            # keep track of the total number of waveforms
+            # we've rejected as hopeless
 
-            for (waveforms, parameters), shift in it:
+            for (waveforms, parameters, n_rejected), shift in it:
                 logging.debug(
                     "Creating timeslide for segment {} "
                     "with shifts {}".format(seg_str, shift)
@@ -267,17 +293,6 @@ def main(
                 # 4. Compute the SNRs of the injected waveforms
                 # to record as metadata with the injections
 
-                # create psds from background timeseries
-                # and pack up into tensors compatible
-                # with ml4gw compute_ifo_snr
-                df = 1 / (signals.shape[-1] / sample_rate)
-                psds = []
-                for ifo in ifos:
-                    psd = background[ifo].psd(fftlength).interpolate(df)
-                    psd = torch.tensor(psd.value, dtype=torch.float64)
-                    psds.append(psd)
-                psds = torch.stack(psds)
-
                 snrs = compute_ifo_snr(
                     signals.type(torch.float64),
                     psds,
@@ -323,11 +338,11 @@ def main(
                     "luminosity_distance"
                 ] = cosmology.luminosity_distance(parameters["redshift"])
 
-                # Use redshift to convert sampled masses to source frame
-                parameters["mass1_source"] = parameters["mass_1"] / (
+                # save source frame parameters
+                parameters["mass_1_source"] = parameters["mass_1"] / (
                     1 + parameters["redshift"]
                 )
-                parameters["mass2_source"] = parameters["mass_2"] / (
+                parameters["mass_2_source"] = parameters["mass_2"] / (
                     1 + parameters["redshift"]
                 )
 
@@ -344,6 +359,19 @@ def main(
                             dataset = f[k]
                             dataset.resize(len(dataset) + len(v), axis=0)
                             dataset[-len(v) :] = v
+
+                    # update total amount of rejected waveforms for this shift
+                    try:
+                        total_rejected = f.attrs["n_rejected"]
+                    except KeyError:
+                        total_rejected = 0
+
+                    total_rejected += n_rejected
+                    f.attrs.update(
+                        {
+                            "n_rejected": total_rejected,
+                        }
+                    )
 
             # don't move on until we've finished writing
             # everything so that we don't accidentally
