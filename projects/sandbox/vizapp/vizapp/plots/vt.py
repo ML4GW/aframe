@@ -132,6 +132,9 @@ class VolumeTimeVsFAR:
         volumes = []
         uncertainties = []
         n_effs = []
+
+        self.logger.debug("Converting distances to redshifts")
+        redshifts = self._to_redshift(self.foreground.distances)
         for far in self.fars:
             self.figure.title.text = (
                 f"VT vs FAR for m1 = {m1_mean}, m2 = {m2_mean},  sd = {sigma}"
@@ -141,12 +144,10 @@ class VolumeTimeVsFAR:
 
             # parse foreground statistics into a dictionary
             # compatible with bilbys prior.prob method
-            distances = self.foreground.distances[indices]
-            redshifts = np.array(list(map(self._to_redshift, distances)))
             recovered_parameters = {
                 "mass_1": self.foreground.m1s[indices],
                 "mass_2": self.foreground.m2s[indices],
-                "redshift": redshifts,
+                "redshift": redshifts[indices],
             }
 
             logging.debug(f"Computing V for FAR {far}")
