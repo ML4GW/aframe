@@ -11,7 +11,7 @@ dependencies:
   # omicron dependencies
   - python-ligo-lw
   - pyomicron
-  - omicron
+  - omicron>=4.0.0
   - dqsegdb2
   - uproot
   # injection dependencies
