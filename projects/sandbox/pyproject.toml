@@ -1,10 +1,10 @@
 [tool.pinto]
 steps = [
-    #"datagen:generate-background",
-    #"datagen:generate-waveforms",
-    #"datagen:generate-glitches",
-    #"train:train:resnet",
-    #"export:export-model:resnet",
+    "datagen:generate-background",
+    "datagen:generate-waveforms",
+    "datagen:generate-glitches",
+    "train:train:resnet",
+    "export:export-model:resnet",
     "datagen:generate-timeslides",
     "infer:infer",
     "analyze:analyze",

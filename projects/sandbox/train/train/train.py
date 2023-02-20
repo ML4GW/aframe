@@ -287,8 +287,11 @@ def main(
 
     # fit our waveform injector to this background
     # to facilitate the SNR remapping
-    augmenter._modules["injector"].fit(*background)
     for module in augmenter._modules.values():
+        try:
+            module.fit(*background)
+        except AttributeError:
+            pass
         module.to(device)
 
     # create full training dataloader

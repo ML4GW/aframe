@@ -133,3 +133,27 @@ class GlitchSampler(torch.nn.Module):
             # strain data with the sampled glitches
             X[mask, i] = glitches[:, 0]
         return X, y
+
+
+class SignalInverter(torch.nn.Module):
+    def __init__(self, prob: float = 0.5):
+        super().__init__()
+        self.prob = prob
+
+    def forward(self, X, y):
+        if self.training:
+            mask = torch.rand(size=X.shape[:-1]) < self.prob
+            X[mask] *= -1
+        return X, y
+
+
+class SignalReverser(torch.nn.Module):
+    def __init__(self, prob: float = 0.5):
+        super().__init__()
+        self.prob = prob
+
+    def forward(self, X, y):
+        if self.training:
+            mask = torch.rand(size=X.shape[:-1]) < self.prob
+            X[mask] = X[mask].flip(-1)
+        return X, y
