@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Dict,
     Iterable,
+    List,
     Optional,
     Sequence,
     Tuple,
@@ -74,6 +75,47 @@ class Metric(torch.nn.Module):
 
     def __contains__(self, threshold):
         return threshold in self.thresholds
+
+
+class MultiThresholdAUROC(Metric):
+    name = "AUROC"
+    param = "max_fpr"
+
+    def call(self, signal_preds, background_preds):
+        x = torch.cat([signal_preds, background_preds])
+        y = torch.zeros_like(x)
+        thresholds = torch.Tensor(self.thresholds).to(y.device)
+        y[: len(signal_preds)] = 1
+
+        idx = torch.argsort(x, descending=True)
+        y = y[idx]
+
+        tpr = torch.cumsum(y, -1) / y.sum()
+        fpr = torch.cumsum(1 - y, -1) / (1 - y).sum()
+        dfpr = fpr.diff()
+        dtpr = tpr.diff()
+
+        mask = fpr[:-1, None] <= thresholds
+        dfpr = dfpr[:, None] * mask
+        integral = (tpr[:-1, None] + dtpr[:, None] * 0.5) * dfpr
+        return integral.sum(0)
+
+
+class BackgroundAUROC(MultiThresholdAUROC):
+    def __init__(
+        self, kernel_size: int, stride: int, thresholds: List[float]
+    ) -> None:
+        super().__init__(thresholds)
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+    def call(self, background, _, signal):
+        background = background.unsqueeze(0)
+        background = torch.nn.functional.max_pool1d(
+            background, kernel_size=self.kernel_size, stride=self.stride
+        )
+        background = background[0]
+        return super().call(signal, background)
 
 
 class BackgroundRecall(Metric):

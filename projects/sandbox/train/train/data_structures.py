@@ -76,12 +76,47 @@ class BBHInMemoryDataset(InMemoryDataset):
 
 
 class BBHNetWaveformInjection(RandomWaveformInjection):
+    def __init__(self, *args, **kwargs):
+        try:
+            glitch_prob = kwargs.pop("glitch_prob")
+            downweight = kwargs.pop("downweight")
+            prob = kwargs.pop("prob")
+        except KeyError:
+            self.downweight = 1
+        else:
+            # not to sound like Fermat but I have a
+            # derivation of this somewhere that I
+            # can't quite find at the moment
+            prob = prob / (1 - glitch_prob * (1 - downweight)) ** 2
+            kwargs["prob"] = prob
+            self.downweight = downweight
+
+        super().__init__(*args, **kwargs)
+
     def forward(self, X: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         if not self.training:
             return X, y
 
-        X, idx, _ = super().forward(X)
-        y[idx] = 1
+        # y == -2 means one glitch, y == -6 means two
+        probs = torch.ones_like(y) * self.prob
+        probs[y < 0] *= self.downweight
+        probs[y < -4] *= self.downweight
+        rvs = torch.rand(size=X.shape[:1], device=probs.device)
+        mask = rvs < probs[:, 0]
+
+        # sample the desired number of waveforms and inject them
+        N = mask.sum().item()
+        waveforms, _ = self.sample(N)
+        waveforms = sample_kernels(
+            waveforms,
+            kernel_size=X.shape[-1],
+            max_center_offset=self.trigger_offset,
+            coincident=True,
+        )
+        X[mask] += waveforms
+
+        # make targets positive if they're injected
+        y[mask] = -y[mask] + 1
         return X, y
 
 
@@ -132,6 +167,11 @@ class GlitchSampler(torch.nn.Module):
             # replace the appropriate channel in our
             # strain data with the sampled glitches
             X[mask, i] = glitches[:, 0]
+
+            # use bash file permissions style
+            # numbers to indicate which channels
+            # go inserted on
+            y[mask] -= 2 ** (i + 1)
         return X, y
 
 

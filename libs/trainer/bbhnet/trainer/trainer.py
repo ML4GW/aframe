@@ -27,6 +27,7 @@ def train_for_one_epoch(
 
     for samples, targets in train_dataset:
         optimizer.zero_grad(set_to_none=True)  # reset gradient
+        targets = torch.clamp(targets, 0, 1)
 
         # do forward step in mixed precision
         # hard code false for now

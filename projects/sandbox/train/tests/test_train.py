@@ -113,6 +113,7 @@ def test_train(
         outdir,
         glitch_prob=glitch_prob,
         waveform_prob=0.5,
+        glitch_downweight=0.8,
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         batch_size=512,
@@ -216,7 +217,6 @@ def test_train(
         np.zeros(h1_glitches),
         atol=1.1e-01,
     )
-    print(num_kernels, h1_glitches)
 
     # Signal DataLoader
     # Check shape
