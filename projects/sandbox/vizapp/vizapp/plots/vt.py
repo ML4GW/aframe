@@ -30,8 +30,6 @@ class VolumeTimeVsFAR:
         self.height = height
         self.width = width
         self.cosmology = cosmology
-        self.keys = list(source_prior.keys())
-
         self.sensitive_volume_calc = SensitiveVolumeCalculator(
             source=source_prior,
             cosmology=self.cosmology,
@@ -127,7 +125,7 @@ class VolumeTimeVsFAR:
         self.logger.debug(
             f"Calculating VT for m1 = {m1_mean}, m2 = {m2_mean}, sd = {sigma}"
         )
-        target = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
+        target, _ = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
 
         fars = []
         volumes = []
