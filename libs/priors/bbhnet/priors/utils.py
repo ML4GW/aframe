@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Sequence, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 import h5py
 import numpy as np
@@ -12,6 +12,10 @@ def mass_ratio_constraint(samples):
     out_samples = samples.copy()
     out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
     return out_samples
+
+
+def transpose(d: Dict[str, List]):
+    return [dict(zip(d, col)) for col in zip(*d.values())]
 
 
 def pdf_from_events(

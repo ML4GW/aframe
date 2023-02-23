@@ -9,6 +9,7 @@ from bbhnet.analysis.sensitivity import (
     SensitiveVolumeCalculator,
     calculate_astrophysical_volume,
 )
+from bbhnet.priors.utils import transpose
 
 
 @pytest.fixture()
@@ -28,20 +29,13 @@ def prior():
 
 
 def test_sensitive_volume(prior):
-    sensitive_volume_calculator = SensitiveVolumeCalculator(
-        source=prior,
-        recovered_parameters=prior.sample(100),
-        n_injections=100,
-    )
+    sensitive_volume_calculator = SensitiveVolumeCalculator(prior)
+    recovered_parameters = prior.sample(100)
+    recovered_parameters = transpose(recovered_parameters)
 
     # calculating weights without target
     # should produce weights of 1s
-    weights = sensitive_volume_calculator.weights()
-    assert all(weights == 1)
-
-    # calculating weights with source
-    # as target should alo produce weights of 1s
-    weights = sensitive_volume_calculator.weights(target=prior)
+    weights = sensitive_volume_calculator.weights(recovered_parameters, prior)
     assert all(weights == 1)
 
     # all weights are 1, so setting the volume to 1
@@ -51,7 +45,7 @@ def test_sensitive_volume(prior):
         sensitive_volume,
         _,
         _,
-    ) = sensitive_volume_calculator.calculate_sensitive_volume()
+    ) = sensitive_volume_calculator(recovered_parameters, 100)
     assert sensitive_volume == sensitive_volume_calculator.volume.value
 
     # TODO: add test for calculating vt with non-trivial target

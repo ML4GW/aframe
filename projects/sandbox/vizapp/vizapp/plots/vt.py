@@ -8,13 +8,13 @@ if TYPE_CHECKING:
 
 import logging
 
-from bilby.gw.conversion import luminosity_distance_to_redshift
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, HoverTool, NumericInput
 from bokeh.plotting import figure
 
 from bbhnet.analysis.sensitivity import SensitiveVolumeCalculator
 from bbhnet.priors.priors import gaussian_masses
+from bbhnet.priors.utils import transpose
 
 MPC3_TO_GPC3 = 1e-9
 
@@ -29,9 +29,13 @@ class VolumeTimeVsFAR:
     ):
         self.height = height
         self.width = width
-        self.source_prior = source_prior
         self.cosmology = cosmology
-        self.keys = self.source_prior.keys()
+        self.keys = list(source_prior.keys())
+
+        self.sensitive_volume_calc = SensitiveVolumeCalculator(
+            source=source_prior,
+            cosmology=self.cosmology,
+        )
 
         self.fars = np.logspace(0, 7, 7)
         self.configure_sources()
@@ -110,9 +114,6 @@ class VolumeTimeVsFAR:
             )
         )
 
-    def _to_redshift(self, x):
-        return luminosity_distance_to_redshift(x, self.cosmology)
-
     def calculate_vt(self, event):
         m1_mean = self.m1_selector.value
         m2_mean = self.m2_selector.value
@@ -132,9 +133,6 @@ class VolumeTimeVsFAR:
         volumes = []
         uncertainties = []
         n_effs = []
-
-        self.logger.debug("Converting distances to redshifts")
-        redshifts = self._to_redshift(self.foreground.distances)
         for far in self.fars:
             self.figure.title.text = (
                 f"VT vs FAR for m1 = {m1_mean}, m2 = {m2_mean},  sd = {sigma}"
@@ -147,22 +145,14 @@ class VolumeTimeVsFAR:
             recovered_parameters = {
                 "mass_1": self.foreground.m1s[indices],
                 "mass_2": self.foreground.m2s[indices],
-                "redshift": redshifts[indices],
+                "redshift": self.foreground.redshifts[indices],
             }
+            recovered_parameters = transpose(recovered_parameters)
 
             logging.debug(f"Computing V for FAR {far}")
-            sensitive_volume_calc = SensitiveVolumeCalculator(
-                source=self.source_prior,
-                recovered_parameters=recovered_parameters,
-                n_injections=self.n_injections,
-                cosmology=self.cosmology,
+            volume, uncertainty, n_eff = self.sensitive_volume_calc(
+                recovered_parameters, self.n_injections, target
             )
-
-            (
-                volume,
-                uncertainty,
-                n_eff,
-            ) = sensitive_volume_calc.calculate_sensitive_volume(target=target)
 
             # convert volume into Gpc^3
             volume *= MPC3_TO_GPC3

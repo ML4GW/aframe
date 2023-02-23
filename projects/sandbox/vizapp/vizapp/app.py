@@ -51,7 +51,11 @@ class VizApp:
         for norm, results in self.distributions.items():
 
             foreground = get_foreground(
-                results, timeslides_strain_dir, timeslides_results_dir, norm
+                results,
+                timeslides_strain_dir,
+                timeslides_results_dir,
+                cosmology,
+                norm,
             )
             self.foregrounds[norm] = foreground
 
