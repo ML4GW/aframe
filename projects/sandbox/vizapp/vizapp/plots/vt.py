@@ -14,6 +14,7 @@ from bokeh.plotting import figure
 
 from bbhnet.analysis.sensitivity import SensitiveVolumeCalculator
 from bbhnet.priors.priors import gaussian_masses
+from bbhnet.priors.utils import transpose
 
 MPC3_TO_GPC3 = 1e-9
 
@@ -28,9 +29,11 @@ class VolumeTimeVsFAR:
     ):
         self.height = height
         self.width = width
-        self.source_prior = source_prior
         self.cosmology = cosmology
-        self.keys = self.source_prior.keys()
+        self.sensitive_volume_calc = SensitiveVolumeCalculator(
+            source=source_prior,
+            cosmology=self.cosmology,
+        )
 
         self.fars = np.logspace(0, 7, 7)
         self.configure_sources()
@@ -122,7 +125,7 @@ class VolumeTimeVsFAR:
         self.logger.debug(
             f"Calculating VT for m1 = {m1_mean}, m2 = {m2_mean}, sd = {sigma}"
         )
-        target = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
+        target, _ = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
 
         fars = []
         volumes = []
@@ -138,23 +141,16 @@ class VolumeTimeVsFAR:
             # parse foreground statistics into a dictionary
             # compatible with bilbys prior.prob method
             recovered_parameters = {
-                "mass_1": self.foreground.m1_source[indices],
-                "mass_2": self.foreground.m2_source[indices],
+                "mass_1": self.foreground.m1s[indices],
+                "mass_2": self.foreground.m2s[indices],
                 "redshift": self.foreground.redshifts[indices],
             }
+            recovered_parameters = transpose(recovered_parameters)
 
-            sensitive_volume_calc = SensitiveVolumeCalculator(
-                source=self.source_prior,
-                recovered_parameters=recovered_parameters,
-                n_injections=self.n_injections,
-                cosmology=self.cosmology,
+            logging.debug(f"Computing V for FAR {far}")
+            volume, uncertainty, n_eff = self.sensitive_volume_calc(
+                recovered_parameters, self.n_injections, target
             )
-
-            (
-                volume,
-                uncertainty,
-                n_eff,
-            ) = sensitive_volume_calc.calculate_sensitive_volume(target=target)
 
             # convert volume into Gpc^3
             volume *= MPC3_TO_GPC3

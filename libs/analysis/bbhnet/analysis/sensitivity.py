@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from astropy import cosmology as cosmo
 from astropy import units as u
@@ -53,6 +53,7 @@ def calculate_astrophysical_volume(
         / (1 + z)
         * (cosmology.differential_comoving_volume(z)).value
     )
+
     volume, _ = quad(integrand, zmin, zmax) * u.Mpc**3 * omega
     return volume
 
@@ -75,16 +76,9 @@ class SensitiveVolumeCalculator:
     """
 
     source: "bilby.core.prior.PriorDict"
-    recovered_parameters: Dict[str, np.ndarray]
-    n_injections: int
     cosmology: "Cosmology" = cosmo.Planck15
 
     def __post_init__(self):
-        # convert recovered parameters to a list of dictionaries
-        self.recovered_parameters = [
-            dict(zip(self.recovered_parameters, col))
-            for col in zip(*self.recovered_parameters.values())
-        ]
         z_prior = self.source["redshift"]
         zmin, zmax = z_prior.minimum, z_prior.maximum
 
@@ -108,27 +102,26 @@ class SensitiveVolumeCalculator:
             cosmology=self.cosmology,
         )
 
-    def weights(self, target: Optional["bilby.core.prior.PriorDict"] = None):
+    def weights(
+        self,
+        recovered_parameters: Dict[str, np.ndarray],
+        target: "bilby.core.prior.PriorDict",
+    ):
         """
         Calculate the weights for the samples.
         """
-
-        # if no target distribution is passed,
-        # use the source distribution
-        if target is None:
-            target = self.source
-
         weights = []
-        for sample in self.recovered_parameters:
+        for sample in recovered_parameters:
             # calculate the weight for each sample
             # using the source and target distributions
             weight = target.prob(sample) / self.source.prob(sample)
             weights.append(weight)
-
         return np.array(weights)
 
-    def calculate_sensitive_volume(
+    def __call__(
         self,
+        recovered_parameters: List[Dict[str, float]],
+        num_injections: int,
         target: Optional["bilby.core.prior.PriorDict"] = None,
     ):
         """
@@ -143,14 +136,17 @@ class SensitiveVolumeCalculator:
 
         Returns tuple of (vt, std, n_eff)
         """
-        weights = self.weights(target)
-        mu = np.sum(weights) / self.n_injections
 
-        v0 = self.volume
-        v = mu * v0
+        if target is not None:
+            weights = self.weights(recovered_parameters, target)
+            mu = np.sum(weights) / num_injections
+            variance = np.sum(weights**2) / num_injections**2
+        else:
+            mu = len(recovered_parameters) / num_injections
+            variance = len(recovered_parameters) / num_injections**2
 
-        variance = np.sum(weights**2) / self.n_injections**2
-        variance -= mu**2 / self.n_injections
+        variance -= mu**2 / num_injections
+        v = mu * self.volume
         variance *= v**2
 
         std = np.sqrt(variance)

@@ -2,11 +2,15 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 import h5py
 import numpy as np
+from bilby.gw.conversion import luminosity_distance_to_redshift
 from vizapp import path_utils
+
+if TYPE_CHECKING:
+    from astropy.cosmology import Cosmology
 
 from bbhnet.analysis.distributions import ClusterDistribution
 
@@ -50,6 +54,7 @@ class Foreground:
     fars: np.ndarray
     snrs: np.ndarray
     distances: np.ndarray
+    redshifts: np.ndarray
     m1s: np.ndarray
     m2s: np.ndarray
     ras: np.ndarray
@@ -66,6 +71,7 @@ def get_foreground(
     results: AnalysisResults,
     strain_dir: Path,
     results_dir: Path,
+    cosmology: "Cosmology",
     norm: Optional[float] = None,
 ) -> Foreground:
     int_dirname = path_utils.get_response_dirname("foreground", norm)
@@ -148,4 +154,7 @@ def get_foreground(
             events["livetime"] = results.foreground.Tb
 
     events = {k: np.array(v) for k, v in events.items()}
+    events["redshifts"] = luminosity_distance_to_redshift(
+        events["distances"], cosmology
+    )
     return Foreground(**events)
