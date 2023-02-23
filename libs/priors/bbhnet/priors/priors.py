@@ -16,7 +16,7 @@ from bilby.gw.prior import UniformSourceFrame
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
 
-from bbhnet.priors.utils import mass_ratio_constraint, read_priors_from_file
+from bbhnet.priors.utils import mass_constraints, read_priors_from_file
 
 # Unit names
 msun = r"$M_{\odot}$"
@@ -25,7 +25,7 @@ rad = "rad"
 
 
 def uniform_extrinsic() -> PriorDict:
-    prior = PriorDict(conversion_function=mass_ratio_constraint)
+    prior = PriorDict(conversion_function=mass_constraints)
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
     prior["theta_jn"] = 0

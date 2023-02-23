@@ -2,7 +2,7 @@
 name = "bbhnet.priors"
 version = "0.1.0"
 description = "Standardized priors for BBHnet"
-authors = ["William Benoit, Ethan Jacob Marx <ethan.marx@ligo.org>"]
+authors = ["William Benoit <benoi090@umn.edu>, Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
 packages = [{include = "bbhnet"}]
 
