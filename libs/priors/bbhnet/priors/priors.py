@@ -81,6 +81,7 @@ def end_o3_ratesandpops(
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=2, maximum=100, unit=msun)
     prior["mass_2"] = PowerLaw(alpha=1, minimum=2, maximum=100, unit=msun)
     prior["mass_ratio"] = Constraint(0.02, 1)
+    prior["chirp_mass"] = Constraint(10, 100)
     prior["redshift"] = UniformSourceFrame(
         0, 2, name="redshift", cosmology=cosmology
     )
