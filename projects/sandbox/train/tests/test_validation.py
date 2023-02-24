@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import torch
 from train import validation
 
@@ -54,6 +55,10 @@ def test_make_glitches():
     background = validation.make_background(background, 10, 5)
 
     glitches = [torch.zeros((9, 12)), torch.ones((11, 12))]
+
+    with pytest.raises(ValueError) as exc:
+        validation.make_glitches(glitches, background, 1)
+    assert str(exc.value).startswith("There are more coincident")
 
     # put wrong values at the edges to make sure
     # that these get appropriate sliced out

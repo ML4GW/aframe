@@ -88,6 +88,11 @@ class BBHNetWaveformInjection(RandomWaveformInjection):
             # derivation of this somewhere that I
             # can't quite find at the moment
             prob = prob / (1 - glitch_prob * (1 - downweight)) ** 2
+            if not 0 < prob <= 1.0:
+                raise ValueError(
+                    "Probability must be between 0 and 1. Adjust the value(s) "
+                    "of waveform_prob, glitch_prob, and/or downweight"
+                )
             kwargs["prob"] = prob
             self.downweight = downweight
 
