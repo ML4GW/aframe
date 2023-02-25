@@ -199,6 +199,22 @@ def test_bbhnet_waveform_injection(rand_mock):
 
 @pytest.mark.parametrize("downweight", [0, 0.5, 1])
 def test_bbhnet_waveform_injection_with_downweight(downweight):
+    if downweight == 0.5:
+        with pytest.raises(ValueError) as exc:
+            tform = BBHNetWaveformInjection(
+                sample_rate=128,
+                ifos=["H1", "L1"],
+                dec=lambda N: torch.zeros((N,)),
+                psi=lambda N: torch.zeros((N,)),
+                phi=lambda N: torch.zeros((N,)),
+                prob=0.9,
+                glitch_prob=0.25,
+                downweight=downweight,
+                plus=torch.zeros((100, 128 * 2)),
+                cross=torch.zeros((100, 128 * 2)),
+            )
+        assert str(exc.value).startswith("Probability must be")
+
     tform = BBHNetWaveformInjection(
         sample_rate=128,
         ifos=["H1", "L1"],

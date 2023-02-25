@@ -345,6 +345,12 @@ def make_glitches(
     num_h1, num_l1 = len(h1_glitches), len(l1_glitches)
     num_glitches = num_h1 + num_l1
     num_coinc = int(glitch_frac**2 * num_glitches / (1 + glitch_frac**2))
+    if num_coinc > min(num_h1, num_l1):
+        raise ValueError(
+            f"There are more coincident glitches ({num_coinc}) that there "
+            "are glitches in one of the ifo glitch datasets. Hanford: "
+            "{num_h1}, Livingston: {num_l1}"
+        )
 
     h1_coinc, h1_glitches = split(h1_glitches, num_coinc / num_h1, 0)
     l1_coinc, l1_glitches = split(l1_glitches, num_coinc / num_l1, 0)

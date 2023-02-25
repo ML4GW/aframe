@@ -12,7 +12,7 @@ from train.data_structures import (
     SignalReverser,
 )
 
-from ml4gw.distributions import Cosine, LogNormal, Uniform
+from ml4gw.distributions import Cosine, Uniform
 
 Tensor = TypeVar("Tensor", np.ndarray, torch.Tensor)
 
@@ -40,6 +40,11 @@ def split(X: Tensor, frac: float, axis: int) -> Tuple[Tensor, Tensor]:
     """
 
     size = int(frac * X.shape[axis])
+    # Catches fp error that sometimes happens when size should be an exact int
+    # Is there a better way to do this?
+    if np.abs(frac * X.shape[axis] - size - 1) < 1e-10:
+        size += 1
+
     if isinstance(X, np.ndarray):
         return np.split(X, [size], axis=axis)
     else:
@@ -55,9 +60,6 @@ def prepare_augmentation(
     glitch_downweight: float,
     sample_rate: float,
     highpass: float,
-    mean_snr: float,
-    std_snr: float,
-    min_snr: Optional[float] = None,
     trigger_distance: float = 0,
     valid_frac: Optional[float] = None,
 ):
@@ -117,7 +119,7 @@ def prepare_augmentation(
         dec=Cosine(),
         psi=Uniform(0, pi),
         phi=Uniform(-pi, pi),
-        snr=LogNormal(mean_snr, std_snr, min_snr),
+        snr=-1,
         sample_rate=sample_rate,
         highpass=highpass,
         prob=waveform_prob,
