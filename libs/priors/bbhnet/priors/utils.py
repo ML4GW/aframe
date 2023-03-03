@@ -6,6 +6,14 @@ import numpy as np
 from bilby.core.prior import Interped, PriorDict
 
 
+def mass_condition_powerlaw(reference_params, mass_1):
+    return dict(
+        alpha=reference_params["alpha"],
+        minimum=reference_params["minimum"],
+        maximum=mass_1,
+    )
+
+
 def mass_constraints(samples):
     if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
         raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
