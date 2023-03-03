@@ -5,8 +5,8 @@ from typing import List
 import h5py
 import numpy as np
 from gwdatafind import find_urls
-from gwpy.segments import DataQualityDict
 from gwpy.timeseries import TimeSeries
+from mldatafind.segments import query_segments
 from typeo import scriptify
 
 from bbhnet.logging import configure_logging
@@ -77,28 +77,16 @@ def main(
 
     # query segments for each ifo
     # I think a certificate is needed for this
-    segments = DataQualityDict.query_dqsegdb(
-        [f"{ifo}:{state_flag}" for ifo in ifos],
-        start,
-        stop,
-    )
+    flags = [f"{ifo}:{state_flag}" for ifo in ifos]
+    segments = query_segments(flags, start, stop, minimum_length)
 
-    # create copy of first ifo segment list to start
-    intersection = segments[f"{ifos[0]}:{state_flag}"].active.copy()
-
-    # loop over ifos finding segment intersection
-    for ifo in ifos:
-        intersection &= segments[f"{ifo}:{state_flag}"].active
-
-    # find first continuous segment of minimum length
-    for seg_start, seg_stop in intersection:
-        if (seg_stop - seg_start) >= minimum_length:
-            break
-    else:
+    if len(segments) == 0:
         raise ValueError(
             "No segments of minimum length, not producing background"
         )
 
+    # choose first of such segments
+    segment = segments[0]
     logging.info(
         "Querying coincident, continuous segment "
         "from {} to {}".format(seg_start, seg_stop)
@@ -119,7 +107,7 @@ def main(
         )
 
         # resample
-        data = data.resample(sample_rate)
+        data.resample(sample_rate)
 
         if np.isnan(data).any():
             raise ValueError(
