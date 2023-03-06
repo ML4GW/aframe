@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     import bilby
@@ -9,7 +10,14 @@ if TYPE_CHECKING:
 import logging
 
 from bokeh.layouts import column, row
-from bokeh.models import Button, ColumnDataSource, HoverTool, NumericInput
+from bokeh.models import (
+    Button,
+    ColumnDataSource,
+    DataTable,
+    HoverTool,
+    NumericInput,
+    TableColumn,
+)
 from bokeh.plotting import figure
 
 from bbhnet.analysis.sensitivity import SensitiveVolumeCalculator
@@ -72,7 +80,46 @@ class VolumeTimeVsFAR:
             line_width=2,
         )
 
-        self.layout = row(self.widgets, self.figure)
+        self.data_table = DataTable(
+            source=ColumnDataSource(
+                pd.DataFrame(
+                    {
+                        "m1_m2": [
+                            "35  35",
+                            "35  20",
+                            "20  20",
+                            "20  10",
+                            "10  10",
+                            "10  5",
+                        ],
+                        "Py_CBC": [
+                            "12.64",
+                            "7.35",
+                            "4.17",
+                            "1.91",
+                            "0.82",
+                            "0.32",
+                        ],
+                        "Gst_LAL": [
+                            "10.54",
+                            "5.91",
+                            "3.44",
+                            "1.54",
+                            "0.67",
+                            "0.26",
+                        ],
+                    }
+                )
+            ),
+            columns=[
+                TableColumn(
+                    field="m1_m2", title="Masses: m1 m2 (Solar Masses)"
+                ),
+                TableColumn(field="Py_CBC", title="PyCBC (Gpc^3)"),
+                TableColumn(field="Gst_LAL", title="GstLAL (Gpc^3)"),
+            ],
+        )
+        self.layout = row(self.widgets, self.figure, self.data_table)
 
     def configure_widgets(self):
         self.m1_selector = NumericInput(
