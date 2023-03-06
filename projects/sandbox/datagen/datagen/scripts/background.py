@@ -110,8 +110,10 @@ def main(
                 f"The background for ifo {ifo} contains NaN values"
             )
 
-        with h5py.File(datadir / f"{ifo}_background.h5", "w") as f:
-            f.create_dataset("hoft", data=data)
-            f.create_dataset("t0", data=float(segment[0]))
+        with h5py.File(datadir / "background.h5", "w") as f:
+            for ifo in ifos:
+                f.create_dataset(f"{ifo}", data=data)
+
+            f.attrs.update({"t0": segment[0]})
 
     return datadir

@@ -68,7 +68,7 @@ def test_generate_background(
         )
 
     for ifo in ifos:
-        background_path = datadir / f"{ifo}_background.h5"
+        background_path = datadir / "background.h5"
         with h5py.File(background_path) as f:
-            assert (f["hoft"] == ts.value).all()
-            assert f["t0"][()] == start
+            assert (f[ifo] == ts.value).all()
+            assert f.attrs["t0"] == start

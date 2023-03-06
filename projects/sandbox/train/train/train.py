@@ -12,16 +12,19 @@ from bbhnet.logging import configure_logging
 from bbhnet.trainer import trainify
 
 
-def load_background(*backgrounds: Path):
+def load_background(background_dataset: Path):
     # TODO: maybe package up hanford and livingston
     # (or any arbitrary set of ifos) background files into one
     # for simplicity
     background = []
-    for fname in backgrounds:
-        with h5py.File(fname, "r") as f:
-            hoft = f["hoft"][:]
-        background.append(hoft)
-    return np.stack(background)
+
+    with h5py.File(background_dataset, "r") as f:
+        ifos = list(f.keys())
+        for ifo in ifos:
+            hoft = f[ifo][:]
+            background.append(hoft)
+        t0 = f.attrs["t0"]
+    return np.stack(background), ifos, t0
 
 
 # note that this function decorator acts both to
@@ -34,8 +37,7 @@ def load_background(*backgrounds: Path):
 @trainify
 def main(
     # paths and environment args
-    hanford_background: Path,
-    livingston_background: Path,
+    background_dataset: Path,
     glitch_dataset: Path,
     waveform_dataset: Path,
     outdir: Path,
@@ -47,7 +49,7 @@ def main(
     kernel_length: float,
     sample_rate: float,
     batch_size: int,
-    highpass: Optional[float] = None,
+    highpass: float,
     batches_per_epoch: Optional[int] = None,
     # preproc args
     fduration: Optional[float] = None,
@@ -70,16 +72,12 @@ def main(
     a BBHNet architecture.
 
     Args:
-        hanford_background:
-            Path to file containing background data for
-            Hanford strain channel to train on. Should be
-            an HDF5 archive with an `"hoft"` dataset
-            containing the strain data.
-        livingston_background:
-            Path to file containing background data for
-            Livingston strain channel to train on. Should be
-            an HDF5 archive with an `"hoft"` dataset
-            containing the strain data.
+        background_dataset:
+            Path to file containing background data for all ifos.
+            Should be an HDF5 archive with a dataset
+            containing strain data for each ifo labeled `"ifo"`. Must
+            also contain an attribute `"t0"` indicating the start gpstime
+            of the strain data.
         glitch_dataset:
             Path to file containing short segments of data
             with non-Gaussian noise transients. Should be
@@ -124,6 +122,15 @@ def main(
         batch_size:
             Number of samples to over which to compute each
             gradient update during training.
+        train_val_start:
+            The gpstime that indicates the start
+            of the contiguous training + validation background.
+            This will be used to ensure glitches from the training set
+            don't leak into the validation set when they are split.
+        train_val_stop:
+            The gpstime that indicates the end
+            of the training background. This will be used to ensure
+            glitches from the training set don't leak into the validation set
         highpass:
             Minimum frequency over which to compute SNR values
             for waveform injection, in Hz. If left as `None`, the
@@ -193,11 +200,19 @@ def main(
     logdir.mkdir(exist_ok=True, parents=True)
     configure_logging(logdir / "train.log", verbose)
 
+    # load background, infer ifos, and get start and end times
+    # of the combined training + validation period
+    background, ifos, t0 = load_background(background_dataset)
+    tf = t0 + background.shape[-1] / sample_rate
+
     # build a torch module that we'll use for doing
     # random augmentation at data-loading time
     augmenter, valid_glitches, valid_injector = prepare_augmentation(
         glitch_dataset,
         waveform_dataset,
+        ifos,
+        t0,
+        tf,
         glitch_prob=glitch_prob,
         waveform_prob=waveform_prob,
         glitch_downweight=glitch_downweight,
@@ -207,10 +222,6 @@ def main(
         valid_frac=valid_frac,
     )
 
-    # TODO: maybe package up hanford and livingston
-    # (or any arbitrary set of ifos) background files
-    # into one file for simplicity
-    background = load_background(hanford_background, livingston_background)
     if valid_frac is not None:
         # split up our background data into train and validation splits
         background, valid_background = split(background, 1 - valid_frac, -1)

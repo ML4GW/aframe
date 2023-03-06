@@ -51,6 +51,7 @@ def generate_glitch_dataset(
 
     glitches = []
     snrs = []
+    gpstimes = []
 
     for trig_file in trigger_files:
         # load in triggers
@@ -104,9 +105,10 @@ def generate_glitch_dataset(
                     glitch_ts = glitch_ts.resample(sample_rate)
                     glitches.append(list(glitch_ts.value))
                     snrs.append(trigger["snr"])
+                    gpstimes.append(time)
 
     glitches = np.stack(glitches)
-    return glitches, snrs
+    return glitches, snrs, gpstimes
 
 
 def omicron_main_wrapper(
@@ -273,6 +275,7 @@ def main(
 
     glitches = {}
     snrs = {}
+    times = {}
     train_futures = []
 
     run_dir = datadir / "omicron"
@@ -325,7 +328,7 @@ def main(
         trigger_dir = train_run_dir / ifo / "merge" / f"{ifo}:{channel}"
         trigger_files = sorted(list(trigger_dir.glob("*.h5")))
 
-        glitches[ifo], snrs[ifo] = generate_glitch_dataset(
+        glitches[ifo], snrs[ifo], times[ifo] = generate_glitch_dataset(
             ifo,
             snr_thresh,
             start,
@@ -340,8 +343,10 @@ def main(
     # store glitches from training set
     with h5py.File(glitch_file, "w") as f:
         for ifo in ifos:
-            f.create_dataset(f"{ifo}_glitches", data=glitches[ifo])
-            f.create_dataset(f"{ifo}_snrs", data=snrs[ifo])
+            g = f.create_group(f"{ifo}")
+            g.create_dataset("glitches", data=glitches[ifo])
+            g.create_dataset("snrs", data=snrs[ifo])
+            g.create_dataset("times", data=times[ifo])
 
     return glitch_file
 

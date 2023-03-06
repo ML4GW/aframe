@@ -59,7 +59,7 @@ def test_generate_glitch_dataset(
     mock_ts = patch("gwpy.timeseries.TimeSeriesDict.get", return_value=ts)
 
     with mock_ts:
-        glitches, snrs = generate_glitch_dataset(
+        glitches, snrs, gpstimes = generate_glitch_dataset(
             ifo,
             snr_thresh,
             start,
@@ -71,5 +71,7 @@ def test_generate_glitch_dataset(
         )
 
     assert glitches.shape[-1] == glitch_len
-    assert len(glitches) == len(snrs)
+    assert len(glitches) == len(snrs) == len(gpstimes)
+    gpstimes = np.array(gpstimes)
+    assert (start < gpstimes).all() and (stop > gpstimes).all()
     assert all(np.array(snrs) > snr_thresh)

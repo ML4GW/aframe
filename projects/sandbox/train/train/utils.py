@@ -1,6 +1,7 @@
+import logging
 from math import pi
 from pathlib import Path
-from typing import Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 import h5py
 import numpy as np
@@ -55,6 +56,9 @@ def split(X: Tensor, frac: float, axis: int) -> Tuple[Tensor, Tensor]:
 def prepare_augmentation(
     glitch_dataset: Path,
     waveform_dataset: Path,
+    ifos: List[str],
+    train_val_start: float,
+    train_val_stop: float,
     glitch_prob: float,
     waveform_prob: float,
     glitch_downweight: float,
@@ -66,22 +70,34 @@ def prepare_augmentation(
     # build a glitch sampler from a pre-saved bank of
     # glitches which will randomly insert them into
     # either or both interferometer channels
-    with h5py.File(glitch_dataset, "r") as f:
-        h1_glitches = f["H1_glitches"][:]
-        l1_glitches = f["L1_glitches"][:]
+    glitch_dict = {}
+    valid_glitches_list = []
 
-    if valid_frac is not None:
-        h1_glitches, valid_h1_glitches = split(h1_glitches, 1 - valid_frac, 0)
-        l1_glitches, valid_l1_glitches = split(l1_glitches, 1 - valid_frac, 0)
-        valid_glitches = [valid_h1_glitches, valid_l1_glitches]
-    else:
-        valid_glitches = None
+    # calculate the time at which the validation set starts
+    valid_start = (1 - valid_frac) * (
+        train_val_stop - train_val_start
+    ) + train_val_start
+    with h5py.File(glitch_dataset, "r") as f:
+        for ifo in ifos:
+            glitches = f[ifo]["glitches"][:]
+            times = f[ifo]["times"][:]
+
+            if valid_frac is not None:
+                train_glitches = glitches[times <= valid_start]
+                valid_glitches = glitches[times > valid_start]
+                logging.info(f"{len(train_glitches)} train glitches for {ifo}")
+                logging.info(f"{len(valid_glitches)} valid glitches for {ifo}")
+                glitch_dict[ifo] = train_glitches
+                valid_glitches_list.append(valid_glitches)
+            else:
+                logging.info(f"{len(train_glitches)} train glitches for {ifo}")
+                glitch_dict[ifo] = glitches
+                valid_glitches_list = None
 
     glitch_inserter = GlitchSampler(
         prob=glitch_prob,
         max_offset=int(trigger_distance * sample_rate),
-        H1=h1_glitches,
-        L1=l1_glitches,
+        **glitch_dict,
     )
 
     # initiate a waveform sampler from a pre-saved bank
@@ -96,7 +112,7 @@ def prepare_augmentation(
 
             slc = slice(-len(valid_signals), None)
             valid_injector = BBHNetWaveformInjection(
-                ifos=["H1", "L1"],
+                ifos=ifos,
                 dec=f["dec"][slc],
                 psi=f["psi"][slc],
                 phi=f["ra"][slc],  # no geocent_time recorded, so just use ra
@@ -115,7 +131,7 @@ def prepare_augmentation(
     # instantiate source parameters as callable
     # distributions which will produce samples
     injector = BBHNetWaveformInjection(
-        ifos=["H1", "L1"],
+        ifos=ifos,
         dec=Cosine(),
         psi=Uniform(0, pi),
         phi=Uniform(-pi, pi),
@@ -137,4 +153,4 @@ def prepare_augmentation(
     augmenter = MultiInputSequential(
         glitch_inserter, SignalInverter(), SignalReverser(), injector
     )
-    return augmenter, valid_glitches, valid_injector
+    return augmenter, valid_glitches_list, valid_injector
