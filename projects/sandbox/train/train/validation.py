@@ -87,6 +87,13 @@ class MultiThresholdAUROC(Metric):
         thresholds = torch.Tensor(self.thresholds).to(y.device)
         y[: len(signal_preds)] = 1
 
+        # shuffle the samples so that constant
+        # network outputs don't show up as perfect
+        idx = torch.randperm(len(y))
+        x = x[idx]
+        y = y[idx]
+
+        # now sort the labels by their corresponding prediction
         idx = torch.argsort(x, descending=True)
         y = y[idx]
 
