@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    import bilby
     from astropy.cosmology import Cosmology
 
 import logging
@@ -32,7 +31,7 @@ class VolumeVsFAR:
         self,
         height,
         width,
-        source_prior: "bilby.core.prior.PriorDict",
+        source_prior: Callable,
         cosmology: "Cosmology",
     ):
         self.height = height

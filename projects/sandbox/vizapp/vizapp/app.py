@@ -2,9 +2,8 @@ import copy
 import itertools
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Callable, List
 
-import bilby
 import h5py
 import numpy as np
 from bokeh.layouts import column, row
@@ -26,7 +25,7 @@ class VizApp:
     def __init__(
         self,
         cosmology: "Cosmology",
-        source_prior: "bilby.core.prior.PriorDict",
+        source_prior: Callable,
         timeslides_results_dir: Path,
         timeslides_strain_dir: Path,
         train_data_dir: Path,

@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 from astropy import cosmology as cosmo
 from astropy import units as u
@@ -75,10 +75,11 @@ class SensitiveVolumeCalculator:
             Astropy Cosmology object used for volume calculation
     """
 
-    source: "bilby.core.prior.PriorDict"
+    source: Callable
     cosmology: "Cosmology" = cosmo.Planck15
 
     def __post_init__(self):
+        self.source, self.detector_frame_prior = self.source(self.cosmology)
         z_prior = self.source["redshift"]
         zmin, zmax = z_prior.minimum, z_prior.maximum
 
@@ -112,9 +113,17 @@ class SensitiveVolumeCalculator:
         """
         weights = []
         for sample in recovered_parameters:
+            source_frame_sample = sample.copy()
+            source_frame_sample["mass_1"] /= 1 + sample["redshift"]
+            source_frame_sample["mass_2"] /= 1 + sample["redshift"]
             # calculate the weight for each sample
             # using the source and target distributions
-            weight = target.prob(sample) / self.source.prob(sample)
+            if self.detector_frame_prior:
+                weight = target.prob(sample) / self.source.prob(sample)
+            else:
+                weight = target.prob(sample) / self.source.prob(
+                    source_frame_sample
+                )
             weights.append(weight)
         return np.array(weights)
 
@@ -125,8 +134,8 @@ class SensitiveVolumeCalculator:
         target: Optional["bilby.core.prior.PriorDict"] = None,
     ):
         """
-        Calculates the VT and its uncertainty. See equations
-        8 and 9 in https://arxiv.org/pdf/1904.10879.pdf
+        Calculates the sensitive volume and its uncertainty.
+        See equations 8 and 9 in https://arxiv.org/pdf/1904.10879.pdf
 
         Args:
             target:
