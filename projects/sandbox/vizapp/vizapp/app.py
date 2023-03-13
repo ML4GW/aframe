@@ -157,9 +157,9 @@ class VizApp:
         )
 
         backgrounds = {}
-        for ifo in self.ifos:
-            with h5py.File(train_data_dir / f"{ifo}_background.h5", "r") as f:
-                bkgd = f["hoft"][:]
+        with h5py.File(train_data_dir / "background.h5", "r") as f:
+            for ifo in self.ifos:
+                bkgd = f[ifo][:]
                 bkgd = bkgd[: int(train_frac * len(bkgd))]
                 backgrounds[ifo] = bkgd
 

@@ -44,7 +44,7 @@ def main(
         # check the timestamp and verify that it
         # meets the conditions
         with h5py.File(output_file, "r") as f:
-            missing_keys = [i not in f for i in ifos]
+            missing_keys = [i for i in ifos if i not in f]
             if missing_keys:
                 raise ValueError(
                     "Background file {} missing data from {}".format(
@@ -53,7 +53,7 @@ def main(
                 )
 
             t0 = f.attrs["t0"][()]
-            length = f[ifos[0]][:] / sample_rate
+            length = len(f[ifos[0]]) / sample_rate
 
         in_range = start <= t0 <= (stop - minimum_length)
         long_enough = length >= minimum_length

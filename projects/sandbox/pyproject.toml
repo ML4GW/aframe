@@ -40,7 +40,7 @@ cosmology = "bbhnet.priors.cosmologies.planck"
 streams_per_gpu = 3
 
 [tool.typeo.scripts.generate-background]
-datadir = "${base.datadir}"
+output_file = "${base.datadir}/background.h5"
 logdir = "${base.logdir}"
 channel = "${base.channel}"
 frame_type = "${base.frame_type}"
