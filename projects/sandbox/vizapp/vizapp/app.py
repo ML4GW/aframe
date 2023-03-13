@@ -14,7 +14,7 @@ from vizapp.plots import (
     BackgroundPlot,
     EventInspectorPlot,
     PerfSummaryPlot,
-    VolumeTimeVsFAR,
+    VolumeVsFAR,
 )
 
 if TYPE_CHECKING:
@@ -152,14 +152,14 @@ class VizApp:
         timeslides_results_dir,
     ):
         self.perf_summary_plot = PerfSummaryPlot(300, 800)
-        self.volume_time_vs_far = VolumeTimeVsFAR(
+        self.volume_vs_far = VolumeVsFAR(
             300, 800, source_prior=self.source_prior, cosmology=self.cosmology
         )
 
         backgrounds = {}
-        for ifo in self.ifos:
-            with h5py.File(train_data_dir / f"{ifo}_background.h5", "r") as f:
-                bkgd = f["hoft"][:]
+        with h5py.File(train_data_dir / "background.h5", "r") as f:
+            for ifo in self.ifos:
+                bkgd = f[ifo][:]
                 bkgd = bkgd[: int(train_frac * len(bkgd))]
                 backgrounds[ifo] = bkgd
 
@@ -178,7 +178,7 @@ class VizApp:
         self.background_plot = BackgroundPlot(300, 1200, self.event_inspector)
 
         summary_layout = column(
-            [self.perf_summary_plot.layout, self.volume_time_vs_far.layout]
+            [self.perf_summary_plot.layout, self.volume_vs_far.layout]
         )
         summary_tab = Panel(child=summary_layout, title="Summary")
 
@@ -198,7 +198,7 @@ class VizApp:
         foreground = self.vetoed_foregrounds[current_veto_label][norm]
 
         self.perf_summary_plot.update(foreground)
-        self.volume_time_vs_far.update(foreground)
+        self.volume_vs_far.update(foreground)
         self.background_plot.update(foreground, background, norm)
         self.event_inspector.reset()
 
@@ -221,7 +221,7 @@ class VizApp:
         )
         # update plots
         self.perf_summary_plot.update(foreground)
-        self.volume_time_vs_far.update(foreground)
+        self.volume_vs_far.update(foreground)
         self.background_plot.update(foreground, background, current_norm)
         self.event_inspector.reset()
 
