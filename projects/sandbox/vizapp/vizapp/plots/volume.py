@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    import bilby
     from astropy.cosmology import Cosmology
 
 import logging
@@ -27,12 +26,12 @@ from bbhnet.priors.utils import transpose
 MPC3_TO_GPC3 = 1e-9
 
 
-class VolumeTimeVsFAR:
+class VolumeVsFAR:
     def __init__(
         self,
         height,
         width,
-        source_prior: "bilby.core.prior.PriorDict",
+        source_prior: Callable,
         cosmology: "Cosmology",
     ):
         self.height = height
@@ -62,7 +61,7 @@ class VolumeTimeVsFAR:
 
         self.figure.line(
             x="far",
-            y="vt",
+            y="volume",
             source=self.source,
             line_width=2,
             line_alpha=0.6,
@@ -139,8 +138,8 @@ class VolumeTimeVsFAR:
             high=10,
         )
 
-        self.calculate_button = Button(label="Calculate VT")
-        self.calculate_button.on_click(self.calculate_vt)
+        self.calculate_button = Button(label="Calculate Volume")
+        self.calculate_button.on_click(self.calculate_volume)
         self.widgets = column(
             self.m1_selector,
             self.m2_selector,
@@ -159,7 +158,7 @@ class VolumeTimeVsFAR:
             )
         )
 
-    def calculate_vt(self, event):
+    def calculate_volume(self, event):
         m1_mean = self.m1_selector.value
         m2_mean = self.m2_selector.value
         sigma = self.sd_selector.value
@@ -170,7 +169,8 @@ class VolumeTimeVsFAR:
             return
 
         self.logger.debug(
-            f"Calculating VT for m1 = {m1_mean}, m2 = {m2_mean}, sd = {sigma}"
+            f"Calculating volume for m1 = {m1_mean}, "
+            f"m2 = {m2_mean}, sd = {sigma}"
         )
         target, _ = gaussian_masses(m1_mean, m2_mean, sigma, self.cosmology)
 
@@ -179,9 +179,8 @@ class VolumeTimeVsFAR:
         uncertainties = []
         n_effs = []
         for far in self.fars:
-            self.figure.title.text = (
-                f"VT vs FAR for m1 = {m1_mean}, m2 = {m2_mean},  sd = {sigma}"
-            )
+            self.figure.title.text = f"Volume vs FAR for m1 = {m1_mean}, "
+            f"m2 = {m2_mean},  sd = {sigma}"
             # downselect to injections that are detected at this FAR
             indices = self.foreground.fars < far
 
@@ -234,4 +233,4 @@ class VolumeTimeVsFAR:
         self.foreground = foreground
         self.n_injections = len(foreground.injection_times)
         self.livetime = foreground.livetime
-        self.calculate_vt(None)
+        self.calculate_volume(None)

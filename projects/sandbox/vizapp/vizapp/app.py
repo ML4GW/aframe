@@ -2,9 +2,8 @@ import copy
 import itertools
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Callable, List
 
-import bilby
 import h5py
 import numpy as np
 from bokeh.layouts import column, row
@@ -14,7 +13,7 @@ from vizapp.plots import (
     BackgroundPlot,
     EventInspectorPlot,
     PerfSummaryPlot,
-    VolumeTimeVsFAR,
+    VolumeVsFAR,
 )
 
 if TYPE_CHECKING:
@@ -26,7 +25,7 @@ class VizApp:
     def __init__(
         self,
         cosmology: "Cosmology",
-        source_prior: "bilby.core.prior.PriorDict",
+        source_prior: Callable,
         timeslides_results_dir: Path,
         timeslides_strain_dir: Path,
         train_data_dir: Path,
@@ -152,7 +151,7 @@ class VizApp:
         timeslides_results_dir,
     ):
         self.perf_summary_plot = PerfSummaryPlot(300, 800)
-        self.volume_time_vs_far = VolumeTimeVsFAR(
+        self.volume_vs_far = VolumeVsFAR(
             300, 800, source_prior=self.source_prior, cosmology=self.cosmology
         )
 
@@ -178,7 +177,7 @@ class VizApp:
         self.background_plot = BackgroundPlot(300, 1200, self.event_inspector)
 
         summary_layout = column(
-            [self.perf_summary_plot.layout, self.volume_time_vs_far.layout]
+            [self.perf_summary_plot.layout, self.volume_vs_far.layout]
         )
         summary_tab = Panel(child=summary_layout, title="Summary")
 
@@ -198,7 +197,7 @@ class VizApp:
         foreground = self.vetoed_foregrounds[current_veto_label][norm]
 
         self.perf_summary_plot.update(foreground)
-        self.volume_time_vs_far.update(foreground)
+        self.volume_vs_far.update(foreground)
         self.background_plot.update(foreground, background, norm)
         self.event_inspector.reset()
 
@@ -221,7 +220,7 @@ class VizApp:
         )
         # update plots
         self.perf_summary_plot.update(foreground)
-        self.volume_time_vs_far.update(foreground)
+        self.volume_vs_far.update(foreground)
         self.background_plot.update(foreground, background, current_norm)
         self.event_inspector.reset()
 
