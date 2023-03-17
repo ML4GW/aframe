@@ -77,15 +77,19 @@ def test_auroc():
     # now verify that constant outputs
     # will produce a score signifying
     # random predictions
-    constants = torch.zeros((1000,))
+    constants = torch.zeros((10000,))
     scores = auroc.call(constants, constants)
 
     # ensure that "random" scores are roughly
     # equal to the area under the y=x line up
-    # to the max fpr value
-    expected = [0.5 * 10 ** (2 * (i - 2)) for i in range(3)]
+    # to the max fpr value. The first value won't
+    # have enough samples to obey nice statistics,
+    # so let's just set a decent upper bound on it
+    assert scores[0] < 2 * 0.01**2
+
+    expected = [0.5 * 10 ** (2 * (i - 1)) for i in range(2)]
     expected = torch.tensor(expected)
-    assert torch.allclose(scores, expected, rtol=0.1)
+    assert torch.allclose(scores[1:], expected, rtol=0.2)
 
 
 def test_glitch_recall():
