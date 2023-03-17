@@ -179,8 +179,11 @@ class VolumeVsFAR:
         uncertainties = []
         n_effs = []
         for far in self.fars:
-            self.figure.title.text = f"Volume vs FAR for m1 = {m1_mean}, "
-            f"m2 = {m2_mean},  sd = {sigma}"
+            self.figure.title.text = (
+                f"Volume vs FAR for m1 = {m1_mean}, "
+                f"m2 = {m2_mean},  sd = {sigma}"
+            )
+
             # downselect to injections that are detected at this FAR
             indices = self.foreground.fars < far
 
