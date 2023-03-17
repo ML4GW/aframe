@@ -26,6 +26,72 @@ def test_background_recall():
     np.testing.assert_allclose(scores, [0.25, 0.5, 0.85])
 
 
+def test_auroc():
+    auroc = validation.MultiThresholdAUROC([0.01, 0.1, 1])
+    signal_preds = 10 + 0.1 * torch.randn(1000)
+    background_preds = 0.1 * torch.randn(1000)
+
+    scores = auroc.call(signal_preds, background_preds)
+    expected = torch.tensor([10 ** (i - 2) for i in range(3)])
+
+    # account for the extra sample that
+    # gets in due to the <=
+    expected[:-1] += 1 / 1000
+    assert torch.allclose(scores, expected, rtol=1e-6)
+
+    scores = auroc.call(background_preds, signal_preds)
+    assert (scores == 0).all().item()
+
+    # now build an arbitrary ROC curve and
+    # make sure the areas are correct. Adding
+    # in a coupple small factors of 10000 to
+    # account for imprecision at the integration
+    # boundaries that I'm too lazy to solve for
+    # exactly, sue me
+    signal_preds[:100] += 30
+    background_preds[:50] += 35
+    area0 = 0.01 * 0.1 + 1 / 10000
+
+    signal_preds[100:500] += 20
+    background_preds[50:200] += 25
+    area1 = area0 + 0.1 * 0.04 + 0.5 * 0.05 + 4 / 10000
+
+    signal_preds[500:700] += 10
+    background_preds[200:800] += 15
+    area2 = area1 + 0.5 * 0.1 + 0.7 * 0.6 + 0.2 - 5 / 10000
+
+    scores = auroc.call(signal_preds, background_preds)
+    expected = torch.tensor([area0, area1, area2])
+    assert torch.allclose(scores, expected, rtol=1e-6)
+
+    # ensure that this isn't an artifact of
+    # the ordering by shuffling and making
+    # sure things still match
+    idx = torch.randperm(1000)
+    signal_preds = signal_preds[idx]
+    idx = torch.randperm(1000)
+    background_preds = background_preds[idx]
+    scores = auroc.call(signal_preds, background_preds)
+    assert torch.allclose(scores, expected, rtol=1e-6)
+
+    # now verify that constant outputs
+    # will produce a score signifying
+    # random predictions
+    constants = torch.zeros((10000,))
+    scores = auroc.call(constants, constants)
+
+    # ensure that "random" scores are roughly
+    # equal to the area under the y=x line up
+    # to the max fpr value. The first value won't
+    # have enough samples to obey nice statistics,
+    # so let's just set a decent upper bound on it
+    assert scores[0] < 2 * 0.01**2
+
+    expected = [0.5 * 10 ** (2 * (i - 1)) for i in range(2)]
+    expected = torch.tensor(expected)
+    assert torch.allclose(scores[1:], expected, rtol=0.2)
+
+
 def test_glitch_recall():
     metric = validation.GlitchRecall([0.5, 0.75, 1])
     glitches = torch.arange(11).type(torch.float32)

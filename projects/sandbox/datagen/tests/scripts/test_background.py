@@ -44,6 +44,7 @@ def test_generate_background(
     minimum_length = 10
     channel = "DCS-CALIB_STRAIN_CLEAN_C01"
     frame_type = "HOFT_C01"
+    background_path = datadir / "background.h5"
 
     times = np.arange(start, stop, 1 / sample_rate)
     n_samples = len(times)
@@ -55,20 +56,19 @@ def test_generate_background(
     )
     with mock_ts, mock_datafind:
         generate_background(
-            start,
-            stop,
-            ifos,
-            sample_rate,
-            channel,
-            frame_type,
-            state_flag,
-            minimum_length,
-            datadir,
-            logdir,
+            start=start,
+            stop=stop,
+            ifos=ifos,
+            sample_rate=sample_rate,
+            channel=channel,
+            frame_type=frame_type,
+            state_flag=state_flag,
+            minimum_length=minimum_length,
+            output_file=background_path,
+            logdir=logdir,
         )
 
-    for ifo in ifos:
-        background_path = datadir / "background.h5"
-        with h5py.File(background_path) as f:
+    with h5py.File(background_path) as f:
+        assert f.attrs["t0"] == start
+        for ifo in ifos:
             assert (f[ifo] == ts.value).all()
-            assert f.attrs["t0"] == start

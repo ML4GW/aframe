@@ -48,7 +48,6 @@ def main(
     )
 
     cosmology = cosmology()
-    source_prior, _ = source_prior(cosmology)
 
     bkapp = VizApp(
         source_prior=source_prior,

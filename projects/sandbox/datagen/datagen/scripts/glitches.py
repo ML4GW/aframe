@@ -179,7 +179,7 @@ def omicron_main_wrapper(
         "--ifo",
         ifo,
         "-c",
-        "request_disk=100",
+        "request_disk=100M",
         "--output-dir",
         str(run_dir),
         "--skip-gzip",
