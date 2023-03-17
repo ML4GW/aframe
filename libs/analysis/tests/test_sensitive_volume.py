@@ -14,22 +14,27 @@ from bbhnet.priors.utils import transpose
 
 @pytest.fixture()
 def prior():
-    prior = bilby.core.prior.PriorDict(
-        dict(
-            m1=bilby.core.prior.Uniform(0, 1, "m1", "Msol"),
-            m2=bilby.core.prior.Uniform(0, 1, "m2", "Msol"),
-            redshift=bilby.core.prior.Uniform(100, 1000, "redshift"),
-            dec=bilby.core.prior.analytical.Cosine(name="dec"),
-            ra=bilby.core.prior.Uniform(
-                minimum=0, maximum=2 * math.pi, name="ra"
-            ),
+    def prior_func(cosmology=None):
+        prior = bilby.core.prior.PriorDict(
+            dict(
+                mass_1=bilby.core.prior.Uniform(0, 1, "mass_1", "Msol"),
+                mass_2=bilby.core.prior.Uniform(0, 1, "mass_2", "Msol"),
+                redshift=bilby.core.prior.Uniform(100, 1000, "redshift"),
+                dec=bilby.core.prior.analytical.Cosine(name="dec"),
+                ra=bilby.core.prior.Uniform(
+                    minimum=0, maximum=2 * math.pi, name="ra"
+                ),
+            )
         )
-    )
-    return prior
+        detector_frame_prior = True
+        return prior, detector_frame_prior
+
+    return prior_func
 
 
 def test_sensitive_volume(prior):
     sensitive_volume_calculator = SensitiveVolumeCalculator(prior)
+    prior, _ = prior()
     recovered_parameters = prior.sample(100)
     recovered_parameters = transpose(recovered_parameters)
 
