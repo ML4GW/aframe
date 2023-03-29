@@ -106,6 +106,9 @@ trigger_distance = -0.5
 waveform_prob = 0.5
 glitch_prob = 0.25
 glitch_downweight = 0.5
+mean_snr = 15
+std_snr = 15
+min_snr = 1
 
 # optimization parameters
 batch_size = 512
