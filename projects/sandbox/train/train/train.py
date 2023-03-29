@@ -49,6 +49,9 @@ def main(
     kernel_length: float,
     sample_rate: float,
     batch_size: int,
+    mean_snr: float,
+    std_snr: float,
+    min_snr: float,
     highpass: float,
     batches_per_epoch: Optional[int] = None,
     # preproc args
@@ -122,6 +125,19 @@ def main(
         batch_size:
             Number of samples to over which to compute each
             gradient update during training.
+        mean_snr:
+            Mean SNR of the log-normal distribution from which
+            to sample SNR values for injected waveforms at
+            data loading-time.
+        std_snr:
+            Standard deviation of the log-normal distribution
+            from which to sample SNR values for injected waveforms
+            at data loading-time.
+        min_snr:
+            Minimum SNR to use for SNR values for injected waveforms
+            at data loading-time. Samples drawn from the log-normal
+            SNR distribution below this value will be clipped to it.
+            If left as `None`, all sampled SNRs will be used as-is.
         train_val_start:
             The gpstime that indicates the start
             of the contiguous training + validation background.
@@ -218,6 +234,9 @@ def main(
         glitch_downweight=glitch_downweight,
         sample_rate=sample_rate,
         highpass=highpass,
+        mean_snr=mean_snr,
+        std_snr=std_snr,
+        min_snr=min_snr,
         trigger_distance=trigger_distance,
         valid_frac=valid_frac,
     )
