@@ -134,6 +134,7 @@ def test_train(
         glitch_prob=glitch_prob,
         waveform_prob=0.5,
         glitch_downweight=0.8,
+        snr_thresh=6,
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         batch_size=512,

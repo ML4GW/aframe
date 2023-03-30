@@ -17,6 +17,7 @@ datadir = "${DATA_DIR}"
 logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 ifos = ['H1', 'L1']
+hopeless_snr_thresh = 6
 glitch_start = 1262653854
 train_start = 1262653854
 train_stop = 1262686622 # 32768 s segment
@@ -38,6 +39,7 @@ fduration = 1
 valid_frac = 0.25
 cosmology = "bbhnet.priors.cosmologies.planck"
 streams_per_gpu = 3
+
 
 [tool.typeo.scripts.generate-background]
 output_file = "${base.datadir}/background.h5"
@@ -100,28 +102,28 @@ outdir = "${base.basedir}/training"
 sample_rate = "${base.sample_rate}"
 kernel_length = 2
 fduration = "${base.fduration}"
-
+snr_thresh = "${base.hopeless_snr_thresh}"
 highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
-waveform_prob = 0.5
-glitch_prob = 0.25
-glitch_downweight = 0.5
 mean_snr = 15
 std_snr = 15
 min_snr = 1
+waveform_prob = 0.470644
+glitch_prob = 0.420902
+glitch_downweight = 0.650283 
 
 # optimization parameters
 batch_size = 512
 batches_per_epoch = 200
 max_epochs = 200
-max_lr = 4e-3
-lr_ramp_epochs = 75 
-weight_decay = 1e-5
+max_lr = 0.000181352 
+lr_ramp_epochs = 92
+weight_decay = 2.81536e-06
 
 # validation parameters
 valid_frac = "${base.valid_frac}"
 valid_stride = 0.0625
-early_stop = 20
+early_stop = 50
 monitor_metric = "background"
 threshold = 0.01
 checkpoint_every = 5
@@ -186,7 +188,7 @@ spacing = 48
 buffer = 4
 jitter = 2
 cosmology = "${base.cosmology}"
-hopeless_snr_threshold = 6
+hopeless_snr_threshold = "${base.hopeless_snr_thresh}"
 # misc parameters
 verbose = true
 

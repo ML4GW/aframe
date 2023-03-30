@@ -18,6 +18,9 @@ import numpy as np
 import torch
 from train.utils import split
 
+from ml4gw.gw import compute_network_snr, reweight_snrs
+from ml4gw.spectral import normalize_psd
+
 if TYPE_CHECKING:
     from train.waveform_injection import BBHNetWaveformInjection
 
@@ -63,7 +66,7 @@ class Metric(torch.nn.Module):
         tab = " " * 8
         string = ""
         for threshold, value in zip(self.thresholds, self.values):
-            string += f"\n{tab}{self.param} = {threshold}: {value:0.3f}"
+            string += f"\n{tab}{self.param} = {threshold}: {value:0.4f}"
         return self.name + " @:" + string
 
     def __getitem__(self, threshold):
@@ -399,6 +402,8 @@ class Validator:
         background: np.ndarray,
         glitches: Sequence[np.ndarray],
         injector: "BBHNetWaveformInjection",
+        snr_thresh: float,
+        highpass: float,
         kernel_length: float,
         stride: float,
         sample_rate: float,
@@ -435,6 +440,11 @@ class Validator:
                 for the time being so that we can potentially do
                 on-the-fly SNR reweighting during validation. For now,
                 waveforms are sampled with no SNR reweighting.
+            snr_thresh:
+                Lower snr threshold for waveforms. Waveforms that have snrs
+                below this threshold will be rescaled to this threshold.
+            highpass:
+                Low frequency cutoff used when evaluating waveform snr.
             kernel_length:
                 The length of windows to sample from the background
                 in seconds.
@@ -468,7 +478,25 @@ class Validator:
         kernel_size = int(kernel_length * sample_rate)
         stride_size = int(stride * sample_rate)
 
-        # create a datset of pure background
+        # sample waveforms and rescale snrs below threshold
+        waveforms, _ = injector.sample(-1)
+        df = 1 / (waveforms.shape[-1] / sample_rate)
+        psds = []
+        for back in background:
+            psd = normalize_psd(back, df, sample_rate)
+            psds.append(psd)
+        psds = torch.tensor(np.stack(psds), dtype=torch.float64)
+
+        snrs = compute_network_snr(waveforms, psds, sample_rate, highpass)
+        mask = snrs < snr_thresh
+        logging.info(
+            f"Rescaling {mask.sum()} out of {len(snrs)} "
+            "waveforms below snr threshold"
+        )
+        snrs[mask] = snr_thresh
+        waveforms = reweight_snrs(waveforms, snrs, psds, sample_rate, highpass)
+
+        # create a dataset of pure background
         background = make_background(background, kernel_size, stride_size)
         self.background_loader = self.make_loader(background, batch_size)
 
@@ -477,8 +505,7 @@ class Validator:
         glitch_background = make_glitches(glitches, background, glitch_frac)
         self.glitch_loader = self.make_loader(glitch_background, batch_size)
 
-        # 3. create a tensor of background with waveforms injected
-        waveforms, _ = injector.sample(-1)
+        # create a tensor of background with waveforms injected.
         signal_background = repeat(background, len(waveforms))
 
         start = waveforms.shape[-1] // 2 - kernel_size // 2
