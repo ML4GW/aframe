@@ -186,12 +186,16 @@ class VolumeVsFAR:
 
             # downselect to injections that are detected at this FAR
             indices = self.foreground.fars < far
-
+            detected_redshifts = self.foreground.redshifts[indices]
             # parse foreground statistics into a dictionary
-            # compatible with bilbys prior.prob method
+            # compatible with bilbys prior.prob method.
+            # convert to source frame since that is what the sensitive volume
+            # calculator expects
             recovered_parameters = {
-                "mass_1": self.foreground.m1s[indices],
-                "mass_2": self.foreground.m2s[indices],
+                "mass_1": self.foreground.m1s[indices]
+                / (1 + detected_redshifts),
+                "mass_2": self.foreground.m2s[indices]
+                / (1 + detected_redshifts),
                 "redshift": self.foreground.redshifts[indices],
             }
             recovered_parameters = transpose(recovered_parameters)

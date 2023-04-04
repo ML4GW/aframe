@@ -35,7 +35,8 @@ def prior():
 def test_sensitive_volume(prior):
     sensitive_volume_calculator = SensitiveVolumeCalculator(prior)
     prior, _ = prior()
-    recovered_parameters = prior.sample(100)
+    n_samples, n_injections = 100, 200
+    recovered_parameters = prior.sample(n_samples)
     recovered_parameters = transpose(recovered_parameters)
 
     # calculating weights without target
@@ -48,10 +49,15 @@ def test_sensitive_volume(prior):
     sensitive_volume_calculator.volume = 1 * u.Mpc**3
     (
         sensitive_volume,
-        _,
-        _,
-    ) = sensitive_volume_calculator(recovered_parameters, 100)
-    assert sensitive_volume == sensitive_volume_calculator.volume.value
+        std,
+        n_eff,
+    ) = sensitive_volume_calculator(recovered_parameters, n_injections)
+    assert sensitive_volume == sensitive_volume_calculator.volume.value * (
+        n_samples / n_injections
+    )
+    assert (
+        n_eff == (n_samples / n_injections) ** 2 / std**2
+    )  # this works since volume = 1
 
     # TODO: add test for calculating vt with non-trivial target
 
