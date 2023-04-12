@@ -60,13 +60,12 @@ def test_generate_glitch_dataset(
 
     with mock_ts:
         glitches, snrs, gpstimes = generate_glitch_dataset(
-            ifo,
             snr_thresh,
             start,
             stop,
             window,
             sample_rate,
-            channel,
+            f"{ifo}:{channel}",
             trigger_files,
         )
 

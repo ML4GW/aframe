@@ -17,7 +17,6 @@ from bbhnet.logging import configure_logging
 
 
 def generate_glitch_dataset(
-    ifo: str,
     snr_thresh: float,
     start: float,
     stop: float,
@@ -31,13 +30,12 @@ def generate_glitch_dataset(
     Generates a list of omicron trigger times that satisfy snr threshold
 
     Args:
-        ifo: ifo to generate glitch triggers for
         snr_thresh: snr threshold above which to keep as glitch
         start: start gpstime
         stop: stop gpstime
         window: half window around trigger time to query data for
         sample_rate: sampling arequency
-        channel: channel name used to read data
+        channel: channel name used to read data (including ifo prefix)
         frame_type: frame type for data discovery w/ gwdatafind
         trigger_files: List of h5 files of omicron triggers
     """
@@ -46,8 +44,6 @@ def generate_glitch_dataset(
     # https://github.com/ML4GW/mldatafind/issues/30
     # TODO: move back to top once this is fixed
     from mldatafind import find_data
-
-    logging.info(f"Generating glitch dataset for {ifo}")
 
     glitches = []
     snrs = []
@@ -75,7 +71,6 @@ def generate_glitch_dataset(
 
         # TODO: triggers on the edge of chunks will not have enough data.
         # should only impact 2 * n_chunks triggers, so not a huge deal.
-        channel = f"{ifo}:{channel}"
         generator_list = find_data(
             [(file_start, file_stop)],
             [channel],
@@ -328,14 +323,14 @@ def main(
         trigger_dir = train_run_dir / ifo / "merge" / f"{ifo}:{channel}"
         trigger_files = sorted(list(trigger_dir.glob("*.h5")))
 
+        logging.info(f"Generating glitch dataset for {ifo}")
         glitches[ifo], snrs[ifo], times[ifo] = generate_glitch_dataset(
-            ifo,
             snr_thresh,
             start,
             stop,
             window,
             sample_rate,
-            channel,
+            f"{ifo}:{channel}",
             trigger_files,
             chunk_size,
         )
