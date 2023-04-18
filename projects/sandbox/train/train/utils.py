@@ -62,6 +62,8 @@ def prepare_augmentation(
     glitch_prob: float,
     waveform_prob: float,
     glitch_downweight: float,
+    swap_frac: float,
+    mute_frac: float,
     sample_rate: float,
     highpass: float,
     mean_snr: float,
@@ -126,11 +128,11 @@ def prepare_augmentation(
                 plus=valid_plus,
                 cross=valid_cross,
             )
+
         else:
             valid_injector = None
 
     cross, plus = signals.transpose(1, 0, 2)
-
     # instantiate source parameters as callable
     # distributions which will produce samples
     injector = BBHNetWaveformInjection(
@@ -139,6 +141,8 @@ def prepare_augmentation(
         psi=Uniform(0, pi),
         phi=Uniform(-pi, pi),
         snr=LogNormal(mean_snr, std_snr, min_snr),
+        swap_frac=swap_frac,
+        mute_frac=mute_frac,
         sample_rate=sample_rate,
         highpass=highpass,
         prob=waveform_prob,

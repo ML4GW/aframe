@@ -54,6 +54,8 @@ def main(
     std_snr: float,
     min_snr: float,
     highpass: float,
+    swap_frac: float = 0.0,
+    mute_frac: float = 0.0,
     batches_per_epoch: Optional[int] = None,
     # preproc args
     fduration: Optional[float] = None,
@@ -233,6 +235,8 @@ def main(
         glitch_prob=glitch_prob,
         waveform_prob=waveform_prob,
         glitch_downweight=glitch_downweight,
+        swap_frac=swap_frac,
+        mute_frac=mute_frac,
         sample_rate=sample_rate,
         highpass=highpass,
         mean_snr=mean_snr,

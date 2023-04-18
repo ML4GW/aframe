@@ -6,6 +6,7 @@ import torch
 from train.data_structures import (
     BBHInMemoryDataset,
     BBHNetWaveformInjection,
+    ChannelSwapper,
     GlitchSampler,
     SignalInverter,
     SignalReverser,
@@ -338,3 +339,41 @@ def test_signal_reverser(flip_prob, rvs, true_idx):
 
     x = x.cpu().numpy()
     validate_augmenters(X, true_idx, x[::-1], x, flip_prob)
+
+
+@pytest.fixture(params=[0.5])
+def frac():
+    return 0.5
+
+
+def test_channel_swapper(frac):
+    tform = ChannelSwapper(frac=frac)
+    n_batch = 128
+    X = (
+        torch.arange(n_batch)
+        .repeat(n_batch, 1)
+        .transpose(1, 0)
+        .reshape(n_batch, 2, -1)
+    )
+    num = int(frac * n_batch)
+    num = num if not num % 2 else num - 1
+    channels = torch.ones(num // 2, dtype=torch.long)
+    copy = torch.clone(X)
+    with patch("torch.randint", return_value=channels):
+        X, indices = tform(X)
+
+    target_indices = torch.roll(indices, shifts=num // 2, dims=0)
+    X = X.cpu().numpy()
+    copy = copy.cpu().numpy()
+    indices = indices.cpu().numpy()
+    channels = channels.repeat(2)
+
+    assert all(indices == np.arange(num))
+    assert (X[indices, channels] == copy[target_indices, channels]).all()
+
+    tform = ChannelSwapper(frac=0)
+    X = torch.arange(6).repeat(6, 1).transpose(1, 0).reshape(-1, 2, 6)
+    copy = torch.clone(X)
+    X, indices = tform(X)
+    assert indices is None
+    assert (X == copy).all()
