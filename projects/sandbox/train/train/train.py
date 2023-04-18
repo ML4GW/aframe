@@ -12,10 +12,14 @@ from bbhnet.logging import configure_logging
 from bbhnet.trainer import trainify
 
 
-def load_background(background_dataset: Path):
-    # TODO: maybe package up hanford and livingston
-    # (or any arbitrary set of ifos) background files into one
-    # for simplicity
+def load_background(background_dir: Path):
+    # load in the data from the first segment in the background directory
+    try:
+        background_dataset = next(background_dir.iterdir())
+    except StopIteration:
+        raise ValueError(
+            f"No files in background data directory {background_dir}"
+        )
     background = []
 
     with h5py.File(background_dataset, "r") as f:
@@ -23,7 +27,7 @@ def load_background(background_dataset: Path):
         for ifo in ifos:
             hoft = f[ifo][:]
             background.append(hoft)
-        t0 = f.attrs["t0"]
+        t0 = f[ifo].attrs["x0"]
     return np.stack(background), ifos, t0
 
 
@@ -37,7 +41,7 @@ def load_background(background_dataset: Path):
 @trainify
 def main(
     # paths and environment args
-    background_dataset: Path,
+    background_dir: Path,
     glitch_dataset: Path,
     waveform_dataset: Path,
     outdir: Path,
@@ -78,8 +82,9 @@ def main(
     a BBHNet architecture.
 
     Args:
-        background_dataset:
-            Path to file containing background data for all ifos.
+        background_dir:
+            Path to directory containing background segments for all ifos.
+            The first of such segments will be loaded in for training.
             Should be an HDF5 archive with a dataset
             containing strain data for each ifo labeled `"ifo"`. Must
             also contain an attribute `"t0"` indicating the start gpstime
@@ -221,7 +226,7 @@ def main(
 
     # load background, infer ifos, and get start and end times
     # of the combined training + validation period
-    background, ifos, t0 = load_background(background_dataset)
+    background, ifos, t0 = load_background(background_dir)
     tf = t0 + background.shape[-1] / sample_rate
 
     # build a torch module that we'll use for doing

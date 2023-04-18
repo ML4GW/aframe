@@ -1,5 +1,5 @@
+import time
 from pathlib import Path
-from textwrap import dedent
 from typing import List, Tuple
 
 import h5py
@@ -40,38 +40,23 @@ def calc_shifts_required(
     return shifts_required
 
 
-def merge_output(datadir: Path):
-    files = datadir.glob("*.hdf5")
-    n_rejected = 0
-    with h5py.File(datadir / "timeslide_waveforms.h5", "w") as out:
-        for f in files:
-            with h5py.File(f, "r") as h5f:
-                n_rejected += h5f.attrs["n_rejected"]
-                for k, v in h5f.items():
-                    if k not in out:
-                        max_shape = (None,)
-                        if v.ndim > 1:
-                            max_shape += v.shape[1:]
-                        out.create_dataset(k, data=v, maxshape=max_shape)
-                    else:
-                        dataset = out[k]
-                        dataset.resize(len(dataset) + len(v), axis=0)
-                        dataset[-len(v) :] = v
-            f.unlink()
-
-        out.attrs.update(
-            {
-                "n_rejected": n_rejected,
-            }
-        )
+def io_with_blocking(f, fname, timeout=10):
+    start_time = time.time()
+    while True:
+        try:
+            return f(fname)
+        except BlockingIOError:
+            if (time.time() - start_time) > timeout:
+                raise
 
 
-def load_psds(*backgrounds: Path, sample_rate: float, df: float):
-
-    psds = []
-    for fname in backgrounds:
-        with h5py.File(fname, "r") as f:
-            hoft = f["hoft"][:]
+def load_psds(
+    background: Path, ifos: List[str], sample_rate: float, df: float
+):
+    with h5py.File(background, "r") as f:
+        psds = []
+        for ifo in ifos:
+            hoft = f[ifo][:]
             psd = normalize_psd(hoft, df, sample_rate)
             psds.append(psd)
     psds = torch.tensor(np.stack(psds), dtype=torch.float64)
@@ -103,33 +88,3 @@ def calc_segment_injection_times(
     spacing += waveform_duration
     injection_times = np.arange(start + buffer, stop - buffer, spacing)
     return injection_times
-
-
-def create_submit_file(
-    executable: str,
-    condor_dir: Path,
-    accounting_group: str,
-    accounting_group_user: str,
-    request_memory: int,
-    request_disk: int,
-    arguments: str,
-):
-
-    logdir = condor_dir / "logs"
-    logdir.mkdir(exist_ok=True, parents=True)
-    subfile = dedent(
-        f"""\
-        universe = vanilla
-        executable = {executable}
-        arguments = {arguments}
-        log = {logdir}/timeslide_waveforms.log
-        output = {logdir}/timeslide_waveforms.out
-        error = {logdir}/timeslide_waveforms.err
-        accounting_group = {accounting_group}
-        accounting_group_user = {accounting_group_user}
-        request_memory = {request_memory}
-        request_disk = {request_disk}
-        queue start,stop from {condor_dir}/segments.txt
-    """
-    )
-    return subfile

@@ -29,8 +29,6 @@ def train_for_one_epoch(
         optimizer.zero_grad(set_to_none=True)  # reset gradient
         targets = torch.clamp(targets, 0, 1)
 
-        # do forward step in mixed precision
-        # hard code false for now
         with torch.autocast("cuda", enabled=scaler is not None):
             predictions = model(samples)
             loss = criterion(predictions, targets)
@@ -162,6 +160,8 @@ def train(
     # get exported along with everything else
     if preprocessor is not None:
         preprocessor.to(device)
+        caster = torch.autocast("cuda", enabled=False)
+        preprocessor.forward = caster(preprocessor.forward)
         model = torch.nn.Sequential(preprocessor, model)
 
     if init_weights is not None:

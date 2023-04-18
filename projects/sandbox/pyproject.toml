@@ -3,13 +3,11 @@ steps = [
     "datagen:generate-background",
     "datagen:generate-waveforms",
     "datagen:generate-glitches",
-    "datagen:condorize-timeslide-waveforms",
+    "datagen:deploy-timeslide-waveforms",
     "train:train:resnet",
     "export:export-model:resnet",
-    "datagen:generate-timeslides",
-    "infer:infer",
-    "analyze:analyze",
-    "vizapp:vizapp"
+    "infer:deploy-infer",
+    # "vizapp:vizapp"
 ]
 
 [tool.typeo.base]
@@ -31,6 +29,7 @@ state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [2, 2, 2, 2], norm_groups = 8}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
+Tb = 5184000  # 60 days of background
 inference_sampling_rate = 16
 inference_batch_size = 128
 waveform_duration = 8
@@ -44,19 +43,21 @@ valid_frac = 0.25
 cosmology = "bbhnet.priors.cosmologies.planck"
 streams_per_gpu = 3
 waveform_approximant = "IMRPhenomPv2"
+verbose = false
 
 
 [tool.typeo.scripts.generate-background]
 output_file = "${base.datadir}/background.h5"
 logdir = "${base.logdir}"
 channel = "${base.channel}"
-frame_type = "${base.frame_type}"
 state_flag = "${base.state_flag}"
-start = "${base.train_start}" 
-stop = "${base.train_stop}" 
+train_start = "${base.train_start}" 
+train_stop = "${base.train_stop}" 
+test_stop = "${base.test_stop}"
 ifos = "${base.ifos}"
 sample_rate = "${base.sample_rate}" 
-minimum_length = 8000
+minimum_train_length = 8000
+minimum_test_length = 1024
 force_generation = "${base.force_generation}"
 
 [tool.typeo.scripts.generate-glitches]
@@ -74,19 +75,20 @@ q_max = 108
 cluster_dt = 0.5
 chunk_duration = 124
 segment_duration = 64 
-overlap = 4 
+overlap = 4
 mismatch_max = 0.2
 force_generation = "${base.force_generation}"
 ifos = "${base.ifos}"
-datadir = "${base.datadir}"
+datadir = "${base.datadir}/train"
 logdir = "${base.logdir}"
 sample_rate = "${base.sample_rate}"
 analyze_testing_set = false
+verbose = true
 
 [tool.typeo.scripts.generate-waveforms]
 minimum_frequency = "${base.minimum_frequency}" 
 reference_frequency = "${base.reference_frequency}"
-datadir = "${base.datadir}"
+datadir = "${base.datadir}/train"
 logdir = "${base.logdir}"
 num_signals = 50000
 prior = "${base.training_prior}"
@@ -97,9 +99,9 @@ waveform_approximant = "${base.waveform_approximant}"
 
 [tool.typeo.scripts.train]
 # input and output paths
-background_dataset = "${base.datadir}/background.h5"
-glitch_dataset = "${base.datadir}/glitches.h5"
-waveform_dataset = "${base.datadir}/signals.h5"
+background_dir = "${base.datadir}/train/background"
+glitch_dataset = "${base.datadir}/train/glitches.h5"
+waveform_dataset = "${base.datadir}/train/signals.h5"
 
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
@@ -111,12 +113,13 @@ fduration = "${base.fduration}"
 snr_thresh = "${base.hopeless_snr_thresh}"
 highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
+
 mean_snr = 15
 std_snr = 15
 min_snr = 1
-waveform_prob = 0.470644
-glitch_prob = 0.420902
-glitch_downweight = 0.650283 
+waveform_prob = 0.5
+glitch_prob = 0.4
+glitch_downweight = 0.65
 swap_frac = 0.15
 mute_frac = 0.15
 
@@ -124,9 +127,9 @@ mute_frac = 0.15
 batch_size = 512
 batches_per_epoch = 200
 max_epochs = 200
-max_lr = 0.000181352 
-lr_ramp_epochs = 92
-weight_decay = 2.81536e-06
+max_lr = 0.00018
+lr_ramp_epochs = 90
+weight_decay = 2.8e-6
 
 # validation parameters
 valid_frac = "${base.valid_frac}"
@@ -168,8 +171,9 @@ clean = true
 # arch parameters
 commands.resnet = "${base.resnet}"
 
-[tool.typeo.scripts.condorize-timeslide-waveforms]
+[tool.typeo.scripts.deploy-timeslide-waveforms]
 # paths and what not
+outdir = "${base.basedir}"
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 accounting_group = "${base.accounting_group}"
@@ -185,7 +189,7 @@ min_segment_length = 1024
 
 # timeslide parameters
 shifts = [0, 1]
-Tb = 3.14e+7 
+Tb = "${base.Tb}"
 
 # injection parameters
 prior = "${base.testing_prior}"
@@ -195,30 +199,47 @@ highpass = "${base.highpass}"
 spacing = 48
 buffer = 4
 cosmology = "${base.cosmology}"
-snr_threshold = 6
+snr_threshold = 4
 waveform_duration = "${base.waveform_duration}"
 waveform_approximant = "${base.waveform_approximant}"
 
-
-[tool.typeo.scripts.infer]
+[tool.typeo.scripts.deploy-infer]
+# paths
 model_repo_dir = "${base.repository_directory}"
-model_name = "bbhnet-stream"
-data_dir = "${base.datadir}/timeslide_injections/" 
-write_dir = "${base.basedir}/timeslide_injections/"
-triton_image = "hermes/tritonserver:22.12"
+data_dir = "${base.datadir}/test/background"
+injection_set_file = "${base.datadir}/test/waveforms.h5"
+output_dir = "${base.basedir}/infer"
+log_dir = "${base.logdir}"
 
-fields = ["injection", "background"]
-inference_sampling_rate = "${base.inference_sampling_rate}"
-sample_rate = "${base.sample_rate}"
-batch_size = "${base.inference_batch_size}"
+# condor args
+accounting_group_user = "${base.accounting_group_user}"
+accounting_group = "${base.accounting_group}"
+
+# triton args
+model_name = "bbhnet-stream"
 model_version = -1
-base_sequence_id = 1001
-log_file = "${base.logdir}/infer.log"
-throughput_per_gpu = 1000
-streams_per_gpu = "${base.streams_per_gpu}"
-num_workers = 4
+image = "hermes/tritonserver:22.12"
+sequence_id = 1001
+
+# timeslide args
+Tb = "${base.Tb}"
+shift = 1
+throughput = 400
+
+# data args
+sample_rate = "${base.sample_rate}"
+inference_sampling_rate = "${base.inference_sampling_rate}"
+batch_size = "${base.inference_batch_size}"
+ifos = "${base.ifos}"
+chunk_size = 4096
+
+# analysis args
+integration_window_length = 1
+cluster_window_length = 8
 fduration = "${base.fduration}"
-verbose = false
+
+# misc
+verbose = "${base.verbose}"
 
 [tool.typeo.scripts.analyze]
 data_dir = "${base.basedir}/timeslide_injections/"
