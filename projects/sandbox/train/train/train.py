@@ -231,7 +231,7 @@ def main(
 
     # build a torch module that we'll use for doing
     # random augmentation at data-loading time
-    augmenter, valid_glitches, valid_injector = prepare_augmentation(
+    augmentor, valid_glitches, valid_responses = prepare_augmentation(
         glitch_dataset,
         waveform_dataset,
         ifos,
@@ -292,7 +292,7 @@ def main(
             recorder,
             background=valid_background,
             glitches=valid_glitches,
-            injector=valid_injector,
+            responses=valid_responses,
             snr_thresh=snr_thresh,
             highpass=highpass,
             kernel_length=kernel_length,
@@ -305,14 +305,7 @@ def main(
     else:
         validator = None
 
-    # fit our waveform injector to this background
-    # to facilitate the SNR remapping
-    for module in augmenter._modules.values():
-        try:
-            module.fit(*background)
-        except AttributeError:
-            pass
-        module.to(device)
+    augmentor.to(device)
 
     # create full training dataloader
     train_dataset = AframeInMemoryDataset(
@@ -320,17 +313,14 @@ def main(
         int(kernel_length * sample_rate),
         batch_size=batch_size,
         batches_per_epoch=batches_per_epoch,
-        preprocessor=augmenter,
+        preprocessor=augmentor,
         coincident=False,
         shuffle=True,
         device=device,
     )
 
-    # TODO: hard-coding num_ifos into preprocessor. Should
-    # we just expose this as an arg? How will this fit in
-    # to the broader-generalization scheme?
     preprocessor = Preprocessor(
-        2, sample_rate=sample_rate, fduration=fduration
+        len(ifos), sample_rate=sample_rate, fduration=fduration
     )
 
     # fit the whitening module to the background then

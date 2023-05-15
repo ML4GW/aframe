@@ -3,16 +3,7 @@ import pickle
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -20,9 +11,6 @@ from train.utils import split
 
 from ml4gw.gw import compute_network_snr, reweight_snrs
 from ml4gw.spectral import normalize_psd
-
-if TYPE_CHECKING:
-    from train.waveform_injection import AframeWaveformInjection
 
 
 class Metric(torch.nn.Module):
@@ -401,7 +389,7 @@ class Validator:
         recorder: Callable,
         background: np.ndarray,
         glitches: Sequence[np.ndarray],
-        injector: "AframeWaveformInjection",
+        responses: np.ndarray,
         snr_thresh: float,
         highpass: float,
         kernel_length: float,
@@ -434,12 +422,9 @@ class Validator:
                 containing glitches from each interferometer, with
                 the 0th axis used to enumerate individual glitches
                 and the 1st axis corresponding to time.
-            injector:
-                A `AframeWaveformInjection` object for sampling
-                waveforms. Preferring this to an array of waveforms
-                for the time being so that we can potentially do
-                on-the-fly SNR reweighting during validation. For now,
-                waveforms are sampled with no SNR reweighting.
+            responses:
+                A 2D array containing interferometer responses for each
+                validation signal.
             snr_thresh:
                 Lower snr threshold for waveforms. Waveforms that have snrs
                 below this threshold will be rescaled to this threshold.
@@ -478,23 +463,23 @@ class Validator:
         kernel_size = int(kernel_length * sample_rate)
         stride_size = int(stride * sample_rate)
 
-        # sample waveforms and rescale snrs below threshold
-        waveforms, _ = injector.sample(-1)
-        df = 1 / (waveforms.shape[-1] / sample_rate)
+        # rescale snrs below threshold
+
+        df = 1 / (responses.shape[-1] / sample_rate)
         psds = []
         for back in background:
             psd = normalize_psd(back, df, sample_rate)
             psds.append(psd)
         psds = torch.tensor(np.stack(psds), dtype=torch.float64)
 
-        snrs = compute_network_snr(waveforms, psds, sample_rate, highpass)
+        snrs = compute_network_snr(responses, psds, sample_rate, highpass)
         mask = snrs < snr_thresh
         logging.info(
             f"Rescaling {mask.sum()} out of {len(snrs)} "
-            "waveforms below snr threshold"
+            "responses below snr threshold"
         )
         snrs[mask] = snr_thresh
-        waveforms = reweight_snrs(waveforms, snrs, psds, sample_rate, highpass)
+        responses = reweight_snrs(responses, snrs, psds, sample_rate, highpass)
 
         # create a dataset of pure background
         background = make_background(background, kernel_size, stride_size)
@@ -506,11 +491,11 @@ class Validator:
         self.glitch_loader = self.make_loader(glitch_background, batch_size)
 
         # create a tensor of background with waveforms injected.
-        signal_background = repeat(background, len(waveforms))
+        signal_background = repeat(background, len(responses))
 
-        start = waveforms.shape[-1] // 2 - kernel_size // 2
+        start = responses.shape[-1] // 2 - kernel_size // 2
         stop = start + kernel_size
-        signal_background += waveforms[:, :, start:stop]
+        signal_background += responses[:, :, start:stop]
         self.signal_loader = self.make_loader(signal_background, batch_size)
 
     def make_loader(self, X: torch.Tensor, batch_size: int):
