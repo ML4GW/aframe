@@ -305,6 +305,8 @@ def main(
     else:
         validator = None
 
+    # fit rescaler to training background
+    augmentor.rescaler.fit(*background)
     augmentor.to(device)
 
     # create full training dataloader
@@ -327,4 +329,5 @@ def main(
     # move eveyrthing to the desired device
     preprocessor.whitener.fit(kernel_length, *background)
     preprocessor.whitener.to(device)
+
     return train_dataset, validator, preprocessor

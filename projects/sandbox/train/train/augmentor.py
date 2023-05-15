@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 
 import numpy as np
 import torch
-from data_structures import (
+from train.data_structures import (
     ChannelMuter,
     ChannelSwapper,
     GlitchSampler,
@@ -30,28 +30,32 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         dec: Callable,
         psi: Callable,
         phi: Callable,
-        trigger_offset: float,
+        trigger_distance: float,
         snr: Optional[Callable] = None,
         rescaler: Optional["SnrRescaler"] = None,
-        inverter_prob: Optional[float] = 0.5,
-        reverser_prob: Optional[float] = 0.5,
+        invert_prob: Optional[float] = 0.5,
+        reverse_prob: Optional[float] = 0.5,
         **polarizations: np.ndarray,
     ):
 
         super().__init__()
+
         glitch_prob = glitch_sampler.prob
+        self.glitch_sampler = glitch_sampler
+        self.downweight = downweight
         signal_prob = signal_prob / (1 - glitch_prob * (1 - downweight)) ** 2
         signal_prob = signal_prob / (
             1 - (swap_frac + mute_frac - (swap_frac * mute_frac))
         )
         self.signal_prob = signal_prob
-        self.trigger_offset = trigger_offset
+        self.trigger_offset = int(trigger_distance * sample_rate)
         self.sample_rate = sample_rate
+
         self.muter = ChannelMuter(frac=mute_frac)
         self.swapper = ChannelSwapper(frac=swap_frac)
+        self.inverter = SignalInverter(invert_prob)
+        self.reverser = SignalReverser(reverse_prob)
 
-        self.signal_inverter = SignalInverter(inverter_prob)
-        self.signal_reverser = SignalReverser(reverser_prob)
         self.dec = dec
         self.psi = psi
         self.phi = phi
@@ -63,14 +67,51 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         self.register_buffer("tensors", tensors)
         self.register_buffer("vertices", vertices)
 
+        # make sure we have the same number of waveforms
+        # for all the different polarizations
+        num_waveforms = None
+        self.polarizations = {}
+        for polarization, tensor in polarizations.items():
+            if num_waveforms is not None and len(tensor) != num_waveforms:
+                raise ValueError(
+                    "Polarization {} has {} waveforms "
+                    "associated with it, expected {}".format(
+                        polarization, len(tensor), num_waveforms
+                    )
+                )
+            elif num_waveforms is None:
+                num_waveforms, _ = tensor.shape
+
+            # don't register these as buffers since they could
+            # be large and we don't necessarily want them on
+            # the same device as everything else
+            self.polarizations[polarization] = torch.Tensor(tensor)
+        self.num_waveforms = num_waveforms
+
+    def to(self, device: str):
+        super().to(device)
+        self.muter.to(device)
+        self.swapper.to(device)
+        self.inverter.to(device)
+        self.reverser.to(device)
+        self.rescaler.to(device)
+        return self
+
     def sample_responses(self, N: int, kernel_size: int):
+
+        dec, psi, phi = self.dec(N), self.psi(N), self.phi(N)
+        dec, psi, phi = (
+            dec.to(self.tensors.device),
+            psi.to(self.tensors.device),
+            phi.to(self.tensors.device),
+        )
+
         idx = torch.randperm(self.num_waveforms)[:N]
         polarizations = {}
         for polarization, waveforms in self.polarizations.items():
             waveforms = waveforms[idx]
-            polarizations[polarization] = waveforms
+            polarizations[polarization] = waveforms.to(dec.device)
 
-        dec, psi, phi = self.dec(N), self.psi(N), self.phi(N)
         responses = gw.compute_observed_strain(
             dec,
             psi,
@@ -81,8 +122,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
             **polarizations,
         )
         if self.rescaler is not None:
-            target_snrs = self.snr(N)
-            responses = self.rescaler(responses, target_snrs)
+            target_snrs = self.snr(N).to(responses.device)
+            responses, _ = self.rescaler(responses, target_snrs)
 
         kernels = sample_kernels(
             responses,
@@ -95,8 +136,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
     def forward(self, X, y):
         # insert glitches and apply inversion / flip augementations
         X, y = self.glitch_sampler(X, y)
-        X = self.signal_inverter(X)
-        X = self.signal_reverser(X)
+        X = self.inverter(X)
+        X = self.reverser(X)
 
         # calculate number of waveforms to generate
         # based on waveform prob, mute prob, and swap prob and downweight
@@ -113,8 +154,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         responses = self.sample_responses(N, X.shape[-1])
         responses.to(X.device)
 
-        responses, swap_indices = self.channel_swapper(responses)
-        waveforms, mute_indices = self.channel_muter(responses)
+        responses, swap_indices = self.swapper(responses)
+        waveforms, mute_indices = self.muter(responses)
         X[mask] += waveforms
 
         # set response augmentation labels to noise

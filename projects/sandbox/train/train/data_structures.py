@@ -192,11 +192,11 @@ class SignalInverter(torch.nn.Module):
         super().__init__()
         self.prob = prob
 
-    def forward(self, X, y):
+    def forward(self, X):
         if self.training:
             mask = torch.rand(size=X.shape[:-1]) < self.prob
             X[mask] *= -1
-        return X, y
+        return X
 
 
 class SignalReverser(torch.nn.Module):
@@ -204,11 +204,11 @@ class SignalReverser(torch.nn.Module):
         super().__init__()
         self.prob = prob
 
-    def forward(self, X, y):
+    def forward(self, X):
         if self.training:
             mask = torch.rand(size=X.shape[:-1]) < self.prob
             X[mask] = X[mask].flip(-1)
-        return X, y
+        return X
 
 
 # TODO: use ml4gw version if/when it's merged
@@ -263,6 +263,7 @@ class SnrRescaler(FittableTransform):
             idx = torch.randperm(len(snrs))
             target_snrs = snrs[idx]
 
+        target_snrs.to(snrs.device)
         weights = target_snrs / snrs
         rescaled_responses = responses * weights.view(-1, 1, 1)
 

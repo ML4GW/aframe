@@ -48,7 +48,6 @@ def prepare_augmentation(
     swap_frac: float,
     mute_frac: float,
     sample_rate: float,
-    trigger_offset: float,
     highpass: float,
     mean_snr: float,
     std_snr: float,
@@ -99,9 +98,16 @@ def prepare_augmentation(
         if valid_frac is not None:
             signals, valid_signals = split(signals, 1 - valid_frac, 0)
             valid_cross, valid_plus = valid_signals.transpose(1, 0, 2)
-
+            valid_cross, valid_plus = torch.Tensor(valid_cross), torch.Tensor(
+                valid_plus
+            )
             slc = slice(-len(valid_signals), None)
-            dec, psi, phi = f["dec"][slc], f["psi"][slc], f["phi"][slc]
+            dec, psi, phi = f["dec"][slc], f["psi"][slc], f["ra"][slc]
+            dec, psi, phi = (
+                torch.Tensor(dec),
+                torch.Tensor(psi),
+                torch.Tensor(phi),
+            )
             valid_responses = gw.compute_observed_strain(
                 dec,
                 psi,
@@ -140,7 +146,7 @@ def prepare_augmentation(
         dec=Cosine(),
         psi=Uniform(0, pi),
         phi=Uniform(-pi, pi),
-        trigger_offset=trigger_offset,
+        trigger_distance=trigger_distance,
         snr=snr,
         rescaler=rescaler,
         invert_prob=invert_prob,
