@@ -14,7 +14,7 @@ import ml4gw.gw as gw
 from ml4gw.utils.slicing import sample_kernels
 
 if TYPE_CHECKING:
-    from data_structures import SnrRescaler
+    from train.data_structures import SnrRescaler
 
 
 class BBHNetBatchAugmentor(torch.nn.Module):
@@ -140,7 +140,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         rvs = torch.rand(size=X.shape[:1], device=probs.device)
         mask = rvs < probs[:, 0]
 
-        # sample the desired number of responses and inject them
+        # sample the desired number of responses,
+        # perform muting and swapping, and inject them
         N = mask.sum().item()
         responses = self.sample_responses(N, X.shape[-1])
         responses.to(X.device)
@@ -153,7 +154,7 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         mask[mask][mute_indices] = False
         mask[mask][swap_indices] = False
 
-        # set labels to 1 for injected signals
+        # set labels to positive for injected signals
         y[mask] = -y[mask] + 1
 
         # curriculum learning step
