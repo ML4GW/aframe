@@ -88,15 +88,6 @@ class BBHNetBatchAugmentor(torch.nn.Module):
             self.polarizations[polarization] = torch.Tensor(tensor)
         self.num_waveforms = num_waveforms
 
-    def to(self, device: str):
-        super().to(device)
-        self.muter.to(device)
-        self.swapper.to(device)
-        self.inverter.to(device)
-        self.reverser.to(device)
-        self.rescaler.to(device)
-        return self
-
     def sample_responses(self, N: int, kernel_size: int):
 
         dec, psi, phi = self.dec(N), self.psi(N), self.phi(N)
@@ -155,12 +146,15 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         responses.to(X.device)
 
         responses, swap_indices = self.swapper(responses)
-        waveforms, mute_indices = self.muter(responses)
-        X[mask] += waveforms
+        responses, mute_indices = self.muter(responses)
+        X[mask] += responses
 
         # set response augmentation labels to noise
         mask[mask][mute_indices] = False
         mask[mask][swap_indices] = False
+
+        # set labels to 1 for injected signals
+        y[mask] = -y[mask] + 1
 
         # curriculum learning step
         self.snr.step()
