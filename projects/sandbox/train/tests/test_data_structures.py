@@ -238,7 +238,7 @@ def test_signal_inverter(flip_prob, rvs, true_idx):
     tform = SignalInverter(flip_prob)
     X = torch.ones((4, 2, 8))
     with patch("torch.rand", return_value=rvs):
-        X, _ = tform(X, None)
+        X = tform(X)
     X = X.cpu().numpy()
     validate_augmenters(X, true_idx, -1, 1, flip_prob)
 
@@ -249,7 +249,7 @@ def test_signal_reverser(flip_prob, rvs, true_idx):
     X = torch.stack([x] * 2)
     X = torch.stack([X] * 4)
     with patch("torch.rand", return_value=rvs):
-        X, _ = tform(X, None)
+        X = tform(X)
     X = X.cpu().numpy()
 
     x = x.cpu().numpy()
@@ -290,5 +290,5 @@ def test_channel_swapper(frac):
     X = torch.arange(6).repeat(6, 1).transpose(1, 0).reshape(-1, 2, 6)
     copy = torch.clone(X)
     X, indices = tform(X)
-    assert indices is None
+    assert not indices
     assert (X == copy).all()
