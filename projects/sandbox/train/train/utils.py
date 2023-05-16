@@ -57,8 +57,8 @@ def prepare_augmentation(
     glitch_dataset: Path,
     waveform_dataset: Path,
     ifos: List[str],
-    train_val_start: float,
-    train_val_stop: float,
+    train_start: float,
+    train_stop: float,
     glitch_prob: float,
     waveform_prob: float,
     glitch_downweight: float,
@@ -79,9 +79,10 @@ def prepare_augmentation(
     valid_glitches_list = []
 
     # calculate the time at which the validation set starts
-    valid_start = (1 - valid_frac) * (
-        train_val_stop - train_val_start
-    ) + train_val_start
+    full_duration = train_stop - train_start
+    train_duration = (1 - valid_frac) * full_duration
+    valid_start = train_start + train_duration
+
     with h5py.File(glitch_dataset, "r") as f:
         for ifo in ifos:
             glitches = f[ifo]["glitches"][:]
