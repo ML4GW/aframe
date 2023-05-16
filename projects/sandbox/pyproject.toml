@@ -47,7 +47,7 @@ verbose = true
 
 
 [tool.typeo.scripts.generate-background]
-output_file = "${base.datadir}/background.h5"
+datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 channel = "${base.channel}"
 state_flag = "${base.state_flag}"
