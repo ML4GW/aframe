@@ -74,7 +74,11 @@ class EventSet(TimeSlideEventSet):
 class RecoveredInjectionSet(TimeSlideEventSet, InterferometerResponseSet):
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
-        return Ledger.compare_metadata(key, ours, theirs)
+        if key == "num_injections":
+            return InterferometerResponseSet.compare_metadata(
+                key, ours, theirs
+            )
+        return EventSet.compare_metadata(key, ours, theirs)
 
     @staticmethod
     def get_idx_for_shift(

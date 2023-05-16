@@ -36,14 +36,14 @@ waveform_duration = 8
 minimum_frequency = 20
 reference_frequency = 50
 highpass = 32
-training_prior = "bbhnet.priors.priors.end_o3_ratesandpops"
-testing_prior = "bbhnet.priors.priors.end_o3_ratesandpops"
+training_prior = "bbhnet.priors.priors.mdc_prior"
+testing_prior = "bbhnet.priors.priors.mdc_prior"
 fduration = 1
 valid_frac = 0.25
 cosmology = "bbhnet.priors.cosmologies.planck"
 streams_per_gpu = 3
 waveform_approximant = "IMRPhenomPv2"
-verbose = false
+verbose = true
 
 
 [tool.typeo.scripts.generate-background]

@@ -138,7 +138,8 @@ def main(
         # insert our accepted parameters into the output array
         start, stop = idx, idx + num_accepted
         for key, value in params.items():
-            parameters[key][start:stop] = value[mask]
+            if key not in ("mass_ratio", "chirp_mass"):
+                parameters[key][start:stop] = value[mask]
 
         # do the same for our accepted projected waveforms
         projected = projected[mask].numpy()
@@ -164,6 +165,9 @@ def main(
 
     rejected_fname = output_dir / "rejected-parameters.h5"
     utils.io_with_blocking(rejected_params.write, rejected_fname)
+
+    # TODO: compute probability of all parameters against
+    # source and all target priors here then save them somehow
     return waveform_fname, rejected_fname
 
 

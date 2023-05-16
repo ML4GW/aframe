@@ -6,6 +6,10 @@ import numpy as np
 from bilby.core.prior import Interped, PriorDict
 
 
+def chirp_mass(m1, m2):
+    return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
+
+
 def mass_condition_powerlaw(reference_params, mass_1):
     return dict(
         alpha=reference_params["alpha"],
@@ -15,14 +19,11 @@ def mass_condition_powerlaw(reference_params, mass_1):
 
 
 def mass_constraints(samples):
-    if "mass_1" not in samples.keys() or "mass_2" not in samples.keys():
+    if "mass_1" not in samples or "mass_2" not in samples:
         raise KeyError("mass_1 and mass_1 must exist to have a mass_ratio")
-    out_samples = samples.copy()
-    out_samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
-    m1 = samples["mass_1"]
-    m2 = samples["mass_2"]
-    out_samples["chirp_mass"] = ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
-    return out_samples
+    samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
+    samples["chirp_mass"] = chirp_mass(samples["mass_1"], samples["mass_2"])
+    return samples
 
 
 def transpose(d: Dict[str, List]):

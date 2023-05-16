@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import h5py
 import pytest
@@ -137,33 +137,36 @@ def test_main(
 ):
 
     start, stop = 0, 1000
-    hanford_background = livingston_background = None
+    background_mock = MagicMock()
+    background_mock.iterdir = lambda: iter([None])
     mock_compute_network_snr = create_mock_compute_network_snr(snr_threshold)
-    with patch(
-        "datagen.scripts.timeslide_waveforms.utils.load_psds",
-        return_value=mock_psds,
-    ), patch(
+    ml4gw_mock = patch(
         "datagen.scripts.timeslide_waveforms.compute_network_snr",
         new=mock_compute_network_snr,
-    ):
-        output_fname = main(
+    )
+    load_mock = patch(
+        "datagen.utils.timeslide_waveforms.load_psds",
+        return_value=mock_psds,
+    )
+    with load_mock, ml4gw_mock:
+        output_fname, rejected_params = main(
             start,
             stop,
-            hanford_background,
-            livingston_background,
-            spacing,
-            buffer,
-            waveform_duration,
-            cosmology,
-            prior,
-            minimum_frequency,
-            reference_frequency,
-            sample_rate,
-            waveform_approximant,
-            highpass,
-            snr_threshold,
-            ifos,
-            tmp_path / "test.h5",
+            shifts=[0, 1],
+            background=background_mock,
+            spacing=spacing,
+            buffer=buffer,
+            waveform_duration=waveform_duration,
+            cosmology=cosmology,
+            prior=prior,
+            minimum_frequency=minimum_frequency,
+            reference_frequency=reference_frequency,
+            sample_rate=sample_rate,
+            waveform_approximant=waveform_approximant,
+            highpass=highpass,
+            snr_threshold=snr_threshold,
+            ifos=ifos,
+            output_dir=tmp_path / "test.h5",
         )
 
         expected_n_signals = len(
@@ -172,20 +175,35 @@ def test_main(
             )
         )
         assert output_fname.exists()
+
+        # TODO: should really just load in using
+        # the LigoResponseSetObject but this will
+        # work for the time being
         with h5py.File(output_fname, "r") as f:
-            shape = f["signals"].shape
+            num_injections = f.attrs["num_injections"]
+            waveforms = f["waveforms"]
+            for ifo in "hl":
+                assert f"{ifo}1" in waveforms
+            shape = waveforms["h1"].shape
             assert shape == (
                 expected_n_signals,
-                2,
                 waveform_duration * sample_rate,
             )
 
-            for key in f.keys():
-                data = f[key][:]
+            params = f["parameters"]
+            for key in params:
+                data = params[key][:]
                 assert len(data) == shape[0]
                 if key == "snr":
                     assert all(data > snr_threshold)
 
+        with h5py.File(rejected_params, "r") as f:
+            num_rejected = f.attrs["length"]
+            assert (num_rejected + expected_n_signals) == num_injections
 
-def test_deploy():
-    pass
+            params = f["parameters"]
+            for key in params:
+                data = params[key][:]
+                assert len(data) == num_rejected
+                if key == "snr":
+                    assert all(data < snr_threshold)

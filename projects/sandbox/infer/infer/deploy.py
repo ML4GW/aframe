@@ -159,7 +159,7 @@ def main(
         monitor = ServerMonitor(
             model_name=model_name,
             ips="localhost",
-            filename=log_dir / "server-stats.csv",
+            filename=log_dir / f"server-stats-{batch_size}.csv",
             model_version=model_version,
             name="monitor",
             rate=10,

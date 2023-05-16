@@ -24,7 +24,7 @@ typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 
 # hermes utilities
-"hermes.aeriel" = {path = "../../../hermes/hermes/hermes.aeriel", develop = true}
+"hermes.aeriel" = {path = "../../../hermes/hermes/hermes.aeriel", extras=["serve"], develop = true}
 "hermes.stillwater" = {path = "../../../hermes/hermes/hermes.stillwater", develop = true}
 
 [tool.poetry.dev-dependencies]
