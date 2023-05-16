@@ -149,4 +149,4 @@ class SensitiveVolumeCalculator:
         variance *= self.volume**2
         std = np.sqrt(variance)
         n_eff = v**2 / variance
-        return v, std, n_eff
+        return v.value, std.value, n_eff.value
