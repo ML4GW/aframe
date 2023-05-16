@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List
+from typing import TYPE_CHECKING, List
 
 import bilby
 import numpy as np
