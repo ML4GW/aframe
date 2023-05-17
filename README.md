@@ -73,6 +73,8 @@ This will execute training and inference pipeline which will:
 - Use these predictions to generate background and foreground event distributions
 - Serve up an application for visualizing and analyzing those distributions at `localhost:5005`.
 
+**!! NOTE:** You may run into issues with HDF5 I/O when running on LDG. To mitigate these, consider running with `HDF5_USE_FILE_LOCKING=FALSE`, or setting this environment variable in the `.env` file discussed below **!!**
+
 Note that the first execution may take a bit longer than subsequent runs, since `pinto` will build all the necessary environments at run time if they don't already exist. The environments for data generation and training in particular can be expensive to build because the former is built with Conda and the latter requires building GPU libraries.
 
 ### 3b. Simplify with a `.env`
@@ -81,6 +83,7 @@ Since `pinto` supports using `.env` files to specify environment variables, cons
 ```bash
 BASE_DIR=$HOME/bbhnet/results/my-first-run
 DATA_DIR=$HOME/bbhnet/data
+HDF5_USE_FILE_LOCKING=FALSE
 ```
 
 Then you can simplify the above expression to just
