@@ -15,6 +15,8 @@ from typeo import scriptify
 
 from bbhnet.logging import configure_logging
 
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 def generate_glitch_dataset(
     snr_thresh: float,

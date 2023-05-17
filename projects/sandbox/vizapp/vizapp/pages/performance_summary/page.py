@@ -1,5 +1,7 @@
 from vizapp.pages.page import Page
-from vizapp.pages.performance_summary import SensitiveVolumePlot
+from vizapp.pages.performance_summary.sensitive_volume import (
+    SensitiveVolumePlot,
+)
 
 
 class PerformanceSummaryPage(Page):
