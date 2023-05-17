@@ -27,9 +27,6 @@ libs/analysis:
   - 'libs/io/**'
   - 'libs/parallelize/**'
   - 'libs/base/**'
-libs/parallelize/:
-  - *workflow
-  - 'libs/parallelize/**'
 libs/trainer/:
   - *workflow
   - 'libs/trainer/**'

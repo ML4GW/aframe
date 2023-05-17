@@ -64,16 +64,18 @@ def h5py_mock(background, glitches, glitch_times, waveforms, ifos):
     def mock(fname, _):
         if "background" in fname:
             hoft, times = background
-            strain = {ifo: hoft for ifo in ifos}
-            value = MagicMock()
-            value.__getitem__.side_effect = strain.__getitem__
-            value.keys = strain.keys
-            value.attrs = {"t0": times[0]}
+            value = {}
+            for ifo in ifos:
+                dataset = MagicMock()
+                dataset.__getitem__.side_effect = hoft.__getitem__
+                dataset.attrs = {"x0": times[0]}
+                value[ifo] = dataset
         elif "glitches" in fname:
-            value = {
-                "H1": {"glitches": glitches, "times": glitch_times},
-                "L1": {"glitches": -glitches, "times": glitch_times},
-            }
+            value = {ifo: {} for ifo in ifos}
+            for i, ifo in enumerate(ifos):
+                sign = (-1) ** i
+                value[ifo]["glitches"] = sign * glitches
+                value[ifo]["times"] = glitch_times
         elif "signals" in fname:
             zeros = np.zeros((len(waveforms),))
             value = {i: zeros for i in ["dec", "ra", "psi"]}
@@ -125,8 +127,10 @@ def test_train(
     kernel_length = 2
     fduration = 1
 
+    background_dir = MagicMock()
+    background_dir.iterdir = lambda: iter(["background.h5"])
     train_dataset, validator, preprocessor = train(
-        "background.h5",
+        background_dir,
         "glitches.h5",
         "signals.h5",
         outdir,
@@ -142,8 +146,6 @@ def test_train(
         std_snr=15,
         min_snr=1,
         highpass=32,
-        train_val_start=0,
-        train_val_stop=duration,
         batches_per_epoch=200,
         # preproc args
         fduration=fduration,

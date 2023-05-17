@@ -13,7 +13,8 @@ license = "MIT"
 generate-background = "datagen.scripts.background:main"
 generate-glitches = "datagen.scripts.glitches:main"
 generate-waveforms = "datagen.scripts.waveforms:main"
-generate-timeslides = "datagen.scripts.timeslides:main"
+generate-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:main"
+deploy-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:deploy"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
@@ -23,7 +24,8 @@ torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 mldatafind = {git = "https://github.com/ML4GW/mldatafind.git", branch = "main"}
 
-"bbhnet.parallelize" = {path = "../../../libs/parallelize", develop = true}
+"bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
+"bbhnet.deploy" = {path = "../../../libs/deploy", develop = true}
 "bbhnet.io" = {path = "../../../libs/io", develop = true}
 "bbhnet.logging" = {path = "../../../libs/logging", develop = true}
 "bbhnet.priors" = {path = "../../../libs/priors", develop = true}

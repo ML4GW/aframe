@@ -6,7 +6,6 @@ from astropy import cosmology as cosmo
 from astropy import units as u
 
 if TYPE_CHECKING:
-    from astropy.units import Quantity
     from astropy.cosmology import Cosmology
     import bilby
 
@@ -22,7 +21,7 @@ def calculate_astrophysical_volume(
     dec_min: float = -PI_OVER_TWO,
     dec_max: float = PI_OVER_TWO,
     cosmology: "Cosmology" = cosmo.Planck15,
-) -> "Quantity":
+) -> float:
     """
     Calculates the astrophysical volume over which injections have been made.
     See equation 4) in https://arxiv.org/pdf/1712.00482.pdf
@@ -39,23 +38,18 @@ def calculate_astrophysical_volume(
 
     # calculate the angular volume of the sky
     # over which injections have been made
-    dec_min, dec_max = dec_min * u.rad, dec_max * u.rad
-    theta_max, theta_min = (
-        np.pi / 2 - dec_min.value,
-        np.pi / 2 - dec_max.value,
-    )
+    theta_max = PI_OVER_TWO - dec_min
+    theta_min = PI_OVER_TWO - dec_max
     omega = -2 * math.pi * (np.cos(theta_max) - np.cos(theta_min))
 
     # calculate the volume of the universe
     # over which injections have been made
-    integrand = (
-        lambda z: 1
-        / (1 + z)
-        * (cosmology.differential_comoving_volume(z)).value
-    )
+    def integrand(z):
+        dcv = cosmology.differential_comoving_volume(z).value
+        return dcv / (1 + z)
 
     volume, _ = quad(integrand, zmin, zmax) * u.Mpc**3 * omega
-    return volume
+    return volume.value
 
 
 @dataclass
@@ -91,7 +85,8 @@ class SensitiveVolumeCalculator:
             dec_prior = self.source["dec"]
             dec_min, dec_max = dec_prior.minimum, dec_prior.maximum
         else:
-            dec_min = dec_max = None
+            dec_min = -PI_OVER_TWO
+            dec_max = PI_OVER_TWO
 
         # calculate the astrophysical volume over
         # which injections have been made.
@@ -146,11 +141,12 @@ class SensitiveVolumeCalculator:
             mu = len(recovered_parameters) / num_injections
             variance = len(recovered_parameters) / num_injections**2
 
-        variance -= mu**2 / num_injections
-        n_eff = mu**2 / variance
+        v = mu * self.volume
+        variance = (variance - mu**2 / num_injections) * v**2
 
         # now attach physical units to quantities
         v = mu * self.volume
         variance *= self.volume**2
         std = np.sqrt(variance)
-        return v.value, std.value, n_eff
+        n_eff = v**2 / variance
+        return v.value, std.value, n_eff.value

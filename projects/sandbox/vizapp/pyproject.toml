@@ -10,7 +10,7 @@ vizapp = "vizapp.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-bokeh = "^2.4.3"
+bokeh = "^3.0"
 scipy = "^1.7"
 h5py = "^3.5"
 lalsuite = "^7.10"

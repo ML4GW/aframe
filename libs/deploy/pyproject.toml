@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "bbhnet.deploy"
+version = "0.0.1"
+description = "Tools for deploying jobs on the LIGO data grid"
+authors = ["Alec Gunny"]
+license = "MIT"
+packages = [
+    {include = "bbhnet"}
+]
+# readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

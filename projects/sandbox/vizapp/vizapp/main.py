@@ -10,16 +10,21 @@ from .app import VizApp
 from .vetoes import VetoParser
 
 
+def _normalize_path(path: Path):
+    if not path.is_absolute():
+        return Path(__file__).resolve().parent / path
+    return path
+
+
 @scriptify
 def main(
+    outdir: Path,
+    datadir: Path,
+    veto_definer_file: Path,
+    gate_paths: Dict[str, Path],
     ifos: List[str],
     cosmology: Callable,
     source_prior: Callable,
-    veto_definer_file: Path,
-    gate_paths: Dict[str, Path],
-    timeslides_results_dir: Path,
-    timeslides_strain_dir: Path,
-    train_data_dir: Path,
     start: float,
     stop: float,
     sample_rate: float,
@@ -32,12 +37,9 @@ def main(
 
     configure_logging(logdir / "vizapp.log", verbose)
 
-    if not veto_definer_file.is_absolute():
-        veto_definer_file = Path(__file__).resolve().parent / veto_definer_file
-
+    veto_definer_file = _normalize_path(veto_definer_file)
     for ifo in ifos:
-        if not gate_paths[ifo].is_absolute():
-            gate_paths[ifo] = Path(__file__).resolve().parent / gate_paths[ifo]
+        gate_paths[ifo] = _normalize_path(gate_paths[ifo])
 
     veto_parser = VetoParser(
         veto_definer_file,
@@ -50,16 +52,15 @@ def main(
     cosmology = cosmology()
 
     bkapp = VizApp(
+        base_directory=outdir,
+        data_directory=datadir,
+        cosmology=cosmology,
         source_prior=source_prior,
-        timeslides_results_dir=timeslides_results_dir,
-        timeslides_strain_dir=timeslides_strain_dir,
-        train_data_dir=train_data_dir,
         ifos=ifos,
         sample_rate=sample_rate,
         fduration=fduration,
         valid_frac=valid_frac,
         veto_parser=veto_parser,
-        cosmology=cosmology,
     )
 
     server = Server({"/": bkapp}, num_procs=1, port=port, address="0.0.0.0")

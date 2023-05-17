@@ -15,6 +15,8 @@ from typeo import scriptify
 
 from bbhnet.logging import configure_logging
 
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 def generate_glitch_dataset(
     snr_thresh: float,
@@ -80,6 +82,7 @@ def generate_glitch_dataset(
 
         for data in data_generator:
             # restrict to triggers within current data chunk
+            data = data.resample(sample_rate)
             data = data[channel]
             times = data.times.value
             mask = (triggers["time"] > times[0] + window) & (
@@ -97,7 +100,6 @@ def generate_glitch_dataset(
                     )
                     continue
                 else:
-                    glitch_ts = glitch_ts.resample(sample_rate)
                     glitches.append(list(glitch_ts.value))
                     snrs.append(trigger["snr"])
                     gpstimes.append(time)
@@ -174,7 +176,7 @@ def omicron_main_wrapper(
         "--ifo",
         ifo,
         "-c",
-        "request_disk=100M",
+        "request_disk=4GB",
         "--output-dir",
         str(run_dir),
         "--skip-gzip",

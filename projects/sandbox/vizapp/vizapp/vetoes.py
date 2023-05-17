@@ -44,15 +44,6 @@ class VetoParser:
         self.veto_cache = {}
 
     def get_vetoes(self, category: str):
-        try:
-            vetoes = self.veto_cache[category]
-        except KeyError:
-            vetoes = self._query_vetoes(category)
-            self.veto_cache[category] = vetoes
-
-        return vetoes
-
-    def _query_vetoes(self, category: str):
         vetoes = {}
 
         for ifo in self.ifos:

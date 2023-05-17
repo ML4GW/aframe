@@ -79,4 +79,4 @@ def test_calculate_astrophysical_volume():
         )
         # expected answer is 4 pi since the integrand
         # is 1 and the volume is 1 Mpc^3
-        assert volume.value == 4 * math.pi
+        assert volume == 4 * math.pi
