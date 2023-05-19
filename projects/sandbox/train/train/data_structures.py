@@ -270,13 +270,39 @@ class SnrRescaler(FittableTransform):
         return rescaled_responses, target_snrs
 
 
-# TODO: actually implement
-class SnrSampler:
-    def __init__(self, dist: Callable):
-        self.dist = dist
+def get_lognormal_params(mean, std):
+    sigma = np.log((std / mean) ** 2 + 1) ** 0.5
+    mu = 2 * np.log(mean / (mean**2 + std**2) ** 0.25)
+    return torch.Tensor([mu]), torch.Tensor([sigma])
 
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
+
+class SnrSampler:
+    def __init__(
+        self,
+        max_mean_snr: float,
+        min_mean_snr: float,
+        std_snr: float,
+        decay_steps: int,
+    ):
+        self.max_mean_snr = max_mean_snr
+        self.min_mean_snr = min_mean_snr
+        self.std_snr = std_snr
+        self.decay_steps = decay_steps
+        self._step = 0
+
+        loc, scale = get_lognormal_params(max_mean_snr, std_snr)
+        self.dist = torch.distributions.log_normal.LogNormal(loc, scale)
+
+    def __call__(self, N):
+        return self.dist.sample(N)
 
     def step(self):
-        return
+        self._step += 1
+        if self._step >= self.decay_steps:
+            return
+
+        frac = self._step / self.decay_steps
+        diff = self.max_mean_snr - self.min_mean_snr
+        new = self.max_mean_snr - frac * diff
+        loc, _ = get_lognormal_params(new, self.std_snr)
+        self.dist.base_dist.loc = loc

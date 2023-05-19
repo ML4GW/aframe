@@ -113,10 +113,10 @@ fduration = "${base.fduration}"
 snr_thresh = "${base.hopeless_snr_thresh}"
 highpass = "${base.minimum_frequency}"
 trigger_distance = -0.5
-
-mean_snr = 15
-std_snr = 15
-min_snr = 1
+max_mean_snr = 15
+min_mean_snr = 2.27
+std_snr = 1.78
+snr_decay_steps = 50000
 waveform_prob = 0.5
 glitch_prob = 0.4
 glitch_downweight = 0.65
