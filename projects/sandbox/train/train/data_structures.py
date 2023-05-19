@@ -1,3 +1,4 @@
+import math
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -271,8 +272,8 @@ class SnrRescaler(FittableTransform):
 
 
 def get_lognormal_params(mean, std):
-    sigma = np.log((std / mean) ** 2 + 1) ** 0.5
-    mu = 2 * np.log(mean / (mean**2 + std**2) ** 0.25)
+    sigma = math.log((std / mean) ** 2 + 1) ** 0.5
+    mu = 2 * math.log(mean / (mean**2 + std**2) ** 0.25)
     return torch.Tensor([mu]), torch.Tensor([sigma])
 
 
@@ -294,7 +295,7 @@ class SnrSampler:
         self.dist = torch.distributions.log_normal.LogNormal(loc, scale)
 
     def __call__(self, N):
-        return self.dist.sample(N)
+        return self.dist.sample((N,)).view(-1)
 
     def step(self):
         self._step += 1

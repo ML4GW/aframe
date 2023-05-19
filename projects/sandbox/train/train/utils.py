@@ -128,6 +128,7 @@ def prepare_augmentation(
     # construct the augmentor that will be used at training time
     # to sample waveforms, rescale snrs, insert glitches, perform
     # background strain inversions and flips, etc.
+    snr = SnrSampler(max_mean_snr, min_mean_snr, std_snr, snr_decay_steps)
     rescaler = SnrRescaler(
         len(ifos),
         sample_rate,
