@@ -49,9 +49,10 @@ def prepare_augmentation(
     mute_frac: float,
     sample_rate: float,
     highpass: float,
-    max_mean_snr: float,
-    min_mean_snr: float,
-    std_snr: float,
+    max_min_snr: float,
+    min_min_snr: float,
+    max_snr: float,
+    snr_alpha: float,
     snr_decay_steps: float,
     invert_prob: Optional[float] = 0.5,
     reverse_prob: Optional[float] = 0.5,
@@ -128,7 +129,9 @@ def prepare_augmentation(
     # construct the augmentor that will be used at training time
     # to sample waveforms, rescale snrs, insert glitches, perform
     # background strain inversions and flips, etc.
-    snr = SnrSampler(max_mean_snr, min_mean_snr, std_snr, snr_decay_steps)
+    snr = SnrSampler(
+        max_min_snr, min_min_snr, max_snr, snr_alpha, snr_decay_steps
+    )
     rescaler = SnrRescaler(
         len(ifos),
         sample_rate,

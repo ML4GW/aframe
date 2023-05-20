@@ -1,4 +1,3 @@
-import math
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -6,6 +5,7 @@ import torch
 
 from ml4gw import gw
 from ml4gw.dataloading import InMemoryDataset
+from ml4gw.distributions import PowerLaw
 from ml4gw.spectral import Background, normalize_psd
 from ml4gw.transforms.transform import FittableTransform
 from ml4gw.utils.slicing import sample_kernels
@@ -271,31 +271,26 @@ class SnrRescaler(FittableTransform):
         return rescaled_responses, target_snrs
 
 
-def get_lognormal_params(mean, std):
-    sigma = math.log((std / mean) ** 2 + 1) ** 0.5
-    mu = 2 * math.log(mean / (mean**2 + std**2) ** 0.25)
-    return torch.Tensor([mu]), torch.Tensor([sigma])
-
-
 class SnrSampler:
     def __init__(
         self,
-        max_mean_snr: float,
-        min_mean_snr: float,
-        std_snr: float,
+        max_min_snr: float,
+        min_min_snr: float,
+        max_snr: float,
+        alpha: float,
         decay_steps: int,
     ):
-        self.max_mean_snr = max_mean_snr
-        self.min_mean_snr = min_mean_snr
-        self.std_snr = std_snr
+        self.max_min_snr = max_min_snr
+        self.min_min_snr = min_min_snr
+        self.max_snr = max_snr
+        self.alpha = alpha
         self.decay_steps = decay_steps
         self._step = 0
 
-        loc, scale = get_lognormal_params(max_mean_snr, std_snr)
-        self.dist = torch.distributions.log_normal.LogNormal(loc, scale)
+        self.dist = PowerLaw(max_min_snr, max_snr, alpha)
 
     def __call__(self, N):
-        return self.dist.sample((N,)).view(-1)
+        return self.dist(N)
 
     def step(self):
         self._step += 1
@@ -303,7 +298,11 @@ class SnrSampler:
             return
 
         frac = self._step / self.decay_steps
-        diff = self.max_mean_snr - self.min_mean_snr
-        new = self.max_mean_snr - frac * diff
-        loc, _ = get_lognormal_params(new, self.std_snr)
-        self.dist.base_dist.loc = loc
+        diff = self.max_min_snr - self.min_min_snr
+        new = self.max_min_snr - frac * diff
+
+        self.dist.x_min = new
+        self.dist.normalization = new ** (-self.alpha + 1)
+        self.dist.normalization -= self.max_snr ** (-self.alpha + 1)
+
+        self._step += 1
