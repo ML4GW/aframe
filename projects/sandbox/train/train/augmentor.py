@@ -133,7 +133,7 @@ class BBHNetBatchAugmentor(torch.nn.Module):
 
     def forward(self, X, y):
         # insert glitches and apply inversion / flip augementations
-        print(self.glitch_sampler.__call__, self.glitch_sampler.prob)
+
         X, y = self.glitch_sampler(X, y)
         X = self.inverter(X)
         X = self.reverser(X)
@@ -159,8 +159,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         X[mask] += responses
 
         # set response augmentation labels to noise
-        mask[mask][mute_indices] = False
-        mask[mask][swap_indices] = False
+        mask[torch.where(mask)[0][mute_indices]] = 0
+        mask[torch.where(mask)[0][swap_indices]] = 0
 
         # set labels to positive for injected signals
         y[mask] = -y[mask] + 1
