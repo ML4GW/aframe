@@ -47,6 +47,13 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         signal_prob = signal_prob / (
             1 - (swap_frac + mute_frac - (swap_frac * mute_frac))
         )
+        if not 0 < signal_prob <= 1.0:
+            raise ValueError(
+                "Probability must be between 0 and 1. "
+                "Adjust the value(s) of waveform_prob, "
+                "glitch_prob, swap_frac, mute_frac, and/or downweight"
+            )
+
         self.signal_prob = signal_prob
         self.trigger_offset = int(trigger_distance * sample_rate)
         self.sample_rate = sample_rate
@@ -126,6 +133,7 @@ class BBHNetBatchAugmentor(torch.nn.Module):
 
     def forward(self, X, y):
         # insert glitches and apply inversion / flip augementations
+        print(self.glitch_sampler.__call__, self.glitch_sampler.prob)
         X, y = self.glitch_sampler(X, y)
         X = self.inverter(X)
         X = self.reverser(X)
@@ -158,6 +166,7 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         y[mask] = -y[mask] + 1
 
         # curriculum learning step
-        self.snr.step()
+        if self.snr is not None:
+            self.snr.step()
 
         return X, y
