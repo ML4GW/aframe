@@ -53,9 +53,9 @@ def prepare_augmentation(
     min_min_snr: float,
     max_snr: float,
     snr_alpha: float,
-    snr_decay_steps: float,
-    invert_prob: Optional[float] = 0.5,
-    reverse_prob: Optional[float] = 0.5,
+    snr_decay_steps: int,
+    invert_prob: float = 0.5,
+    reverse_prob: float = 0.5,
     trigger_distance: float = 0,
     valid_frac: Optional[float] = None,
 ):
@@ -67,8 +67,12 @@ def prepare_augmentation(
 
     # calculate the time at which the validation set starts
     full_duration = train_stop - train_start
-    train_duration = (1 - valid_frac) * full_duration
-    valid_start = train_start + train_duration
+    if valid_frac is not None:
+        train_duration = (1 - valid_frac) * full_duration
+        valid_start = train_start + train_duration
+    else:
+        train_duration = full_duration
+
     with h5py.File(glitch_dataset, "r") as f:
         for ifo in ifos:
             glitches = f[ifo]["glitches"][:]
@@ -144,15 +148,15 @@ def prepare_augmentation(
     augmentor = AframeBatchAugmentor(
         ifos,
         sample_rate,
-        mute_frac,
-        swap_frac,
-        glitch_downweight,
         waveform_prob,
         glitch_sampler,
         dec=Cosine(),
         psi=Uniform(0, pi),
         phi=Uniform(-pi, pi),
         trigger_distance=trigger_distance,
+        downweight=glitch_downweight,
+        mute_frac=mute_frac,
+        swap_frac=swap_frac,
         snr=snr,
         rescaler=rescaler,
         invert_prob=invert_prob,
