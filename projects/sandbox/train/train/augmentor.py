@@ -33,8 +33,8 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         swap_frac: float = 0.0,
         snr: Optional[Callable] = None,
         rescaler: Optional["SnrRescaler"] = None,
-        invert_prob: Optional[float] = 0.5,
-        reverse_prob: Optional[float] = 0.5,
+        invert_prob: float = 0.5,
+        reverse_prob: float = 0.5,
         **polarizations: np.ndarray,
     ):
 
@@ -47,6 +47,7 @@ class BBHNetBatchAugmentor(torch.nn.Module):
         signal_prob = signal_prob / (
             1 - (swap_frac + mute_frac - (swap_frac * mute_frac))
         )
+
         if not 0 < signal_prob <= 1.0:
             raise ValueError(
                 "Probability must be between 0 and 1. "

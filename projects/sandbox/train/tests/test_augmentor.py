@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, Mock, patch
 
+import numpy as np
 import pytest
 import torch
 from train.augmentor import BBHNetBatchAugmentor
@@ -35,8 +36,8 @@ def test_bbhnet_batch_augmentor(rand_mock):
         psi=MagicMock(),
         phi=MagicMock(),
         trigger_distance=-0.5,
-        plus=torch.zeros((1, 128 * 2)),
-        cross=torch.zeros((1, 128 * 2)),
+        plus=np.zeros((1, 128 * 2)),
+        cross=np.zeros((1, 128 * 2)),
     )
 
     X = torch.zeros((32, 2, 128 * 1))
@@ -47,6 +48,30 @@ def test_bbhnet_batch_augmentor(rand_mock):
     assert (X[1::2] == 0).all().item()
     assert (y[::2] == 1).all().item()
     assert (y[1::2] == 0).all().item()
+
+    for _, tensor in augmentor.polarizations.items():
+        assert len(tensor) == augmentor.num_waveforms
+
+    assert len(list(augmentor.buffers())) == 2
+
+    polarizations = {
+        "plus": torch.randn(100, 4096),
+        "cross": torch.randn(99, 4096),
+    }
+    with pytest.raises(ValueError) as exc:
+        augmentor = BBHNetBatchAugmentor(
+            ifos=["H1", "L1"],
+            sample_rate=2048,
+            signal_prob=0.9,
+            glitch_sampler=glitch_sampler,
+            dec=lambda N: torch.randn(N, 3, 4096),
+            psi=lambda N: torch.randn(N, 15),
+            phi=lambda N: torch.randn(N, 15),
+            trigger_distance=0.1,
+            **polarizations,
+        )
+
+    assert str(exc.value).startswith("Polarization ")
 
 
 @pytest.mark.parametrize("downweight", [0, 0.5, 1])
@@ -67,8 +92,8 @@ def test_bbhnet_batch_augmentor_with_downweight(downweight):
                 phi=lambda N: torch.zeros((N,)),
                 trigger_distance=-0.5,
                 downweight=downweight,
-                plus=torch.zeros((1, 128 * 2)),
-                cross=torch.zeros((1, 128 * 2)),
+                plus=np.zeros((1, 128 * 2)),
+                cross=np.zeros((1, 128 * 2)),
             )
         assert str(exc.value).startswith("Probability must be")
 
@@ -90,8 +115,8 @@ def test_bbhnet_batch_augmentor_with_downweight(downweight):
         psi=lambda N: torch.zeros((N,)),
         phi=lambda N: torch.zeros((N,)),
         downweight=downweight,
-        plus=torch.zeros((100, 128 * 2)),
-        cross=torch.zeros((100, 128 * 2)),
+        plus=np.zeros((100, 128 * 2)),
+        cross=np.zeros((100, 128 * 2)),
     )
 
     if downweight == 1:
@@ -140,8 +165,8 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
                 trigger_distance=-0.5,
                 swap_frac=swap_frac,
                 mute_frac=mute_frac,
-                plus=torch.zeros((1, 128 * 2)),
-                cross=torch.zeros((1, 128 * 2)),
+                plus=np.zeros((1, 128 * 2)),
+                cross=np.zeros((1, 128 * 2)),
             )
         assert str(exc.value).startswith("Probability must be")
 
@@ -161,8 +186,8 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
         phi=lambda N: torch.zeros((N,)),
         swap_frac=swap_frac,
         mute_frac=mute_frac,
-        plus=torch.zeros((100, 128 * 2)),
-        cross=torch.zeros((100, 128 * 2)),
+        plus=np.zeros((100, 128 * 2)),
+        cross=np.zeros((100, 128 * 2)),
     )
 
     if swap_frac + mute_frac == 0:
@@ -201,4 +226,30 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
 
 
 def test_sample_responses():
-    pass
+    # Test that sample_responses returns the expected output shape
+    ifos = ["H1", "L1"]
+    sample_rate = 2048
+    signal_prob = 0.5
+    glitch_sampler = MagicMock(return_value=torch.randn(10, 3, 4096))
+    glitch_sampler.prob = 0.25
+
+    polarizations = {
+        "plus": np.random.randn(100, 4096 * 2),
+        "cross": np.random.randn(100, 4096 * 2),
+    }
+    augmentor = BBHNetBatchAugmentor(
+        ifos,
+        sample_rate,
+        signal_prob,
+        glitch_sampler,
+        dec=lambda N: torch.randn(N),
+        psi=lambda N: torch.randn(N),
+        phi=lambda N: torch.randn(N),
+        trigger_distance=-0.5,
+        **polarizations,
+    )
+
+    N = 10
+    kernel_size = 4096
+    kernels = augmentor.sample_responses(N, kernel_size)
+    assert kernels.shape == (N, 2, kernel_size)
