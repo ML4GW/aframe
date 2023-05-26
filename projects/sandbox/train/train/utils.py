@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple, TypeVar
 import h5py
 import numpy as np
 import torch
-
 from train.augmentor import AframeBatchAugmentor
 from train.data_structures import GlitchSampler, SnrRescaler, SnrSampler
 
@@ -142,9 +141,6 @@ def prepare_augmentation(
         waveform_duration,
         highpass,
     )
-
-    snr = SnrSampler(max_mean_snr, min_mean_snr, std_snr, snr_decay_steps)
-
     augmentor = AframeBatchAugmentor(
         ifos,
         sample_rate,
