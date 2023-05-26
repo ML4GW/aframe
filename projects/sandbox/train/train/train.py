@@ -316,9 +316,11 @@ def main(
 
     # Create full training dataloader.
     # Use waveform dataset to dictate what
-    # an "epoch" should be
+    # an "epoch" should be, adding a factor
+    # to account for our sky parameter sampling
+    # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
-    batches_per_epoch = len(waveforms) / waveforms_per_batch
+    batches_per_epoch = 4 * len(waveforms) / waveforms_per_batch
     train_dataset = AframeInMemoryDataset(
         background,
         int(kernel_length * sample_rate),
