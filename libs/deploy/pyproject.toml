@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "bbhnet.deploy"
+name = "aframe.deploy"
 version = "0.0.1"
 description = "Tools for deploying jobs on the LIGO data grid"
 authors = ["Alec Gunny"]
 license = "MIT"
 packages = [
-    {include = "bbhnet"}
+    {include = "aframe"}
 ]
 # readme = "README.md"
 
@@ -13,7 +13,7 @@ packages = [
 python = ">=3.8,<3.11"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry-core"]

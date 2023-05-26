@@ -8,7 +8,7 @@ from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
 
-from bbhnet.analysis.ledger.ledger import (
+from aframe.analysis.ledger.ledger import (
     PATH,
     Ledger,
     metadata,

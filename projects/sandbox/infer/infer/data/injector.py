@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from bbhnet.analysis.ledger.injections import LigoResponseSet
+from aframe.analysis.ledger.injections import LigoResponseSet
 
 
 @dataclass

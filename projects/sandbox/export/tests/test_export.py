@@ -9,7 +9,7 @@ from export import export
 from google.protobuf import text_format
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
-from bbhnet.architectures import Preprocessor, ResNet
+from aframe.architectures import Preprocessor, ResNet
 
 
 # set up a directory for the entirety of the session
@@ -42,8 +42,8 @@ def get_network_weights(weights_dir, architecture):
             preprocessor.whitener.build(
                 kernel_length=torch.Tensor((kernel_length,))
             )
-            bbhnet = architecture(num_ifos)
-            model = torch.nn.Sequential(preprocessor, bbhnet)
+            aframe = architecture(num_ifos)
+            model = torch.nn.Sequential(preprocessor, aframe)
             torch.save(model.state_dict(prefix=""), weights)
 
         shutil.copy(weights, target)
@@ -74,7 +74,7 @@ def load_config(config_path: Path):
 @pytest.fixture
 def validate_repo(repo_dir):
     def fn(
-        expected_bbhnet_instances,
+        expected_aframe_instances,
         expected_preproc_instances,
         expected_snapshots,
         expected_versions,
@@ -116,9 +116,9 @@ def validate_repo(repo_dir):
 
                 assert (model / "1" / "model.onnx").exists()
                 assert not (model / "2").is_dir()
-            elif model.name in ("bbhnet", "preproc"):
-                if model.name == "bbhnet":
-                    expected_instances = expected_bbhnet_instances
+            elif model.name in ("aframe", "preproc"):
+                if model.name == "aframe":
+                    expected_instances = expected_aframe_instances
                     expected_input_dim = expected_kernel_size - expected_crop
                     expected_output_shape = [expected_batch_size, 1]
                     assert config.optimization.graph.level == -1
@@ -143,7 +143,7 @@ def validate_repo(repo_dir):
                 else:
                     if expected_instances is None:
                         raise ValueError(
-                            "Didn't expect bbhnet instances but found "
+                            "Didn't expect aframe instances but found "
                             f"instance group {instance_group}"
                         )
                     assert instance_group.count == expected_instances
@@ -156,7 +156,7 @@ def validate_repo(repo_dir):
                 assert config.output[0].dims == expected_output_shape
 
                 if isinstance(expected_versions, tuple):
-                    idx = 0 if model.name == "bbhnet" else 1
+                    idx = 0 if model.name == "aframe" else 1
                     versions = expected_versions[idx]
                 else:
                     versions = expected_versions
@@ -165,7 +165,7 @@ def validate_repo(repo_dir):
                     assert (model / str(j + 1) / "model.onnx").is_file()
                 assert not (model / str(j + 2)).is_dir()
 
-            elif model.name == "bbhnet-stream":
+            elif model.name == "aframe-stream":
                 assert (model / "1").is_dir()
                 assert not (model / "2").is_dir()
             else:
@@ -236,11 +236,11 @@ def test_export_for_shapes(
             fduration=1,
             weights=weights,
             streams_per_gpu=1,
-            bbhnet_instances=1,
+            aframe_instances=1,
             preproc_instances=1,
         )
         validate_repo(
-            expected_bbhnet_instances=1,
+            expected_aframe_instances=1,
             expected_preproc_instances=1,
             expected_snapshots=1,
             expected_versions=1,
@@ -298,11 +298,11 @@ def test_export_for_weights(
         fduration=1,
         weights=weights,
         streams_per_gpu=1,
-        bbhnet_instances=1,
+        aframe_instances=1,
         preproc_instances=1,
     )
     validate_repo(
-        expected_bbhnet_instances=1,
+        expected_aframe_instances=1,
         expected_preproc_instances=1,
         expected_snapshots=1,
         expected_versions=1,
@@ -317,7 +317,7 @@ def test_export_for_weights(
 # now test how different values of scaling parameters
 # lead to different configs
 @pytest.fixture(params=[None, 1])
-def bbhnet_instances(request):
+def aframe_instances(request):
     return request.param
 
 
@@ -342,7 +342,7 @@ def test_export_for_scaling(
     repo_dir,
     output_dir,
     streams_per_gpu,
-    bbhnet_instances,
+    aframe_instances,
     preproc_instances,
     clean,
     architecture,
@@ -362,7 +362,7 @@ def test_export_for_scaling(
         p.write_text("dummy text")
 
     def run_export(
-        bbhnet_instances=bbhnet_instances,
+        aframe_instances=aframe_instances,
         preproc_instances=preproc_instances,
         clean=clean,
     ):
@@ -377,14 +377,14 @@ def test_export_for_scaling(
             fduration=1,
             weights=weights,
             streams_per_gpu=streams_per_gpu,
-            bbhnet_instances=bbhnet_instances,
+            aframe_instances=aframe_instances,
             preproc_instances=preproc_instances,
             clean=clean,
         )
 
     run_export()
     validate_repo(
-        expected_bbhnet_instances=bbhnet_instances,
+        expected_aframe_instances=aframe_instances,
         expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=1,
@@ -398,7 +398,7 @@ def test_export_for_scaling(
     # now check what happens if the repo already exists
     run_export()
     validate_repo(
-        expected_bbhnet_instances=bbhnet_instances,
+        expected_aframe_instances=aframe_instances,
         expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=1 if clean else 2,
@@ -412,10 +412,10 @@ def test_export_for_scaling(
     # now make sure if we change the scale
     # we get another version and the config changes
     run_export(
-        bbhnet_instances=3, preproc_instances=preproc_instances, clean=False
+        aframe_instances=3, preproc_instances=preproc_instances, clean=False
     )
     validate_repo(
-        expected_bbhnet_instances=3,
+        expected_aframe_instances=3,
         expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=2 if clean else 3,
@@ -427,32 +427,32 @@ def test_export_for_scaling(
     )
 
     # now test to make sure an error gets raised if the
-    # ensemble already exists but bbhnet is not part of it
-    shutil.move(repo_dir / "bbhnet", repo_dir / "bbbhnet")
-    bbhnet_config = repo_dir / "bbbhnet" / "config.pbtxt"
-    config = bbhnet_config.read_text()
-    config = re.sub('name: "bbhnet"', 'name: "bbbhnet"', config)
-    bbhnet_config.write_text(config)
+    # ensemble already exists but aframe is not part of it
+    shutil.move(repo_dir / "aframe", repo_dir / "aaframe")
+    aframe_config = repo_dir / "aaframe" / "config.pbtxt"
+    config = aframe_config.read_text()
+    config = re.sub('name: "aframe"', 'name: "aaframe"', config)
+    aframe_config.write_text(config)
 
-    ensemble_config = repo_dir / "bbhnet-stream" / "config.pbtxt"
+    ensemble_config = repo_dir / "aframe-stream" / "config.pbtxt"
     config = ensemble_config.read_text()
-    config = re.sub('model_name: "bbhnet"', 'model_name: "bbbhnet"', config)
+    config = re.sub('model_name: "aframe"', 'model_name: "aaframe"', config)
     ensemble_config.write_text(config)
 
     with pytest.raises(ValueError) as exc_info:
         run_export(clean=False)
-    assert str(exc_info.value).endswith("model 'bbhnet'")
+    assert str(exc_info.value).endswith("model 'aframe'")
 
-    # ensure that bbhnet got exported before things
+    # ensure that aframe got exported before things
     # went wrong with the ensemble. TODO: this is
     # actually probably undesirable behavior, but I'm
     # not sure the best way to handle it elegantly in
     # the export function. I guess a try-catch on the
     # ensemble section that deletes the most recent
-    # bbhnet version if things go wrong?
-    shutil.rmtree(repo_dir / "bbbhnet")
+    # aframe version if things go wrong?
+    shutil.rmtree(repo_dir / "aaframe")
     validate_repo(
-        expected_bbhnet_instances=bbhnet_instances,
+        expected_aframe_instances=aframe_instances,
         expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=(1, 3) if clean else (1, 4),

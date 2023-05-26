@@ -4,7 +4,7 @@ from bokeh.palettes import Dark2_8 as palette
 from bokeh.plotting import figure
 from scipy.integrate import quad
 
-from bbhnet.priors.priors import log_normal_masses
+from aframe.priors.priors import log_normal_masses
 
 SECONDS_PER_MONTH = 3600 * 24 * 30
 

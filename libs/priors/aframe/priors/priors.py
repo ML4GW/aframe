@@ -19,7 +19,7 @@ from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
 
-from bbhnet.priors.utils import (
+from aframe.priors.utils import (
     mass_condition_powerlaw,
     mass_constraints,
     read_priors_from_file,

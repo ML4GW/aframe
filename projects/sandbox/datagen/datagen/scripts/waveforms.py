@@ -7,7 +7,7 @@ import numpy as np
 from datagen.utils.injection import generate_gw
 from typeo import scriptify
 
-from bbhnet.logging import configure_logging
+from aframe.logging import configure_logging
 
 
 @scriptify

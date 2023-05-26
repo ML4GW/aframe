@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "bbhnet.architectures"
+name = "aframe.architectures"
 version = "0.0.1"
-description = "BBHNet neural network architecture zoo"
+description = "aframe neural network architecture zoo"
 authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 # readme = "README.md"
 packages = [
-    {include = "bbhnet"}
+    {include = "aframe"}
 ]
 
 [tool.poetry.dependencies]
@@ -15,7 +15,7 @@ typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main", optional =
 ml4gw = {path = "../../ml4gw", develop = true}
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [tool.poetry.extras]
 wrapper = ["typeo"]

@@ -13,7 +13,7 @@ import numpy as np
 from omicron.cli.process import main as omicron_main
 from typeo import scriptify
 
-from bbhnet.logging import configure_logging
+from aframe.logging import configure_logging
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 

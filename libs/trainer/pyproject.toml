@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "bbhnet.trainer"
+name = "aframe.trainer"
 version = "0.0.1"
-description = "BBHNet training helper functions"
+description = "aframe training helper functions"
 authors = ["Ethan Marx", "Alec Gunny"]
 license = "MIT"
 packages = [
-    {include = "bbhnet"}
+    {include = "aframe"}
 ]
 # readme = "README.md"
 
@@ -14,8 +14,8 @@ python = ">=3.8,<3.11"
 torch = {version = "^1.12", source = "torch"}
 "hermes.typeo" = "^0.1.5"
 
-"bbhnet.architectures" = {path = "../architectures", develop = true}
-"bbhnet.logging" = {path = "../logging", develop = true}
+"aframe.architectures" = {path = "../architectures", develop = true}
+"aframe.logging" = {path = "../logging", develop = true}
 
 [[tool.poetry.source]]
 name = "torch"
@@ -24,7 +24,7 @@ secondary = true
 default = false
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry>=1.2"]

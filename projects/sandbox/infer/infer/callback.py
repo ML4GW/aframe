@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from bbhnet.analysis.ledger.events import TimeSlideEventSet
+from aframe.analysis.ledger.events import TimeSlideEventSet
 
 
 class SequenceNotStarted(Exception):

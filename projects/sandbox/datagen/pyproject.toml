@@ -24,14 +24,14 @@ torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 mldatafind = {git = "https://github.com/ML4GW/mldatafind.git", branch = "main"}
 
-"bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
-"bbhnet.deploy" = {path = "../../../libs/deploy", develop = true}
-"bbhnet.io" = {path = "../../../libs/io", develop = true}
-"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
-"bbhnet.priors" = {path = "../../../libs/priors", develop = true}
+"aframe.analysis" = {path = "../../../libs/analysis", develop = true}
+"aframe.deploy" = {path = "../../../libs/deploy", develop = true}
+"aframe.io" = {path = "../../../libs/io", develop = true}
+"aframe.logging" = {path = "../../../libs/logging", develop = true}
+"aframe.priors" = {path = "../../../libs/priors", develop = true}
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.0"
+pytest = "^7.3"
 
 [[tool.poetry.source]]
 name = "torch"

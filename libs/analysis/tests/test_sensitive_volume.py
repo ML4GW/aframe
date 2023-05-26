@@ -5,11 +5,11 @@ import astropy.units as u
 import bilby
 import pytest
 
-from bbhnet.analysis.sensitivity import (
+from aframe.analysis.sensitivity import (
     SensitiveVolumeCalculator,
     calculate_astrophysical_volume,
 )
-from bbhnet.priors.utils import transpose
+from aframe.priors.utils import transpose
 
 
 @pytest.fixture()
@@ -71,7 +71,7 @@ def test_calculate_astrophysical_volume():
 
     dl_min, dl_max = 0, 1
     with patch(
-        "bbhnet.analysis.sensitivity.cosmo.z_at_value",
+        "aframe.analysis.sensitivity.cosmo.z_at_value",
         return_value=[dl_min, dl_max],
     ):
         volume = calculate_astrophysical_volume(

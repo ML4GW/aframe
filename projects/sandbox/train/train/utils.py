@@ -7,7 +7,7 @@ import h5py
 import numpy as np
 import torch
 from train.data_structures import (
-    BBHNetWaveformInjection,
+    AframeWaveformInjection,
     GlitchSampler,
     SignalInverter,
     SignalReverser,
@@ -117,7 +117,7 @@ def prepare_augmentation(
             valid_cross, valid_plus = valid_signals.transpose(1, 0, 2)
 
             slc = slice(-len(valid_signals), None)
-            valid_injector = BBHNetWaveformInjection(
+            valid_injector = AframeWaveformInjection(
                 ifos=ifos,
                 dec=f["dec"][slc],
                 psi=f["psi"][slc],
@@ -136,7 +136,7 @@ def prepare_augmentation(
     cross, plus = signals.transpose(1, 0, 2)
     # instantiate source parameters as callable
     # distributions which will produce samples
-    injector = BBHNetWaveformInjection(
+    injector = AframeWaveformInjection(
         ifos=ifos,
         dec=Cosine(),
         psi=Uniform(0, pi),

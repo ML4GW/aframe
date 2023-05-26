@@ -8,11 +8,11 @@ from bokeh.layouts import column, row
 from bokeh.models import Div, MultiChoice, TabPanel, Tabs
 from vizapp.pages import AnalysisPage, DataSummaryPage, PerformanceSummaryPage
 
-from bbhnet.analysis.ledger.events import (
+from aframe.analysis.ledger.events import (
     RecoveredInjectionSet,
     TimeSlideEventSet,
 )
-from bbhnet.analysis.ledger.injections import InjectionParameterSet
+from aframe.analysis.ledger.injections import InjectionParameterSet
 
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
@@ -78,7 +78,7 @@ class VizApp:
         self.update_vetos(None, None, [])
 
         # set up a header with a title and the selecter
-        title = Div(text="<h1>BBHNet Performance Dashboard</h1>", width=500)
+        title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)
         header = row(title, self.veto_selecter)
 
         # generate the final layout

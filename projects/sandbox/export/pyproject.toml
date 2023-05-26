@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "export"
 version = "0.0.1"
-description = "Export BBHNet for IaaS inference"
+description = "Export aframe for IaaS inference"
 authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 # readme = "README.md"
 
@@ -40,15 +40,15 @@ tensorrt = "8.5.1.7"
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 
-"bbhnet.architectures" = {path = "../../../libs/architectures", extras = ["wrapper"], develop = true}
-"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
+"aframe.architectures" = {path = "../../../libs/architectures", extras = ["wrapper"], develop = true}
+"aframe.logging" = {path = "../../../libs/logging", develop = true}
 
 [tool.poetry.dependencies."hermes.quiver"]
 path = "../../../hermes/hermes/hermes.quiver"
 develop = true
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [[tool.poetry.source]]
 name = "torch"

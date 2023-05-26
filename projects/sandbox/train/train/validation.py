@@ -22,7 +22,7 @@ from ml4gw.gw import compute_network_snr, reweight_snrs
 from ml4gw.spectral import normalize_psd
 
 if TYPE_CHECKING:
-    from train.waveform_injection import BBHNetWaveformInjection
+    from train.waveform_injection import AframeWaveformInjection
 
 
 class Metric(torch.nn.Module):
@@ -401,7 +401,7 @@ class Validator:
         recorder: Callable,
         background: np.ndarray,
         glitches: Sequence[np.ndarray],
-        injector: "BBHNetWaveformInjection",
+        injector: "AframeWaveformInjection",
         snr_thresh: float,
         highpass: float,
         kernel_length: float,
@@ -435,7 +435,7 @@ class Validator:
                 the 0th axis used to enumerate individual glitches
                 and the 1st axis corresponding to time.
             injector:
-                A `BBHNetWaveformInjection` object for sampling
+                A `AframeWaveformInjection` object for sampling
                 waveforms. Preferring this to an array of waveforms
                 for the time being so that we can potentially do
                 on-the-fly SNR reweighting during validation. For now,

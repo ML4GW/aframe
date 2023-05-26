@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "bbhnet.analysis"
+name = "aframe.analysis"
 version = "0.0.1"
-description = "Tools for making detections from BBHNet outputs"
+description = "Tools for making detections from aframe outputs"
 authors = ["Alec Gunny"]
 license = "MIT"
 packages = [
-    {include = "bbhnet"}
+    {include = "aframe"}
 ]
 # readme = "README.md"
 
@@ -15,11 +15,11 @@ scipy = "^1.7.3"
 astropy = "^5.2.1"
 bilby = "^1.4.1"
 
-"bbhnet.io" = {path = "../io", develop = true}
-"bbhnet.priors" = {path = "../priors", develop = true}
+"aframe.io" = {path = "../io", develop = true}
+"aframe.priors" = {path = "../priors", develop = true}
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry>=1.2"]

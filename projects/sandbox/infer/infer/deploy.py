@@ -9,9 +9,9 @@ from typing import List
 import psutil
 from typeo import scriptify
 
-from bbhnet.analysis.ledger.events import EventSet, RecoveredInjectionSet
-from bbhnet.deploy import condor
-from bbhnet.logging import configure_logging
+from aframe.analysis.ledger.events import EventSet, RecoveredInjectionSet
+from aframe.deploy import condor
+from aframe.logging import configure_logging
 from hermes.aeriel.serve import serve
 from hermes.stillwater import ServerMonitor
 

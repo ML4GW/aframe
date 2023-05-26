@@ -11,12 +11,12 @@ from datagen.utils.injection import generate_gw
 from mldatafind.segments import query_segments
 from typeo import scriptify
 
-from bbhnet.analysis.ledger.injections import (
+from aframe.analysis.ledger.injections import (
     InjectionParameterSet,
     LigoResponseSet,
 )
-from bbhnet.deploy import condor
-from bbhnet.logging import configure_logging
+from aframe.deploy import condor
+from aframe.logging import configure_logging
 from ml4gw.gw import (
     compute_network_snr,
     compute_observed_strain,

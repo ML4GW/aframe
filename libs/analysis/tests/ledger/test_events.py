@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from bbhnet.analysis.ledger import events, injections
+from aframe.analysis.ledger import events, injections
 
 
 class TestTimeSlideEventSet:

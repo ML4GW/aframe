@@ -7,7 +7,7 @@ from ml4gw.transforms import Whitening
 
 class Preprocessor(torch.nn.Module):
     """
-    Module for encoding BBHNet preprocessing procedure.
+    Module for encoding aframe preprocessing procedure.
     Very simple wrapper for now, but encoding it this
     way to accommodate potentially more complex preprocessing
     in the future.

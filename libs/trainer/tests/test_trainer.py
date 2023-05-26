@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from bbhnet.trainer.trainer import train_for_one_epoch
+from aframe.trainer.trainer import train_for_one_epoch
 
 # test copied from deepclean
 

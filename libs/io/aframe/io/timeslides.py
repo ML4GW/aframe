@@ -58,7 +58,7 @@ from typing import Iterable, List, Tuple, Union
 
 import numpy as np
 
-from bbhnet.io.h5 import read_timeseries
+from aframe.io.h5 import read_timeseries
 
 fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*).hdf5$")
 PATH_LIKE = Union[str, Path]

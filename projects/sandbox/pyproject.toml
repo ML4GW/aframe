@@ -36,11 +36,11 @@ waveform_duration = 8
 minimum_frequency = 20
 reference_frequency = 50
 highpass = 32
-training_prior = "bbhnet.priors.priors.mdc_prior"
-testing_prior = "bbhnet.priors.priors.mdc_prior"
+training_prior = "aframe.priors.priors.mdc_prior"
+testing_prior = "aframe.priors.priors.mdc_prior"
 fduration = 1
 valid_frac = 0.25
-cosmology = "bbhnet.priors.cosmologies.planck"
+cosmology = "aframe.priors.cosmologies.planck"
 streams_per_gpu = 3
 waveform_approximant = "IMRPhenomPv2"
 verbose = true
@@ -161,7 +161,7 @@ fduration = "${base.fduration}"
 batch_size = "${base.inference_batch_size}"
 
 # repo/triton parameters
-bbhnet_instances = 4
+aframe_instances = 4
 preproc_instances = 6
 streams_per_gpu = "${base.streams_per_gpu}"
 platform = "tensorrt_plan"
@@ -216,7 +216,7 @@ accounting_group_user = "${base.accounting_group_user}"
 accounting_group = "${base.accounting_group}"
 
 # triton args
-model_name = "bbhnet-stream"
+model_name = "aframe-stream"
 model_version = -1
 image = "hermes/tritonserver:22.12"
 sequence_id = 1001

@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 import torch
 
-from bbhnet.architectures.resnet import BottleneckResNet, ResNet
+from aframe.architectures.resnet import BottleneckResNet, ResNet
 
 architectures = {
     "resnet": ResNet,
@@ -42,7 +42,7 @@ def get_arch_fns(fn, fn_kwargs={}):
     As an example:
     ```python
     import argparse
-    from bbhnet.architectures import get_arch_fns
+    from aframe.architectures import get_arch_fns
 
     def train(architecture, learning_rate, batch_size):
         network = architecture(num_ifos=2)
@@ -106,7 +106,7 @@ def architecturize(f):
     ```python
     from typing import Callable
     from training_library import do_some_training
-    from bbhnet.architectures import architecturize
+    from aframe.architectures import architecturize
 
 
     @architecturize

@@ -4,7 +4,7 @@ from typing import Callable, Dict, List, Optional
 from bokeh.server.server import Server
 from typeo import scriptify
 
-from bbhnet.logging import configure_logging
+from aframe.logging import configure_logging
 
 from .app import VizApp
 from .vetoes import VetoParser

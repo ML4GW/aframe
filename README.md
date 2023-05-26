@@ -1,19 +1,19 @@
-# BBHNet
+# aframe
 Detecting binary black hole mergers from gravitational wave strain timeseries data using neural networks, with an emphasis on
 - **Efficiency** - making effective use of accelerated hardware like GPUs in order to minimize time-to-solution.
 - **Scale** - validating hypotheses on large volumes of data to obtain high-confidence estimates of model performance
 - **Flexibility** - modularizing functionality to expose various levels of abstraction and make implementing new ideas simple
 - **Physics first** - taking advantage of the rich priors available in GW physics to build robust models and evaluate them accoring to meaningful metrics
 
-BBHNet represents a _framework_ for optimizing neural networks for detection of CBC events from time-domain strain, rather than any particular network architecture.
+aframe represents a _framework_ for optimizing neural networks for detection of CBC events from time-domain strain, rather than any particular network architecture.
 
 ## Quickstart
-> **_NOTE:_** right now, BBHNet can only be run by LIGO members
+> **_NOTE:_** right now, aframe can only be run by LIGO members
 
-> **_NOTE:_** Running BBHNet out-of-the-box requires access to an enterprise-grade GPU (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements.
+> **_NOTE:_** Running aframe out-of-the-box requires access to an enterprise-grade GPU (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements.
 
 ### 1. Setting up your environment for data access
-In order to access the LIGO data services required to run BBHNet, start by following the instructions [here](https://computing.docs.ligo.org/guide/auth/kerberos/#usage) to set up a kerberos keytab for passwordless authentication to LIGO data services
+In order to access the LIGO data services required to run aframe, start by following the instructions [here](https://computing.docs.ligo.org/guide/auth/kerberos/#usage) to set up a kerberos keytab for passwordless authentication to LIGO data services
 
 ```console
 $ ktutil
@@ -28,35 +28,35 @@ with `albert.einstein` replaced with your LIGO username. Move this keytab file t
 mkdir ~/.kerberos
 mv ligo.org.keytab ~/.kerberos
 ```
-You'll also want to create directories for storing X509 credentials, input data, and BBHNet outputs.
+You'll also want to create directories for storing X509 credentials, input data, and aframe outputs.
 
 ```console
-mkdir -p ~/cilogon_cert ~/bbhnet/data ~/bbhnet/results
+mkdir -p ~/cilogon_cert ~/aframe/data ~/aframe/results
 ```
 
 ### 2. Install `pinto`
-BBHNet leverages both Conda and Poetry to manage the environments of its projects. For this reason, end-to-end execution of the BBHNet pipeline relies on the [`pinto`](https://ml4gw.gitub.io) command line utility. Please see the [Conda-based installation instructions](https://ml4gw.github.io/pinto/#conda) for `pinto` in its documentation and continue once you have it installed. You can confirm your installation by running
+aframe leverages both Conda and Poetry to manage the environments of its projects. For this reason, end-to-end execution of the aframe pipeline relies on the [`pinto`](https://ml4gw.gitub.io) command line utility. Please see the [Conda-based installation instructions](https://ml4gw.github.io/pinto/#conda) for `pinto` in its documentation and continue once you have it installed. You can confirm your installation by running
 
 ```console
 pinto --version
 ```
 
 ### 3. Run the `sandbox` pipeline
-The default BBHNet experiment is the [`sandbox`](./projects/sandbox) pipeline found under the `projects` directory. If you're on a GPU-enabled node on the LIGO Data Grid (LDG) and have completed the steps above, start by defining a couple environment variables
+The default aframe experiment is the [`sandbox`](./projects/sandbox) pipeline found under the `projects` directory. If you're on a GPU-enabled node on the LIGO Data Grid (LDG) and have completed the steps above, start by defining a couple environment variables
 
 ```console
 # BASE_DIR is where we'll write all logs, training checkpoints,
 # and inference/analysis outputs. This should be unique to
 # each experiment you run
-export BASE_DIR=~/bbhnet/results/my-first-run
+export BASE_DIR=~/aframe/results/my-first-run
 
 # DATA_DIR is where we'll write all training/testing
 # input data, which can be reused between experiment
 # runs. Just be sure to delete existing data or use
 # a new directory if a new experiment changes anything
-# about how data is generated, because BBHNet by default
+# about how data is generated, because aframe by default
 # will opt to use cached data if it exists.
-export DATA_DIR=~/bbhnet/data
+export DATA_DIR=~/aframe/data
 ```
 
 then from the `projects/sandbox` directory, just run
@@ -81,8 +81,8 @@ Note that the first execution may take a bit longer than subsequent runs, since 
 Since `pinto` supports using `.env` files to specify environment variables, consider creating a `projects/sandbox/.env` file and specifying `BASE_DIR` and `DATA_DIR` there:
 
 ```bash
-BASE_DIR=$HOME/bbhnet/results/my-first-run
-DATA_DIR=$HOME/bbhnet/data
+BASE_DIR=$HOME/aframe/results/my-first-run
+DATA_DIR=$HOME/aframe/data
 HDF5_USE_FILE_LOCKING=FALSE
 ```
 
@@ -93,8 +93,8 @@ pinto run
 
 Another useful way to set things up is to write `projects/sandbox/.env` like
 ```bash
-BASE_DIR=$HOME/bbhnet/results/$PROJECT
-DATA_DIR=$HOME/bbhnet/data
+BASE_DIR=$HOME/aframe/results/$PROJECT
+DATA_DIR=$HOME/aframe/data
 ```
 
 then redefine the `PROJECT` environment variable for each new experiment you run so that it's given its own results directory, e.g.
@@ -117,7 +117,7 @@ Deep learning algorithms represent an attractive alternative to these methods be
 
 While glitches can also represent problematic inputs for neural networks, they offer the potential to learn to exclude them by sheer "brute-force": providing networks with lots of examples of glitches during training in order to learn to distinguish them from real events.
 
-BBHNet attempts to apply deep learning methods to this problem by combining these observations and leveraging both the powerful existing models of BBH signals and the enormous amount of existing data collected by LIGO to build robust datasets of both background and signal-containing samples. More specifially, we:
+aframe attempts to apply deep learning methods to this problem by combining these observations and leveraging both the powerful existing models of BBH signals and the enormous amount of existing data collected by LIGO to build robust datasets of both background and signal-containing samples. More specifially, we:
 - Use the `ml4gw` library to project a dataset of pre-computed gravitational waveforms to interferometer responses on-the-fly on the GPU. This allows us to efficiently augment our dataset of signals by "observing" the same event at any point on the celestial sphere and at arbitrary distances (the latter achieved by remapping its SNR relative to the background PSD of the training set. Note that this will by extension change the observed mass of the black holes in the _detector frame_)
 - Use the `pyomicron` utility to search through the training set (and periods before it) for glitches which we can oversample during training and randomly use to replace each interferometer channel independently.
 
@@ -131,7 +131,7 @@ By default, `pinto` uses Poetry to install all local libraries editably. This me
 ### Code Structure
 The code here is structured like a [monorepo](https://medium.com/opendoor-labs/our-python-monorepo-d34028f2b6fa), with applications siloed off into isolated environments to keep dependencies lightweight, but built on top of a shared set of libraries to keep the code modular and consistent.
 
-Note that this means there is no "BBHNet environment:" you won't find an `environment.yaml` or poetry config at this root level. Each project is associated with its own environment which is defined _locally with respect to the project itself_. For instructions on installing each project, see its associated documentation (though in general, running `pinto build` from the project's directory will be sufficient).
+Note that this means there is no "aframe environment:" you won't find an `environment.yaml` or poetry config at this root level. Each project is associated with its own environment which is defined _locally with respect to the project itself_. For instructions on installing each project, see its associated documentation (though in general, running `pinto build` from the project's directory will be sufficient).
 
 If you run the pipeline using the [instructions above](#3.-run-the-`sandbox`-pipeline), the environment associated with each step in the pipeline (i.e. each child project's environment) will be built before running the step if it does not already exist. This is true of running `pinto run` for each step individually as well.
 

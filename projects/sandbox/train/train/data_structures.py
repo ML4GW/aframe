@@ -63,7 +63,7 @@ class ChannelMuter(torch.nn.Module):
         return X, indices
 
 
-class BBHInMemoryDataset(InMemoryDataset):
+class AframeInMemoryDataset(InMemoryDataset):
     """
     Dataloader which samples batches of kernels
     from a single timeseries array and prepares
@@ -130,7 +130,7 @@ class BBHInMemoryDataset(InMemoryDataset):
         return X, y
 
 
-class BBHNetWaveformInjection(RandomWaveformInjection):
+class AframeWaveformInjection(RandomWaveformInjection):
     def __init__(
         self,
         *args,

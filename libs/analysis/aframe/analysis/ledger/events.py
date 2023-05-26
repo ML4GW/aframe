@@ -3,8 +3,8 @@ from typing import List, TypeVar, Union
 
 import numpy as np
 
-from bbhnet.analysis.ledger.injections import InterferometerResponseSet
-from bbhnet.analysis.ledger.ledger import Ledger, metadata, parameter
+from aframe.analysis.ledger.injections import InterferometerResponseSet
+from aframe.analysis.ledger.ledger import Ledger, metadata, parameter
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)

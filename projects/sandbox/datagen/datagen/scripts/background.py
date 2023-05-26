@@ -8,7 +8,7 @@ from mldatafind.io import fetch_timeseries
 from mldatafind.segments import query_segments
 from typeo import scriptify
 
-from bbhnet.logging import configure_logging
+from aframe.logging import configure_logging
 
 
 def _intify(x: float):
@@ -78,7 +78,7 @@ def main(
     force_generation: bool = False,
     verbose: bool = False,
 ):
-    """Generates background data for training and testing BBHnet
+    """Generates background data for training and testing aframe
 
     Args:
         start: start gpstime

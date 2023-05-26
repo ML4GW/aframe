@@ -5,8 +5,8 @@ from typing import Callable, Optional
 import torch
 
 import hermes.quiver as qv
-from bbhnet.architectures import Preprocessor, architecturize
-from bbhnet.logging import configure_logging
+from aframe.architectures import Preprocessor, architecturize
+from aframe.logging import configure_logging
 
 
 def scale_model(model, instances):
@@ -29,14 +29,14 @@ def export(
     fduration: Optional[float] = None,
     weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
-    bbhnet_instances: Optional[int] = None,
+    aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.ONNX,
     clean: bool = False,
     verbose: bool = False,
 ) -> None:
     """
-    Export a BBHNet architecture to a model repository
+    Export a aframe architecture to a model repository
     for streaming inference, including adding a model
     for caching input snapshot state on the server.
 
@@ -53,7 +53,7 @@ def export(
             directory is assumed to contain a file `"weights.pt"`.
         num_ifos:
             The number of interferometers contained along the
-            channel dimension used to train BBHNet
+            channel dimension used to train aframe
         inference_sampling_rate:
             The rate at which kernels are sampled from the
             h(t) timeseries. This, along with the `sample_rate`,
@@ -71,7 +71,7 @@ def export(
             inference
         instances:
             The number of concurrent execution instances of the
-            BBHNet architecture to host per GPU during inference
+            aframe architecture to host per GPU during inference
         platform:
             The backend framework platform used to host the
             DeepClean architecture on the inference service. Right
@@ -121,14 +121,14 @@ def export(
 
     # instantiate a model repository at the
     # indicated location. Split up the preprocessor
-    # and the neural network (which we'll call bbhnet)
+    # and the neural network (which we'll call aframe)
     # to export/scale them separately, and start by
     # seeing if either already exists in the model repo
     repo = qv.ModelRepository(repository_directory, clean)
     try:
-        bbhnet = repo.models["bbhnet"]
+        aframe = repo.models["aframe"]
     except KeyError:
-        bbhnet = repo.add("bbhnet", platform=platform)
+        aframe = repo.add("aframe", platform=platform)
 
     # do the same for preprocessor
     try:
@@ -138,8 +138,8 @@ def export(
 
     # if we specified a number of instances we want per-gpu
     # for each model at inference time, scale them now
-    if bbhnet_instances is not None:
-        scale_model(bbhnet, bbhnet_instances)
+    if aframe_instances is not None:
+        scale_model(aframe, aframe_instances)
     if preproc_instances is not None:
         scale_model(preproc, preproc_instances)
 
@@ -164,12 +164,12 @@ def export(
 
         # turn off graph optimization because of this error
         # https://github.com/triton-inference-server/server/issues/3418
-        bbhnet.config.optimization.graph.level = -1
+        aframe.config.optimization.graph.level = -1
     elif platform == qv.Platform.TENSORRT:
         kwargs["use_fp16"] = True
 
     input_shape = tuple(preproc.config.output[0].dims)
-    bbhnet.export_version(
+    aframe.export_version(
         nn._modules["1"],
         input_shapes={"whitened": input_shape},
         output_names=["discriminator"],
@@ -178,7 +178,7 @@ def export(
 
     # now try to create an ensemble that has a snapshotter
     # at the front for streaming new data to
-    ensemble_name = "bbhnet-stream"
+    ensemble_name = "aframe-stream"
     stream_size = int(sample_rate / inference_sampling_rate)
 
     # see if we have an existing snapshot model up front,
@@ -196,7 +196,7 @@ def export(
 
         # if a snapshot model already exists, add it to
         # the ensemble and pipe its output to the input of
-        # bbhnet, otherwise use the `add_streaming_inputs`
+        # aframe, otherwise use the `add_streaming_inputs`
         # method on the ensemble to create a snapshotter
         # and perform this piping for us
         if snapshotter is not None:
@@ -217,20 +217,20 @@ def export(
 
         # now send the outputs of the preprocessing module
         # to the inputs of the neural network
-        ensemble.pipe(preproc.outputs["whitened"], bbhnet.inputs["whitened"])
+        ensemble.pipe(preproc.outputs["whitened"], aframe.inputs["whitened"])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry
-        ensemble.add_output(bbhnet.outputs["discriminator"])
+        ensemble.add_output(aframe.outputs["discriminator"])
         ensemble.export_version(None)
     else:
         # if there does already exist an ensemble by
-        # the given name, make sure it has BBHNet
+        # the given name, make sure it has aframe
         # and the snapshotter as a part of its models
-        if bbhnet not in ensemble.models:
+        if aframe not in ensemble.models:
             raise ValueError(
                 "Ensemble model '{}' already in repository "
-                "but doesn't include model 'bbhnet'".format(ensemble_name)
+                "but doesn't include model 'aframe'".format(ensemble_name)
             )
         elif snapshotter is None or snapshotter not in ensemble.models:
             raise ValueError(

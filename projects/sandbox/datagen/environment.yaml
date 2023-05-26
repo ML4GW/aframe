@@ -1,4 +1,4 @@
-name: bbhnet-datagen
+name: aframe-datagen
 channels:
   - conda-forge
 dependencies:

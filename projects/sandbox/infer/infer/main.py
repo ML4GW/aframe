@@ -7,13 +7,13 @@ from infer.callback import Callback
 from infer.data import ChunkedSegmentLoader, Injector, batch_chunks
 from typeo import scriptify
 
-from bbhnet.analysis.ledger.events import (
+from aframe.analysis.ledger.events import (
     EventSet,
     RecoveredInjectionSet,
     TimeSlideEventSet,
 )
-from bbhnet.analysis.ledger.injections import LigoResponseSet
-from bbhnet.logging import configure_logging
+from aframe.analysis.ledger.injections import LigoResponseSet
+from aframe.logging import configure_logging
 from hermes.aeriel.client import InferenceClient
 
 

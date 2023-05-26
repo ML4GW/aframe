@@ -86,7 +86,7 @@ def train(
     use_amp: bool = False,
     profile: bool = False,
 ) -> None:
-    """Train BBHnet model on in-memory data
+    """Train aframe model on in-memory data
     Args:
         architecture:
             A callable which takes as its only input the number

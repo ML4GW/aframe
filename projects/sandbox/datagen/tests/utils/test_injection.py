@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from datagen.utils import injection
 
-from bbhnet.priors.priors import end_o3_ratesandpops, nonspin_bbh
+from aframe.priors.priors import end_o3_ratesandpops, nonspin_bbh
 
 
 @pytest.fixture(params=[nonspin_bbh, end_o3_ratesandpops])

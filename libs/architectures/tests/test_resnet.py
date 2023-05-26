@@ -2,7 +2,7 @@ import h5py  # noqa
 import pytest
 import torch
 
-from bbhnet.architectures.resnet import (
+from aframe.architectures.resnet import (
     BasicBlock,
     Bottleneck,
     BottleneckResNet,

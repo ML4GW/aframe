@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "vizapp"
 version = "0.1.0"
-description = "Visualization application for analyzed BBHNet output"
+description = "Visualization application for analyzed aframe output"
 authors = ["Alec Gunny <alecg@.mit.edu>"]
 license = "MIT"
 
@@ -17,9 +17,9 @@ lalsuite = "^7.10"
 python-ligo-lw = "<1.8"
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 
-"bbhnet.analysis" = {path = "../../../libs/analysis", develop = true}
-"bbhnet.logging" = {path = "../../../libs/logging", develop = true}
-"bbhnet.priors" = {path = "../../../libs/priors", develop = true}
+"aframe.analysis" = {path = "../../../libs/analysis", develop = true}
+"aframe.logging" = {path = "../../../libs/logging", develop = true}
+"aframe.priors" = {path = "../../../libs/priors", develop = true}
 gwpy = "^3.0.2"
 
 [build-system]

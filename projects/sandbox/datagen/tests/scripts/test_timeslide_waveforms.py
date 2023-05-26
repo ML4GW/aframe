@@ -10,7 +10,7 @@ from datagen.utils.timeslide_waveforms import (
     calc_shifts_required,
 )
 
-from bbhnet.priors.priors import end_o3_ratesandpops
+from aframe.priors.priors import end_o3_ratesandpops
 
 
 @pytest.fixture(params=[end_o3_ratesandpops])

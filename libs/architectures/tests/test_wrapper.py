@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import torch
 
-from bbhnet.architectures import architecturize
-from bbhnet.architectures.wrapper import architectures
+from aframe.architectures import architecturize
+from aframe.architectures.wrapper import architectures
 
 
 def set_argv(*args):

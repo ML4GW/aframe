@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from scipy.stats import ks_2samp
 
-from bbhnet.priors.utils import read_priors_from_file
+from aframe.priors.utils import read_priors_from_file
 
 
 @pytest.fixture

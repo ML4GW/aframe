@@ -5,7 +5,7 @@ import sys
 import pytest
 import torch
 
-from bbhnet.trainer.wrapper import trainify
+from aframe.trainer.wrapper import trainify
 
 
 @pytest.fixture(scope="session")

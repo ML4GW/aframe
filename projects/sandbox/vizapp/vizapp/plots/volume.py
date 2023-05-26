@@ -19,9 +19,9 @@ from bokeh.models import (
 )
 from bokeh.plotting import figure
 
-from bbhnet.analysis.sensitivity import SensitiveVolumeCalculator
-from bbhnet.priors.priors import gaussian_masses
-from bbhnet.priors.utils import transpose
+from aframe.analysis.sensitivity import SensitiveVolumeCalculator
+from aframe.priors.priors import gaussian_masses
+from aframe.priors.utils import transpose
 
 MPC3_TO_GPC3 = 1e-9
 

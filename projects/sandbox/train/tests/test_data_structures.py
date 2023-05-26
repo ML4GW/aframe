@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 import torch
 from train.data_structures import (
-    BBHInMemoryDataset,
-    BBHNetWaveformInjection,
+    AframeInMemoryDataset,
+    AframeWaveformInjection,
     ChannelSwapper,
     GlitchSampler,
     SignalInverter,
@@ -50,7 +50,7 @@ def coincident(request):
     return request.param
 
 
-def test_bbhnet_in_memory_dataloader(
+def test_aframe_in_memory_dataloader(
     sequential_data,
     kernel_length,
     batch_size,
@@ -60,7 +60,7 @@ def test_bbhnet_in_memory_dataloader(
     sample_rate,
 ):
     kernel_size = int(kernel_length * sample_rate)
-    dataset = BBHInMemoryDataset(
+    dataset = AframeInMemoryDataset(
         sequential_data,
         kernel_size,
         batch_size,
@@ -93,7 +93,7 @@ def test_bbhnet_in_memory_dataloader(
     assert (i + 1) == batches_per_epoch
 
 
-def test_bbhnet_in_memory_dataloader_with_preprocessor(
+def test_aframe_in_memory_dataloader_with_preprocessor(
     sequential_data, sample_rate
 ):
     def preprocessor(X, y):
@@ -101,7 +101,7 @@ def test_bbhnet_in_memory_dataloader_with_preprocessor(
         y[::2] = 1
         return X, y
 
-    dataset = BBHInMemoryDataset(
+    dataset = AframeInMemoryDataset(
         sequential_data,
         kernel_size=2 * sample_rate,
         batch_size=8,
@@ -176,8 +176,8 @@ rand_value = 0.1 + 0.5 * (torch.arange(32) % 2)
 
 @patch("ml4gw.transforms.injection.RandomWaveformInjection.sample", new=sample)
 @patch("torch.rand", return_value=rand_value)
-def test_bbhnet_waveform_injection(rand_mock):
-    tform = BBHNetWaveformInjection(
+def test_aframe_waveform_injection(rand_mock):
+    tform = AframeWaveformInjection(
         sample_rate=128,
         ifos=["H1", "L1"],
         dec=MagicMock(),
@@ -199,10 +199,10 @@ def test_bbhnet_waveform_injection(rand_mock):
 
 
 @pytest.mark.parametrize("downweight", [0, 0.5, 1])
-def test_bbhnet_waveform_injection_with_downweight(downweight):
+def test_aframe_waveform_injection_with_downweight(downweight):
     if downweight == 0.5:
         with pytest.raises(ValueError) as exc:
-            tform = BBHNetWaveformInjection(
+            tform = AframeWaveformInjection(
                 sample_rate=128,
                 ifos=["H1", "L1"],
                 dec=lambda N: torch.zeros((N,)),
@@ -216,7 +216,7 @@ def test_bbhnet_waveform_injection_with_downweight(downweight):
             )
         assert str(exc.value).startswith("Probability must be")
 
-    tform = BBHNetWaveformInjection(
+    tform = AframeWaveformInjection(
         sample_rate=128,
         ifos=["H1", "L1"],
         dec=lambda N: torch.zeros((N,)),

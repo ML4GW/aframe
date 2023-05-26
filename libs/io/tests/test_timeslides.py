@@ -5,8 +5,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from bbhnet.io.h5 import write_timeseries
-from bbhnet.io.timeslides import Segment, TimeSlide, filter_and_sort_files
+from aframe.io.h5 import write_timeseries
+from aframe.io.timeslides import Segment, TimeSlide, filter_and_sort_files
 
 
 @pytest.fixture
@@ -176,7 +176,7 @@ def test_segment_loading(segment_fnames, t0, file_length, sample_rate):
     # now patch the read method to make sure that when
     # we call load again, it doesn't attempt to read but
     # goes to the cache instead
-    with patch("bbhnet.io.timeslides.Segment.read") as mock:
+    with patch("aframe.io.timeslides.Segment.read") as mock:
         y, t = segment.load("out")
         mock.assert_not_called()
 

@@ -1,7 +1,7 @@
 import inspect
 
-from bbhnet.architectures import get_arch_fns
-from bbhnet.trainer.trainer import train
+from aframe.architectures import get_arch_fns
+from aframe.trainer.trainer import train
 from hermes.typeo import typeo
 from hermes.typeo.typeo import _parse_doc, _parse_help
 
@@ -54,9 +54,9 @@ def trainify(f):
     """Turn a data-generating function into a command line trainer
     Wraps the function `f`, which is assumed to generate training
     and validation data, so that this data gets passed to
-    `bbhnet.trainer.trainer.train`, but in such a way that
+    `aframe.trainer.trainer.train`, but in such a way that
     `f` can be called from the command line with all of the arguments
-    to `bbhnet.trainer.trainer.train`, with the network architecture
+    to `aframe.trainer.trainer.train`, with the network architecture
     as a positional parameter and its arguments as additional parameters
     after that.
     """

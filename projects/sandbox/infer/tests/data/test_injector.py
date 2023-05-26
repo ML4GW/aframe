@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from infer.data.injector import Injector
 
-from bbhnet.analysis.ledger.injections import LigoResponseSet
+from aframe.analysis.ledger.injections import LigoResponseSet
 
 
 def ranger(sample_rate, N, step):

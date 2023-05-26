@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from bbhnet.analysis.ledger import injections
+from aframe.analysis.ledger import injections
 
 
 class TestLigoResponseSet:

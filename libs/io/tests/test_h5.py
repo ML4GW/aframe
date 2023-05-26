@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import pytest
 
-from bbhnet.io import h5
+from aframe.io import h5
 
 
 @pytest.fixture(scope="function")

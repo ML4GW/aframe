@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "bbhnet.io"
+name = "aframe.io"
 version = "0.0.1"
-description = "Tools for standardizing reading and writing BBHNet files"
+description = "Tools for standardizing reading and writing aframe files"
 authors = ["Alec Gunny"]
 license = "MIT"
 packages = [
-    {include = "bbhnet"}
+    {include = "aframe"}
 ]
 # readme = "README.md"
 
@@ -15,7 +15,7 @@ h5py = "^3.6"
 numpy = ">=1.22.0,<1.22.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry>=1.1"]
