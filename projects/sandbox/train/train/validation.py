@@ -195,6 +195,10 @@ class Validator:
         start = self._injection_idx
         stop = start + len(X)
         waveforms = self.waveforms[start:stop]
+
+        start = waveforms.shape[-1] // 2 - self.kernel_size // 2
+        stop = start + self.kernel_size
+        waveforms = waveforms[:, :, int(start) : int(stop)]
         return X[: len(waveforms)] + waveforms
 
     @torch.no_grad()
