@@ -136,7 +136,7 @@ class Validator:
         self.stride_size = int(self.stride * self.sample_rate)
         self.pool_size = int(self.pool_length / self.stride)
 
-        integration_size = int(self.integration_length * self.sample_rate)
+        integration_size = int(self.integration_length * self.stride)
         self.window = torch.ones((1, 1, integration_size)) / integration_size
         self.window = self.window.to(self.device)
         self.integration_size = integration_size
@@ -195,7 +195,7 @@ class Validator:
         start = self._injection_idx
         stop = start + len(X)
         waveforms = self.waveforms[start:stop]
-        return X[: len(waveforms)]
+        return X[: len(waveforms)] + waveforms
 
     @torch.no_grad()
     def infer_shift(self, model: torch.nn.Module, shift: float):

@@ -118,7 +118,7 @@ snr_thresh = "${base.hopeless_snr_thresh}"
 max_min_snr = 12
 max_snr = 100
 snr_alpha = 3
-snr_decay_steps = 5000
+snr_decay_steps = 2500
 
 # data args
 sample_rate = "${base.sample_rate}"
@@ -139,7 +139,7 @@ valid_frac = "${base.valid_frac}"
 valid_stride = 0.5
 max_fpr = 1e-3
 valid_livetime = 57600  # 16 hours of background
-early_stop = 50
+early_stop = 100
 checkpoint_every = 5
 
 # misc args

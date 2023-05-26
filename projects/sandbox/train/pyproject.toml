@@ -8,6 +8,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
+torchmetrics = "^0.11"
 ml4gw = {path = "../../../ml4gw", develop = true}
 "aframe.logging" = {path = "../../../libs/logging", develop = true}
 "aframe.trainer" = {path = "../../../libs/trainer", develop = true}
