@@ -136,7 +136,7 @@ class Validator:
         self.stride_size = int(self.stride * self.sample_rate)
         self.pool_size = int(self.pool_length / self.stride)
 
-        integration_size = int(self.integration_length * self.stride)
+        integration_size = int(self.integration_length / self.stride)
         self.window = torch.ones((1, 1, integration_size)) / integration_size
         self.window = self.window.to(self.device)
         self.integration_size = integration_size
@@ -199,6 +199,7 @@ class Validator:
         start = waveforms.shape[-1] // 2 - self.kernel_size // 2
         stop = start + self.kernel_size
         waveforms = waveforms[:, :, int(start) : int(stop)]
+        waveforms = waveforms.to(X.device)
         return X[: len(waveforms)] + waveforms
 
     @torch.no_grad()
