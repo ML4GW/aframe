@@ -33,7 +33,6 @@ def main(
     logdir: Path,
     # optimization args
     batch_size: int,
-    batches_per_epoch: int,
     snr_thresh: float,
     max_min_snr: float,
     max_snr: float,
@@ -315,7 +314,11 @@ def main(
     )
     augmentor = augmentor.to(device)
 
-    # create full training dataloader
+    # Create full training dataloader.
+    # Use waveform dataset to dictate what
+    # an "epoch" should be
+    waveforms_per_batch = batch_size * waveform_prob
+    batches_per_epoch = len(waveforms) / waveforms_per_batch
     train_dataset = AframeInMemoryDataset(
         background,
         int(kernel_length * sample_rate),
