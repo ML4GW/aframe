@@ -1,34 +1,19 @@
+import logging
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
-import h5py
-import numpy as np
-from train.data_structures import AframeInMemoryDataset
-from train.utils import prepare_augmentation, split
-from train.validation import BackgroundAUROC, GlitchRecall, Recorder, Validator
+from train import utils as train_utils
+from train import validation as valid_utils
+from train.data_structures import (
+    AframeInMemoryDataset,
+    GlitchSampler,
+    SnrRescaler,
+    SnrSampler,
+)
 
 from aframe.architectures import Preprocessor
 from aframe.logging import configure_logging
 from aframe.trainer import trainify
-
-
-def load_background(background_dir: Path):
-    # load in the data from the first segment in the background directory
-    try:
-        background_dataset = next(background_dir.iterdir())
-    except StopIteration:
-        raise ValueError(
-            f"No files in background data directory {background_dir}"
-        )
-    background = []
-
-    with h5py.File(background_dataset, "r") as f:
-        ifos = list(f.keys())
-        for ifo in ifos:
-            hoft = f[ifo][:]
-            background.append(hoft)
-        t0 = f[ifo].attrs["x0"]
-    return np.stack(background), ifos, t0
 
 
 # note that this function decorator acts both to
@@ -46,31 +31,31 @@ def main(
     waveform_dataset: Path,
     outdir: Path,
     logdir: Path,
-    # data generation args
-    glitch_prob: float,
-    waveform_prob: float,
-    glitch_downweight: float,
-    snr_thresh: float,
-    kernel_length: float,
-    sample_rate: float,
+    # optimization args
     batch_size: int,
+    batches_per_epoch: int,
+    snr_thresh: float,
     max_min_snr: float,
-    min_min_snr: float,
     max_snr: float,
     snr_alpha: float,
     snr_decay_steps: int,
+    # data args
+    sample_rate: float,
+    kernel_length: float,
+    fduration: float,
     highpass: float,
+    # augmentation args
+    glitch_prob: float,
+    waveform_prob: float,
+    glitch_downweight: float,
     swap_frac: float = 0.0,
     mute_frac: float = 0.0,
-    batches_per_epoch: Optional[int] = None,
-    # preproc args
-    fduration: Optional[float] = None,
     trigger_distance: float = 0,
     # validation args
     valid_frac: Optional[float] = None,
     valid_stride: Optional[float] = None,
-    monitor_metric: Literal["background", "glitch"] = "glitch",
-    threshold: float = 1.0,
+    max_fpr: float = 1e-3,
+    valid_livetime: float = (3600 * 12),
     early_stop: Optional[int] = None,
     checkpoint_every: Optional[int] = None,
     # misc args
@@ -228,90 +213,107 @@ def main(
 
     # load background, infer ifos, and get start and end times
     # of the combined training + validation period
-    background, ifos, t0 = load_background(background_dir)
-    tf = t0 + background.shape[-1] / sample_rate
+    logging.info("Loading background data")
+    background, ifos, t0 = train_utils.get_background(background_dir)
+    duration = background.shape[-1] / sample_rate
+    logging.info(
+        "Loaded {} seconds of data from ifos {}".format(
+            duration, ", ".join(ifos)
+        )
+    )
 
-    # build a torch module that we'll use for doing
-    # random augmentation at data-loading time
-    augmentor, valid_glitches, valid_responses = prepare_augmentation(
-        glitch_dataset,
-        waveform_dataset,
-        ifos,
-        t0,
-        tf,
-        glitch_prob=glitch_prob,
-        waveform_prob=waveform_prob,
-        glitch_downweight=glitch_downweight,
-        swap_frac=swap_frac,
-        mute_frac=mute_frac,
-        sample_rate=sample_rate,
-        highpass=highpass,
-        max_min_snr=max_min_snr,
-        min_min_snr=min_min_snr,
-        max_snr=max_snr,
-        snr_alpha=snr_alpha,
-        snr_decay_steps=snr_decay_steps,
-        trigger_distance=trigger_distance,
-        valid_frac=valid_frac,
+    # load our waveforms and build some objects
+    # for augmenting their snrs
+    waveforms, valid_waveforms = train_utils.get_waveforms(
+        waveform_dataset, ifos, sample_rate, valid_frac
+    )
+    waveform_duration = waveforms.shape[-1] / sample_rate
+    rescaler = SnrRescaler(len(ifos), sample_rate, waveform_duration, highpass)
+    snr_sampler = SnrSampler(
+        max_min_snr, snr_thresh, max_snr, snr_alpha, snr_decay_steps
     )
 
     if valid_frac is not None:
-        # split up our background data into train and validation splits
-        background, valid_background = split(background, 1 - valid_frac, -1)
-
-        # build a couple validation metrics to evaluate during training
-        background_recall = BackgroundAUROC(
-            kernel_size=int(4 / valid_stride),
-            stride=int(4 / valid_stride),
-            thresholds=[0.001, 0.01, 0.1],
+        background, valid_background = train_utils.split(
+            background, 1 - valid_frac, -1
         )
-        glitch_recall = GlitchRecall(specs=[0.75, 0.9, 1])
+        tf = t0 + (1 - valid_frac) * duration
 
-        # pop out one of them to monitor for model selection
-        # and early-stopping purposes.
-        additional = [background_recall, glitch_recall]
-        if monitor_metric == "background":
-            monitor = additional.pop(0)
-        elif monitor_metric == "glitch":
-            monitor = additional.pop(1)
-        else:
-            raise ValueError(f"Unknown validation metric {monitor_metric}")
+        # fit our rescaler here since we'll need its
+        # background psd estimate to threshold
+        logging.info("Rescaling validation waveforms")
+        rescaler.fit(*background)
+        valid_waveforms = train_utils.threshold_snrs(
+            valid_waveforms,
+            snr_thresh,
+            sample_rate,
+            rescaler.background,
+            highpass,
+        )
 
-        # set up a recorder which will perform evaluation,
+        # set up a tracker which will perform evaluation,
         # model selection, and checkpointing.
-        recorder = Recorder(
+        tracker = valid_utils.LocalTracker(
             outdir,
-            monitor,
-            threshold=threshold,
-            additional=additional,
+            f"valid_auroc@{max_fpr:0.1e}",
             early_stop=early_stop,
             checkpoint_every=checkpoint_every,
         )
 
-        # pass this all to a validation callable which will
-        # build the necessary datasets, compute predictions
-        # on them using the model, and pass the predictions
-        # to the recorder
-        validator = Validator(
-            recorder,
-            background=valid_background,
-            glitches=valid_glitches,
-            responses=valid_responses,
-            snr_thresh=snr_thresh,
-            highpass=highpass,
-            kernel_length=kernel_length,
+        # hard code some of these validation parameters
+        # for now until it seems like they might need
+        # some tuning
+        validator = valid_utils.Validator(
+            tracker,
+            valid_background,
+            valid_waveforms,
+            sample_rate,
             stride=valid_stride,
-            sample_rate=sample_rate,
+            injection_stride=4,
+            kernel_length=kernel_length,
             batch_size=4 * batch_size,
-            glitch_frac=glitch_prob,
+            pool_length=4,
+            integration_length=1,
+            livetime=valid_livetime,
+            shift=1,
+            max_fpr=max_fpr,
             device=device,
         )
     else:
+        tf = t0 + duration
+        rescaler.fit(*background)
         validator = None
+    rescaler = rescaler.to(device)
 
-    # fit rescaler to training background
-    augmentor.rescaler.fit(*background)
-    augmentor.to(device)
+    # load our glitches and build an object
+    # for randomly sampling from them
+    logging.info("Loading glitches")
+    glitches = train_utils.get_glitches(glitch_dataset, ifos, tf)
+    for ifo, dset in glitches.items():
+        logging.info(f"{len(dset)} glitches from {ifo}")
+    glitch_sampler = GlitchSampler(
+        prob=glitch_prob,
+        max_offset=int(trigger_distance * sample_rate),
+        **glitches,
+    )
+
+    # now construct an object that will make
+    # real-time augmentations to our training
+    # data as its loaded
+    augmentor = train_utils.get_augmentor(
+        ifos,
+        sample_rate,
+        glitch_sampler,
+        waveforms,
+        waveform_prob,
+        snr_sampler,
+        rescaler,
+        mute_frac,
+        swap_frac,
+        glitch_downweight,
+        trigger_distance,
+    )
+    augmentor = augmentor.to(device)
 
     # create full training dataloader
     train_dataset = AframeInMemoryDataset(

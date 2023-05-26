@@ -35,113 +35,122 @@ def split(X: Tensor, frac: float, axis: int) -> Tuple[Tensor, Tensor]:
         return torch.split(X, splits, dim=axis)
 
 
-def prepare_augmentation(
-    glitch_dataset: Path,
-    waveform_dataset: Path,
-    ifos: List[str],
-    train_start: float,
-    train_stop: float,
-    glitch_prob: float,
-    waveform_prob: float,
-    glitch_downweight: float,
-    swap_frac: float,
-    mute_frac: float,
-    sample_rate: float,
-    highpass: float,
-    max_min_snr: float,
-    min_min_snr: float,
-    max_snr: float,
-    snr_alpha: float,
-    snr_decay_steps: int,
-    invert_prob: float = 0.5,
-    reverse_prob: float = 0.5,
-    trigger_distance: float = 0,
-    valid_frac: Optional[float] = None,
-):
-    # build a glitch sampler from a pre-saved bank of
-    # glitches which will randomly insert them into
-    # either or both interferometer channels
+def get_background(background_dir: Path):
+    # load in the data from the first segment in the background directory
+    try:
+        background_dataset = next(background_dir.iterdir())
+    except StopIteration:
+        raise ValueError(
+            f"No files in background data directory {background_dir}"
+        )
+    background = []
+
+    with h5py.File(background_dataset, "r") as f:
+        ifos = list(f.keys())
+        for ifo in ifos:
+            hoft = f[ifo][:]
+            background.append(hoft)
+        t0 = f[ifo].attrs["x0"]
+    return np.stack(background), ifos, t0
+
+
+def get_glitches(
+    glitch_dataset: Path, ifos: List[str], end_time: Optional[float] = None
+) -> GlitchSampler:
+    """
+    Build a glitch sampler from a pre-saved bank of
+    glitches which will randomly insert them into
+    either or both interferometer channels
+    """
     glitch_dict = {}
-    valid_glitches = []
-
-    # calculate the time at which the validation set starts
-    full_duration = train_stop - train_start
-    if valid_frac is not None:
-        train_duration = (1 - valid_frac) * full_duration
-        valid_start = train_start + train_duration
-    else:
-        train_duration = full_duration
-
     with h5py.File(glitch_dataset, "r") as f:
         for ifo in ifos:
             glitches = f[ifo]["glitches"][:]
-            times = f[ifo]["times"][:]
+            if end_time is not None:
+                times = f[ifo]["times"][:]
+                glitches = glitches[times <= end_time]
+            glitch_dict[ifo] = glitches
+    return glitch_dict
 
-            if valid_frac is not None:
-                train_glitches = glitches[times <= valid_start]
-                ifo_glitches = glitches[times > valid_start]
-                logging.info(f"{len(train_glitches)} train glitches for {ifo}")
-                logging.info(f"{len(ifo_glitches)} valid glitches for {ifo}")
-                glitch_dict[ifo] = train_glitches
-                valid_glitches.append(ifo_glitches)
-            else:
-                logging.info(f"{len(train_glitches)} train glitches for {ifo}")
-                glitch_dict[ifo] = glitches
-                valid_glitches = None
 
-    glitch_sampler = GlitchSampler(
-        prob=glitch_prob,
-        max_offset=int(trigger_distance * sample_rate),
-        **glitch_dict,
-    )
-
-    tensors, vertices = gw.get_ifo_geometry(*ifos)
+def get_waveforms(
+    waveform_dataset: Path,
+    ifos: List[str],
+    sample_rate: float,
+    valid_frac: float,
+):
     # perform train/val split of waveforms,
     # and compute fixed validation responses
     with h5py.File(waveform_dataset, "r") as f:
         signals = f["signals"][:]
+
         if valid_frac is not None:
             signals, valid_signals = split(signals, 1 - valid_frac, 0)
+
             valid_cross, valid_plus = valid_signals.transpose(1, 0, 2)
-            valid_cross, valid_plus = torch.Tensor(valid_cross), torch.Tensor(
-                valid_plus
-            )
             slc = slice(-len(valid_signals), None)
             dec, psi, phi = f["dec"][slc], f["psi"][slc], f["ra"][slc]
-            dec, psi, phi = (
+
+            # project the validation waveforms to IFO
+            # responses up front since we don't care
+            # about sampling sky parameters
+            tensors, vertices = gw.get_ifo_geometry(*ifos)
+            valid_responses = gw.compute_observed_strain(
                 torch.Tensor(dec),
                 torch.Tensor(psi),
                 torch.Tensor(phi),
-            )
-            valid_responses = gw.compute_observed_strain(
-                dec,
-                psi,
-                phi,
                 detector_tensors=tensors,
                 detector_vertices=vertices,
                 sample_rate=sample_rate,
-                plus=valid_plus,
-                cross=valid_cross,
+                plus=torch.Tensor(valid_plus),
+                cross=torch.Tensor(valid_cross),
             )
-        else:
-            valid_responses = None
+            return signals, valid_responses
+    return signals, None
 
-    cross, plus = signals.transpose(1, 0, 2)
-    waveform_duration = cross.shape[-1] / sample_rate
 
-    # construct the augmentor that will be used at training time
-    # to sample waveforms, rescale snrs, insert glitches, perform
-    # background strain inversions and flips, etc.
-    snr = SnrSampler(
-        max_min_snr, min_min_snr, max_snr, snr_alpha, snr_decay_steps
+def threshold_snrs(
+    ifo_responses: torch.Tensor,
+    threshold: float,
+    sample_rate: float,
+    psd: torch.Tensor,
+    highpass: float,
+):
+    mask = torch.linspace(0, sample_rate / 2, psd.shape[-1])
+    mask = mask >= highpass
+    mask = mask.to(ifo_responses.device)
+
+    snrs = gw.compute_network_snr(ifo_responses, psd, sample_rate, mask)
+    target_snrs = snrs.clamp(threshold, 1000)
+    weights = target_snrs / snrs
+
+    num_rescaled = (weights > 1).sum().item()
+    logging.info(
+        "{}/{} waveforms had SNR<{}".format(
+            num_rescaled, len(weights), threshold
+        )
     )
-    rescaler = SnrRescaler(
-        len(ifos),
-        sample_rate,
-        waveform_duration,
-        highpass,
-    )
-    augmentor = AframeBatchAugmentor(
+
+    return ifo_responses * weights.view(-1, 1, 1)
+
+
+def get_augmentor(
+    ifos: List[str],
+    sample_rate: float,
+    glitch_sampler: GlitchSampler,
+    waveforms: np.ndarray,
+    waveform_prob: float,
+    snr_sampler: SnrSampler,
+    snr_rescaler: SnrRescaler,
+    mute_frac: float,
+    swap_frac: float,
+    glitch_downweight: float,
+    trigger_distance: float,
+    invert_prob: float = 0.5,
+    reverse_prob: float = 0.5,
+):
+    cross, plus = waveforms.transpose(1, 0, 2)
+    return AframeBatchAugmentor(
         ifos,
         sample_rate,
         waveform_prob,
@@ -153,12 +162,10 @@ def prepare_augmentation(
         downweight=glitch_downweight,
         mute_frac=mute_frac,
         swap_frac=swap_frac,
-        snr=snr,
-        rescaler=rescaler,
+        snr=snr_sampler,
+        rescaler=snr_rescaler,
         invert_prob=invert_prob,
         reverse_prob=reverse_prob,
         cross=cross,
         plus=plus,
     )
-
-    return augmentor, valid_glitches, valid_responses
