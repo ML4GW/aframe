@@ -3,8 +3,11 @@ from typing import Callable, Optional, Tuple
 import numpy as np
 import torch
 
+from ml4gw import gw
 from ml4gw.dataloading import InMemoryDataset
-from ml4gw.transforms.injection import RandomWaveformInjection
+from ml4gw.distributions import PowerLaw
+from ml4gw.spectral import Background, normalize_psd
+from ml4gw.transforms.transform import FittableTransform
 from ml4gw.utils.slicing import sample_kernels
 
 
@@ -24,7 +27,7 @@ class ChannelSwapper(torch.nn.Module):
 
     def forward(self, X):
         num = int(X.shape[0] * self.frac)
-        indices = None
+        indices = []
         if num > 0:
             num = num if not num % 2 else num - 1
             num = max(2, num)
@@ -54,7 +57,7 @@ class ChannelMuter(torch.nn.Module):
 
     def forward(self, X):
         num = int(X.shape[0] * self.frac)
-        indices = None
+        indices = []
         if num > 0:
             channel = torch.randint(X.shape[1], size=(num,))
             indices = torch.randint(X.shape[0], size=(num,))
@@ -130,76 +133,6 @@ class AframeInMemoryDataset(InMemoryDataset):
         return X, y
 
 
-class AframeWaveformInjection(RandomWaveformInjection):
-    def __init__(
-        self,
-        *args,
-        prob: float = 1.0,
-        swap_frac: float = 0.0,
-        mute_frac: float = 0.0,
-        downweight: float = 1.0,
-        glitch_prob: float = 0.5,
-        **kwargs
-    ):
-        self.downweight = downweight
-        self.prob = prob
-        # not to sound like Fermat but I have a
-        # derivation of this somewhere that I
-        # can't quite find at the moment
-        prob = prob / (1 - glitch_prob * (1 - downweight)) ** 2
-        # account for the fact that some waveforms will have a channel
-        # swapped with another waveform and labeled as noise
-        prob = prob / (1 - (swap_frac + mute_frac - (swap_frac * mute_frac)))
-
-        if not 0 < prob <= 1.0:
-            raise ValueError(
-                "Probability must be between 0 and 1. "
-                "Adjust the value(s) of waveform_prob, "
-                "glitch_prob, swap_frac, mute_frac, and/or downweight"
-            )
-        kwargs["prob"] = prob
-
-        super().__init__(*args, **kwargs)
-        self.channel_swapper = ChannelSwapper(frac=swap_frac)
-        self.channel_muter = ChannelMuter(frac=mute_frac)
-
-    def forward(self, X: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        if not self.training:
-            return X, y
-
-        # y == -2 means one glitch, y == -6 means two
-        probs = torch.ones_like(y) * self.prob
-        probs[y < 0] *= self.downweight
-        probs[y < -4] *= self.downweight
-        rvs = torch.rand(size=X.shape[:1], device=probs.device)
-        mask = rvs < probs[:, 0]
-
-        # sample the desired number of waveforms and inject them
-        N = mask.sum().item()
-        waveforms, _ = self.sample(N)
-        waveforms = sample_kernels(
-            waveforms,
-            kernel_size=X.shape[-1],
-            max_center_offset=self.trigger_offset,
-            coincident=True,
-        )
-
-        waveforms, swap_indices = self.channel_swapper(waveforms)
-        waveforms, mute_indices = self.channel_muter(waveforms)
-        X[mask] += waveforms
-
-        # make targets negative if they have had a channel swapped or muted
-        if mute_indices is not None:
-            mask[mask][mute_indices] = False
-
-        if swap_indices is not None:
-            mask[mask][swap_indices] = False
-
-        # make targets positive if they're injected
-        y[mask] = -y[mask] + 1
-        return X, y
-
-
 class GlitchSampler(torch.nn.Module):
     def __init__(
         self, prob: float, max_offset: int, **glitches: np.ndarray
@@ -260,11 +193,11 @@ class SignalInverter(torch.nn.Module):
         super().__init__()
         self.prob = prob
 
-    def forward(self, X, y):
+    def forward(self, X):
         if self.training:
             mask = torch.rand(size=X.shape[:-1]) < self.prob
             X[mask] *= -1
-        return X, y
+        return X
 
 
 class SignalReverser(torch.nn.Module):
@@ -272,8 +205,102 @@ class SignalReverser(torch.nn.Module):
         super().__init__()
         self.prob = prob
 
-    def forward(self, X, y):
+    def forward(self, X):
         if self.training:
             mask = torch.rand(size=X.shape[:-1]) < self.prob
             X[mask] = X[mask].flip(-1)
-        return X, y
+        return X
+
+
+# TODO: use ml4gw version if/when it's merged
+class SnrRescaler(FittableTransform):
+    def __init__(
+        self,
+        num_ifos: int,
+        sample_rate: float,
+        waveform_duration: float,
+        highpass: Optional[float] = None,
+    ):
+        super().__init__()
+        self.highpass = highpass
+        self.sample_rate = sample_rate
+        self.df = 1 / waveform_duration
+        waveform_size = int(waveform_duration * sample_rate)
+        num_freqs = int(waveform_size // 2 + 1)
+        buff = torch.zeros((num_ifos, num_freqs), dtype=torch.float64)
+        self.register_buffer("background", buff)
+
+        if highpass is not None:
+            freqs = torch.fft.rfftfreq(waveform_size, 1 / sample_rate)
+            self.register_buffer("mask", freqs >= highpass, persistent=False)
+        else:
+            self.mask = None
+
+    def fit(
+        self,
+        *backgrounds: Background,
+        sample_rate: Optional[float] = None,
+        fftlength: float = 2
+    ):
+        psds = []
+        for background in backgrounds:
+            psd = normalize_psd(
+                background, self.df, self.sample_rate, sample_rate, fftlength
+            )
+            psds.append(psd)
+
+        background = torch.tensor(np.stack(psds), dtype=torch.float64)
+        super().build(background=background)
+
+    def forward(
+        self,
+        responses: gw.WaveformTensor,
+        target_snrs: Optional[gw.ScalarTensor] = None,
+    ):
+        snrs = gw.compute_network_snr(
+            responses, self.background, self.sample_rate, self.mask
+        )
+        if target_snrs is None:
+            idx = torch.randperm(len(snrs))
+            target_snrs = snrs[idx]
+
+        target_snrs.to(snrs.device)
+        weights = target_snrs / snrs
+        rescaled_responses = responses * weights.view(-1, 1, 1)
+
+        return rescaled_responses, target_snrs
+
+
+class SnrSampler:
+    def __init__(
+        self,
+        max_min_snr: float,
+        min_min_snr: float,
+        max_snr: float,
+        alpha: float,
+        decay_steps: int,
+    ):
+        self.max_min_snr = max_min_snr
+        self.min_min_snr = min_min_snr
+        self.max_snr = max_snr
+        self.alpha = alpha
+        self.decay_steps = decay_steps
+        self._step = 0
+
+        self.dist = PowerLaw(max_min_snr, max_snr, alpha)
+
+    def __call__(self, N):
+        return self.dist(N)
+
+    def step(self):
+        self._step += 1
+        if self._step > self.decay_steps:
+            return
+
+        frac = self._step / self.decay_steps
+        diff = self.max_min_snr - self.min_min_snr
+        new = self.max_min_snr - frac * diff
+
+        self.dist.x_min = new
+        self.dist.normalization = new ** (-self.alpha + 1)
+        self.dist.normalization -= self.max_snr ** (-self.alpha + 1)

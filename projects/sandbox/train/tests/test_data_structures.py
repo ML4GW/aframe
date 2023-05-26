@@ -1,15 +1,15 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import torch
 from train.data_structures import (
     AframeInMemoryDataset,
-    AframeWaveformInjection,
     ChannelSwapper,
     GlitchSampler,
     SignalInverter,
     SignalReverser,
+    SnrSampler,
 )
 
 
@@ -174,90 +174,6 @@ def sample(obj, N):
 rand_value = 0.1 + 0.5 * (torch.arange(32) % 2)
 
 
-@patch("ml4gw.transforms.injection.RandomWaveformInjection.sample", new=sample)
-@patch("torch.rand", return_value=rand_value)
-def test_aframe_waveform_injection(rand_mock):
-    tform = AframeWaveformInjection(
-        sample_rate=128,
-        ifos=["H1", "L1"],
-        dec=MagicMock(),
-        psi=MagicMock(),
-        phi=MagicMock(),
-        prob=0.5,
-        plus=torch.zeros((1, 128 * 2)),
-        cross=torch.zeros((1, 128 * 2)),
-    )
-
-    X = torch.zeros((32, 2, 128 * 1))
-    y = torch.zeros((32, 1))
-
-    X, y = tform(X, y)
-    assert (X[::2] == 1).all().item()
-    assert (X[1::2] == 0).all().item()
-    assert (y[::2] == 1).all().item()
-    assert (y[1::2] == 0).all().item()
-
-
-@pytest.mark.parametrize("downweight", [0, 0.5, 1])
-def test_aframe_waveform_injection_with_downweight(downweight):
-    if downweight == 0.5:
-        with pytest.raises(ValueError) as exc:
-            tform = AframeWaveformInjection(
-                sample_rate=128,
-                ifos=["H1", "L1"],
-                dec=lambda N: torch.zeros((N,)),
-                psi=lambda N: torch.zeros((N,)),
-                phi=lambda N: torch.zeros((N,)),
-                prob=0.9,
-                glitch_prob=0.25,
-                downweight=downweight,
-                plus=torch.zeros((100, 128 * 2)),
-                cross=torch.zeros((100, 128 * 2)),
-            )
-        assert str(exc.value).startswith("Probability must be")
-
-    tform = AframeWaveformInjection(
-        sample_rate=128,
-        ifos=["H1", "L1"],
-        dec=lambda N: torch.zeros((N,)),
-        psi=lambda N: torch.zeros((N,)),
-        phi=lambda N: torch.zeros((N,)),
-        prob=0.5,
-        glitch_prob=0.25,
-        downweight=downweight,
-        plus=torch.zeros((100, 128 * 2)),
-        cross=torch.zeros((100, 128 * 2)),
-    )
-
-    if downweight == 1:
-        assert tform.prob == 0.5
-    elif downweight == 0:
-        assert tform.prob == (0.5 / 0.75**2)
-    else:
-        assert tform.prob > 0.5
-
-    X = torch.zeros((32, 2, 128 * 1))
-    y = torch.zeros((32, 1))
-    y[:8] = -2
-    y[8:16] = -4
-    y[16:24] = -6
-
-    value = 0.99 * tform.prob
-    if (downweight != 0) and (downweight) != 1:
-        value = value * downweight
-    with patch("torch.rand", return_value=value):
-        X, y = tform(X, y)
-        if downweight == 1:
-            assert (y > 0).all().item()
-        elif downweight == 0:
-            assert (y[:24] < 0).all().item()
-            assert (y[24:] == 1).all().item()
-        else:
-            assert (y[:16] > 0).all().item()
-            assert (y[16:24] < 0).all().item()
-            assert (y[24:] > 0).all().item()
-
-
 @pytest.fixture(params=[0.0, 0.25, 0.5, 1])
 def flip_prob(request):
     return request.param
@@ -323,7 +239,7 @@ def test_signal_inverter(flip_prob, rvs, true_idx):
     tform = SignalInverter(flip_prob)
     X = torch.ones((4, 2, 8))
     with patch("torch.rand", return_value=rvs):
-        X, _ = tform(X, None)
+        X = tform(X)
     X = X.cpu().numpy()
     validate_augmenters(X, true_idx, -1, 1, flip_prob)
 
@@ -334,7 +250,7 @@ def test_signal_reverser(flip_prob, rvs, true_idx):
     X = torch.stack([x] * 2)
     X = torch.stack([X] * 4)
     with patch("torch.rand", return_value=rvs):
-        X, _ = tform(X, None)
+        X = tform(X)
     X = X.cpu().numpy()
 
     x = x.cpu().numpy()
@@ -375,5 +291,55 @@ def test_channel_swapper(frac):
     X = torch.arange(6).repeat(6, 1).transpose(1, 0).reshape(-1, 2, 6)
     copy = torch.clone(X)
     X, indices = tform(X)
-    assert indices is None
+    assert not indices
     assert (X == copy).all()
+
+
+def powerlaw_mean(x0, xf, alpha):
+    a1 = 1 - alpha
+    value = -a1 / (x0**a1 - xf**a1)
+    value /= alpha - 2
+    value *= x0 ** (a1 + 1) - xf ** (a1 + 1)
+    return value
+
+
+def test_snr_sampler():
+    sampler = SnrSampler(
+        10,
+        1,
+        100,
+        alpha=3,
+        decay_steps=2,
+    )
+    tols = dict(atol=0, rtol=0.1)
+    vals = sampler(1000)
+    assert vals.min().item() > 10
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(10, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 5.5
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(5.5, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 1
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(1, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    # verify that an additional step does nothing
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 1
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(1, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
