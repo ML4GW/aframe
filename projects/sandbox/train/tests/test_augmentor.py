@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 import numpy as np
 import pytest
 import torch
-from train.augmentor import BBHNetBatchAugmentor
+from train.augmentor import AframeBatchAugmentor
 
 
 @pytest.fixture
@@ -18,7 +18,7 @@ def sample(obj, N, kernel_size):
 rand_value = 0.1 + 0.5 * (torch.arange(32) % 2)
 
 
-@patch("train.augmentor.BBHNetBatchAugmentor.sample_responses", new=sample)
+@patch("train.augmentor.AframeBatchAugmentor.sample_responses", new=sample)
 @patch("torch.rand", return_value=rand_value)
 def test_bbhnet_batch_augmentor(rand_mock):
 
@@ -27,7 +27,7 @@ def test_bbhnet_batch_augmentor(rand_mock):
     )
     glitch_sampler.prob = 0.0
 
-    augmentor = BBHNetBatchAugmentor(
+    augmentor = AframeBatchAugmentor(
         ifos=["H1", "L1"],
         sample_rate=2048,
         signal_prob=0.5,
@@ -59,7 +59,7 @@ def test_bbhnet_batch_augmentor(rand_mock):
         "cross": torch.randn(99, 4096),
     }
     with pytest.raises(ValueError) as exc:
-        augmentor = BBHNetBatchAugmentor(
+        augmentor = AframeBatchAugmentor(
             ifos=["H1", "L1"],
             sample_rate=2048,
             signal_prob=0.9,
@@ -82,7 +82,7 @@ def test_bbhnet_batch_augmentor_with_downweight(downweight):
     glitch_sampler.prob = 0.25
     if downweight == 0.5:
         with pytest.raises(ValueError) as exc:
-            augmentor = BBHNetBatchAugmentor(
+            augmentor = AframeBatchAugmentor(
                 ifos=["H1", "L1"],
                 sample_rate=2048,
                 signal_prob=0.9,
@@ -105,7 +105,7 @@ def test_bbhnet_batch_augmentor_with_downweight(downweight):
 
     glitch_sampler = Mock(return_value=(X, y))
     glitch_sampler.prob = 0.25
-    augmentor = BBHNetBatchAugmentor(
+    augmentor = AframeBatchAugmentor(
         sample_rate=128,
         ifos=["H1", "L1"],
         signal_prob=0.5,
@@ -142,7 +142,7 @@ def test_bbhnet_batch_augmentor_with_downweight(downweight):
             assert (y[24:] > 0).all().item()
 
 
-@patch("train.augmentor.BBHNetBatchAugmentor.sample_responses", new=sample)
+@patch("train.augmentor.AframeBatchAugmentor.sample_responses", new=sample)
 @pytest.mark.parametrize("swap_frac", [0, 0.1])
 @pytest.mark.parametrize("mute_frac", [0, 0.1])
 def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
@@ -154,7 +154,7 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
 
     if swap_frac == 0.5:
         with pytest.raises(ValueError) as exc:
-            augmentor = BBHNetBatchAugmentor(
+            augmentor = AframeBatchAugmentor(
                 ifos=["H1", "L1"],
                 sample_rate=2048,
                 signal_prob=0.9,
@@ -175,7 +175,7 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
     glitch_sampler = Mock(return_value=(X, y))
     glitch_sampler.prob = 0.0
 
-    augmentor = BBHNetBatchAugmentor(
+    augmentor = AframeBatchAugmentor(
         sample_rate=128,
         ifos=["H1", "L1"],
         signal_prob=0.5,
@@ -237,7 +237,7 @@ def test_sample_responses():
         "plus": np.random.randn(100, 4096 * 2),
         "cross": np.random.randn(100, 4096 * 2),
     }
-    augmentor = BBHNetBatchAugmentor(
+    augmentor = AframeBatchAugmentor(
         ifos,
         sample_rate,
         signal_prob,

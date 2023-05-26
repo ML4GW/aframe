@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from train.data_structures import SnrRescaler
 
 
-class BBHNetBatchAugmentor(torch.nn.Module):
+class AframeBatchAugmentor(torch.nn.Module):
     def __init__(
         self,
         ifos: List[str],
