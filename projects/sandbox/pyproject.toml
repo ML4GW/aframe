@@ -138,8 +138,8 @@ valid_frac = "${base.valid_frac}"
 valid_stride = 0.5
 max_fpr = 1e-3
 valid_livetime = 57600  # 16 hours of background
-early_stop = 100
-checkpoint_every = 5
+early_stop = 25
+checkpoint_every = 3
 
 # misc args
 device = "cuda"
