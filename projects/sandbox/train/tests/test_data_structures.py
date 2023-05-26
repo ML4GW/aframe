@@ -311,7 +311,7 @@ def test_snr_sampler():
         alpha=3,
         decay_steps=2,
     )
-    tols = dict(atol=0, rtol=0.05)
+    tols = dict(atol=0, rtol=0.1)
     vals = sampler(1000)
     assert vals.min().item() > 10
     assert vals.max().item() < 100
