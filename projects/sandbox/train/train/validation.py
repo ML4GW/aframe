@@ -224,14 +224,8 @@ class Validator:
     def __call__(self, model: torch.nn.Module, train_loss: float) -> bool:
         model.eval()
         self._injection_idx = 0
-
-        # do the 0-shift inference manually since
-        # there's only one to do and it won't fit
-        # as nicely in the loop below
-        predictions, inj_predictions = self.infer_shift(model, 0)
-        predictions = [predictions]
-        inj_predictions = [inj_predictions]
-        T = self.duration + 0
+        predictions, inj_predictions = [], []
+        T = 0
         i = 1
         while T < self.livetime:
             shift = i * self.shift
