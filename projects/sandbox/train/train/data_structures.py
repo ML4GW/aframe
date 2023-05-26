@@ -34,7 +34,6 @@ class ChannelSwapper(torch.nn.Module):
             channel = torch.randint(X.shape[1], size=(num // 2,)).repeat(2)
             # swap channels from the first num / 2 elements with the
             # second num / 2 elements
-            print(indices, X.shape)
             indices = torch.arange(num)
             target_indices = torch.roll(indices, shifts=num // 2, dims=0)
             X[indices, channel] = X[target_indices, channel]
@@ -295,7 +294,7 @@ class SnrSampler:
 
     def step(self):
         self._step += 1
-        if self._step >= self.decay_steps:
+        if self._step > self.decay_steps:
             return
 
         frac = self._step / self.decay_steps
@@ -305,5 +304,3 @@ class SnrSampler:
         self.dist.x_min = new
         self.dist.normalization = new ** (-self.alpha + 1)
         self.dist.normalization -= self.max_snr ** (-self.alpha + 1)
-
-        self._step += 1

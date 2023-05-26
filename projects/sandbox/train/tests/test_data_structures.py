@@ -9,6 +9,7 @@ from train.data_structures import (
     GlitchSampler,
     SignalInverter,
     SignalReverser,
+    SnrSampler,
 )
 
 
@@ -292,3 +293,53 @@ def test_channel_swapper(frac):
     X, indices = tform(X)
     assert not indices
     assert (X == copy).all()
+
+
+def powerlaw_mean(x0, xf, alpha):
+    a1 = 1 - alpha
+    value = -a1 / (x0**a1 - xf**a1)
+    value /= alpha - 2
+    value *= x0 ** (a1 + 1) - xf ** (a1 + 1)
+    return value
+
+
+def test_snr_sampler():
+    sampler = SnrSampler(
+        10,
+        1,
+        100,
+        alpha=3,
+        decay_steps=2,
+    )
+    tols = dict(atol=0, rtol=0.05)
+    vals = sampler(1000)
+    assert vals.min().item() > 10
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(10, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 5.5
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(5.5, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 1
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(1, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
+
+    # verify that an additional step does nothing
+    sampler.step()
+    vals = sampler(1000)
+    assert vals.min().item() > 1
+    assert vals.max().item() < 100
+
+    expected_mean = powerlaw_mean(1, 100, 3)
+    torch.testing.assert_allclose(vals.mean(), expected_mean, **tols)
