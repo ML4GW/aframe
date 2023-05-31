@@ -145,7 +145,7 @@ class Validator:
         self._injection_step = int(self.injection_stride // self.stride)
 
     def steps_for_shift(self, shift: float):
-        return (self.duration - shift - self.kernel_size) // self.stride + 1
+        return (self.duration - shift - self.kernel_length) // self.stride + 1
 
     def shift_background(self, shift: float):
         if not shift:

@@ -1,147 +1,135 @@
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
 import torch
-from train import validation
+from train.validation import Validator
 
 
-def test_background_recall():
-    metric = validation.BackgroundRecall(10, 10, 3)
-    background = torch.zeros((31,))
+def add_method(mock, method):
+    def dummy(*args, **kwargs):
+        return method(mock, *args, **kwargs)
 
-    # after pooling, the top 3 values should come
-    # out to 2, 1.5, and 0.8
-    background[3] = 1
-    background[4] = 1.5
-    background[10] = 2
-    background[14] = 0.5
-    background[18] = 0.9
-    background[22] = 0.8
-    background[30] = 3  # this will get trimmed
-
-    signal = torch.arange(0.5, 2.5, 0.1)
-    scores = metric(background, None, signal).cpu().numpy()
-    assert len(scores) == 3
-    assert all([i == j for i, j in zip(scores, metric.values)])
-
-    np.testing.assert_allclose(scores, [0.25, 0.5, 0.85])
+    setattr(mock, method.__name__, dummy)
 
 
-def test_auroc():
-    auroc = validation.MultiThresholdAUROC([0.01, 0.1, 1])
-    signal_preds = 10 + 0.1 * torch.randn(1000)
-    background_preds = 0.1 * torch.randn(1000)
+class TestValidator:
+    def test_steps_for_shift(self):
+        mock = Mock()
+        mock.duration = 20
+        mock.kernel_length = 2
+        mock.stride = 1.5
 
-    scores = auroc.call(signal_preds, background_preds)
-    expected = torch.tensor([10 ** (i - 2) for i in range(3)])
+        steps = Validator.steps_for_shift(mock, 0)
+        assert steps == 13
 
-    # account for the extra sample that
-    # gets in due to the <=
-    expected[:-1] += 1 / 1000
-    assert torch.allclose(scores, expected, rtol=1e-6)
+        steps = Validator.steps_for_shift(mock, 1)
+        assert steps == 12
 
-    scores = auroc.call(background_preds, signal_preds)
-    assert (scores == 0).all().item()
+    def test_shift_background(self):
+        x = np.arange(128)
+        mock = Mock()
+        mock.background = np.stack([x, -x])
+        mock.sample_rate = 8
 
-    # now build an arbitrary ROC curve and
-    # make sure the areas are correct. Adding
-    # in a coupple small factors of 10000 to
-    # account for imprecision at the integration
-    # boundaries that I'm too lazy to solve for
-    # exactly, sue me
-    signal_preds[:100] += 30
-    background_preds[:50] += 35
-    area0 = 0.01 * 0.1 + 1 / 10000
+        background = Validator.shift_background(mock, 0)
+        np.testing.assert_array_equal(background, mock.background)
 
-    signal_preds[100:500] += 20
-    background_preds[50:200] += 25
-    area1 = area0 + 0.1 * 0.04 + 0.5 * 0.05 + 4 / 10000
+        background = Validator.shift_background(mock, 1)
+        assert background.shape == (2, 120)
+        expected = np.arange(120)
+        np.testing.assert_array_equal(background[0], expected)
 
-    signal_preds[500:700] += 10
-    background_preds[200:800] += 15
-    area2 = area1 + 0.5 * 0.1 + 0.7 * 0.6 + 0.2 - 5 / 10000
+        expected = -np.arange(8, 128)
+        np.testing.assert_array_equal(background[1], expected)
 
-    scores = auroc.call(signal_preds, background_preds)
-    expected = torch.tensor([area0, area1, area2])
-    assert torch.allclose(scores, expected, rtol=1e-6)
+        background = Validator.shift_background(mock, -1)
+        assert background.shape == (2, 120)
+        expected = np.arange(8, 128)
+        np.testing.assert_array_equal(background[0], expected)
 
-    # ensure that this isn't an artifact of
-    # the ordering by shuffling and making
-    # sure things still match
-    idx = torch.randperm(1000)
-    signal_preds = signal_preds[idx]
-    idx = torch.randperm(1000)
-    background_preds = background_preds[idx]
-    scores = auroc.call(signal_preds, background_preds)
-    assert torch.allclose(scores, expected, rtol=1e-6)
+        expected = -np.arange(120)
+        np.testing.assert_array_equal(background[1], expected)
 
-    # now verify that constant outputs
-    # will produce a score signifying
-    # random predictions
-    constants = torch.zeros((10000,))
-    scores = auroc.call(constants, constants)
+    def test_iter_shift(self):
+        x = np.arange(128)
+        mock = Mock()
+        mock.background = np.stack([x, -x])
+        mock.sample_rate = 8
+        mock.duration = 16
+        mock.batch_size = 4
+        mock.device = "cpu"
 
-    # ensure that "random" scores are roughly
-    # equal to the area under the y=x line up
-    # to the max fpr value. The first value won't
-    # have enough samples to obey nice statistics,
-    # so let's just set a decent upper bound on it
-    assert scores[0] < 2 * 0.01**2
+        mock.kernel_length = 2
+        mock.kernel_size = 16
 
-    expected = [0.5 * 10 ** (2 * (i - 1)) for i in range(2)]
-    expected = torch.tensor(expected)
-    assert torch.allclose(scores[1:], expected, rtol=0.2)
+        mock.stride = 1.5
+        mock.stride_size = 12
 
+        add_method(mock, Validator.steps_for_shift)
+        add_method(mock, Validator.shift_background)
 
-def test_glitch_recall():
-    metric = validation.GlitchRecall([0.5, 0.75, 1])
-    glitches = torch.arange(11).type(torch.float32)
-    signal = torch.arange(4, 12).type(torch.float32)
+        it = Validator.iter_shift(mock, 0)
+        X = next(it).numpy()
+        assert X.shape == (4, 2, 16)
+        expected = np.arange(16)
+        for i, x in enumerate(X):
+            y = i * 12 + expected
+            np.testing.assert_array_equal(x[0], y)
+            np.testing.assert_array_equal(x[1], -y)
 
-    scores = metric(None, glitches, signal).cpu().numpy()
-    assert len(scores) == 3
-    assert all([i == j for i, j in zip(scores, metric.values)])
+        X = next(it).numpy()
+        assert X.shape == (4, 2, 16)
+        for i, x in enumerate(X):
+            y = (i + 4) * 12 + expected
+            np.testing.assert_array_equal(x[0], y)
+            np.testing.assert_array_equal(x[1], -y)
 
-    np.testing.assert_allclose(scores, [7 / 8, 4 / 8, 2 / 8])
+        X = next(it).numpy()
+        assert X.shape == (2, 2, 16)
+        for i, x in enumerate(X):
+            y = (i + 8) * 12 + expected
+            np.testing.assert_array_equal(x[0], y)
+            np.testing.assert_array_equal(x[1], -y)
 
+        with pytest.raises(StopIteration):
+            next(it)
 
-def test_make_background():
-    x = torch.arange(2 * 32).reshape(2, 32).type(torch.float32)
-    batched = validation.make_background(x, 10, 5)
-    assert batched.shape == (5, 2, 10)
+    def test_postprocess(self):
+        mock = Mock()
+        mock.integration_size = 2
+        mock.window = torch.ones((1, 1, 2)) / 2
+        mock.pool_size = 8
 
-    for i in range(5):
-        for j in range(2):
-            start = i * 5 + j * 32
-            expected = torch.arange(start, start + 10)
-            assert (batched[i, j] == expected).all().item()
+        preds = torch.arange(32) + 1
+        preds = preds.type(torch.float32)
+        post = Validator.postprocess(mock, preds).numpy()
+        assert post.shape == (4,)
 
+        expected = 8 * np.arange(1, 5) - 0.5
+        np.testing.assert_array_equal(post, expected)
 
-def test_make_glitches():
-    background = 2 + torch.arange(2 * 32).reshape(2, 32).type(torch.float32)
-    background = validation.make_background(background, 10, 5)
+    def test_inject(self):
+        mock = Mock()
+        mock._injection_step = 4
+        mock._injection_idx = 0
+        mock.kernel_size = 16
 
-    glitches = [torch.zeros((9, 12)), torch.ones((11, 12))]
+        x = torch.arange(16)
+        x = torch.stack([x, x])
+        X = torch.stack([x + i for i in range(13)])
+        X[:, 1] *= -1
 
-    with pytest.raises(ValueError) as exc:
-        validation.make_glitches(glitches, background, 1)
-    assert str(exc.value).startswith("There are more coincident")
+        waveforms = torch.zeros((3, 2, 32))
+        waveforms[:, :, 8:-8] += torch.arange(3)[:, None, None] + 1
+        mock.waveforms = waveforms
 
-    # put wrong values at the edges to make sure
-    # that these get appropriate sliced out
-    glitches[0][:, [0, -1]] = 1
-    glitches[1][:, [0, -1]] = 0
+        injected = Validator.inject(mock, X).numpy()
+        assert injected.shape == (3, 2, 16)
+        expected = np.arange(16)
+        for i, x in enumerate(injected):
+            y = expected + 5 * i + 1
+            np.testing.assert_array_equal(x[0], y)
 
-    dataset = validation.make_glitches(glitches, background, 0.5)
-    assert dataset.shape == (16, 2, 10)
-
-    # first 9 - 4 = 5 should be just H1
-    assert (dataset[:5, 0] == 0).all().item()
-    assert (dataset[:5, 1] != 0).all().item()
-
-    # next 11 - 4 = 7 should be just L1
-    assert (dataset[5:12, 0] != 1).all().item()
-    assert (dataset[5:12, 1] == 1).all().item()
-
-    # remaining (0.5**2) * 16 = 4 should be coincident
-    assert (dataset[12:, 0] == 0).all().item()
-    assert (dataset[12:, 1] == 1).all().item()
+            y = -expected - 3 * i + 1
+            np.testing.assert_array_equal(x[1], y)
