@@ -130,7 +130,6 @@ class Validator:
     device: str
 
     def __post_init__(self):
-        print("here!")
         self.auroc = BinaryAUROC(max_fpr=self.max_fpr)
         self.duration = self.background.shape[-1] / self.sample_rate
         self.kernel_size = int(self.kernel_length * self.sample_rate)
@@ -172,7 +171,6 @@ class Validator:
 
     def iter_shift(self, shift):
         num_steps = self.steps_for_shift(shift)
-        print(shift, num_steps)
         num_batches = (num_steps - 1) // self.batch_size + 1
         background = self.shift_background(shift)
 

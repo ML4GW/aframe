@@ -320,7 +320,7 @@ def main(
     # to account for our sky parameter sampling
     # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
-    batches_per_epoch = 4 * len(waveforms) / waveforms_per_batch
+    batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
     train_dataset = AframeInMemoryDataset(
         background,
         int(kernel_length * sample_rate),

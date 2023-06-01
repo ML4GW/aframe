@@ -1,7 +1,7 @@
 import logging
 from math import pi
 from pathlib import Path
-from typing import List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import h5py
 import numpy as np
@@ -56,7 +56,7 @@ def get_background(background_dir: Path):
 
 def get_glitches(
     glitch_dataset: Path, ifos: List[str], end_time: Optional[float] = None
-) -> GlitchSampler:
+) -> Dict[str, np.ndarray]:
     """
     Build a glitch sampler from a pre-saved bank of
     glitches which will randomly insert them into
