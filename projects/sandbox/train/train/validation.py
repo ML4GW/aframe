@@ -130,6 +130,7 @@ class Validator:
     device: str
 
     def __post_init__(self):
+        print("here!")
         self.auroc = BinaryAUROC(max_fpr=self.max_fpr)
         self.duration = self.background.shape[-1] / self.sample_rate
         self.kernel_size = int(self.kernel_length * self.sample_rate)
@@ -145,6 +146,7 @@ class Validator:
         self._injection_step = int(self.injection_stride // self.stride)
 
     def steps_for_shift(self, shift: float):
+        shift = abs(shift)  # doesn't matter which direction
         return (self.duration - shift - self.kernel_length) // self.stride + 1
 
     def shift_background(self, shift: float):
@@ -170,6 +172,7 @@ class Validator:
 
     def iter_shift(self, shift):
         num_steps = self.steps_for_shift(shift)
+        print(shift, num_steps)
         num_batches = (num_steps - 1) // self.batch_size + 1
         background = self.shift_background(shift)
 
