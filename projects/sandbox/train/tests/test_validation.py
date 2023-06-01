@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 import pytest
@@ -14,6 +14,51 @@ def add_method(mock, method):
 
 
 class TestValidator:
+    @pytest.fixture
+    def background(self):
+        x = np.arange(128)
+        return np.stack([x, -x])
+
+    @pytest.fixture
+    def waveforms(self):
+        waveforms = torch.zeros((3, 2, 32))
+        waveforms[:, :, 8:-8] += torch.arange(3)[:, None, None] + 1
+        return waveforms
+
+    @pytest.fixture
+    def model(self):
+        class Slicer(torch.nn.Module):
+            def forward(self, X):
+                return X[:, 0, -1:]
+
+        return Slicer()
+
+    def test_init(self, background, waveforms):
+        tracker = Mock()
+        validator = Validator(
+            tracker,
+            background,
+            waveforms,
+            sample_rate=8,
+            stride=0.5,
+            injection_stride=4,
+            kernel_length=2,
+            batch_size=8,
+            pool_length=4,
+            integration_length=1,
+            livetime=32,
+            shift=1,
+            max_fpr=1e-3,
+            device="cpu",
+        )
+
+        assert validator.duration == 16
+        assert validator.kernel_size == 16
+        assert validator.stride_size == 4
+        assert validator.pool_size == 8
+        assert validator.integration_size == 2
+        assert validator._injection_step == 8
+
     def test_steps_for_shift(self):
         mock = Mock()
         mock.duration = 20
@@ -26,11 +71,10 @@ class TestValidator:
         steps = Validator.steps_for_shift(mock, 1)
         assert steps == 12
 
-    def test_shift_background(self):
-        x = np.arange(128)
+    def test_shift_background(self, background):
         mock = Mock()
-        mock.background = np.stack([x, -x])
         mock.sample_rate = 8
+        mock.background = background
 
         background = Validator.shift_background(mock, 0)
         np.testing.assert_array_equal(background, mock.background)
@@ -51,10 +95,9 @@ class TestValidator:
         expected = -np.arange(120)
         np.testing.assert_array_equal(background[1], expected)
 
-    def test_iter_shift(self):
-        x = np.arange(128)
+    def test_iter_shift(self, background):
         mock = Mock()
-        mock.background = np.stack([x, -x])
+        mock.background = background
         mock.sample_rate = 8
         mock.duration = 16
         mock.batch_size = 4
@@ -109,7 +152,7 @@ class TestValidator:
         expected = 8 * np.arange(1, 5) - 0.5
         np.testing.assert_array_equal(post, expected)
 
-    def test_inject(self):
+    def test_inject(self, waveforms):
         mock = Mock()
         mock._injection_step = 4
         mock._injection_idx = 0
@@ -133,3 +176,82 @@ class TestValidator:
 
             y = -expected - 3 * i + 1
             np.testing.assert_array_equal(x[1], y)
+
+    def test_infer_shift(self, model, background, waveforms):
+        tracker = Mock()
+        validator = Validator(
+            tracker,
+            background,
+            waveforms,
+            sample_rate=8,
+            stride=0.5,
+            injection_stride=4,
+            kernel_length=2,
+            batch_size=8,
+            pool_length=4,
+            integration_length=1,
+            livetime=32,
+            shift=1,
+            max_fpr=1e-3,
+            device="cpu",
+        )
+        preds, inj_preds = validator.infer_shift(model, 0)
+        preds = preds.numpy()
+
+        # 14s worth of predictions, with 4s pooling,
+        # and torch ditches the last 2s
+        assert preds.shape == (3,)
+
+        # NN predictions will be
+        # [15, 19, 23, ...., 123, 127]
+        # after integration
+        # [7.5, 17, 21, ..., 125]
+        # so first pooled output will be
+        # 6 samples after the 17 above,
+        # and then will be spaced evenly above that
+        base = 17 + 4 * 6
+        expected = base + np.arange(3) * 8 * 4
+        np.testing.assert_array_equal(preds, expected)
+
+        inj_preds = inj_preds.numpy()
+        assert inj_preds.shape == (3,)
+
+        # first waveform adds 1 to the last element
+        # of the first kernel (15), second waveform
+        # adds 2 to the last element of the kernel
+        # 4s later (so 32 samples later), last waveform
+        # adds 3 to the last element of the kernel
+        # another 32 samples later
+        expected = 15 + np.arange(3) * (4 * 8 + 1) + 1
+        np.testing.assert_array_equal(inj_preds, expected)
+
+    def test_call(self, model, background, waveforms):
+        tracker = Mock()
+        tracker.log = lambda i, j: setattr(tracker, "metrics", j)
+
+        validator = Validator(
+            tracker,
+            background,
+            waveforms,
+            sample_rate=8,
+            stride=0.5,
+            injection_stride=4,
+            kernel_length=2,
+            batch_size=8,
+            pool_length=4,
+            integration_length=1,
+            livetime=45,
+            shift=1,
+            max_fpr=1e-3,
+            device="cpu",
+        )
+
+        values = (torch.zeros((3,)), torch.ones((3,)))
+        with patch(
+            "train.validation.Validator.infer_shift", return_value=values
+        ) as mock:
+            validator(model, 0.5)
+
+        mock.assert_has_calls([call(model, i) for i in [1, -1, 2, -2]])
+        assert tracker.metrics["train_loss"] == 0.5
+        assert tracker.metrics["valid_auroc@1.0e-03"] == 1
