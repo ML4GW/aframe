@@ -106,41 +106,42 @@ waveform_dataset = "${base.datadir}/train/signals.h5"
 logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
 
-# data generation and processing parameters
+# optimization args
+batch_size = 1024
+max_epochs = 200
+max_lr = 0.00018
+lr_ramp_epochs = 90
+weight_decay = 2.8e-6
+
+snr_thresh = "${base.hopeless_snr_thresh}"
+max_min_snr = 12
+max_snr = 100
+snr_alpha = 3
+snr_decay_steps = 2500
+
+# data args
 sample_rate = "${base.sample_rate}"
 kernel_length = 2
 fduration = "${base.fduration}"
-snr_thresh = "${base.hopeless_snr_thresh}"
 highpass = "${base.minimum_frequency}"
+
+# augmentation args
 trigger_distance = -0.5
-max_min_snr = 12
-min_min_snr = "${base.hopeless_snr_thresh}"
-max_snr = 100
-snr_alpha = 3
-snr_decay_steps = 5000
 waveform_prob = 0.5
 glitch_prob = 0.4
 glitch_downweight = 0.65
 swap_frac = 0.15
 mute_frac = 0.15
 
-# optimization parameters
-batch_size = 512
-batches_per_epoch = 200
-max_epochs = 200
-max_lr = 0.00018
-lr_ramp_epochs = 90
-weight_decay = 2.8e-6
-
-# validation parameters
+# validation args
 valid_frac = "${base.valid_frac}"
-valid_stride = 0.0625
-early_stop = 50
-monitor_metric = "background"
-threshold = 0.1
-checkpoint_every = 5
+valid_stride = 0.5
+max_fpr = 1e-3
+valid_livetime = 57600  # 16 hours of background
+early_stop = 25
+checkpoint_every = 3
 
-# misc params
+# misc args
 device = "cuda"
 profile = false
 use_amp = false
