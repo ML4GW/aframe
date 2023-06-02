@@ -26,12 +26,12 @@ test_stop = 1262945822 # 3 day window for test
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
 state_flag = "DCS-ANALYSIS_READY_C01:1"
-resnet = {layers = [2, 2, 2, 2], norm_groups = 8}
+resnet = {layers = [3, 4, 6, 3], norm_groups = 16}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
 Tb = 5184000  # 60 days of background
 inference_sampling_rate = 16
-inference_batch_size = 128
+inference_batch_size = 1024
 waveform_duration = 8
 minimum_frequency = 20
 reference_frequency = 50
@@ -109,15 +109,15 @@ outdir = "${base.basedir}/training"
 # optimization args
 batch_size = 1024
 max_epochs = 200
-max_lr = 0.00018
-lr_ramp_epochs = 90
-weight_decay = 2.8e-6
+max_lr = 1.33e-4
+lr_ramp_epochs = 9
+weight_decay = 0.0
 
 snr_thresh = "${base.hopeless_snr_thresh}"
 max_min_snr = 12
 max_snr = 100
 snr_alpha = 3
-snr_decay_steps = 2500
+snr_decay_steps = 768
 
 # data args
 sample_rate = "${base.sample_rate}"
@@ -128,10 +128,10 @@ highpass = "${base.minimum_frequency}"
 # augmentation args
 trigger_distance = -0.5
 waveform_prob = 0.5
-glitch_prob = 0.4
-glitch_downweight = 0.65
-swap_frac = 0.15
-mute_frac = 0.15
+glitch_prob = 0.833
+glitch_downweight = 0.33
+swap_frac = 0.025
+mute_frac = 0.12
 
 # validation args
 valid_frac = "${base.valid_frac}"
