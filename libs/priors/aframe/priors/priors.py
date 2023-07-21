@@ -1,6 +1,8 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
+from astropy import units
+from astropy.cosmology import z_at_value
 from bilby.core.prior import (
     ConditionalPowerLaw,
     ConditionalPriorDict,
@@ -233,3 +235,45 @@ def log_normal_masses(
 
     detector_frame_prior = True
     return prior, detector_frame_prior
+
+
+# The below two functions are for direct comparison with the methodology
+# used in the ML MDC paper: https://arxiv.org/abs/2209.11146
+def mdc_prior_chirp_distance(cosmology: Optional["Cosmology"] = None):
+    prior = PriorDict(conversion_function=mass_constraints)
+    prior["mass_2"] = Uniform(7, 50, unit=msun)
+    prior["mass_ratio"] = Constraint(0.00, 1)
+    prior["mass_1"] = Uniform(7, 50, unit=msun)
+    spin_prior = uniform_spin()
+    for key, value in spin_prior.items():
+        prior[key] = value
+
+    extrinsic_prior = uniform_extrinsic()
+    for key, value in extrinsic_prior.items():
+        prior[key] = value
+
+    prior["chirp_distance"] = PowerLaw(2, 130, 350)
+    detector_frame_prior = True
+
+    return prior, detector_frame_prior
+
+
+def convert_mdc_prior_samples(
+    samples: Dict[str, np.ndarray], cosmology: "Cosmology"
+):
+    """
+    Convert samples produced by the `mdc_prior_chirp_distance` Prior into
+    chirp mass, luminosity distance and redshift.
+    """
+    samples["chirp_mass"] = (samples["mass_1"] * samples["mass_2"]) ** 0.6 / (
+        samples["mass_1"] + samples["mass_2"]
+    ) ** 0.2
+
+    fiducial = 1.4 / (2 ** (1 / 5))
+    factor = (fiducial / samples["chirp_mass"]) ** (5 / 6)
+    samples["luminosity_distance"] = samples["chirp_distance"] / factor
+    samples["redshift"] = z_at_value(
+        cosmology.luminosity_distance,
+        samples["luminosity_distance"] * units.Mpc,
+    ).value
+    return samples

@@ -1,14 +1,128 @@
-from typing import Callable, Optional, Tuple
+from dataclasses import dataclass
+from typing import Callable, List, Optional
 
+import h5py
 import numpy as np
 import torch
 
+import ml4gw.utils.slicing as slicing
 from ml4gw import gw
-from ml4gw.dataloading import InMemoryDataset
 from ml4gw.distributions import PowerLaw
-from ml4gw.spectral import Background, normalize_psd
-from ml4gw.transforms.transform import FittableTransform
-from ml4gw.utils.slicing import sample_kernels
+from ml4gw.transforms import SpectralDensity
+
+
+def sample_kernels(chunk, kernel_size, batch_size):
+    max_idx = chunk.shape[-1] - kernel_size
+    fname_idx = torch.randint(len(chunk), size=(batch_size, 1))
+    start_idx = torch.randint(max_idx, size=(batch_size, 1))
+
+    kernels = torch.arange(kernel_size).view(1, kernel_size)
+    kernels = kernels.repeat(batch_size, 1)
+    kernels += fname_idx * chunk.shape[-1] + start_idx
+
+    return torch.take(chunk, kernels)
+
+
+@dataclass
+class ChunkedDataloader:
+    """
+    Iterable for generating batches of background data
+    loaded on-the-fly from multiple HDF5 files. Loads
+    `chunk_length`-sized randomly-sampled stretches of
+    background from `reads_per_chunk` randomly sampled
+    files up front, then samples `batches_per_chunk`
+    batches of kernels from this chunk before loading
+    in the next one. Terminates after `chunks_per_epoch`
+    chunks have been exhausted, which amounts to
+    `chunks_per_epoch * batches_per_chunk` batches.
+    """
+
+    fnames: List[str]
+    ifos: List[str]
+    kernel_length: float
+    sample_rate: float
+    batch_size: int
+    reads_per_chunk: int
+    chunk_length: float
+    batches_per_chunk: int
+    chunks_per_epoch: int
+    device: str
+    preprocessor: Optional[Callable] = (None,)
+
+    def __len__(self):
+        return self.batches_per_chunk * self.chunks_per_epoch
+
+    def __iter__(self):
+        kernel_size = int(self.kernel_length * self.sample_rate)
+        chunk_size = int(self.chunk_length * self.sample_rate)
+
+        @torch.no_grad()
+        def chunked_generator():
+            shape = (self.reads_per_chunk, 1, chunk_size)
+            chunks = [torch.zeros(shape) for _ in self.ifos]
+
+            # initialize the batch tensor up front
+            # so that all we have to do is populate
+            # with data at each iteration
+            batch_shape = (self.batch_size, len(self.ifos), kernel_size)
+            batch = torch.zeros(batch_shape).to(self.device)
+
+            for _ in range(self.chunks_per_epoch):
+                # randomly select files to read random,
+                # independently sampled chunks of data from
+                for i in range(self.reads_per_chunk):
+                    fname = np.random.choice(self.fnames)
+                    with h5py.File(fname, "r") as f:
+                        for j, ifo in enumerate(self.ifos):
+                            dset = f[ifo]
+                            start = np.random.choice(len(dset) - chunk_size)
+                            x = dset[start : start + chunk_size]
+                            chunks[j][i, 0] = torch.Tensor(x)
+
+                # generate a batches from this chunk by
+                # sampling from each IFO independently
+                for _ in range(self.batches_per_chunk):
+                    # sample kernels for each ifo and insert
+                    # them into the batch
+                    for i, chunk in enumerate(chunks):
+                        kernels = sample_kernels(
+                            chunk, kernel_size, self.batch_size
+                        )
+                        batch[:, i] = kernels
+
+                    # generate y separately each time in
+                    # case downstream augmentations update
+                    # it in-place
+                    y = torch.zeros((len(batch), 1), device=self.device)
+                    if self.preprocessor is not None:
+                        yield self.preprocessor(batch, y)
+                    else:
+                        yield batch, y
+
+        return chunked_generator()
+
+
+class PsdEstimator(torch.nn.Module):
+    def __init__(
+        self,
+        background_length: float,
+        sample_rate: float,
+        fftlength: float,
+        overlap: Optional[float] = None,
+        average: str = "mean",
+        fast: bool = True,
+    ) -> None:
+        super().__init__()
+        self.background_size = int(background_length * sample_rate)
+        self.spectral_density = SpectralDensity(
+            sample_rate, fftlength, overlap, average, fast=fast
+        )
+
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        splits = [self.background_size, X.shape[-1] - self.background_size]
+        background, X = torch.split(X, splits, dim=-1)
+        psds = self.spectral_density(background.double())
+        return X, psds
 
 
 class ChannelSwapper(torch.nn.Module):
@@ -37,7 +151,6 @@ class ChannelSwapper(torch.nn.Module):
             indices = torch.arange(num)
             target_indices = torch.roll(indices, shifts=num // 2, dims=0)
             X[indices, channel] = X[target_indices, channel]
-
         return X, indices
 
 
@@ -64,73 +177,6 @@ class ChannelMuter(torch.nn.Module):
             X[indices, channel] = torch.zeros(X.shape[-1], device=X.device)
 
         return X, indices
-
-
-class AframeInMemoryDataset(InMemoryDataset):
-    """
-    Dataloader which samples batches of kernels
-    from a single timeseries array and prepares
-    corresponding target array of all 0s. Optionally
-    applies a preprocessing step to both the sampled
-    kernels and their targets.
-
-    Args:
-        X: Array containing multi-channel timeseries data
-        kernel_size:
-            The size of the kernels, in terms of number of
-            samples, to sample from the timeseries.
-        batch_size:
-            Number of kernels to produce at each iteration.
-            Represents the 0th dimension of the returned tensor.
-        batches_per_epoch:
-            Number of iterations dataset will perform before
-            raising a `StopIteration` exception.
-        preprocessor:
-            Optional preprocessing step to apply to both the
-            sampled kernels and their targets. If left as
-            `None`, the batches and targets will be returned
-            as-is.
-        coincident:
-            Whether to sample kernels from all channels using
-            the same timesteps, or whether to sample them
-            independently from across the whole timeseries.
-        shuffle:
-            Whether to samples kernels uniformly from the
-            timeseries, or iterate through them in order.
-        device:
-            Device on which to host the timeseries dataset.
-    """
-
-    def __init__(
-        self,
-        X: np.ndarray,
-        kernel_size: int,
-        batch_size: int = 32,
-        batches_per_epoch: Optional[int] = None,
-        preprocessor: Optional[Callable] = None,
-        coincident: bool = True,
-        shuffle: bool = True,
-        device: str = "cpu",
-    ) -> None:
-        super().__init__(
-            X,
-            kernel_size,
-            batch_size=batch_size,
-            stride=1,
-            batches_per_epoch=batches_per_epoch,
-            coincident=coincident,
-            shuffle=shuffle,
-            device=device,
-        )
-        self.preprocessor = preprocessor
-
-    def __next__(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        X = super().__next__()
-        y = torch.zeros((len(X), 1)).to(X.device)
-
-        if self.preprocessor is not None:
-            X, y = self.preprocessor(X, y)
-        return X, y
 
 
 class GlitchSampler(torch.nn.Module):
@@ -171,7 +217,7 @@ class GlitchSampler(torch.nn.Module):
             # timeseries, but rather a batch of single
             # channel timeseries
             glitches = glitches[idx, None]
-            glitches = sample_kernels(
+            glitches = slicing.sample_kernels(
                 glitches,
                 kernel_size=X.shape[-1],
                 max_center_offset=self.max_offset,
@@ -213,10 +259,9 @@ class SignalReverser(torch.nn.Module):
 
 
 # TODO: use ml4gw version if/when it's merged
-class SnrRescaler(FittableTransform):
+class SnrRescaler(torch.nn.Module):
     def __init__(
         self,
-        num_ifos: int,
         sample_rate: float,
         waveform_duration: float,
         highpass: Optional[float] = None,
@@ -226,9 +271,6 @@ class SnrRescaler(FittableTransform):
         self.sample_rate = sample_rate
         self.df = 1 / waveform_duration
         waveform_size = int(waveform_duration * sample_rate)
-        num_freqs = int(waveform_size // 2 + 1)
-        buff = torch.zeros((num_ifos, num_freqs), dtype=torch.float64)
-        self.register_buffer("background", buff)
 
         if highpass is not None:
             freqs = torch.fft.rfftfreq(waveform_size, 1 / sample_rate)
@@ -236,29 +278,17 @@ class SnrRescaler(FittableTransform):
         else:
             self.mask = None
 
-    def fit(
-        self,
-        *backgrounds: Background,
-        sample_rate: Optional[float] = None,
-        fftlength: float = 2
-    ):
-        psds = []
-        for background in backgrounds:
-            psd = normalize_psd(
-                background, self.df, self.sample_rate, sample_rate, fftlength
-            )
-            psds.append(psd)
-
-        background = torch.tensor(np.stack(psds), dtype=torch.float64)
-        super().build(background=background)
-
     def forward(
         self,
         responses: gw.WaveformTensor,
+        asds: torch.Tensor,
         target_snrs: Optional[gw.ScalarTensor] = None,
     ):
+        num_freqs = responses.shape[-1] // 2 + 1
+        if asds.shape[-1] != num_freqs:
+            asds = torch.nn.functional.interpolate(asds, size=(num_freqs,))
         snrs = gw.compute_network_snr(
-            responses, self.background, self.sample_rate, self.mask
+            responses, asds**2, self.sample_rate, self.mask
         )
         if target_snrs is None:
             idx = torch.randperm(len(snrs))

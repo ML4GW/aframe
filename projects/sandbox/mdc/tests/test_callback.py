@@ -25,7 +25,6 @@ class TestCallback:
             integration_window_length=integration_window_length,
             cluster_window_length=cluster_window_length,
             fduration=1.0,
-            psd_length=16,
         )
 
     def test_initialize(self, callback):

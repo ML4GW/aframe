@@ -21,6 +21,7 @@ default = false
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3"
+jupyter = "^1.0.0"
 
 [tool.poetry.scripts]
 train = "train.train:main"

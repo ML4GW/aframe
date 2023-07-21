@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import torch
+from export.snapshotter import add_streaming_input_preprocessor
 
 import hermes.quiver as qv
-from aframe.architectures import Preprocessor, architecturize
+from aframe.architectures import architecturize
 from aframe.logging import configure_logging
 
 
@@ -18,19 +19,22 @@ def scale_model(model, instances):
 
 
 @architecturize
-def export(
+def main(
     architecture: Callable,
     repository_directory: str,
     outdir: Path,
     num_ifos: int,
+    kernel_length: float,
     inference_sampling_rate: float,
     sample_rate: float,
     batch_size: int,
-    fduration: Optional[float] = None,
+    fduration: float,
+    psd_length: float,
+    fftlength: float = 8,
+    highpass: Optional[float] = None,
     weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
-    preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.ONNX,
     clean: bool = False,
     verbose: bool = False,
@@ -103,20 +107,12 @@ def export(
     # of the network architecture, including preprocessor
     logging.info("Initializing model architecture")
     nn = architecture(num_ifos)
-    preprocessor = Preprocessor(num_ifos, sample_rate, fduration=fduration)
-    nn = torch.nn.Sequential(preprocessor, nn)
     logging.info(f"Initialize:\n{nn}")
 
-    # load in a set of trained weights and use the
-    # preprocessor's kernel_length parameter to infer
-    # the expected input dimension along the time axis
+    # load in a set of trained weights
     logging.info(f"Loading parameters from {weights}")
     state_dict = torch.load(weights, map_location="cpu")
     nn.load_state_dict(state_dict)
-    kernel_length = preprocessor.whitener.kernel_length.item()
-    logging.info(
-        f"Model will be exported with input kernel length of {kernel_length}s"
-    )
     nn.eval()
 
     # instantiate a model repository at the
@@ -130,29 +126,13 @@ def export(
     except KeyError:
         aframe = repo.add("aframe", platform=platform)
 
-    # do the same for preprocessor
-    try:
-        preproc = repo.models["preproc"]
-    except KeyError:
-        preproc = repo.add("preproc", platform=platform)
-
     # if we specified a number of instances we want per-gpu
     # for each model at inference time, scale them now
     if aframe_instances is not None:
         scale_model(aframe, aframe_instances)
-    if preproc_instances is not None:
-        scale_model(preproc, preproc_instances)
 
-    # start by exporting the preprocessor, then  use
-    # its inferred output shape to export the network
-    input_dim = int(kernel_length * sample_rate)
-    input_shape = (batch_size, num_ifos, input_dim)
-    preproc.export_version(
-        nn._modules["0"],
-        input_shapes={"hoft": input_shape},
-        output_names=["whitened"],
-    )
-
+    size = int(kernel_length * sample_rate)
+    input_shape = (batch_size, num_ifos, size)
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -166,11 +146,10 @@ def export(
         # https://github.com/triton-inference-server/server/issues/3418
         aframe.config.optimization.graph.level = -1
     elif platform == qv.Platform.TENSORRT:
-        kwargs["use_fp16"] = True
+        kwargs["use_fp16"] = False
 
-    input_shape = tuple(preproc.config.output[0].dims)
     aframe.export_version(
-        nn._modules["1"],
+        nn,
         input_shapes={"whitened": input_shape},
         output_names=["discriminator"],
         **kwargs,
@@ -179,13 +158,6 @@ def export(
     # now try to create an ensemble that has a snapshotter
     # at the front for streaming new data to
     ensemble_name = "aframe-stream"
-    stream_size = int(sample_rate / inference_sampling_rate)
-
-    # see if we have an existing snapshot model up front,
-    # since we'll make different choices later depending
-    # on whether it already exists or not
-    snapshotter = repo.models.get("snapshotter", None)
-
     try:
         # first see if we have an existing
         # ensemble with the given name
@@ -193,31 +165,19 @@ def export(
     except KeyError:
         # if we don't, create one
         ensemble = repo.add(ensemble_name, platform=qv.Platform.ENSEMBLE)
-
-        # if a snapshot model already exists, add it to
-        # the ensemble and pipe its output to the input of
-        # aframe, otherwise use the `add_streaming_inputs`
-        # method on the ensemble to create a snapshotter
-        # and perform this piping for us
-        if snapshotter is not None:
-            ensemble.add_input(snapshotter.inputs["stream"])
-            ensemble.pipe(
-                snapshotter.outputs["snapshotter"], preproc.inputs["hoft"]
-            )
-        else:
-            # there's no snapshotter, so make one
-            ensemble.add_streaming_inputs(
-                inputs=[preproc.inputs["hoft"]],
-                stream_size=stream_size,
-                batch_size=batch_size,
-                name="snapshotter",
-                streams_per_gpu=streams_per_gpu,
-            )
-            snapshotter = repo.models["snapshotter"]
-
-        # now send the outputs of the preprocessing module
-        # to the inputs of the neural network
-        ensemble.pipe(preproc.outputs["whitened"], aframe.inputs["whitened"])
+        whitened = add_streaming_input_preprocessor(
+            ensemble,
+            aframe.inputs["whitened"],
+            psd_length=psd_length,
+            sample_rate=sample_rate,
+            inference_sampling_rate=inference_sampling_rate,
+            fduration=fduration,
+            fftlength=fftlength,
+            highpass=highpass,
+            name="snapshotter",
+            streams_per_gpu=streams_per_gpu,
+        )
+        ensemble.pipe(whitened, aframe.inputs["whitened"])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry
@@ -232,14 +192,11 @@ def export(
                 "Ensemble model '{}' already in repository "
                 "but doesn't include model 'aframe'".format(ensemble_name)
             )
-        elif snapshotter is None or snapshotter not in ensemble.models:
-            raise ValueError(
-                "Ensemble model '{}' already in repository "
-                "but doesn't include model 'snapshotter'".format(ensemble_name)
-            )
+        # TODO: checks for snapshotter and preprocessor
 
     # keep snapshot states around for a long time in case there are
     # unexpected bottlenecks which throttle update for a few seconds
+    snapshotter = repo.models["snapshotter"]
     snapshotter.config.sequence_batching.max_sequence_idle_microseconds = int(
         6e10
     )
@@ -247,4 +204,4 @@ def export(
 
 
 if __name__ == "__main__":
-    export()
+    main()

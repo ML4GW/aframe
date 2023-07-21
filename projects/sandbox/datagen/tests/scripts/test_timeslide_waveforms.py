@@ -10,10 +10,10 @@ from datagen.utils.timeslide_waveforms import (
     calc_shifts_required,
 )
 
-from aframe.priors.priors import end_o3_ratesandpops
+from aframe.priors.priors import mdc_prior_chirp_distance
 
 
-@pytest.fixture(params=[end_o3_ratesandpops])
+@pytest.fixture(params=[mdc_prior_chirp_distance])
 def prior(request):
     return request.param
 
@@ -106,16 +106,14 @@ def mock_psds(sample_rate, waveform_duration):
 
 
 def test_calc_shifts_required():
-    # one shift has 30 seconds of livetime
-    segments = ((0, 10), (20, 30), (40, 50))
 
     # test that requiring 0 background time returns 0 shifts
-    shifts_required = calc_shifts_required(segments, 0, 1)
+    shifts_required = calc_shifts_required(0, 30, 1)
     assert shifts_required == 0
 
     # need an extra shift to get 60 seconds of background
     # due to the chopping off of livetime at the end of each segment
-    shifts_required = calc_shifts_required(segments, 60, 1)
+    shifts_required = calc_shifts_required(60, 30, 1)
     assert shifts_required == 3
 
 

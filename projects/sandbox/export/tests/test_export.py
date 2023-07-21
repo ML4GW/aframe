@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 import torch
-from export import export
+from export.main import main as export
 from google.protobuf import text_format
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
-from aframe.architectures import Preprocessor, ResNet
+from aframe.architectures import ResNet
 
 
 # set up a directory for the entirety of the session
@@ -35,16 +35,11 @@ def architecture():
 
 @pytest.fixture
 def get_network_weights(weights_dir, architecture):
-    def fn(num_ifos, sample_rate, kernel_length, target):
+    def fn(num_ifos, target):
         weights = weights_dir / f"{num_ifos}-{sample_rate}-{kernel_length}.pt"
         if not weights.exists():
-            preprocessor = Preprocessor(num_ifos, sample_rate, fduration=1)
-            preprocessor.whitener.build(
-                kernel_length=torch.Tensor((kernel_length,))
-            )
             aframe = architecture(num_ifos)
-            model = torch.nn.Sequential(preprocessor, aframe)
-            torch.save(model.state_dict(prefix=""), weights)
+            torch.save(aframe.state_dict(prefix=""), weights)
 
         shutil.copy(weights, target)
 
@@ -75,12 +70,12 @@ def load_config(config_path: Path):
 def validate_repo(repo_dir):
     def fn(
         expected_aframe_instances,
-        expected_preproc_instances,
         expected_snapshots,
         expected_versions,
         expected_num_ifos,
         expected_stream_size,
-        expected_kernel_size,
+        expected_state_size,
+        expected_aframe_size,
         expected_crop,
         expected_batch_size,
     ):
@@ -109,28 +104,18 @@ def validate_repo(repo_dir):
                     expected_stream_size * expected_batch_size,
                 ]
                 assert config.output[0].dims == [
-                    expected_batch_size,
+                    1,
                     expected_num_ifos,
-                    expected_kernel_size,
+                    expected_state_size
+                    + (expected_stream_size * expected_batch_size),
                 ]
 
                 assert (model / "1" / "model.onnx").exists()
                 assert not (model / "2").is_dir()
-            elif model.name in ("aframe", "preproc"):
-                if model.name == "aframe":
-                    expected_instances = expected_aframe_instances
-                    expected_input_dim = expected_kernel_size - expected_crop
-                    expected_output_shape = [expected_batch_size, 1]
-                    assert config.optimization.graph.level == -1
-                else:
-                    expected_instances = expected_preproc_instances
-                    expected_input_dim = expected_kernel_size
-                    output_dim = expected_kernel_size - expected_crop
-                    expected_output_shape = [
-                        expected_batch_size,
-                        expected_num_ifos,
-                        output_dim,
-                    ]
+            elif model.name == "aframe":
+                expected_instances = expected_aframe_instances
+                expected_output_shape = [expected_batch_size, 1]
+                assert config.optimization.graph.level == -1
 
                 try:
                     instance_group = config.instance_group[0]
@@ -151,12 +136,12 @@ def validate_repo(repo_dir):
                 assert config.input[0].dims == [
                     expected_batch_size,
                     expected_num_ifos,
-                    expected_input_dim,
+                    expected_aframe_size,
                 ]
                 assert config.output[0].dims == expected_output_shape
 
                 if isinstance(expected_versions, tuple):
-                    idx = 0 if model.name == "aframe" else 1
+                    idx = 0
                     versions = expected_versions[idx]
                 else:
                     versions = expected_versions
@@ -168,6 +153,18 @@ def validate_repo(repo_dir):
             elif model.name == "aframe-stream":
                 assert (model / "1").is_dir()
                 assert not (model / "2").is_dir()
+            elif model.name == "preprocessor":
+                assert config.input[0].dims == [
+                    1,
+                    expected_num_ifos,
+                    expected_state_size
+                    + (expected_stream_size * expected_batch_size),
+                ]
+                assert config.output[0].dims == [
+                    expected_batch_size,
+                    expected_num_ifos,
+                    expected_aframe_size,
+                ]
             else:
                 raise ValueError(f"Unexpected model {model.name} in repo")
 
@@ -198,6 +195,11 @@ def kernel_length(request):
     return request.param
 
 
+@pytest.fixture(params=[8, 16])
+def psd_length(request):
+    return request.param
+
+
 @pytest.fixture(params=[1, 2, 8])
 def batch_size(request):
     return request.param
@@ -209,6 +211,7 @@ def test_export_for_shapes(
     num_ifos,
     sample_rate,
     kernel_length,
+    psd_length,
     batch_size,
     inference_sampling_rate,
     architecture,
@@ -216,7 +219,7 @@ def test_export_for_shapes(
     validate_repo,
 ):
     weights = output_dir / "weights.pt"
-    get_network_weights(num_ifos, sample_rate, kernel_length, weights)
+    get_network_weights(num_ifos, weights)
 
     # test fully from scratch behavior
     if (kernel_length * inference_sampling_rate) <= 1:
@@ -224,6 +227,16 @@ def test_export_for_shapes(
     else:
         context = nullcontext()
 
+    fduration = 1
+    expected_state_size = int(
+        sample_rate
+        * (
+            kernel_length
+            + fduration
+            + psd_length
+            - (1 / inference_sampling_rate)
+        )
+    )
     with context:
         export(
             architecture,
@@ -231,23 +244,24 @@ def test_export_for_shapes(
             output_dir,
             num_ifos=num_ifos,
             inference_sampling_rate=inference_sampling_rate,
+            kernel_length=kernel_length,
+            psd_length=psd_length,
             sample_rate=sample_rate,
             batch_size=batch_size,
-            fduration=1,
+            fduration=fduration,
             weights=weights,
             streams_per_gpu=1,
             aframe_instances=1,
-            preproc_instances=1,
         )
         validate_repo(
             expected_aframe_instances=1,
-            expected_preproc_instances=1,
             expected_snapshots=1,
             expected_versions=1,
             expected_num_ifos=num_ifos,
             expected_stream_size=int(sample_rate / inference_sampling_rate),
-            expected_kernel_size=int(sample_rate * kernel_length),
-            expected_crop=int(sample_rate),
+            expected_state_size=expected_state_size,
+            expected_aframe_size=int(sample_rate * kernel_length),
+            expected_crop=int(sample_rate * fduration),
             expected_batch_size=batch_size,
         )
 
@@ -275,8 +289,9 @@ def test_export_for_weights(
     num_ifos = 2
     kernel_length = 2
     sample_rate = 128
+    psd_length = 16
     inference_sampling_rate = 4
-
+    fduration = 1
     if not weights:
         target = output_dir / "weights.pt"
         if weights is None:
@@ -285,8 +300,17 @@ def test_export_for_weights(
             weights = output_dir / "weights.pt"
     else:
         weights = target = output_dir / weights
-    get_network_weights(num_ifos, sample_rate, kernel_length, target)
+    get_network_weights(num_ifos, target)
 
+    expected_state_size = int(
+        sample_rate
+        * (
+            kernel_length
+            + fduration
+            + psd_length
+            - (1 / inference_sampling_rate)
+        )
+    )
     export(
         architecture,
         str(repo_dir),
@@ -294,21 +318,22 @@ def test_export_for_weights(
         num_ifos=num_ifos,
         inference_sampling_rate=inference_sampling_rate,
         sample_rate=sample_rate,
+        kernel_length=kernel_length,
+        psd_length=psd_length,
         batch_size=1,
-        fduration=1,
+        fduration=fduration,
         weights=weights,
         streams_per_gpu=1,
         aframe_instances=1,
-        preproc_instances=1,
     )
     validate_repo(
         expected_aframe_instances=1,
-        expected_preproc_instances=1,
         expected_snapshots=1,
         expected_versions=1,
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
-        expected_kernel_size=int(sample_rate * kernel_length),
+        expected_aframe_size=int(sample_rate * kernel_length),
+        expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
         expected_batch_size=1,
     )
@@ -352,10 +377,20 @@ def test_export_for_scaling(
     num_ifos = 2
     kernel_length = 2
     sample_rate = 128
+    psd_length = 16
     inference_sampling_rate = 4
-
+    fduration = 1
     weights = output_dir / "weights.pt"
-    get_network_weights(num_ifos, sample_rate, kernel_length, weights)
+    get_network_weights(num_ifos, weights)
+    expected_state_size = int(
+        sample_rate
+        * (
+            kernel_length
+            + fduration
+            + psd_length
+            - (1 / inference_sampling_rate)
+        )
+    )
 
     if clean:
         p = repo_dir / "dummy_file.txt"
@@ -373,24 +408,25 @@ def test_export_for_scaling(
             num_ifos=num_ifos,
             inference_sampling_rate=inference_sampling_rate,
             sample_rate=sample_rate,
+            kernel_length=kernel_length,
+            psd_length=psd_length,
             batch_size=1,
             fduration=1,
             weights=weights,
             streams_per_gpu=streams_per_gpu,
             aframe_instances=aframe_instances,
-            preproc_instances=preproc_instances,
             clean=clean,
         )
 
     run_export()
     validate_repo(
         expected_aframe_instances=aframe_instances,
-        expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=1,
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
-        expected_kernel_size=int(sample_rate * kernel_length),
+        expected_aframe_size=int(sample_rate * kernel_length),
+        expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
         expected_batch_size=1,
     )
@@ -399,14 +435,14 @@ def test_export_for_scaling(
     run_export()
     validate_repo(
         expected_aframe_instances=aframe_instances,
-        expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=1 if clean else 2,
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
-        expected_kernel_size=int(sample_rate * kernel_length),
-        expected_batch_size=1,
+        expected_aframe_size=int(sample_rate * kernel_length),
+        expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
+        expected_batch_size=1,
     )
 
     # now make sure if we change the scale
@@ -416,12 +452,12 @@ def test_export_for_scaling(
     )
     validate_repo(
         expected_aframe_instances=3,
-        expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=2 if clean else 3,
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
-        expected_kernel_size=int(sample_rate * kernel_length),
+        expected_aframe_size=int(sample_rate * kernel_length),
+        expected_state_size=expected_state_size,
         expected_batch_size=1,
         expected_crop=int(sample_rate),
     )
@@ -453,12 +489,12 @@ def test_export_for_scaling(
     shutil.rmtree(repo_dir / "aaframe")
     validate_repo(
         expected_aframe_instances=aframe_instances,
-        expected_preproc_instances=preproc_instances,
         expected_snapshots=streams_per_gpu,
         expected_versions=(1, 3) if clean else (1, 4),
         expected_num_ifos=num_ifos,
         expected_stream_size=int(sample_rate / inference_sampling_rate),
-        expected_kernel_size=int(sample_rate * kernel_length),
+        expected_aframe_size=int(sample_rate * kernel_length),
+        expected_state_size=expected_state_size,
         expected_batch_size=1,
         expected_crop=int(sample_rate),
     )

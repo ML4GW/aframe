@@ -2,13 +2,14 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import h5py
 import numpy as np
 import torch
 from torchmetrics.classification import BinaryAUROC
 
+import ml4gw.gw as gw
 from ml4gw.utils.slicing import unfold_windows
 
 
@@ -117,9 +118,13 @@ class Validator:
     tracker: LocalTracker
     background: torch.Tensor
     waveforms: torch.Tensor
+    psd_estimator: Callable
+    whitener: Callable
     sample_rate: float
     stride: float
     injection_stride: float
+    snr_thresh: float
+    highpass: float
     kernel_length: float
     batch_size: int
     pool_length: float
@@ -191,32 +196,70 @@ class Validator:
         )
         return preds[0, 0]
 
-    def inject(self, X: torch.Tensor) -> torch.Tensor:
+    def threshold_snrs(self, waveforms: torch.Tensor, psds: torch.Tensor):
+        num_freqs = waveforms.shape[-1] // 2 + 1
+        if num_freqs != psds.shape[-1]:
+            psds = torch.nn.functional.interpolate(psds, (num_freqs,))
+
+        mask = torch.linspace(0, self.sample_rate / 2, num_freqs)
+        mask = mask >= self.highpass
+        mask = mask.to(waveforms.device)
+
+        snrs = gw.compute_network_snr(waveforms, psds, self.sample_rate, mask)
+        target_snrs = snrs.clamp(self.snr_thresh, 1000)
+        weights = target_snrs / snrs
+        return waveforms * weights.view(-1, 1, 1)
+
+    def inject(self, X: torch.Tensor, psds: torch.Tensor) -> torch.Tensor:
+        # downsample the background batch to give us
+        # the desired stride between injections
         X = X[:: self._injection_step]
+        psds = psds[:: self._injection_step]
+
+        # grab the next batch of injections and possibly
+        # reduce the background batch size to match it
+        # if we're at the end. Increment our injection
+        # index counter
         start = self._injection_idx
         stop = start + len(X)
-        waveforms = self.waveforms[start:stop]
+        waveforms = self.waveforms[start:stop].to(X.device)
+        psds = psds[: len(waveforms)]
+        X = X[: len(waveforms)]
+        self._injection_idx += len(waveforms)
 
-        start = waveforms.shape[-1] // 2 - self.kernel_size // 2
-        stop = start + self.kernel_size
+        # threshold the SNRs of the injections to the desired value.
+        waveforms = self.threshold_snrs(waveforms, psds)
+
+        # now cut out a window symmetrically about the
+        # coalescence time and inject it into the background
+        kernel_size = X.shape[-1]
+
+        start = waveforms.shape[-1] // 2 - kernel_size // 2
+        stop = start + kernel_size
         waveforms = waveforms[:, :, int(start) : int(stop)]
-        waveforms = waveforms.to(X.device)
-        return X[: len(waveforms)] + waveforms
+        X += waveforms
+
+        # return the downsampled PSDs for whitening
+        return X, psds
+
+    def predict(self, model, X, psd):
+        X = self.whitener(X, psd)
+        return model(X)[:, 0]
 
     @torch.no_grad()
     def infer_shift(self, model: torch.nn.Module, shift: float):
         preds, inj_preds = [], []
         for X in self.iter_shift(shift):
-            y = model(X)[:, 0]
+            X, psd = self.psd_estimator(X)
+            y = self.predict(model, X, psd)
             preds.append(y)
 
             if self._injection_idx >= len(self.waveforms):
                 continue
 
-            X = self.inject(X)
-            y = model(X)[:, 0]
+            X, psd = self.inject(X, psd)
+            y = self.predict(model, X, psd)
             inj_preds.append(y)
-            self._injection_idx += len(X)
 
         preds = torch.cat(preds)
         if inj_preds:

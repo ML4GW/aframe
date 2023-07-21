@@ -91,7 +91,7 @@ def infer_on_segment(
         result = client.get()
         time.sleep(1e-1)
 
-    logging.info(f"Retreived results from sequence {str_rep}")
+    logging.info(f"Retrieved results from sequence {str_rep}")
     background_events, foreground_events = result
 
     logging.info("Recovering injections from foreground")
@@ -115,6 +115,7 @@ def main(
     batch_size: int,
     integration_window_length: float,
     cluster_window_length: float,
+    psd_length: float,
     fduration: float,
     throughput: float,
     chunk_size: float,
@@ -192,6 +193,7 @@ def main(
         integration_window_length=integration_window_length,
         cluster_window_length=cluster_window_length,
         fduration=fduration,
+        psd_length=psd_length,
     )
 
     logging.info(f"Connecting to server at {ip}:8001")

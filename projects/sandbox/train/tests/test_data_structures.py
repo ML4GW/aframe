@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 import torch
 from train.data_structures import (
-    AframeInMemoryDataset,
     ChannelSwapper,
     GlitchSampler,
     SignalInverter,
@@ -48,76 +47,6 @@ def sequential_data(num_ifos, sample_rate):
 @pytest.fixture(params=[True, False])
 def coincident(request):
     return request.param
-
-
-def test_aframe_in_memory_dataloader(
-    sequential_data,
-    kernel_length,
-    batch_size,
-    batches_per_epoch,
-    coincident,
-    num_ifos,
-    sample_rate,
-):
-    kernel_size = int(kernel_length * sample_rate)
-    dataset = AframeInMemoryDataset(
-        sequential_data,
-        kernel_size,
-        batch_size,
-        batches_per_epoch=batches_per_epoch,
-        preprocessor=None,
-        coincident=coincident,
-        shuffle=True,
-        device="cpu",
-    )
-
-    for i, (X, y) in enumerate(dataset):
-        assert X.shape == (batch_size, num_ifos, kernel_size)
-        assert y.shape == (batch_size, 1)
-        assert (y == 0).all().item()
-
-        for sample in X:
-            start = sample[0, 0]
-            expected = torch.arange(start, start + kernel_size)
-            assert (sample[0] == expected).all().item()
-            if num_ifos == 1:
-                continue
-
-            if coincident:
-                expected = expected + 128 * sample_rate
-                assert (sample[1] == expected).all().item()
-            else:
-                start = sample[1, 0]
-                expected = torch.arange(start, start + kernel_size)
-                assert (sample[1] == expected).all().item()
-    assert (i + 1) == batches_per_epoch
-
-
-def test_aframe_in_memory_dataloader_with_preprocessor(
-    sequential_data, sample_rate
-):
-    def preprocessor(X, y):
-        X[:, 0] *= 2
-        y[::2] = 1
-        return X, y
-
-    dataset = AframeInMemoryDataset(
-        sequential_data,
-        kernel_size=2 * sample_rate,
-        batch_size=8,
-        batches_per_epoch=2,
-        preprocessor=preprocessor,
-        coincident=True,
-        shuffle=True,
-        device="cpu",
-    )
-    for X, y in dataset:
-        assert ((X[:, 0] % 2) == 0).all().item()
-        if X.shape[1] > 1:
-            assert not ((X[:, 1] % 2) == 0).all().item()
-
-        assert (y[::2] == 1).all().item()
-        assert (y[1::2] == 0).all().item()
 
 
 @pytest.fixture(params=[0, 0.25, 1])

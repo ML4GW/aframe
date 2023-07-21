@@ -268,7 +268,8 @@ class Ledger:
             idx = 0
             for source in _iter_open(files, "r", clean=clean):
                 source_length = source.attrs["length"]
-
+                if source_length == 0:
+                    continue
                 # for each dataset in the ledger, move the data
                 # from the source into the correct spot in the target
                 for key, attr in cls.__dataclass_fields__.items():

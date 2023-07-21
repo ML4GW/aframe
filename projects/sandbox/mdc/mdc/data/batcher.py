@@ -43,6 +43,7 @@ def batch_chunks(
     for i in range(num_steps):
         start = chunk_idx * step_size
         stop = (chunk_idx + 1) * step_size
+
         # if we can't build an entire batch with
         # whatever data we have left, grab the
         # next chunk of data
@@ -81,12 +82,10 @@ def batch_chunks(
         chunk_idx += 1
 
     try:
-        x, _ = next(it)
+        next(it)
     except StopIteration:
         return
     else:
-        if x.shape[-1] < step_size:
-            return
         raise ValueError(
             "Data iterator expected to have {} "
             "steps, but data still available".format(num_steps)

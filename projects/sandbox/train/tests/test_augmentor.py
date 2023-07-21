@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -8,11 +8,53 @@ from train.augmentor import AframeBatchAugmentor
 
 @pytest.fixture
 def sample_rate():
-    return 512
+    return 128
 
 
-def sample(obj, N, kernel_size):
+@pytest.fixture
+def kernel_length():
+    return 1
+
+
+@pytest.fixture
+def background_length():
+    return 10
+
+
+@pytest.fixture
+def fduration():
+    return 1
+
+
+# total size of kernels that get sampled
+@pytest.fixture
+def size(sample_rate, kernel_length, background_length, fduration):
+    return int(sample_rate * (background_length + kernel_length + fduration))
+
+
+def sample(obj, N, kernel_size, _):
     return torch.ones((N, 2, kernel_size))
+
+
+# dummy psd estimator and whitener
+# TODO: implement local whitener in ml4gw
+@pytest.fixture
+def psd_estimator(background_length, sample_rate):
+    def f(X):
+        size = background_length * sample_rate
+        splits = [size, X.shape[-1] - size]
+        background, X = torch.split(X, splits, dim=-1)
+        return X, background
+
+    return f
+
+
+@pytest.fixture
+def whitener():
+    def f(x, y):
+        return x
+
+    return f
 
 
 rand_value = 0.1 + 0.5 * (torch.arange(32) % 2)
@@ -20,27 +62,31 @@ rand_value = 0.1 + 0.5 * (torch.arange(32) % 2)
 
 @patch("train.augmentor.AframeBatchAugmentor.sample_responses", new=sample)
 @patch("torch.rand", return_value=rand_value)
-def test_bbhnet_batch_augmentor(rand_mock):
-
+def test_bbhnet_batch_augmentor(
+    rand_mock, psd_estimator, whitener, size, sample_rate
+):
+    """
     glitch_sampler = Mock(
         return_value=(torch.zeros((32, 2, 128 * 1)), torch.zeros((32, 1)))
     )
     glitch_sampler.prob = 0.0
+    """
 
     augmentor = AframeBatchAugmentor(
         ifos=["H1", "L1"],
-        sample_rate=2048,
+        sample_rate=sample_rate,
         signal_prob=0.5,
-        glitch_sampler=glitch_sampler,
+        whitener=whitener,
         dec=MagicMock(),
         psi=MagicMock(),
         phi=MagicMock(),
         trigger_distance=-0.5,
         plus=np.zeros((1, 128 * 2)),
         cross=np.zeros((1, 128 * 2)),
+        psd_estimator=psd_estimator,
     )
 
-    X = torch.zeros((32, 2, 128 * 1))
+    X = torch.zeros((32, 2, size))
     y = torch.zeros((32, 1))
 
     X, y = augmentor(X, y)
@@ -61,9 +107,10 @@ def test_bbhnet_batch_augmentor(rand_mock):
     with pytest.raises(ValueError) as exc:
         augmentor = AframeBatchAugmentor(
             ifos=["H1", "L1"],
-            sample_rate=2048,
+            sample_rate=sample_rate,
             signal_prob=0.9,
-            glitch_sampler=glitch_sampler,
+            psd_estimator=psd_estimator,
+            whitener=whitener,
             dec=lambda N: torch.randn(N, 3, 4096),
             psi=lambda N: torch.randn(N, 15),
             phi=lambda N: torch.randn(N, 15),
@@ -74,112 +121,53 @@ def test_bbhnet_batch_augmentor(rand_mock):
     assert str(exc.value).startswith("Polarization ")
 
 
-@pytest.mark.parametrize("downweight", [0, 0.5, 1])
-def test_bbhnet_batch_augmentor_with_downweight(downweight):
-    glitch_sampler = Mock(
-        return_value=(torch.zeros((32, 2, 128 * 1)), torch.zeros((32, 1)))
-    )
-    glitch_sampler.prob = 0.25
-    if downweight == 0.5:
-        with pytest.raises(ValueError) as exc:
-            augmentor = AframeBatchAugmentor(
-                ifos=["H1", "L1"],
-                sample_rate=2048,
-                signal_prob=0.9,
-                glitch_sampler=glitch_sampler,
-                dec=lambda N: torch.zeros((N,)),
-                psi=lambda N: torch.zeros((N,)),
-                phi=lambda N: torch.zeros((N,)),
-                trigger_distance=-0.5,
-                downweight=downweight,
-                plus=np.zeros((1, 128 * 2)),
-                cross=np.zeros((1, 128 * 2)),
-            )
-        assert str(exc.value).startswith("Probability must be")
-
-    X = torch.zeros((32, 2, 128 * 1))
-    y = torch.zeros((32, 1))
-    y[:8] = -2
-    y[8:16] = -4
-    y[16:24] = -6
-
-    glitch_sampler = Mock(return_value=(X, y))
-    glitch_sampler.prob = 0.25
-    augmentor = AframeBatchAugmentor(
-        sample_rate=128,
-        ifos=["H1", "L1"],
-        signal_prob=0.5,
-        glitch_sampler=glitch_sampler,
-        trigger_distance=-0.25,
-        dec=lambda N: torch.zeros((N,)),
-        psi=lambda N: torch.zeros((N,)),
-        phi=lambda N: torch.zeros((N,)),
-        downweight=downweight,
-        plus=np.zeros((100, 128 * 2)),
-        cross=np.zeros((100, 128 * 2)),
-    )
-
-    if downweight == 1:
-        assert augmentor.signal_prob == 0.5
-    elif downweight == 0:
-        assert augmentor.signal_prob == (0.5 / 0.75**2)
-    else:
-        assert augmentor.signal_prob > 0.5
-
-    value = 0.99 * augmentor.signal_prob
-    if (downweight != 0) and (downweight) != 1:
-        value = value * downweight
-    with patch("torch.rand", return_value=value):
-        X, y = augmentor(X, y)
-        if downweight == 1:
-            assert (y > 0).all().item()
-        elif downweight == 0:
-            assert (y[:24] < 0).all().item()
-            assert (y[24:] == 1).all().item()
-        else:
-            assert (y[:16] > 0).all().item()
-            assert (y[16:24] < 0).all().item()
-            assert (y[24:] > 0).all().item()
-
-
 @patch("train.augmentor.AframeBatchAugmentor.sample_responses", new=sample)
 @pytest.mark.parametrize("swap_frac", [0, 0.1])
 @pytest.mark.parametrize("mute_frac", [0, 0.1])
-def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
+def test_bbhnet_batch_augmentor_with_swapping_and_muting(
+    size,
+    swap_frac,
+    mute_frac,
+    psd_estimator,
+    whitener,
+    kernel_length,
+    fduration,
+    sample_rate,
+):
 
-    X = torch.zeros((32, 2, 128 * 1))
+    X = torch.zeros((32, 2, size))
     y = torch.zeros((32, 1))
-    glitch_sampler = Mock(return_value=(X, y))
-    glitch_sampler.prob = 0.25
 
     if swap_frac == 0.5:
         with pytest.raises(ValueError) as exc:
             augmentor = AframeBatchAugmentor(
                 ifos=["H1", "L1"],
-                sample_rate=2048,
+                sample_rate=sample_rate,
                 signal_prob=0.9,
-                glitch_sampler=glitch_sampler,
+                # glitch_sampler=glitch_sampler,
                 dec=lambda N: torch.zeros((N,)),
                 psi=lambda N: torch.zeros((N,)),
                 phi=lambda N: torch.zeros((N,)),
                 trigger_distance=-0.5,
                 swap_frac=swap_frac,
                 mute_frac=mute_frac,
-                plus=np.zeros((1, 128 * 2)),
-                cross=np.zeros((1, 128 * 2)),
+                plus=np.zeros((1, sample_rate * 8)),
+                cross=np.zeros((1, sample_rate * 8)),
+                psd_estimator=psd_estimator,
+                whitener=whitener,
             )
         assert str(exc.value).startswith("Probability must be")
 
-    X = torch.zeros((32, 2, 128 * 1))
+    X = torch.zeros((32, 2, size))
     y = torch.zeros((32, 1))
-    glitch_sampler = Mock(return_value=(X, y))
-    glitch_sampler.prob = 0.0
+    # glitch_sampler = Mock(return_value=(X, y))
+    # glitch_sampler.prob = 0.0
 
     augmentor = AframeBatchAugmentor(
-        sample_rate=128,
+        sample_rate=sample_rate,
         ifos=["H1", "L1"],
         signal_prob=0.5,
-        glitch_sampler=glitch_sampler,
+        # glitch_sampler=glitch_sampler,
         trigger_distance=-0.25,
         dec=lambda N: torch.zeros((N,)),
         psi=lambda N: torch.zeros((N,)),
@@ -188,6 +176,8 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
         mute_frac=mute_frac,
         plus=np.zeros((100, 128 * 2)),
         cross=np.zeros((100, 128 * 2)),
+        psd_estimator=psd_estimator,
+        whitener=whitener,
     )
 
     if swap_frac + mute_frac == 0:
@@ -197,13 +187,17 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
     else:
         assert augmentor.signal_prob == (0.5 / (1 - (0.2 - 0.01)))
 
-    #
     value = 0.99 * augmentor.signal_prob
     mute_indices = torch.arange(4, 8) if mute_frac == 0.1 else []
     swap_indices = torch.arange(4) if swap_frac == 0.1 else []
 
-    mock_channel_muter = MagicMock(return_value=(X, mute_indices))
-    mock_channel_swapper = MagicMock(return_value=(X, swap_indices))
+    waveform_shape = torch.randn(
+        X.shape[0], 2, (kernel_length + fduration) * sample_rate
+    )
+    mock_channel_muter = MagicMock(return_value=(waveform_shape, mute_indices))
+    mock_channel_swapper = MagicMock(
+        return_value=(waveform_shape, swap_indices)
+    )
 
     augmentor.muter.forward = mock_channel_muter
     augmentor.swapper.forward = mock_channel_swapper
@@ -225,13 +219,13 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(swap_frac, mute_frac):
             assert (y[8:] == 1).all().item()
 
 
-def test_sample_responses():
+def test_sample_responses(
+    psd_estimator, whitener, background_length, sample_rate
+):
     # Test that sample_responses returns the expected output shape
     ifos = ["H1", "L1"]
-    sample_rate = 2048
+
     signal_prob = 0.5
-    glitch_sampler = MagicMock(return_value=torch.randn(10, 3, 4096))
-    glitch_sampler.prob = 0.25
 
     polarizations = {
         "plus": np.random.randn(100, 4096 * 2),
@@ -241,15 +235,18 @@ def test_sample_responses():
         ifos,
         sample_rate,
         signal_prob,
-        glitch_sampler,
+        # glitch_sampler,
         dec=lambda N: torch.randn(N),
         psi=lambda N: torch.randn(N),
         phi=lambda N: torch.randn(N),
         trigger_distance=-0.5,
+        psd_estimator=psd_estimator,
+        whitener=whitener,
         **polarizations,
     )
 
     N = 10
     kernel_size = 4096
-    kernels = augmentor.sample_responses(N, kernel_size)
+    psds = torch.ones((N, 2, background_length * sample_rate))
+    kernels = augmentor.sample_responses(N, kernel_size, psds)
     assert kernels.shape == (N, 2, kernel_size)

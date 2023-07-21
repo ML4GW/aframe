@@ -100,10 +100,7 @@ def main(
         train_stop,
         minimum_train_length,
     )
-
-    try:
-        train_segment = train_segments[0]
-    except IndexError:
+    if not train_segments:
         raise ValueError(
             "No segments of minimum length, not producing background"
         )
@@ -115,7 +112,7 @@ def main(
         minimum_test_length,
     )
 
-    segments = [train_segment] + test_segments
+    segments = train_segments + test_segments
     channels = [f"{ifo}:{channel}" for ifo in ifos]
 
     for start, stop in segments:

@@ -5,7 +5,6 @@ import torch
 from train.data_structures import (
     ChannelMuter,
     ChannelSwapper,
-    GlitchSampler,
     SignalInverter,
     SignalReverser,
 )
@@ -23,12 +22,12 @@ class AframeBatchAugmentor(torch.nn.Module):
         ifos: List[str],
         sample_rate: float,
         signal_prob: float,
-        glitch_sampler: GlitchSampler,
         dec: Callable,
         psi: Callable,
         phi: Callable,
+        psd_estimator: Callable,
+        whitener: Callable,
         trigger_distance: float,
-        downweight: float = 1.0,
         mute_frac: float = 0.0,
         swap_frac: float = 0.0,
         snr: Optional[Callable] = None,
@@ -39,11 +38,6 @@ class AframeBatchAugmentor(torch.nn.Module):
     ):
 
         super().__init__()
-
-        glitch_prob = glitch_sampler.prob
-        self.glitch_sampler = glitch_sampler
-        self.downweight = downweight
-        signal_prob = signal_prob / (1 - glitch_prob * (1 - downweight)) ** 2
         signal_prob = signal_prob / (
             1 - (swap_frac + mute_frac - (swap_frac * mute_frac))
         )
@@ -52,7 +46,7 @@ class AframeBatchAugmentor(torch.nn.Module):
             raise ValueError(
                 "Probability must be between 0 and 1. "
                 "Adjust the value(s) of waveform_prob, "
-                "glitch_prob, swap_frac, mute_frac, and/or downweight"
+                "swap_frac, mute_frac, and/or downweight"
             )
 
         self.signal_prob = signal_prob
@@ -69,6 +63,8 @@ class AframeBatchAugmentor(torch.nn.Module):
         self.phi = phi
         self.snr = snr
         self.rescaler = rescaler
+        self.psd_estimator = psd_estimator
+        self.whitener = whitener
 
         # store ifo geometries
         tensors, vertices = gw.get_ifo_geometry(*ifos)
@@ -96,8 +92,7 @@ class AframeBatchAugmentor(torch.nn.Module):
             self.polarizations[polarization] = torch.Tensor(tensor)
         self.num_waveforms = num_waveforms
 
-    def sample_responses(self, N: int, kernel_size: int):
-
+    def sample_responses(self, N: int, kernel_size: int, psds: torch.Tensor):
         dec, psi, phi = self.dec(N), self.psi(N), self.phi(N)
         dec, psi, phi = (
             dec.to(self.tensors.device),
@@ -122,7 +117,7 @@ class AframeBatchAugmentor(torch.nn.Module):
         )
         if self.rescaler is not None:
             target_snrs = self.snr(N).to(responses.device)
-            responses, _ = self.rescaler(responses, target_snrs)
+            responses, _ = self.rescaler(responses, psds**0.5, target_snrs)
 
         kernels = sample_kernels(
             responses,
@@ -132,36 +127,43 @@ class AframeBatchAugmentor(torch.nn.Module):
         )
         return kernels
 
+    @torch.no_grad()
     def forward(self, X, y):
-        # insert glitches and apply inversion / flip augementations
+        X, psds = self.psd_estimator(X)
 
-        X, y = self.glitch_sampler(X, y)
+        # apply inversion / flip augementations
         X = self.inverter(X)
         X = self.reverser(X)
 
         # calculate number of waveforms to generate
-        # based on waveform prob, mute prob, and swap prob and downweight
-        # likelihood of injecting a signal on top of a glitch.
-        # y == -2 means one glitch, y == -6 means two
         probs = torch.ones_like(y) * self.signal_prob
-        probs[y < 0] *= self.downweight
-        probs[y < -4] *= self.downweight
         rvs = torch.rand(size=X.shape[:1], device=probs.device)
         mask = rvs < probs[:, 0]
 
-        # sample the desired number of responses,
-        # perform muting and swapping, and inject them
+        # sample waveforms and use them to compute
+        # interferometer responses
         N = mask.sum().item()
-        responses = self.sample_responses(N, X.shape[-1])
+        responses = self.sample_responses(N, X.shape[-1], psds[mask])
         responses.to(X.device)
 
+        # perform swapping and muting augmentations
+        # on those responses, and then inject them
+        print(responses.shape)
         responses, swap_indices = self.swapper(responses)
+        print(responses.shape)
         responses, mute_indices = self.muter(responses)
+        print(X.shape)
         X[mask] += responses
 
+        # now that injections have been made,
+        # whiten _all_ the strain using the
+        # background psds computed up top
+        X = self.whitener(X, psds)
+
         # set response augmentation labels to noise
-        mask[torch.where(mask)[0][mute_indices]] = 0
-        mask[torch.where(mask)[0][swap_indices]] = 0
+        idx = torch.where(mask)[0]
+        mask[idx[mute_indices]] = 0
+        mask[idx[swap_indices]] = 0
 
         # set labels to positive for injected signals
         y[mask] = -y[mask] + 1

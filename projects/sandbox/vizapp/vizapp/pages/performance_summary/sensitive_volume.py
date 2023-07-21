@@ -28,7 +28,7 @@ class SensitiveVolumePlot:
     def __init__(self, page):
         self.page = page
 
-        max_far_per_month = 10
+        max_far_per_month = 1000
         Tb = page.app.background.Tb / SECONDS_PER_MONTH
         self.max_events = int(max_far_per_month * Tb)
         self.x = np.arange(1, self.max_events + 1) / Tb
@@ -209,7 +209,7 @@ class SensitiveVolumePlot:
         return hover, LegendItem(renderers=[r, band], label=label)
 
     def get_layout(self, height, width):
-        pad = 0.01 * (self.x.max() - self.x.min())
+        pad = (self.x.max() / self.x.min()) ** 0.01
         p = figure(
             height=height,
             width=width,
@@ -219,7 +219,8 @@ class SensitiveVolumePlot:
             ),
             x_axis_label=r"$$\text{False Alarm Rate [months}^{-1}\text{]}$$",
             y_axis_label=r"$$\text{Sensitive Distance [Mpc]}$$",
-            x_range=(self.x.min() - pad, self.x.max() + pad),
+            x_range=(self.x.min() / pad, self.x.max() * pad),
+            x_axis_type="log",
             tools="save",
         )
 

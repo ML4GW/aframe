@@ -1,3 +1,4 @@
+import math
 import time
 from pathlib import Path
 from typing import List, Tuple
@@ -9,35 +10,32 @@ import torch
 from ml4gw.spectral import normalize_psd
 
 
-def calc_shifts_required(
-    segments: List[Tuple[int, int]], Tb: float, shift: float
-):
+def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
+    r"""
+    The algebra to get this is gross but straightforward.
+    Just solving
+    $$\sum_{i=1}^{N}(T - i\delta) \geq T_b$$
+    for the lowest value of N, where \delta is the
+    shift increment.
+
+    TODO: generalize to multiple ifos and negative
+    shifts, since e.g. you can in theory get the same
+    amount of Tb with fewer shifts if for each shift
+    you do its positive and negative. This should just
+    amount to adding a factor of 2 * number of ifo
+    combinations in front of the sum above.
     """
-    Based off of the lengths of the segments and the
-    amount of data that will need to be sloughed off
-    the ends due to shifting, calculate how many shifts
-    will be required to achieve Tb seconds worth of background
 
-    Args:
-        segments: A list of tuples of the start and stop times of the segments
-        Tb: The amount of background data to generate
-        shift: The increment to shift the data by
+    discriminant = (delta / 2 - T) ** 2 - 2 * delta * Tb
+    N = (T - delta / 2 - discriminant**0.5) / delta
+    return math.ceil(N)
 
-    Returns the number of shifts required to achieve Tb seconds of background
-    """
 
-    livetime = sum([stop - start for start, stop in segments])
-    n_segments = len(segments)
-    shifts_required = 0
-    while True:
-        max_shift = shift * shifts_required
-        total_livetime = (livetime - n_segments * max_shift) * shifts_required
-        if total_livetime < Tb:
-            shifts_required += 1
-            continue
-        break
-
-    return shifts_required
+def get_num_shifts(
+    segments: List[Tuple[float, float]], Tb: float, shift: float
+) -> int:
+    T = sum([stop - start for start, stop in segments])
+    return calc_shifts_required(Tb, T, shift)
 
 
 def io_with_blocking(f, fname, timeout=10):

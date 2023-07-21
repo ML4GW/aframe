@@ -17,5 +17,5 @@ dependencies:
   - dqsegdb2
   - uproot
   # injection dependencies
-  - bilby<1.2
+  - bilby
   - lalsuite

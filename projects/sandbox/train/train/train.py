@@ -1,19 +1,17 @@
 import logging
+from math import pi
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
+from train import data_structures as structures
 from train import utils as train_utils
 from train import validation as valid_utils
-from train.data_structures import (
-    AframeInMemoryDataset,
-    GlitchSampler,
-    SnrRescaler,
-    SnrSampler,
-)
+from train.augmentor import AframeBatchAugmentor
 
-from aframe.architectures import Preprocessor
+from aframe.architectures import preprocessor
 from aframe.logging import configure_logging
 from aframe.trainer import trainify
+from ml4gw.distributions import Cosine, Uniform
 
 
 # note that this function decorator acts both to
@@ -27,10 +25,10 @@ from aframe.trainer import trainify
 def main(
     # paths and environment args
     background_dir: Path,
-    glitch_dataset: Path,
     waveform_dataset: Path,
     outdir: Path,
     logdir: Path,
+    ifos: List[str],
     # optimization args
     batch_size: int,
     snr_thresh: float,
@@ -41,12 +39,11 @@ def main(
     # data args
     sample_rate: float,
     kernel_length: float,
+    psd_length: float,
     fduration: float,
     highpass: float,
     # augmentation args
-    glitch_prob: float,
     waveform_prob: float,
-    glitch_downweight: float,
     swap_frac: float = 0.0,
     mute_frac: float = 0.0,
     trigger_distance: float = 0,
@@ -212,43 +209,24 @@ def main(
 
     # load background, infer ifos, and get start and end times
     # of the combined training + validation period
-    logging.info("Loading background data")
-    background, ifos, t0 = train_utils.get_background(background_dir)
-    duration = background.shape[-1] / sample_rate
-    logging.info(
-        "Loaded {} seconds of data from ifos {}".format(
-            duration, ", ".join(ifos)
-        )
+    background_fnames = train_utils.get_background_fnames(background_dir)
+    sample_length = kernel_length + psd_length + fduration
+
+    psd_estimator = structures.PsdEstimator(
+        psd_length, sample_rate, fftlength=2, fast=highpass is not None
     )
+    whitener = preprocessor.Whitener(fduration, sample_rate)
+    whitener = whitener.to(device)
 
     # load our waveforms and build some objects
     # for augmenting their snrs
     waveforms, valid_waveforms = train_utils.get_waveforms(
         waveform_dataset, ifos, sample_rate, valid_frac
     )
-    waveform_duration = waveforms.shape[-1] / sample_rate
-    rescaler = SnrRescaler(len(ifos), sample_rate, waveform_duration, highpass)
-    snr_sampler = SnrSampler(
-        max_min_snr, snr_thresh, max_snr, snr_alpha, snr_decay_steps
-    )
-
-    if valid_frac is not None:
-        background, valid_background = train_utils.split(
-            background, 1 - valid_frac, -1
-        )
-        tf = t0 + (1 - valid_frac) * duration
-
-        # fit our rescaler here since we'll need its
-        # background psd estimate to threshold
-        logging.info("Rescaling validation waveforms")
-        rescaler.fit(*background)
-        valid_waveforms = train_utils.threshold_snrs(
-            valid_waveforms,
-            snr_thresh,
-            sample_rate,
-            rescaler.background,
-            highpass,
-        )
+    if valid_waveforms is not None:
+        valid_fname = background_fnames.pop(-1)
+        logging.info(f"Loading validation segment {valid_fname}")
+        valid_background = train_utils.get_background(valid_fname)
 
         # set up a tracker which will perform evaluation,
         # model selection, and checkpointing.
@@ -266,10 +244,14 @@ def main(
             tracker,
             valid_background,
             valid_waveforms,
-            sample_rate,
+            psd_estimator=psd_estimator,
+            whitener=whitener,
+            snr_thresh=snr_thresh,
+            highpass=highpass,
+            sample_rate=sample_rate,
             stride=valid_stride,
             injection_stride=4,
-            kernel_length=kernel_length,
+            kernel_length=sample_length,
             batch_size=4 * batch_size,
             pool_length=4,
             integration_length=1,
@@ -279,38 +261,41 @@ def main(
             device=device,
         )
     else:
-        tf = t0 + duration
-        rescaler.fit(*background)
         validator = None
-    rescaler = rescaler.to(device)
-
-    # load our glitches and build an object
-    # for randomly sampling from them
-    logging.info("Loading glitches")
-    glitches = train_utils.get_glitches(glitch_dataset, ifos, tf)
-    for ifo, dset in glitches.items():
-        logging.info(f"{len(dset)} glitches from {ifo}")
-    glitch_sampler = GlitchSampler(
-        prob=glitch_prob,
-        max_offset=int(trigger_distance * sample_rate),
-        **glitches,
-    )
 
     # now construct an object that will make
     # real-time augmentations to our training
     # data as its loaded
-    augmentor = train_utils.get_augmentor(
+    waveform_duration = waveforms.shape[-1] / sample_rate
+    rescaler = structures.SnrRescaler(sample_rate, waveform_duration, highpass)
+    rescaler = rescaler.to(device)
+    snr_sampler = structures.SnrSampler(
+        max_min_snr=max_min_snr,
+        min_min_snr=snr_thresh,
+        max_snr=max_snr,
+        alpha=snr_alpha,
+        decay_steps=snr_decay_steps,
+    )
+    print(waveforms)
+    cross, plus = waveforms.transpose(1, 0)
+    augmentor = AframeBatchAugmentor(
         ifos,
         sample_rate,
-        glitch_sampler,
-        waveforms,
         waveform_prob,
-        snr_sampler,
-        rescaler,
-        mute_frac,
-        swap_frac,
-        glitch_downweight,
-        trigger_distance,
+        dec=Cosine(),
+        psi=Uniform(0, pi),
+        phi=Uniform(-pi, pi),
+        psd_estimator=psd_estimator,
+        whitener=whitener,
+        trigger_distance=trigger_distance,
+        mute_frac=mute_frac,
+        swap_frac=swap_frac,
+        snr=snr_sampler,
+        rescaler=rescaler,
+        invert_prob=0.5,
+        reverse_prob=0.5,
+        cross=cross,
+        plus=plus,
     )
     augmentor = augmentor.to(device)
 
@@ -320,25 +305,20 @@ def main(
     # to account for our sky parameter sampling
     # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
-    batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
-    train_dataset = AframeInMemoryDataset(
-        background,
-        int(kernel_length * sample_rate),
+    batches_per_epoch = int(2 * len(waveforms) / waveforms_per_batch)
+    train_dataset = structures.ChunkedDataloader(
+        background_fnames,
+        ifos=ifos,
+        kernel_length=sample_length,
+        sample_rate=sample_rate,
         batch_size=batch_size,
-        batches_per_epoch=batches_per_epoch,
-        preprocessor=augmentor,
-        coincident=False,
-        shuffle=True,
+        # TODO: do we just add args for all of these,
+        # or set some sensible defaults?
+        reads_per_chunk=10,
+        chunk_length=1024,
+        batches_per_chunk=int(batches_per_epoch / 4),
+        chunks_per_epoch=4,
         device=device,
+        preprocessor=augmentor,
     )
-
-    preprocessor = Preprocessor(
-        len(ifos), sample_rate=sample_rate, fduration=fduration
-    )
-
-    # fit the whitening module to the background then
-    # move eveyrthing to the desired device
-    preprocessor.whitener.fit(kernel_length, *background)
-    preprocessor.whitener.to(device)
-
-    return train_dataset, validator, preprocessor
+    return train_dataset, validator, None

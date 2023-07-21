@@ -9,7 +9,7 @@ authors = ["Alec Gunny <alec.gunny@gmail.com>"]
 cuda-version = "11.7"
 
 [tool.poetry.scripts]
-export-model = "export:export"
+export-model = "export.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"

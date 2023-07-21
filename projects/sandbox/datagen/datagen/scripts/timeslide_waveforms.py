@@ -17,6 +17,7 @@ from aframe.analysis.ledger.injections import (
 )
 from aframe.deploy import condor
 from aframe.logging import configure_logging
+from aframe.priors.priors import convert_mdc_prior_samples
 from ml4gw.gw import (
     compute_network_snr,
     compute_observed_strain,
@@ -90,6 +91,7 @@ def main(
     rejected_params = InjectionParameterSet()
     while n_samples > 0:
         params = prior.sample(n_samples)
+        params = convert_mdc_prior_samples(params, cosmology)
         waveforms = generate_gw(
             params,
             minimum_frequency,
@@ -138,7 +140,16 @@ def main(
         # insert our accepted parameters into the output array
         start, stop = idx, idx + num_accepted
         for key, value in params.items():
-            if key not in ("mass_ratio", "chirp_mass"):
+            # TODO: at this point, start using the
+            # __dataclass_fields__ instead. Maybe
+            # arm the metaclasses with a .parameters
+            # method to make the logic of getting those simpler
+            if key not in (
+                "mass_ratio",
+                "chirp_mass",
+                "luminosity_distance",
+                "chirp_distance",
+            ):
                 parameters[key][start:stop] = value[mask]
 
         # do the same for our accepted projected waveforms
@@ -162,6 +173,9 @@ def main(
     response_set = LigoResponseSet(**parameters)
     waveform_fname = output_dir / "waveforms.h5"
     utils.io_with_blocking(response_set.write, waveform_fname)
+
+    # For MDC dataset we don't need to save rejected parameters
+    # since we use a hopeless snr threshold of 0
 
     rejected_fname = output_dir / "rejected-parameters.h5"
     utils.io_with_blocking(rejected_params.write, rejected_fname)
@@ -192,6 +206,7 @@ def deploy(
     highpass: float,
     snr_threshold: float,
     ifos: List[str],
+    psd_length: float,
     outdir: Path,
     datadir: Path,
     logdir: Path,
@@ -238,7 +253,7 @@ def deploy(
     # to accumulate desired background livetime
     state_flags = [f"{ifo}:{state_flag}" for ifo in ifos]
     segments = query_segments(state_flags, start, stop, min_segment_length)
-    shifts_required = utils.calc_shifts_required(segments, Tb, max(shifts))
+    shifts_required = utils.get_num_shifts(segments, Tb, max(shifts))
 
     # create text file from which the condor job will read
     # the start, stop, and shift for each job
@@ -246,9 +261,10 @@ def deploy(
     for start, stop in segments:
         for i in range(shifts_required):
             # TODO: make this more general
-            shift = [i * shift for shift in shifts]
+            shift = [(i + 1) * shift for shift in shifts]
             shift = " ".join(map(str, shift))
-            parameters += f"{start},{stop},{shift}\n"
+            # add psd_length to account for the burn in of psd calculation
+            parameters += f"{start + psd_length},{stop},{shift}\n"
 
     # TODO: have typeo do this CLI argument construction?
     arguments = "--start $(start) --stop $(stop) --shifts $(shift) "

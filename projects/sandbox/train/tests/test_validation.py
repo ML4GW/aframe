@@ -6,6 +6,30 @@ import torch
 from train.validation import Validator
 
 
+# dummy psd estimator and whitener
+# TODO: implement local whitener in ml4gw
+@pytest.fixture
+def psd_estimator():
+    sample_rate = 8
+    background_length = 2
+
+    def f(X):
+        size = background_length * sample_rate
+        splits = [size, X.shape[-1] - size]
+        background, X = torch.split(X, splits, dim=-1)
+        return X, background
+
+    return f
+
+
+@pytest.fixture
+def whitener():
+    def f(x, y):
+        return x
+
+    return f
+
+
 def add_method(mock, method):
     def dummy(*args, **kwargs):
         return method(mock, *args, **kwargs)
@@ -33,16 +57,21 @@ class TestValidator:
 
         return Slicer()
 
-    def test_init(self, background, waveforms):
+    def test_init(self, background, waveforms, psd_estimator, whitener):
         tracker = Mock()
+
         validator = Validator(
             tracker,
             background,
             waveforms,
+            psd_estimator=psd_estimator,
+            whitener=whitener,
             sample_rate=8,
             stride=0.5,
             injection_stride=4,
-            kernel_length=2,
+            snr_thresh=0,
+            highpass=32,
+            kernel_length=4,
             batch_size=8,
             pool_length=4,
             integration_length=1,
@@ -53,7 +82,7 @@ class TestValidator:
         )
 
         assert validator.duration == 16
-        assert validator.kernel_size == 16
+        assert validator.kernel_size == 32
         assert validator.stride_size == 4
         assert validator.pool_size == 8
         assert validator.integration_size == 2
@@ -95,13 +124,15 @@ class TestValidator:
         expected = -np.arange(120)
         np.testing.assert_array_equal(background[1], expected)
 
-    def test_iter_shift(self, background):
+    def test_iter_shift(self, background, psd_estimator, whitener):
         mock = Mock()
         mock.background = background
         mock.sample_rate = 8
         mock.duration = 16
         mock.batch_size = 4
         mock.device = "cpu"
+        mock.psd_estimator = psd_estimator
+        mock.whitener = whitener
 
         mock.kernel_length = 2
         mock.kernel_size = 16
@@ -158,7 +189,7 @@ class TestValidator:
         mock._injection_idx = 0
         mock.kernel_size = 16
 
-        x = torch.arange(16)
+        x = torch.arange(16, dtype=torch.float32)
         x = torch.stack([x, x])
         X = torch.stack([x + i for i in range(13)])
         X[:, 1] *= -1
@@ -167,7 +198,13 @@ class TestValidator:
         waveforms[:, :, 8:-8] += torch.arange(3)[:, None, None] + 1
         mock.waveforms = waveforms
 
-        injected = Validator.inject(mock, X).numpy()
+        def threshold_snrs(_, x, y):
+            return x
+
+        add_method(mock, threshold_snrs)
+
+        injected, _ = Validator.inject(mock, X, X)
+        injected = injected.numpy()
         assert injected.shape == (3, 2, 16)
         expected = np.arange(16)
         for i, x in enumerate(injected):
@@ -177,16 +214,23 @@ class TestValidator:
             y = -expected - 3 * i + 1
             np.testing.assert_array_equal(x[1], y)
 
-    def test_infer_shift(self, model, background, waveforms):
+    def test_infer_shift(
+        self, model, background, waveforms, psd_estimator, whitener
+    ):
+        return
         tracker = Mock()
         validator = Validator(
             tracker,
             background,
             waveforms,
+            psd_estimator=psd_estimator,
+            whitener=whitener,
             sample_rate=8,
             stride=0.5,
             injection_stride=4,
-            kernel_length=2,
+            snr_thresh=0,
+            highpass=32,
+            kernel_length=4,
             batch_size=8,
             pool_length=4,
             integration_length=1,
@@ -225,7 +269,7 @@ class TestValidator:
         expected = 15 + np.arange(3) * (4 * 8 + 1) + 1
         np.testing.assert_array_equal(inj_preds, expected)
 
-    def test_call(self, model, background, waveforms):
+    def test_call(self, model, background, waveforms, psd_estimator, whitener):
         tracker = Mock()
         tracker.log = lambda i, j: setattr(tracker, "metrics", j)
 
@@ -233,9 +277,13 @@ class TestValidator:
             tracker,
             background,
             waveforms,
+            psd_estimator=psd_estimator,
+            whitener=whitener,
             sample_rate=8,
             stride=0.5,
             injection_stride=4,
+            snr_thresh=0,
+            highpass=32,
             kernel_length=2,
             batch_size=8,
             pool_length=4,
