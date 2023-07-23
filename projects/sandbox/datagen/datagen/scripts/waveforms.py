@@ -14,8 +14,8 @@ from aframe.logging import configure_logging
 def main(
     prior: Callable,
     num_signals: int,
-    logdir: Path,
     datadir: Path,
+    logdir: Path,
     reference_frequency: float,
     minimum_frequency: float,
     sample_rate: float,
@@ -24,20 +24,36 @@ def main(
     force_generation: bool = False,
     verbose: bool = False,
 ):
-    """Simulates a set of raw BBH signals and saves them to an output file.
+    """
+    Simulates a set of BBH plus and cross polarization waveforms
+    and saves them to an output file.
 
     Args:
-        prior_file: prior file for bilby to sample from
-        num_signals: number of signal to inject
-        logdir: directory where log file will be written
-        datadir: output directory to which signals will be written
-        reference_frequency: reference frequency for waveform generation
-        minimum_frequency: minimum_frequency for waveform generation
-        sample_rate: rate at which to sample waveforms
-        waveform_duration: length of injected waveforms
-        waveform_approximant: which lalsimulation waveform approximant to use
-        force_generation: if True, generate signals even if path already exists
-        verbose: log verbosely
+        prior:
+            A function that returns a Bilby PriorDict when called
+        num_signals:
+            Number of waveforms to simulate
+        datadir:
+            Directory to which the waveforms will be written
+        logdir:
+            Directory to which the log file will be written
+        reference_frequency:
+            Reference frequency for waveform generation
+        minimum_frequency:
+            Minimum frequency for waveform generation
+        sample_rate:
+            Sample rate at which the waveforms will be simulated
+        waveform_duration:
+            Length of the waveforms in seconds
+        waveform_approximant:
+            The lalsimulation waveform approximant to use
+        force_generation:
+            If false, will not generate data if an existing dataset exists
+        verbose:
+            If true, log at `DEBUG` verbosity, otherwise log at
+            `INFO` verbosity.
+
+    Returns: The name of the file containing the waveforms and parameters
     """
 
     # make dirs

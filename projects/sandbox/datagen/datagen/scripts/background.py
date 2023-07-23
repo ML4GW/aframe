@@ -13,10 +13,15 @@ from aframe.logging import configure_logging
 
 
 def _intify(x: float):
+    """
+    Converts the input float into an int if the two are equal (e.g., 4.0 == 4).
+    Otherwise, returns the input unchanged.
+    """
     return int(x) if int(x) == x else x
 
 
 def _make_fname(prefix, t0, length):
+    """Creates a filename for background files in a consistent format"""
     t0 = _intify(t0)
     length = _intify(length)
     return f"{prefix}-{t0}-{length}.hdf5"
@@ -30,9 +35,10 @@ def validate_file(
     stop: float,
     minimum_length: float,
 ):
-    # if there exists files in training range,
-    # check the timestamp and verify that it
-    # meets the requested conditions
+    """
+    If there exist files in the time range, check the timestamp
+    and verify that it meets the requested conditions
+    """
     with h5py.File(filename, "r") as f:
         missing_keys = [i for i in ifos if i not in f]
         if missing_keys:
@@ -64,6 +70,10 @@ def validate_file(
 
 
 def split_segments(segments: List[tuple], chunk_size: float):
+    """
+    Split a list of segments into segments that are at most
+    `chunk_size` seconds long
+    """
     out_segments = []
     for segment in segments:
         start, stop = segment
@@ -93,7 +103,17 @@ def validate_segments(
     ifos: List[str],
     sample_rate: float,
 ):
+    """
+    Check whether any background data for a set of segments already exists.
 
+    This check depends on how the segments are split using 
+    `max_segment_length`. It may be that equivalent data already exists
+    in the data directory, but spread differently over the data files.
+    For the check to be accurate, the same `max_segment_length` needs
+    to be used.
+
+    Returns a list of segments that there is not data for.
+    """
     segments = split_segments(segments, max_segment_length)
     validated = []
     for start, stop in segments:
@@ -177,10 +197,21 @@ def main(
     """Generates background data for training and testing aframe
 
     Args:
-        start: start gpstime
-        stop: stop gpstime
-        ifos: which ifos to query data for
-        outdir: where to store data
+        start:
+            Starting GPS time of the timeseries to be fetched
+        stop:
+            Ending GPS time of the timeseries to be fetched
+        writepath:
+            Path, including file name, that the data will be saved to
+        channel:
+            Channel from which to fetch the timeseries
+        ifos:
+            List of interferometers to query data from. Expected to be given
+            by prefix; e.g. "H1" for Hanford
+        sample_rate:
+            Sample rate to which the timeseries will be resampled
+
+    Returns: The `Path` of the output file
     """
     authenticate()
     channels = [f"{ifo}:{channel}" for ifo in ifos]
@@ -208,15 +239,61 @@ def deploy(
     logdir: Path,
     accounting_group: str,
     accounting_group_user: str,
-    # note that doing consecutive runs while changing max_segment_length
-    # will screw with the caching checking, so be careful
     max_segment_length: float = 20000,
     request_memory: int = 32768,
     request_disk: int = 1024,
     force_generation: bool = False,
     verbose: bool = False,
 ):
+    """
+    Deploy condor jobs to download background data.
 
+    Args:
+        train_start:
+            GPS time of the beginning of the training period.
+        train_stop:
+            GPS time of the end of the training period.
+            Also corresponds to the beginning of the testing period.
+        test_stop:
+            GPS time of the end of the testing period.
+        minimum_train_length:
+            The shortest a contiguous segment of training background can be.
+            Specified in seconds.
+        minimum_test_length:
+            The shortest a contiguous segment of testing background can be.
+            Specified in seconds.
+        ifos:
+            List of interferometers to query data from. Expected to be given
+            by prefix; e.g. "H1" for Hanford
+        sample_rate:
+            Sample rate to which the timeseries will be resampled
+        channel:
+            Channel from which to fetch the timeseries
+        state_flag:
+            Identifier for which segments to use
+        datadir:
+            Directory to which data will be written
+        logdir:
+            Directory to which the log file will be written
+        accounting_group_user:
+            Username of the person running the condor jobs
+        accounting_group:
+            Accounting group for the condor jobs
+        max_segment_length:
+            Maximum length of a segment in seconds. Note that doing 
+            consecutive runs while changing `max_segment_length` will 
+            screw with the caching checking, so be careful.
+        request_memory:
+            Amount of memory for condor jobs to request in Mb
+        request_disk:
+            Amount of disk space for condor jobs to request in Mb
+        force_generation:
+            If false, will not generate data if an existing dataset exists
+        verbose:
+            If true, log at `DEBUG` verbosity, otherwise log at
+            `INFO` verbosity.
+    """
+    # make logdir dir
     logdir.mkdir(exist_ok=True, parents=True)
     datadir.mkdir(exist_ok=True, parents=True)
     condordir = datadir / "condor" / "background"
