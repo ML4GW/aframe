@@ -11,6 +11,10 @@ from aframe.logging import configure_logging
 
 
 def scale_model(model, instances):
+    """
+    Scale the model to the number of instances per GPU desired
+    at inference time
+    """
     # TODO: should quiver handle this under the hood?
     try:
         model.config.scale_instance_group(instances)
@@ -22,7 +26,7 @@ def scale_model(model, instances):
 def main(
     architecture: Callable,
     repository_directory: str,
-    outdir: Path,
+    logdir: Path,
     num_ifos: int,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -38,6 +42,7 @@ def main(
     platform: qv.Platform = qv.Platform.ONNX,
     clean: bool = False,
     verbose: bool = False,
+    **kwargs,
 ) -> None:
     """
     Export a aframe architecture to a model repository
@@ -48,16 +53,18 @@ def main(
         architecture:
             A function which takes as input a number of witness
             channels and returns an instantiated torch `Module`
-            which represents a DeepClean network architecture
+            which represents an aframe network architecture
         repository_directory:
             Directory to which to save the models and their
             configs
-        outdir:
+        logdir:
             Path to save logs. If `weights` is `None`, this
             directory is assumed to contain a file `"weights.pt"`.
         num_ifos:
             The number of interferometers contained along the
             channel dimension used to train aframe
+        kernel_length:
+            Length of segment in seconds that the networks sees
         inference_sampling_rate:
             The rate at which kernels are sampled from the
             h(t) timeseries. This, along with the `sample_rate`,
@@ -65,15 +72,26 @@ def main(
             snapshotter model
         sample_rate:
             Rate at which the input kernel has been sampled, in Hz
+        batch_size:
+            Number of kernels per batch
+        fduration:
+            Length of the time-domain whitening filter in seconds
+        psd_length:
+            Length of background time in seconds to use for PSD
+            calculation
+        fftlength:
+            Length of time in seconds to use to calculate the FFT
+            during whitening
+        highpass: Frequency to use for a highpass filter
         weights:
             Path to a set of trained weights with which to
             initialize the network architecture. If left as
-            `None`, a file called `"weights.pt"` will be looked
+            `None`, a file called `weights.pt` will be looked
             for in the `output_directory`.
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
-        instances:
+        aframe_instances:
             The number of concurrent execution instances of the
             aframe architecture to host per GPU during inference
         platform:
@@ -84,24 +102,24 @@ def main(
             Whether to clear the repository directory before starting
             export
         verbose:
-            If set, log at `DEBUG` verbosity, otherwise log at
+            If true, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
         **kwargs:
             key word arguments specific to the export platform
     """
 
     # make relevant directories
-    outdir.mkdir(exist_ok=True, parents=True)
+    logdir.mkdir(exist_ok=True, parents=True)
 
     # if we didn't specify a weights filename, assume
     # that a "weights.pt" lives in our output directory
     if weights is None or weights.is_dir():
-        weights_dir = outdir if weights is None else weights
+        weights_dir = logdir if weights is None else weights
         weights = weights_dir / "weights.pt"
     if not weights.exists():
         raise FileNotFoundError(f"No weights file '{weights}'")
 
-    configure_logging(outdir / "export.log", verbose)
+    configure_logging(logdir / "export.log", verbose)
 
     # instantiate a new, randomly initialized version
     # of the network architecture, including preprocessor
@@ -174,7 +192,6 @@ def main(
             fduration=fduration,
             fftlength=fftlength,
             highpass=highpass,
-            name="snapshotter",
             streams_per_gpu=streams_per_gpu,
         )
         ensemble.pipe(whitened, aframe.inputs["whitened"])
