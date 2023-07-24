@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import Dict
 
+import astropy.cosmology as cosmo
 import numpy as np
 from astropy import units
 from astropy.cosmology import z_at_value
@@ -18,14 +19,14 @@ from bilby.core.prior import (
 )
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
 
-if TYPE_CHECKING:
-    from astropy.cosmology import Cosmology
-
 from aframe.priors.utils import (
     mass_condition_powerlaw,
     mass_constraints,
     read_priors_from_file,
 )
+
+# default cosmology
+COSMOLOGY = cosmo.Planck15
 
 # Unit names
 msun = r"$M_{\odot}$"
@@ -65,7 +66,7 @@ def uniform_spin() -> PriorDict:
     return prior
 
 
-def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+def nonspin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
     """
     Define a Bilby `PriorDict` that describes a reasonable population
     of non-spinning binary black holes
@@ -101,7 +102,7 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
     return prior, detector_frame_prior
 
 
-def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+def spin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
     """
     Define a Bilby `PriorDict` that describes a reasonable population
     of spin-aligned binary black holes
@@ -138,7 +139,7 @@ def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
 
 
 def end_o3_ratesandpops(
-    cosmology: Optional["Cosmology"] = None,
+    cosmology: cosmo.Cosmology = COSMOLOGY,
 ) -> ConditionalPriorDict:
     """
     Define a Bilby `PriorDict` that matches the distributions used
@@ -188,7 +189,7 @@ def mass_condition_uniform(reference_params, mass_1):
     )
 
 
-def mdc_prior(cosmology: Optional["Cosmology"] = None, method="constrain"):
+def mdc_prior(cosmology: cosmo.Cosmology = COSMOLOGY, method="constrain"):
     """
     Define a Bilby `PriorDict` that matches the distributions used
     by in a machine learning mock data challenge.
@@ -269,7 +270,7 @@ def gaussian_masses(
     m1: float,
     m2: float,
     sigma: float = 2,
-    cosmology: Optional["Cosmology"] = None,
+    cosmology: cosmo.Cosmology = COSMOLOGY,
 ):
     """
     Construct a gaussian bilby prior for masses.
@@ -322,7 +323,7 @@ def log_normal_masses(
     m1: float,
     m2: float,
     sigma: float = 2,
-    cosmology: Optional["Cosmology"] = None,
+    cosmology: cosmo.Cosmology = COSMOLOGY,
 ):
     """
     Construct a log normal bilby prior for masses.
@@ -392,7 +393,7 @@ def mdc_prior_chirp_distance():
 
 
 def convert_mdc_prior_samples(
-    samples: Dict[str, np.ndarray], cosmology: "Cosmology"
+    samples: Dict[str, np.ndarray], cosmology: cosmo.Cosmology = COSMOLOGY
 ):
     """
     Convert samples produced by the `mdc_prior_chirp_distance` prior into

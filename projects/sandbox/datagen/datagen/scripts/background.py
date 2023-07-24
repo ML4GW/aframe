@@ -93,19 +93,37 @@ def validate_segments(
     ifos: List[str],
     sample_rate: float,
 ):
+
     segments = split_segments(segments, max_segment_length)
     validated = []
     for start, stop in segments:
-
+        duration = stop - start
         # using start/stops to decide if something
         # is a training file or not to make robust
         # to future use of multiple training background
-        is_train = train_start <= start <= (train_stop - minimum_train_length)
+        is_train = train_start <= start
+        is_train &= stop <= train_stop
+
         if is_train:
             subdir = "train"
             stop = min(stop, train_stop)
+            if duration < minimum_train_length:
+                logging.info(
+                    "Skipping segment {}-{}, too short for training".format(
+                        start, stop
+                    )
+                )
+                continue
         else:
             subdir = "test"
+            stop = min(stop, test_stop)
+            if duration < minimum_test_length:
+                logging.info(
+                    "Skipping segment {}-{}, too short for testing".format(
+                        start, stop
+                    )
+                )
+                continue
 
         write_dir = datadir / subdir / "background"
         write_dir.mkdir(parents=True, exist_ok=True)
@@ -193,7 +211,7 @@ def deploy(
     # note that doing consecutive runs while changing max_segment_length
     # will screw with the caching checking, so be careful
     max_segment_length: float = 20000,
-    request_memory: int = 8192,
+    request_memory: int = 32768,
     request_disk: int = 1024,
     force_generation: bool = False,
     verbose: bool = False,
@@ -226,7 +244,7 @@ def deploy(
         minimum_test_length,
     )
 
-    segments = train_segments + test_segments
+    segments = list(train_segments) + list(test_segments)
 
     # determine which segments we need to generate data for
     segments = validate_segments(
@@ -243,6 +261,10 @@ def deploy(
         sample_rate,
     )
 
+    if not segments:
+        logging.info("No segments to generate, not deploying condor jobs")
+        return
+
     # create text file from which the condor job will read
     # the start, stop, and shift for each job
     parameters = "start,stop,writepath\n"
@@ -253,6 +275,9 @@ def deploy(
     arguments += "--writepath $(writepath) "
     arguments += f"--channel {channel} --sample-rate {sample_rate} "
     arguments += f"--ifos {' '.join(ifos)} "
+
+    if verbose:
+        arguments += "--verbose "
 
     kwargs = {"+InitialRequestMemory": request_memory}
     subfile = condor.make_submit_file(
@@ -274,5 +299,5 @@ def deploy(
     )
     dag_id = condor.submit(subfile)
     logging.info(f"Launching background generation jobs with dag id {dag_id}")
-    condor.watch(dag_id, condordir, held=False)
+    condor.watch(dag_id, condordir, held=True)
     logging.info("Completed background generation jobs")

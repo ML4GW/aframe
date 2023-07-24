@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 import h5py
 import pytest
 import torch
-from astropy.cosmology import Planck15
 from datagen.scripts.timeslide_waveforms import main
 from datagen.utils.timeslide_waveforms import (
     calc_segment_injection_times,
@@ -83,14 +82,6 @@ def state_flag(request):
     return request.param
 
 
-@pytest.fixture()
-def cosmology():
-    def f():
-        return Planck15
-
-    return f
-
-
 def create_mock_compute_network_snr(snr_threshold):
     def f(projected, *args):
         return torch.randn(len(projected)) + snr_threshold
@@ -121,7 +112,6 @@ def test_main(
     spacing,
     buffer,
     waveform_duration,
-    cosmology,
     prior,
     minimum_frequency,
     reference_frequency,
@@ -155,7 +145,6 @@ def test_main(
             spacing=spacing,
             buffer=buffer,
             waveform_duration=waveform_duration,
-            cosmology=cosmology,
             prior=prior,
             minimum_frequency=minimum_frequency,
             reference_frequency=reference_frequency,

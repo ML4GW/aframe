@@ -34,7 +34,6 @@ def main(
     spacing: float,
     buffer: float,
     waveform_duration: float,
-    cosmology: Callable,
     prior: Callable,
     minimum_frequency: float,
     reference_frequency: float,
@@ -54,8 +53,7 @@ def main(
     output_dir.mkdir(parents=True, exist_ok=True)
     configure_logging(log_file, verbose=verbose)
 
-    cosmology = cosmology()
-    prior, detector_frame_prior = prior(cosmology)
+    prior, detector_frame_prior = prior()
 
     injection_times = utils.calc_segment_injection_times(
         start,
@@ -91,7 +89,7 @@ def main(
     rejected_params = InjectionParameterSet()
     while n_samples > 0:
         params = prior.sample(n_samples)
-        params = convert_mdc_prior_samples(params, cosmology)
+        params = convert_mdc_prior_samples(params)
         waveforms = generate_gw(
             params,
             minimum_frequency,
@@ -196,7 +194,6 @@ def deploy(
     spacing: float,
     buffer: float,
     min_segment_length: float,
-    cosmology: str,
     waveform_duration: float,
     prior: str,
     minimum_frequency: float,
@@ -277,7 +274,7 @@ def deploy(
     arguments += f"--waveform-approximant {waveform_approximant} "
     arguments += f"--highpass {highpass} --snr-threshold {snr_threshold} "
     arguments += f"--ifos {' '.join(ifos)} "
-    arguments += f"--prior {prior} --cosmology {cosmology} "
+    arguments += f"--prior {prior} "
     arguments += f"--output-dir {outdir}/tmp-$(ProcID) "
     arguments += f"--log-file {logdir}/$(ProcID).log "
 

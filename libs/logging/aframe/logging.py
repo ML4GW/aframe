@@ -1,10 +1,11 @@
 import logging
 import sys
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 
 def configure_logging(
-    filename: Optional[str] = None, verbose: bool = False
+    filename: Optional[Union[str, Path]] = None, verbose: bool = False
 ) -> None:
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logging.basicConfig(
