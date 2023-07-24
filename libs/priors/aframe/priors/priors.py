@@ -34,6 +34,11 @@ rad = "rad"
 
 
 def uniform_extrinsic() -> PriorDict:
+    """
+    Define a Bilby `PriorDict` containing distributions that are
+    uniform over the allowed ranges of extrinsic binary black hole
+    parameters.
+    """
     prior = PriorDict()
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
@@ -44,6 +49,11 @@ def uniform_extrinsic() -> PriorDict:
 
 
 def uniform_spin() -> PriorDict:
+    """
+    Define a Bilby `PriorDict` containing distributions that are
+    uniform over the allowed ranges of binary black hole spin
+    parameters.
+    """
     prior = PriorDict()
     prior["psi"] = Uniform(0, np.pi)
     prior["a_1"] = Uniform(0, 0.998)
@@ -56,6 +66,22 @@ def uniform_spin() -> PriorDict:
 
 
 def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+    """
+    Define a Bilby `PriorDict` that describes a reasonable population
+    of non-spinning binary black holes
+
+    Masses are defined in the detector frame.
+
+    Args:
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
+    """
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
@@ -76,6 +102,22 @@ def nonspin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
 
 
 def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
+    """
+    Define a Bilby `PriorDict` that describes a reasonable population
+    of spin-aligned binary black holes
+
+    Masses are defined in the detector frame.
+
+    Args:
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
+    """
     prior = uniform_extrinsic()
     prior["mass_1"] = Uniform(5, 100, unit=msun)
     prior["mass_2"] = Uniform(5, 100, unit=msun)
@@ -98,6 +140,23 @@ def spin_bbh(cosmology: Optional["Cosmology"] = None) -> PriorDict:
 def end_o3_ratesandpops(
     cosmology: Optional["Cosmology"] = None,
 ) -> ConditionalPriorDict:
+    """
+    Define a Bilby `PriorDict` that matches the distributions used
+    by the LIGO Rates and Populations group for pipeline searches
+    at the end of the third observing run.
+
+    Masses are defined in the source frame.
+
+    Args:
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
+    """
     prior = ConditionalPriorDict(uniform_extrinsic())
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=10, maximum=100, unit=msun)
     prior["mass_2"] = ConditionalPowerLaw(
@@ -118,6 +177,11 @@ def end_o3_ratesandpops(
 
 
 def mass_condition_uniform(reference_params, mass_1):
+    """
+    Return a dictionary that can be interpreted by Bilby's
+    `ConditionalUniform` to set the maximum value of `mass_2`
+    to be whatever was drawn for `mass_1`
+    """
     return dict(
         minimum=reference_params["minimum"],
         maximum=mass_1,
@@ -125,6 +189,28 @@ def mass_condition_uniform(reference_params, mass_1):
 
 
 def mdc_prior(cosmology: Optional["Cosmology"] = None, method="constrain"):
+    """
+    Define a Bilby `PriorDict` that matches the distributions used
+    by in a machine learning mock data challenge.
+    See https://github.com/gwastro/ml-mock-data-challenge-1
+
+    Masses are defined in the detector frame.
+
+    Args:
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+        method:
+            Determines the sampling method for mass 2. If "constrain",
+            the sampling rejects any samples with `mass_2 > mass_1`.
+            If "condition", mass 2 is sampled with an upper limit
+            set by the mass 1 sample
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
+    """
     if method == "constrain":
         prior = PriorDict(conversion_function=mass_constraints)
         prior["mass_2"] = Uniform(7, 50, unit=msun)
@@ -152,11 +238,24 @@ def mdc_prior(cosmology: Optional["Cosmology"] = None, method="constrain"):
     for key, value in extrinsic_prior.items():
         prior[key] = value
 
-    detector_frame_prior = False
+    detector_frame_prior = True
     return prior, detector_frame_prior
 
 
 def power_law_dip_break():
+    """
+    Create a Bilby `PriorDict` from a set of sampled parameters
+    following the Power Law + Dip + Break model,
+    see https://dcc.ligo.org/LIGO-T2100512/public
+
+    Masses are defined in the source frame.
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
+    """
     prior = uniform_extrinsic()
     event_file = "./event_files/\
         O1O2O3all_mass_h_iid_mag_iid_tilt_powerlaw_redshift_maxP_events_bbh.h5"
@@ -173,13 +272,25 @@ def gaussian_masses(
     cosmology: Optional["Cosmology"] = None,
 ):
     """
-    Constructs a gaussian bilby prior for masses.
-    Args:
-        m1: mean of the Gaussian distribution for mass 1
-        m2: mean of the Gaussian distribution for mass 2
-        sigma: standard deviation of the Gaussian distribution for both masses
+    Construct a gaussian bilby prior for masses.
 
-    Returns a PriorDict
+    Masses are defined in the detector frame.
+
+    Args:
+        m1:
+            Mean of the Gaussian distribution for mass 1
+        m2:
+            Mean of the Gaussian distribution for mass 2
+        sigma:
+            Standard deviation of the Gaussian distribution for both masses
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
     """
     prior = PriorDict(conversion_function=mass_constraints)
     prior["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
@@ -197,6 +308,11 @@ def gaussian_masses(
 
 
 def get_log_normal_params(mean, std):
+    """
+    Calculate the mean and standard deviation of the normal
+    distribution associated with the lognormal distribution
+    defined by the given mean and standard deviation
+    """
     sigma = np.log((std / mean) ** 2 + 1) ** 0.5
     mu = 2 * np.log(mean / (mean**2 + std**2) ** 0.25)
     return mu, sigma
@@ -209,13 +325,25 @@ def log_normal_masses(
     cosmology: Optional["Cosmology"] = None,
 ):
     """
-    Constructs a log normal bilby prior for masses.
-    Args:
-        m1: mean of the Log Normal distribution for mass 1
-        m2: mean of the Log Normal distribution for mass 2
-        sigma: standard deviation for m1 and m2
+    Construct a log normal bilby prior for masses.
 
-    Returns a PriorDict
+    Masses are defined in the detector frame.
+
+    Args:
+        m1:
+            Mean of the Log Normal distribution for mass 1
+        m2:
+            Mean of the Log Normal distribution for mass 2
+        sigma:
+            Standard deviation for m1 and m2
+        cosmology:
+            An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior:
+            `PriorDict` describing the binary black hole population
+        detector_frame_prior:
+            Boolean indicating which frame masses are defined in
     """
     prior = PriorDict(conversion_function=mass_constraints)
 
@@ -239,7 +367,12 @@ def log_normal_masses(
 
 # The below two functions are for direct comparison with the methodology
 # used in the ML MDC paper: https://arxiv.org/abs/2209.11146
-def mdc_prior_chirp_distance(cosmology: Optional["Cosmology"] = None):
+def mdc_prior_chirp_distance():
+    """
+    Same as `mdc_prior` above, but sampling in chirp distance rather than
+    redshift. This function always uses the "constraint" method of sampling
+    mass 2.
+    """
     prior = PriorDict(conversion_function=mass_constraints)
     prior["mass_2"] = Uniform(7, 50, unit=msun)
     prior["mass_ratio"] = Constraint(0.00, 1)
@@ -262,7 +395,7 @@ def convert_mdc_prior_samples(
     samples: Dict[str, np.ndarray], cosmology: "Cosmology"
 ):
     """
-    Convert samples produced by the `mdc_prior_chirp_distance` Prior into
+    Convert samples produced by the `mdc_prior_chirp_distance` prior into
     chirp mass, luminosity distance and redshift.
     """
     samples["chirp_mass"] = (samples["mass_1"] * samples["mass_2"]) ** 0.6 / (
