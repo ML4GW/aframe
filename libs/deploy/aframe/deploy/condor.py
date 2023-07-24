@@ -104,17 +104,17 @@ def check_failed(submit_dir: Path):
         )
 
 
-def watch(dag_id: str, submit_dir: Path):
+def watch(dag_id: str, submit_dir: Path, held: bool = True):
     cwq = get_executable("condor_watch_q")
-    subprocess.check_call(
-        [
-            cwq,
-            "-exit",
-            "all,done,0",
-            "-exit",
-            "any,held,1",
-            "-clusters",
-            dag_id,
-        ]
-    )
+    cmd = [
+        cwq,
+        "-exit",
+        "all,done,0",
+        "-clusters",
+        dag_id,
+    ]
+    if held:
+        cmd.extend(["-exit", "any,held,1"])
+
+    subprocess.check_call(cmd)
     check_failed(submit_dir)

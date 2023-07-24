@@ -57,7 +57,7 @@ waveform_approximant = "IMRPhenomPv2"
 verbose = true
 
 
-[tool.typeo.scripts.generate-background]
+[tool.typeo.scripts.deploy-background]
 datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 channel = "${base.channel}"
@@ -70,6 +70,8 @@ sample_rate = "${base.sample_rate}"
 minimum_train_length = 8000
 minimum_test_length = 1024
 force_generation = "${base.force_generation}"
+accounting_group = "${base.accounting_group}"
+accounting_group_user = "${base.accounting_group_user}"
 
 [tool.typeo.scripts.generate-glitches]
 snr_thresh = 5

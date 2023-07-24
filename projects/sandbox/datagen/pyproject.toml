@@ -11,6 +11,7 @@ license = "MIT"
 
 [tool.poetry.scripts]
 generate-background = "datagen.scripts.background:main"
+deploy-background = "datagen.scripts.background:deploy"
 generate-glitches = "datagen.scripts.glitches:main"
 generate-waveforms = "datagen.scripts.waveforms:main"
 generate-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:main"
