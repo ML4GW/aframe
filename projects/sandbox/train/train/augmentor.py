@@ -148,11 +148,8 @@ class AframeBatchAugmentor(torch.nn.Module):
 
         # perform swapping and muting augmentations
         # on those responses, and then inject them
-        print(responses.shape)
         responses, swap_indices = self.swapper(responses)
-        print(responses.shape)
         responses, mute_indices = self.muter(responses)
-        print(X.shape)
         X[mask] += responses
 
         # now that injections have been made,

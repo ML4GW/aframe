@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
-import torch
 from train.train import main as train
 
 
@@ -137,14 +136,14 @@ def test_train(
     waveforms_mock = patch(
         "train.utils.get_waveforms",
         return_value=(
-            torch.randn(900, 2, sample_rate * 8),
-            torch.randn(100, 2, sample_rate * 8),
+            np.random.randn(900, 2, sample_rate * 8),
+            np.random.randn(100, 2, sample_rate * 8),
         ),
     )
 
     background_mock = patch(
         "train.utils.get_background",
-        return_value=torch.randn(2, 1024 * sample_rate),
+        return_value=np.random.randn(2, 1024 * sample_rate),
     )
 
     with background_fnames_mock, waveforms_mock, background_mock as _, _, _:

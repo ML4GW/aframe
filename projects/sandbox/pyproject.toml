@@ -120,10 +120,7 @@ logdir = "${base.logdir}"
 outdir = "${base.basedir}/training"
 
 # optimization args
-
-batch_size = 640
-
-
+batch_size = 384
 max_epochs = 200
 max_lr = 1e-3
 lr_ramp_epochs = 9
@@ -144,7 +141,7 @@ highpass = "${base.minimum_frequency}"
 psd_length = "${base.training_psd_length}"
 
 # augmentation args
-trigger_distance = -0.5
+trigger_distance = -0.75
 waveform_prob = 0.5
 
 swap_frac = 0.025

@@ -188,12 +188,18 @@ class TestValidator:
         mock._injection_step = 4
         mock._injection_idx = 0
         mock.kernel_size = 16
+        mock.pad_size = 4
+        mock.num_views = 3
 
         x = torch.arange(16, dtype=torch.float32)
         x = torch.stack([x, x])
         X = torch.stack([x + i for i in range(13)])
         X[:, 1] *= -1
 
+        # waveforms will look like step functions in
+        # the central 16 samples, with value equal to
+        # the index (plus 1). The outer 8 samples on
+        # each side will remain all 0s.
         waveforms = torch.zeros((3, 2, 32))
         waveforms[:, :, 8:-8] += torch.arange(3)[:, None, None] + 1
         mock.waveforms = waveforms
@@ -205,14 +211,37 @@ class TestValidator:
 
         injected, _ = Validator.inject(mock, X, X)
         injected = injected.numpy()
-        assert injected.shape == (3, 2, 16)
+        assert injected.shape == (3 * 3, 2, 16)
         expected = np.arange(16)
-        for i, x in enumerate(injected):
-            y = expected + 5 * i + 1
-            np.testing.assert_array_equal(x[0], y)
 
-            y = -expected - 3 * i + 1
-            np.testing.assert_array_equal(x[1], y)
+        # fastest changing index along the batch dimension
+        # is the waveform index. Slowest changing index
+        # is the offset index (which view of the injection
+        # we're taking)
+        for i in range(3):
+            for j in range(3):
+                x = injected[i * 3 + j]
+                y = expected + 5 * j + 1
+
+                # for views outside the central one, either
+                # the front end or the back end of the waveform
+                # will be all zeros, so subtract off the value
+                # the waveform adds (which is just its index)
+                if i == 0:
+                    y[-4:] -= j + 1
+                elif i == 2:
+                    y[:4] -= j + 1
+                np.testing.assert_array_equal(x[0], y)
+
+                # same goes for the second channel, but
+                # accounting for the fact that it's negative
+                # to begin with
+                y = -expected - 3 * j + 1
+                if i == 0:
+                    y[-4:] -= j + 1
+                elif i == 2:
+                    y[:4] -= j + 1
+                np.testing.assert_array_equal(x[1], y)
 
     def test_infer_shift(
         self, model, background, waveforms, psd_estimator, whitener

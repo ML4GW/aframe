@@ -50,6 +50,7 @@ def main(
     # validation args
     valid_frac: Optional[float] = None,
     valid_stride: Optional[float] = None,
+    num_valid_views: int = 5,
     max_fpr: float = 1e-3,
     valid_livetime: float = (3600 * 12),
     early_stop: Optional[int] = None,
@@ -259,6 +260,8 @@ def main(
             shift=1,
             max_fpr=max_fpr,
             device=device,
+            pad=-trigger_distance,
+            num_views=num_valid_views,
         )
     else:
         validator = None
@@ -276,8 +279,8 @@ def main(
         alpha=snr_alpha,
         decay_steps=snr_decay_steps,
     )
-    print(waveforms)
-    cross, plus = waveforms.transpose(1, 0)
+
+    cross, plus = waveforms.transpose(1, 0, 2)
     augmentor = AframeBatchAugmentor(
         ifos,
         sample_rate,
@@ -305,7 +308,7 @@ def main(
     # to account for our sky parameter sampling
     # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
-    batches_per_epoch = int(2 * len(waveforms) / waveforms_per_batch)
+    batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
     train_dataset = structures.ChunkedDataloader(
         background_fnames,
         ifos=ifos,
@@ -316,8 +319,8 @@ def main(
         # or set some sensible defaults?
         reads_per_chunk=10,
         chunk_length=1024,
-        batches_per_chunk=int(batches_per_epoch / 4),
-        chunks_per_epoch=4,
+        batches_per_chunk=int(batches_per_epoch / 8),
+        chunks_per_epoch=8,
         device=device,
         preprocessor=augmentor,
     )
