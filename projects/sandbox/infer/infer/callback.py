@@ -21,23 +21,20 @@ class Callback:
     Callable class for handling asynchronous server
     responses for streaming inference across sequences
     of timeseries data. New sequences should be
-    initialized by calling the `start_new_sequence`
-    method before starting to submit requests. Only
-    one sequence can be inferred upon at once.
+    initialized by calling the `initialize` method before
+    starting to submit requests. Only one sequence can be
+    inferred upon at once.
 
     Once inference has completed for each sequence,
     it will be asynchronously convolved with a
-    boxcar filter to perform local integration, then
-    both the raw and integrated timeseries will be
-    written to a file in `write_dir` with the filename
-    `out_{start}-{stop}.hdf5`, where `start` and `stop`
-    indicate the initial and final GPS timestamps of
-    the sequence.
+    boxcar filter to perform local integration, and then
+    the outputs will be clustered to find local maxima to
+    identify as events.
 
     Args:
-        write_dir:
-            Directory to which to save network outputs
-            in HDF5 format.
+        id:
+            Identifier used to match up sequences of
+            inference requests.
         inference_sampling_rate:
             Rate at which to sample inference windows
             from the input timeseries. Represents the
@@ -45,14 +42,24 @@ class Callback:
         batch_size:
             The number of subsequent windows to
             include in a single batch of inference.
-        window_length:
+        integration_window_length:
             Length of the window over which network
             outputs should be locally integrated,
+            specified in seconds.
+        cluster_window_length:
+            Length of the window over which network
+            outputs should be clustered, specified
+            in seconds
+        fduration:
+            Length of the time-domain whitening filter,
+            specified in seconds.
+        psd_length:
+            Length of background to use for PSD calculation,
             specified in seconds.
     """
 
     id: int
-    sample_rate: float
+    inference_sampling_rate: float
     batch_size: float
     integration_window_length: float
     cluster_window_length: float
@@ -84,7 +91,7 @@ class Callback:
             )
 
         duration = end - start
-        num_predictions = duration * self.sample_rate
+        num_predictions = duration * self.inference_sampling_rate
         num_steps = int(num_predictions // self.batch_size)
         num_predictions = int(num_steps * self.batch_size)
 
@@ -97,7 +104,7 @@ class Callback:
         self._started = {self.id: False, self.id + 1: False}
         # number of samples to remove from the beginning of the responses
         # due to the PSD burn-in
-        self.psd_size = int(self.sample_rate * self.psd_length)
+        self.psd_size = int(self.inference_sampling_rate * self.psd_length)
         return num_steps
 
     def integrate(self, y: np.ndarray) -> np.ndarray:
@@ -110,7 +117,9 @@ class Callback:
         integrated with 0s, so will have a lower magnitude
         than they technically should.
         """
-        window_size = int(self.integration_window_length * self.sample_rate)
+        window_size = int(
+            self.integration_window_length * self.inference_sampling_rate
+        )
         window = np.ones((window_size,)) / window_size
         integrated = np.convolve(y, window, mode="full")
         return integrated[: -window_size + 1]
@@ -128,7 +137,9 @@ class Callback:
         # hit its maximum value
         t0 -= self.integration_window_length
 
-        window_size = int(self.cluster_window_length * self.sample_rate / 2)
+        window_size = int(
+            self.cluster_window_length * self.inference_sampling_rate / 2
+        )
         i = np.argmax(y[:window_size])
         events, times = [], []
         while i < len(y):
@@ -138,11 +149,11 @@ class Callback:
                 i += np.argmax(window) + 1
             else:
                 events.append(val)
-                t = t0 + i / self.sample_rate
+                t = t0 + i / self.inference_sampling_rate
                 times.append(t)
                 i += window_size + 1
 
-        Tb = len(y) / self.sample_rate
+        Tb = len(y) / self.inference_sampling_rate
         events = np.array(events)
         times = np.array(times)
         return TimeSlideEventSet(events, times, Tb)

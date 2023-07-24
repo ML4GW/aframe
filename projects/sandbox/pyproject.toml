@@ -243,7 +243,7 @@ sequence_id = 1001
 
 # timeslide args
 Tb = "${base.Tb}"
-shift = 1
+shifts = [0, 1]
 throughput = 320
 
 # data args

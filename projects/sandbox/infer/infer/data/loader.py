@@ -16,6 +16,11 @@ import numpy as np
 def load_fname(
     fname: Path, channels: List[str], shifts: List[int], chunk_size: int
 ) -> np.ndarray:
+    """
+    Yield chunks of time-shifted data from a background file. Note that
+    `shifts` is specified in number of indices for this function, as opposed
+    to being in seconds as it is elsewhere.
+    """
     max_shift = max(shifts)
     with h5py.File(fname, "r") as f:
         size = len(f[channels[0]]) - max_shift
@@ -43,6 +48,11 @@ def crawl_through_directory(
     sample_rate: float,
     shifts: Optional[List[float]],
 ):
+    """
+    Go through a directory, finding all files that match the given
+    pattern. Yield the data in those files in chunks, as well as the
+    starting and ending time of the data from each file.
+    """
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     chunk_size = int(chunk_length * sample_rate)
 
