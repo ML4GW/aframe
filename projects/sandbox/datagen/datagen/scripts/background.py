@@ -106,7 +106,7 @@ def validate_segments(
     """
     Check whether any background data for a set of segments already exists.
 
-    This check depends on how the segments are split using 
+    This check depends on how the segments are split using
     `max_segment_length`. It may be that equivalent data already exists
     in the data directory, but spread differently over the data files.
     For the check to be accurate, the same `max_segment_length` needs
@@ -280,8 +280,8 @@ def deploy(
         accounting_group:
             Accounting group for the condor jobs
         max_segment_length:
-            Maximum length of a segment in seconds. Note that doing 
-            consecutive runs while changing `max_segment_length` will 
+            Maximum length of a segment in seconds. Note that doing
+            consecutive runs while changing `max_segment_length` will
             screw with the caching checking, so be careful.
         request_memory:
             Amount of memory for condor jobs to request in Mb
