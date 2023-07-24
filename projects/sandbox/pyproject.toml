@@ -1,6 +1,6 @@
 [tool.pinto]
 steps = [
-    "datagen:generate-background",
+    "datagen:deploy-background",
     "datagen:generate-waveforms",
     "datagen:generate-glitches",
     "datagen:deploy-timeslide-waveforms",
