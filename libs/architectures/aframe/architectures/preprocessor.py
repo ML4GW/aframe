@@ -6,6 +6,10 @@ from ml4gw.transforms import SpectralDensity
 
 
 class Whitener(torch.nn.Module):
+    """
+    Module for whitening the strain data using its PSD
+    """
+
     def __init__(
         self,
         fduration: float,
@@ -21,6 +25,11 @@ class Whitener(torch.nn.Module):
         self.highpass = highpass
 
     def truncate_inverse_spectrum(self, psd, timesteps):
+        """
+        Truncate the spikes in the inverse power spectrum to prevent
+        them from corrupting our timeseries when whitening.
+        See, e.g., https://arxiv.org/ftp/gr-qc/papers/0509/0509116.pdf
+        """
         N = (psd.size(-1) - 1) * 2
         inv_asd = 1 / psd**0.5
 
@@ -71,6 +80,29 @@ class Whitener(torch.nn.Module):
 class Preprocessor(torch.nn.Module):
     """
     Module for encoding aframe preprocessing procedure.
+
+    Args:
+        background_length:
+            Length of background data, in seconds, to use for PSD
+            calculation.
+        sample_rate:
+            Sample rate of timeseries to be whitened, specified in Hz
+        fduration:
+            Length of the time-domain whitening filter in seconds. After
+            whitening, `fduration / 2` seconds will be removed from either
+            side of the whitened timeseries due to corruption.
+        fftlength:
+            Length of the window, in seconds, to use for FFT estimates
+        average:
+            Aggregation method to use for combining windowed FFTs.
+            Allowed values are `"mean"` and `"median"`.
+        overlap:
+            Overlap between windows used for FFT calculation. If left
+            as `None`, this will be set to `fftlength / 2`.
+        highpass:
+            If not `None`, will use an exact implementation of the spectral
+            density calculation, and will use this value for a highpass
+            filter during inverse spectrum truncation.
     """
 
     def __init__(

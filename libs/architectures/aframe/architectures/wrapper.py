@@ -13,10 +13,13 @@ architectures = {
 
 def get_arch_fn(name: str, fn, fn_kwargs={}):
     def arch_fn(**arch_kwargs):
-        # create a function which only takes the input
-        # shape as an argument and instantiates a network
-        # based on the architecture with that shape and
-        # the remaining kwargs
+        """
+        Create a function which takes only the input
+        shape as an argument and instantiates a network
+        based on the architecture with that shape and
+        the remaining kwargs
+        """
+
         def get_arch(num_ifos):
             return architectures[name](num_ifos, **arch_kwargs)
 

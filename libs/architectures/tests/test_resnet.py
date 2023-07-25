@@ -6,7 +6,7 @@ from aframe.architectures.resnet import (
     BasicBlock,
     Bottleneck,
     BottleneckResNet,
-    ChannelNorm,
+    GroupNorm,
     ResNet,
     conv1,
 )
@@ -133,9 +133,9 @@ def num_channels(request):
 
 def test_channel_norm(num_groups, num_channels):
     with pytest.raises(ValueError):
-        ChannelNorm(num_channels, 3)
+        GroupNorm(num_channels, 3)
 
-    norm = ChannelNorm(num_channels, num_groups)
+    norm = GroupNorm(num_channels, num_groups)
     assert norm.num_groups == (num_groups or num_channels)
 
     # update the norm layers weights so that
