@@ -82,7 +82,8 @@ def main(
         fftlength:
             Length of time in seconds to use to calculate the FFT
             during whitening
-        highpass: Frequency to use for a highpass filter
+        highpass:
+            Frequency to use for a highpass filter
         weights:
             Path to a set of trained weights with which to
             initialize the network architecture. If left as
