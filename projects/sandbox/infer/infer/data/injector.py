@@ -16,7 +16,7 @@ class Injector:
         start:
             Initial GPS time of the background being injected
         sample_rate:
-            Sample rate of the background data
+            Sample rate of the background data, specified in Hz
     """
 
     injection_set: LigoResponseSet

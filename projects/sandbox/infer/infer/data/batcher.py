@@ -1,10 +1,11 @@
+from typing import Iterator
+
 import numpy as np
-from infer.data import Injector
 from ratelimiter import RateLimiter
 
 
 def batch_chunks(
-    it: Injector,
+    it: Iterator,
     num_steps: int,
     batch_size: int,
     inference_sampling_rate: float,

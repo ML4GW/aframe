@@ -36,9 +36,9 @@ class Callback:
             Identifier used to match up sequences of
             inference requests.
         inference_sampling_rate:
-            Rate at which to sample inference windows
-            from the input timeseries. Represents the
-            sample rate of the output timeseries.
+            Rate at which to sample inference windows from
+            the input timeseries, specified in Hz.
+            Represents the sample rate of the output timeseries.
         batch_size:
             The number of subsequent windows to
             include in a single batch of inference.

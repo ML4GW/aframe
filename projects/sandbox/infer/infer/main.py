@@ -70,13 +70,12 @@ def infer_on_segment(
             The number of subsequent windows to
             include in a single batch of inference.
         inference_sampling_rate:
-            The rate at which to sample windows for
-            inference from the input timeseries.
-            Corresponds to the sample rate of the
-            output timeseries.
+            The rate at which to sample windows for inference from
+            the input timeseries, specified in Hz.
+            Corresponds to the sample rate of the output timeseries.
         sample_rate:
-            Rate at which input timeseries data has
-            been sampled.
+            Rate at which input timeseries data has been sampled,
+            specified in Hz
         throughput:
             Rate at which to make requests, in units
             of seconds of data per second `[s' / s]`.
@@ -186,7 +185,8 @@ def main(
     Perform inference using Triton on a directory
     of timeseries files, using a particular set of
     interferometer time shifts. Network outputs will
-    be saved both as-is and using local integration.
+    convolved with a boxcar filter and clustered to
+    identify events.
 
     Args:
         ip:
@@ -201,20 +201,19 @@ def main(
             Each HDF5 file in this directory will be used
             for inference.
         output_dir:
-            Directory to which to save raw and locally
-            integrated network outputs.
+            Directory to which to save background and foreground
+            events.
         injection_set_file:
             Path to a file which can be read as a `LigoResponseSet`.
             Contains the interferomter responses that will be added
             onto the background.
         sample_rate:
-            Rate at which input timeseries data has
-            been sampled.
+            Rate at which input timeseries data has been sampled,
+            specified in Hz
         inference_sampling_rate:
-            The rate at which to sample windows for
-            inference from the input timeseries.
-            Corresponds to the sample rate of the
-            output timeseries.
+            The rate at which to sample windows for inference from
+            the input timeseries, specified in Hz.
+            Corresponds to the sample rate of the output timeseries.
         shifts:
             A list of shifts in seconds. Each value corresponds to the
             the length of time by which an interferometer's timeseries is
@@ -258,7 +257,7 @@ def main(
         log_file:
             File to which to write inference logs.
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
     """
     output_dir.mkdir(exist_ok=True, parents=True)

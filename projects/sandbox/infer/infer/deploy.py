@@ -80,7 +80,7 @@ def get_num_shifts(data_dir: Path, Tb: float, shift: float) -> int:
 
 def get_ip_address() -> str:
     """
-    Gets the ip address for the Triton server.
+    Get the local, cluster-internal IP address.
     Currently not a general function.
     """
     nets = psutil.net_if_addrs()
@@ -153,13 +153,12 @@ def main(
             and `shifts = [0, 1]`, then the Livingston timeseries will be
             advanced by one second per shift, and Hanford won't be shifted
         sample_rate:
-            Rate at which input timeseries data has
-            been sampled.
+            Rate at which input timeseries data has been sampled,
+            specified in Hz
         inference_sampling_rate:
-            The rate at which to sample windows for
-            inference from the input timeseries.
-            Corresponds to the sample rate of the
-            output timeseries.
+            The rate at which to sample windows for inference from
+            the input timeseries, specified in Hz.
+            Corresponds to the sample rate of the output timeseries.
         ifos:
             List of interferometers to query data from. Expected to be given
             by prefix; e.g. "H1" for Hanford
@@ -195,7 +194,7 @@ def main(
             inference. Default value of `-1` indicates
             the latest available version of the model.
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
     """
     # _fix_path()  # TODO: replace this

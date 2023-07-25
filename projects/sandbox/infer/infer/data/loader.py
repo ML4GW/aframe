@@ -88,6 +88,36 @@ def crawl_through_directory(
 
 @dataclass
 class ChunkedSegmentLoader:
+    """
+    Iterable context which, upon entering, launches chunked loading
+    of the files in `data_dir` in an asychronous process that gets closed
+    upon context exit. The object returned by `__enter__` is a iterator that,
+    for each file in `data_dir`, returns a generator that iterates through that
+    file's content (possibly with relative shifts between channels) in chunks
+    of length `chunk_length`.
+
+    Example usage:
+    ```python
+    data_dir = Path("/path/to/data")
+    loader = ChunkedSegmentLoader(
+        data_dir,
+        channels=["H1", "L1"],
+        chunk_length=1024,
+        sample_rate=2048,
+        shifts=[0, 1]
+    )
+    with loader:
+        # async loading has launched
+        for iterator in loader:
+            # each file in data_dir has its own iterator
+            for chunk in iterator:
+                # note that this won't be true in general for the
+                # last chunk in each file, which might be shorter
+                # than the specified chunk length
+                assert chunk.shape == (2, 2048 * 1024)
+    ```
+    """
+
     data_dir: Path
     channels: List[str]
     chunk_length: float
