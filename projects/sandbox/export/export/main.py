@@ -36,7 +36,7 @@ def main(
     psd_length: float,
     fftlength: float = 8,
     highpass: Optional[float] = None,
-    weights_dir: Optional[Path] = None,
+    weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.ONNX,
@@ -83,9 +83,10 @@ def main(
             during whitening
         highpass:
             Frequency to use for a highpass filter
-        weights_dir:
+        weights:
             Path to a set of trained weights with which to
-            initialize the network architecture. If left as
+            initialize the network architecture, or a path to
+            a directory containing those weights. If left as
             `None`, the model will be randomly initialized
         streams_per_gpu:
             The number of snapshot states to host per GPU during
@@ -109,14 +110,6 @@ def main(
 
     # make relevant directories
     logdir.mkdir(exist_ok=True, parents=True)
-
-    # Read model weights from our weights directory if specified
-    weights = None
-    if weights_dir is not None:
-        weights = weights_dir / "weights.pt"
-        if not weights.exists():
-            raise FileNotFoundError(f"No weights file '{weights}'")
-
     configure_logging(logdir / "export.log", verbose)
 
     # instantiate a new, randomly initialized version
@@ -126,8 +119,13 @@ def main(
     logging.info(f"Initialize:\n{nn}")
 
     # load in a set of trained weights
-    logging.info(f"Loading parameters from {weights}")
     if weights is not None:
+        # Read model weights if specified
+        if weights.is_dir():
+            weights = weights / "weights.pt"
+        if not weights.exists():
+            raise FileNotFoundError(f"No weights file '{weights}'")
+        logging.info(f"Loading parameters from {weights}")
         state_dict = torch.load(weights, map_location="cpu")
         nn.load_state_dict(state_dict)
     nn.eval()

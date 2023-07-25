@@ -168,7 +168,7 @@ commands.resnet = "${base.resnet}"
 # paths
 repository_directory = "${base.repository_directory}" 
 outdir = "${base.logdir}"
-weights_dir = "${base.basedir}/training/weights.pt"
+weights = "${base.basedir}/training/weights.pt"
 
 # input-output mapping info
 num_ifos = 2 
