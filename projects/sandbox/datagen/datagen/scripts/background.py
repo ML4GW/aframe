@@ -36,8 +36,8 @@ def validate_file(
     minimum_length: float,
 ):
     """
-    If there exist files in the time range, check the timestamp
-    and verify that it meets the requested conditions
+    Check that a background file meets the necessary
+    conditions for inclusion in a dataset
     """
     with h5py.File(filename, "r") as f:
         missing_keys = [i for i in ifos if i not in f]
@@ -209,7 +209,8 @@ def main(
             List of interferometers to query data from. Expected to be given
             by prefix; e.g. "H1" for Hanford
         sample_rate:
-            Sample rate to which the timeseries will be resampled
+            Sample rate to which the timeseries will be resampled, specified
+            in Hz
 
     Returns: The `Path` of the output file
     """
@@ -266,11 +267,14 @@ def deploy(
             List of interferometers to query data from. Expected to be given
             by prefix; e.g. "H1" for Hanford
         sample_rate:
-            Sample rate to which the timeseries will be resampled
+            Sample rate to which the timeseries will be resampled, specified
+            in Hz
         channel:
             Channel from which to fetch the timeseries
         state_flag:
-            Identifier for which segments to use
+            Identifier for which segments to use. Descriptions of flags
+            and there usage can be found here:
+            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags
         datadir:
             Directory to which data will be written
         logdir:
@@ -282,15 +286,16 @@ def deploy(
         max_segment_length:
             Maximum length of a segment in seconds. Note that doing
             consecutive runs while changing `max_segment_length` will
-            screw with the caching checking, so be careful.
+            prevent accurate cache checking. See docstring of
+            `validate_segments`.
         request_memory:
             Amount of memory for condor jobs to request in Mb
         request_disk:
             Amount of disk space for condor jobs to request in Mb
         force_generation:
-            If false, will not generate data if an existing dataset exists
+            If False, will not generate data if an existing dataset exists
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
     """
     # make logdir dir

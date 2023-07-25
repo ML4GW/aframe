@@ -38,19 +38,24 @@ def main(
         logdir:
             Directory to which the log file will be written
         reference_frequency:
-            Reference frequency for waveform generation
+            Frequency of the gravitational wave at the state of
+            the merger that other quantities are defined with
+            reference to
         minimum_frequency:
-            Minimum frequency for waveform generation
+            Minimum frequency of the gravitational wave. The part
+            of the gravitational wave at lower frequencies will
+            not be generated. Specified in Hz.
         sample_rate:
-            Sample rate at which the waveforms will be simulated
+            Sample rate at which the waveforms will be simulated,
+            specified in Hz
         waveform_duration:
             Length of the waveforms in seconds
         waveform_approximant:
             The lalsimulation waveform approximant to use
         force_generation:
-            If false, will not generate data if an existing dataset exists
+            If False, will not generate data if an existing dataset exists
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
 
     Returns: The name of the file containing the waveforms and parameters

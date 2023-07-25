@@ -29,7 +29,7 @@ def generate_glitch_dataset(
     chunk_size: float = 4096,
 ):
     """
-    Generates a list of omicron trigger times that satisfy snr threshold
+    Generate a list of omicron trigger times that satisfy snr threshold
 
     Args:
         snr_thresh:
@@ -42,7 +42,7 @@ def generate_glitch_dataset(
             Amount of time in seconds on either side of a glitch
             to query data for
         sample_rate:
-            Sample rate of queried data
+            Sample rate of queried data, specified in Hz
         channel:
             Channel name used to read data. Should include the
             interferometer prefix
@@ -235,12 +235,19 @@ def main(
 ):
 
     """
-    Generates a set of glitches for both
-    H1 and L1 that can be added to background
+    Generate a set of glitches for both
+    H1 and L1 that can be added to background.
+
     First, an omicron job is launched via pyomicron
     (https://github.com/gwpy/pyomicron/). Next, triggers (i.e. glitches)
     above a given SNR threshold are selected, and data is queried
-    for these triggers and saved in an h5 file.
+    for these triggers and saved in an h5 file. This file contains
+    a group for each interferometer in `ifos`. Within each group,
+    the `times` dataset contains the GPS time of each glitch, the
+    `snrs` dataset contains the SNR of each glitch, and the
+    `glitches` dataset contains a timeseries of the strain data
+    of length `2 * window * sample_rate`, with the time of the glitch
+    centered within it.
 
     Args:
         snr_thresh:
@@ -259,7 +266,7 @@ def main(
         q_max:
             Maximum q value of tiles for omicron
         f_min:
-            Lowest frequency for omicron to consider
+            Lowest frequency for omicron to consider, specified in Hz
         cluster_dt:
             Time window for omicron to cluster neighboring triggers
         chunk_duration:
@@ -283,20 +290,22 @@ def main(
         frame_type:
             Frame type for data discovery with gwdatafind
         sample_rate:
-            Sample rate of queried data
+            Sample rate of queried data, specified in Hz
         state_flag:
-            Identifier for which segments to use
+            Identifier for which segments to use. Descriptions of flags
+            and there usage can be found here:
+            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags
         ifos:
             List of interferometers to query data from. Expected to be given
             by prefix; e.g. "H1" for Hanford
         chunk_size:
             Length in seconds of data to query at one time
         analyze_testing_set:
-            If true, get glitches for the testing dataset
+            If True, get glitches for the testing dataset
         force_generation:
-            If false, will not generate data if an existing dataset exists
+            If False, will not generate data if an existing dataset exists
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
 
     Returns: The name of the file containing the glitch data

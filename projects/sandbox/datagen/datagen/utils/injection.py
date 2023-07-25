@@ -29,12 +29,14 @@ def generate_gw(
             Dictionary of GW parameters where key is the parameter name
             and value is a list of the parameters
         minimum_frequency:
-            Minimum_frequency for generating waveform; not to be confused with
-            highpass filter frequency
+            Minimum frequency of the gravitational wave. The part
+            of the gravitational wave at lower frequencies will
+            not be generated. Specified in Hz.
         reference_frequency:
-            Reference frequency for generating waveform
+            Frequency of the gravitational wave at the state of
+            the merger that other quantities are defined with
         sample_rate:
-            Rate at which to sample time series
+            Rate at which to sample time series, specified in Hz
         waveform_duration:
             Duration of waveform in seconds
         waveform_approximant:

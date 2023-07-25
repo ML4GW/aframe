@@ -88,11 +88,12 @@ def calc_segment_injection_times(
         stop:
             The stop time of the segment
         spacing:
-            The spacing between signals in seconds
-        jitter:
-            The jitter to apply to the signal times in seconds
+            The amount of time, in seconds, to leave between the end
+            of one signal and the start of the next
         buffer:
-            The buffer to apply to each side of the segment in seconds
+            The amount of time, in seconds, on either side of the
+            segment within which injection times will not be
+            generated
         waveform_duration:
             The duration of the waveform in seconds
 
