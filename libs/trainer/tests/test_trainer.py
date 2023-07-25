@@ -3,8 +3,6 @@ import torch
 
 from aframe.trainer.trainer import train_for_one_epoch
 
-# test copied from aframe
-
 
 def make_mlp(input_dim, hidden_dims):
     layers = []
