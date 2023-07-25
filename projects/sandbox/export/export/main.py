@@ -36,7 +36,7 @@ def main(
     psd_length: float,
     fftlength: float = 8,
     highpass: Optional[float] = None,
-    weights: Optional[Path] = None,
+    weights_dir: Optional[Path] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.ONNX,
@@ -58,8 +58,7 @@ def main(
             Directory to which to save the models and their
             configs
         logdir:
-            Path to save logs. If `weights` is `None`, this
-            directory is assumed to contain a file `"weights.pt"`.
+            Directory to which logs will be written
         num_ifos:
             The number of interferometers contained along the
             channel dimension used to train aframe
@@ -84,11 +83,10 @@ def main(
             during whitening
         highpass:
             Frequency to use for a highpass filter
-        weights:
+        weights_dir:
             Path to a set of trained weights with which to
             initialize the network architecture. If left as
-            `None`, a file called `weights.pt` will be looked
-            for in the `output_directory`.
+            `None`, the model will be randomly initialized
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
@@ -97,28 +95,27 @@ def main(
             aframe architecture to host per GPU during inference
         platform:
             The backend framework platform used to host the
-            DeepClean architecture on the inference service. Right
+            aframe architecture on the inference service. Right
             now only `"onnxruntime_onnx"` is supported.
         clean:
             Whether to clear the repository directory before starting
             export
         verbose:
-            If true, log at `DEBUG` verbosity, otherwise log at
+            If True, log at `DEBUG` verbosity, otherwise log at
             `INFO` verbosity.
         **kwargs:
-            key word arguments specific to the export platform
+            Key word arguments specific to the export platform
     """
 
     # make relevant directories
     logdir.mkdir(exist_ok=True, parents=True)
 
-    # if we didn't specify a weights filename, assume
-    # that a "weights.pt" lives in our output directory
-    if weights is None or weights.is_dir():
-        weights_dir = logdir if weights is None else weights
+    # Read model weights from our weights directory if specified
+    weights = None
+    if weights_dir is not None:
         weights = weights_dir / "weights.pt"
-    if not weights.exists():
-        raise FileNotFoundError(f"No weights file '{weights}'")
+        if not weights.exists():
+            raise FileNotFoundError(f"No weights file '{weights}'")
 
     configure_logging(logdir / "export.log", verbose)
 
@@ -130,8 +127,9 @@ def main(
 
     # load in a set of trained weights
     logging.info(f"Loading parameters from {weights}")
-    state_dict = torch.load(weights, map_location="cpu")
-    nn.load_state_dict(state_dict)
+    if weights is not None:
+        state_dict = torch.load(weights, map_location="cpu")
+        nn.load_state_dict(state_dict)
     nn.eval()
 
     # instantiate a model repository at the

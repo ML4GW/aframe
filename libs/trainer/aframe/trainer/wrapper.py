@@ -109,7 +109,7 @@ def trainify(f):
                     arch_kwargs[k] = v
 
             # run the architecture function, which will implicitly
-            # call deepclean.trainer.trainer.train under the
+            # call aframe.trainer.trainer.train under the
             # hood with the arguments we populated into
             # `train_kwargs`
 
