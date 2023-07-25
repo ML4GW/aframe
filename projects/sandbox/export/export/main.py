@@ -63,7 +63,7 @@ def main(
             The number of interferometers contained along the
             channel dimension used to train aframe
         kernel_length:
-            Length of segment in seconds that the networks sees
+            Length of segment in seconds that the network sees
         inference_sampling_rate:
             The rate at which kernels are sampled from the
             h(t) timeseries. This, along with the `sample_rate`,
