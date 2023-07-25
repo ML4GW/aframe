@@ -7,7 +7,10 @@ from hermes.typeo.typeo import _parse_doc, _parse_help
 
 
 def _configure_wrapper(f, wrapper):
-
+    """
+    Create the appropriate signature, name, and documentation
+    for the wrapper function created from `f`
+    """
     f_sig = inspect.signature(f)
     train_sig = inspect.signature(train)
 
