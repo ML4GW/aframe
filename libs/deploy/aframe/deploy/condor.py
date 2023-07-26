@@ -8,6 +8,7 @@ from typing import Union
 
 
 def get_executable(name: str) -> str:
+    """Get the path to an executable based on its name"""
     ex = shutil.which(name)
     if ex is None:
         raise ValueError(f"No executable {name}")
@@ -25,6 +26,30 @@ def make_submit_file(
     clear: bool = True,
     **kwargs,
 ):
+    """
+    Construct a condor `.sub` file
+
+    Args:
+        executable:
+            The executable to be run with condor. Can be either the
+            absolute path or the name of the executable
+        name:
+            Prefix used for naming the log, output, and error condor files
+        parameters:
+            Values that condor will use to fill in arguments for each job
+        arguments:
+            Arguments for the executable
+        submit_dir:
+            Directory to which condor-related files will be written
+        accounting_group:
+            Accounting group for the condor jobs
+        accounting_group_user:
+            Username of the person running the condor jobs
+        clear:
+            If true, remove any log files from the submit directory
+        **kwargs:
+            Additional arguments for the submit file
+    """
     if not os.path.isabs(executable):
         executable = get_executable(executable)
 
@@ -66,6 +91,7 @@ def make_submit_file(
 
 
 def submit(sub_file: Union[str, Path]) -> str:
+    """Submit a condor `.sub` file. Return the id associated with the jobs."""
     condor_submit = get_executable("condor_submit")
     cmd = [condor_submit, str(sub_file)]
     out = subprocess.check_output(cmd, text=True)
@@ -79,6 +105,7 @@ def submit(sub_file: Union[str, Path]) -> str:
 
 
 def check_failed(submit_dir: Path):
+    """Crawl through condor logs and count failed jobs"""
     log_dir = submit_dir / "logs"
     failed_jobs, total_jobs = [], 0
     for f in log_dir.glob("*.log"):
@@ -105,6 +132,10 @@ def check_failed(submit_dir: Path):
 
 
 def watch(dag_id: str, submit_dir: Path, held: bool = True):
+    """
+    Display the status of the condor jobs specified by `dag_id`.
+    Once the jobs are complete, check whether any failed.
+    """
     cwq = get_executable("condor_watch_q")
     cmd = [
         cwq,
