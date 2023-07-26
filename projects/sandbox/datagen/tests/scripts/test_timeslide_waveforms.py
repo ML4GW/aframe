@@ -141,7 +141,7 @@ def test_main(
             start,
             stop,
             shifts=[0, 1],
-            background=background_mock,
+            background_dir=background_mock,
             spacing=spacing,
             buffer=buffer,
             waveform_duration=waveform_duration,

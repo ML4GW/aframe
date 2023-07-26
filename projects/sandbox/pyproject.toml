@@ -44,8 +44,8 @@ inference_psd_length = 64
 training_psd_length = 8
 
 waveform_duration = 4
-minimum_frequency = 20
 reference_frequency = 50
+minimum_frequency = 20
 highpass = 32
 training_prior = "aframe.priors.priors.mdc_prior_chirp_distance"
 testing_prior = "aframe.priors.priors.mdc_prior_chirp_distance"

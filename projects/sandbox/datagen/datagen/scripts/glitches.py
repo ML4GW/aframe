@@ -29,17 +29,30 @@ def generate_glitch_dataset(
     chunk_size: float = 4096,
 ):
     """
-    Generates a list of omicron trigger times that satisfy snr threshold
+    Generate a list of omicron trigger times that satisfy snr threshold
 
     Args:
-        snr_thresh: snr threshold above which to keep as glitch
-        start: start gpstime
-        stop: stop gpstime
-        window: half window around trigger time to query data for
-        sample_rate: sampling arequency
-        channel: channel name used to read data (including ifo prefix)
-        frame_type: frame type for data discovery w/ gwdatafind
-        trigger_files: List of h5 files of omicron triggers
+        snr_thresh:
+            SNR threshold above which glitches will be kept
+        start:
+            GPS time at which to begin looking for glitches
+        stop:
+            GPS time at which to stop looking for glitches
+        window:
+            Amount of time in seconds on either side of a glitch
+            to query data for
+        sample_rate:
+            Sample rate of queried data, specified in Hz
+        channel:
+            Channel name used to read data. Should include the
+            interferometer prefix
+        trigger_files:
+            List of h5 files containing omicron triggers
+        chunk_size:
+            Length in seconds of data to query at one time
+
+    Returns:
+        A list of glitch timeseries, a list of SNRs, and a list timestamps
     """
     # importing here due to issues with ciecplib
     # setting logging. See
@@ -131,7 +144,8 @@ def omicron_main_wrapper(
     verbose: bool,
 ):
 
-    """Parses args into a format compatible for Pyomicron,
+    """
+    Parses args into a format compatible for Pyomicron,
     then launches omicron dag
     """
 
@@ -220,35 +234,81 @@ def main(
     verbose: bool = False,
 ):
 
-    """Generates a set of glitches for both
-        H1 and L1 that can be added to background
+    """
+    Generate a set of glitches for both
+    H1 and L1 that can be added to background.
 
-        First, an omicron job is launched via pyomicron
-        (https://github.com/gwpy/pyomicron/). Next, triggers (i.e. glitches)
-        above a given SNR threshold are selected, and data is queried
-        for these triggers and saved in an h5 file.
+    First, an omicron job is launched via pyomicron
+    (https://github.com/gwpy/pyomicron/). Next, triggers (i.e. glitches)
+    above a given SNR threshold are selected, and data is queried
+    for these triggers and saved in an h5 file. This file contains
+    a group for each interferometer in `ifos`. Within each group,
+    the `times` dataset contains the GPS time of each glitch, the
+    `snrs` dataset contains the SNR of each glitch, and the
+    `glitches` dataset contains a timeseries of the strain data
+    of length `2 * window * sample_rate`, with the time of the glitch
+    centered within it.
 
-    Arguments:
-        snr_thresh: snr threshold above which to keep as glitch
-        start: start gpstime
-        stop: training stop gpstime
-        test_stop: testing stop gpstime
-        q_min: minimum q value of tiles for omicron
-        q_max: maximum q value of tiles for omicron
-        f_min: lowest frequency for omicron to consider
-        cluster_dt: time window for omicron to cluster neighboring triggers
-        chunk_duration: duration of data (seconds) for PSD estimation
-        segment_duration: duration of data (seconds) for FFT
-        overlap: overlap (seconds) between neighbouring segments and chunks
-        mismatch_max: maximum distance between (Q, f) tiles
-        window: half window around trigger time to query data for
-        sample_rate: sampling frequency
-        outdir: output directory to which signals will be written
-        channel: channel name used to read data
-        frame_type: frame type for data discovery w/ gwdatafind
-        sample_rate: sampling frequency of timeseries data
-        state_flag: identifier for which segments to use
-        ifos: which ifos to generate glitches for
+    Args:
+        snr_thresh:
+            SNR threshold above which glitches will be kept
+        start:
+            GPS time at which to begin looking for glitches
+        stop:
+            GPS time at which to stop looking for glitches for the
+            training dataset.
+            Marks the beginning of the testing dataset
+        test_stop:
+            GPS time at which to stop looking for glitches for the
+            testing dataset
+        q_min:
+            Minimum q value of tiles for omicron
+        q_max:
+            Maximum q value of tiles for omicron
+        f_min:
+            Lowest frequency for omicron to consider, specified in Hz
+        cluster_dt:
+            Time window for omicron to cluster neighboring triggers
+        chunk_duration:
+            Duration of data in seconds for PSD estimation
+        segment_duration:
+            Duration of data in seconds for FFT
+        overlap:
+            Overlap in seconds between neighbouring segments and chunks
+        mismatch_max:
+            Maximum distance between (Q, f) tiles
+        window:
+            Amount of time in seconds on either side of a glitch to
+            query data for
+        datadir:
+            Directory to which the glitch dataset will be written
+        logdir:
+            Directory to which the log file will be written
+        channel:
+            Channel name used to read data. Should not include the
+            interferometer prefix
+        frame_type:
+            Frame type for data discovery with gwdatafind
+        sample_rate:
+            Sample rate of queried data, specified in Hz
+        state_flag:
+            Identifier for which segments to use. Descriptions of flags
+            and there usage can be found here:
+            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags
+        ifos:
+            List of interferometers to query data from. Expected to be given
+            by prefix; e.g. "H1" for Hanford
+        chunk_size:
+            Length in seconds of data to query at one time
+        analyze_testing_set:
+            If True, get glitches for the testing dataset
+        force_generation:
+            If False, will not generate data if an existing dataset exists
+        verbose:
+            If True, log at `DEBUG` verbosity, otherwise log at
+            `INFO` verbosity.
+
+    Returns: The name of the file containing the glitch data
     """
 
     logdir.mkdir(exist_ok=True, parents=True)
