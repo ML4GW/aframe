@@ -15,18 +15,14 @@ workflow: &workflow
 # if workflow file is changed?
 
 # libraries
-libs/io/:  
-  - *workflow
-  - 'libs/io/**' 
 libs/architectures/:
   - *workflow
   - 'libs/architectures/**'
+  - 'ml4gw/**'
 libs/analysis:
   - *workflow
   - 'libs/analysis/**'
-  - 'libs/io/**'
-  - 'libs/parallelize/**'
-  - 'libs/base/**'
+  - 'libs/priors/**'
 libs/trainer/:
   - *workflow
   - 'libs/trainer/**'
@@ -41,7 +37,6 @@ projects/sandbox/export/:
   - *workflow 
   - 'projects/sandbox/export/**'
   - 'libs/architectures/**'
-  - 'libs/base/**'
   - 'libs/logging/**'
   - 'ml4gw/**'
   - 'hermes/hermes/hermes.quiver/**'
@@ -50,6 +45,9 @@ projects/sandbox/datagen/:
   - *workflow
   - 'projects/sandbox/datagen/**'
   - 'libs/logging/**'
+  - 'libs/analysis/**'
+  - 'libs/deploy/**'
+  - 'libs/priors/**'
   - 'ml4gw/**'
 
 projects/sandbox/infer/:
@@ -57,6 +55,9 @@ projects/sandbox/infer/:
   - 'projects/sandbox/infer/**'
   - 'hermes/hermes/hermes.stillwater/**'
   - 'hermes/hermes/hermes.aerial/**'
+  - 'libs/analysis/**'
+  - 'libs/deploy/**'
+  - 'libs/logging/**'
 
 projects/sandbox/train/:
   - *workflow

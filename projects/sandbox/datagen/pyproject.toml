@@ -27,7 +27,6 @@ mldatafind = {git = "https://github.com/ML4GW/mldatafind.git", branch = "main"}
 
 "aframe.analysis" = {path = "../../../libs/analysis", develop = true}
 "aframe.deploy" = {path = "../../../libs/deploy", develop = true}
-"aframe.io" = {path = "../../../libs/io", develop = true}
 "aframe.logging" = {path = "../../../libs/logging", develop = true}
 "aframe.priors" = {path = "../../../libs/priors", develop = true}
 

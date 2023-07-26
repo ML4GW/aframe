@@ -15,7 +15,6 @@ scipy = "^1.7.3"
 astropy = "^5.2.1"
 bilby = "^1.4.1"
 
-"aframe.io" = {path = "../io", develop = true}
 "aframe.priors" = {path = "../priors", develop = true}
 
 [tool.poetry.dev-dependencies]
