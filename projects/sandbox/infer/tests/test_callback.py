@@ -6,7 +6,7 @@ from infer.callback import Callback, ExistingSequence
 
 
 @pytest.fixture
-def sample_rate():
+def inference_sampling_rate():
     return 256
 
 
@@ -16,11 +16,14 @@ def sample_rate():
 class TestCallback:
     @pytest.fixture
     def callback(
-        self, integration_window_length, cluster_window_length, sample_rate
+        self,
+        integration_window_length,
+        cluster_window_length,
+        inference_sampling_rate,
     ):
         return Callback(
             id=0,
-            sample_rate=sample_rate,
+            inference_sampling_rate=inference_sampling_rate,
             batch_size=16,
             integration_window_length=integration_window_length,
             cluster_window_length=cluster_window_length,
@@ -37,11 +40,12 @@ class TestCallback:
             callback.initialize(start, stop)
 
     def test_integrate(self, callback):
-        y = np.arange(callback.sample_rate * 10) + 1
+        y = np.arange(callback.inference_sampling_rate * 10) + 1
         integrated = callback.integrate(y)
         assert len(integrated) == len(y)
         window_size = int(
-            callback.integration_window_length * callback.sample_rate
+            callback.integration_window_length
+            * callback.inference_sampling_rate
         )
         for i, value in enumerate(integrated):
 

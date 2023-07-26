@@ -31,6 +31,63 @@ def infer_on_segment(
     sample_rate: float,
     throughput: float,
 ):
+    """
+    Perform inference using Triton on a particular
+    background segment.
+
+    Args:
+        client:
+            A `hermes.aerial` `InferenceClient` that will handle
+            connecting to and making requests of the Triton
+            inference server.
+        callback:
+            Callable object for handling asynchronous server
+            responses for streaming inference across sequences
+            of timeseries data.
+        sequence_id:
+            Identifier to assign to all the sequences
+            of inference requests in this run to match up
+            with a corresponding snapshot state on the
+            inference server.
+        it:
+            Data iterator that will yield chunks of data
+            from the segment.
+        start:
+            GPS start time of the segment
+        end:
+            GPS end time of the segment
+        shifts:
+            A list of shifts in seconds. Each value corresponds to the
+            the length of time by which an interferometer's timeseries is
+            moved during one shift. For example, if `ifos = ["H1", "L1"]`
+            and `shifts = [0, 1]`, then the Livingston timeseries will be
+            advanced by one second per shift, and Hanford won't be shifted
+        injection_set_file:
+            Path to a file which can be read as a `LigoResponseSet`.
+            Contains the interferomter responses that will be added
+            onto the background.
+        batch_size:
+            The number of subsequent windows to
+            include in a single batch of inference.
+        inference_sampling_rate:
+            The rate at which to sample windows for inference from
+            the input timeseries, specified in Hz.
+            Corresponds to the sample rate of the output timeseries.
+        sample_rate:
+            Rate at which input timeseries data has been sampled,
+            specified in Hz
+        throughput:
+            Rate at which to make requests, in units
+            of seconds of data per second `[s' / s]`.
+
+    Returns:
+        background_events:
+            `aframe.analysis.ledger.events.TimeSlideEventSet` of the
+            identified background events
+        foreground_events:
+            `aframe.analysis.ledger.events.RecoveredInjectionSet` of
+            the identified foreground events
+    """
     str_rep = f"{int(start)}-{int(end)}"
     num_steps = callback.initialize(start, end)
 
@@ -128,7 +185,8 @@ def main(
     Perform inference using Triton on a directory
     of timeseries files, using a particular set of
     interferometer time shifts. Network outputs will
-    be saved both as-is and using local integration.
+    convolved with a boxcar filter and clustered to
+    identify events.
 
     Args:
         ip:
@@ -142,32 +200,51 @@ def main(
             timeseries on which to perform inference.
             Each HDF5 file in this directory will be used
             for inference.
-        write_dir:
-            Directory to which to save raw and locally
-            integrated network outputs.
+        output_dir:
+            Directory to which to save background and foreground
+            events.
+        injection_set_file:
+            Path to a file which can be read as a `LigoResponseSet`.
+            Contains the interferomter responses that will be added
+            onto the background.
         sample_rate:
-            Rate at which input timeseries data has
-            been sampled.
+            Rate at which input timeseries data has been sampled,
+            specified in Hz
         inference_sampling_rate:
-            The rate at which to sample windows for
-            inference from the input timeseries.
-            Corresponds to the sample rate of the
-            output timeseries.
+            The rate at which to sample windows for inference from
+            the input timeseries, specified in Hz.
+            Corresponds to the sample rate of the output timeseries.
+        shifts:
+            A list of shifts in seconds. Each value corresponds to the
+            the length of time by which an interferometer's timeseries is
+            moved during one shift. For example, if `ifos = ["H1", "L1"]`
+            and `shifts = [0, 1]`, then the Livingston timeseries will be
+            advanced by one second per shift, and Hanford won't be shifted
+        ifos:
+            List of interferometers to query data from. Expected to be given
+            by prefix; e.g. "H1" for Hanford
         batch_size:
             The number of subsequent windows to
             include in a single batch of inference.
-        window_length:
+        integration_window_length:
             Length of the window over which network
             outputs should be locally integrated,
             specified in seconds.
-        max_shift:
-            The maximum shift value across all runs
-            in the timeslide analysis that this run
-            is a part of. This helps keep all output
-            timeseries the same length.
+        cluster_window_length:
+            Length of the window over which network
+            outputs should be clustered, specified
+            in seconds
+        psd_length:
+            Length of background to use for PSD calculation,
+            specified in seconds.
+        fduration:
+            Length of the time-domain whitening filter,
+            specified in seconds.
         throughput:
             Rate at which to make requests, in units
             of seconds of data per second `[s' / s]`.
+        chunk_size:
+            Length of data to load at once, specified in seconds
         sequence_id:
             Identifier to assign to all the sequences
             of inference requests in this run to match up
@@ -180,8 +257,8 @@ def main(
         log_file:
             File to which to write inference logs.
         verbose:
-            Flag controlling whether logging verbosity
-            is `DEBUG` (`True`) or `INFO` (`False`)
+            If True, log at `DEBUG` verbosity, otherwise log at
+            `INFO` verbosity.
     """
     output_dir.mkdir(exist_ok=True, parents=True)
     configure_logging(log_file, verbose)

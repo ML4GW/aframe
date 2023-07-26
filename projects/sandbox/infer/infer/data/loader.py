@@ -16,6 +16,11 @@ import numpy as np
 def load_fname(
     fname: Path, channels: List[str], shifts: List[int], chunk_size: int
 ) -> np.ndarray:
+    """
+    Yield chunks of time-shifted data from a background file. Note that
+    `shifts` is specified in number of indices for this function, as opposed
+    to being in seconds as it is elsewhere.
+    """
     max_shift = max(shifts)
     with h5py.File(fname, "r") as f:
         size = len(f[channels[0]]) - max_shift
@@ -43,6 +48,12 @@ def crawl_through_directory(
     sample_rate: float,
     shifts: Optional[List[float]],
 ):
+    """
+    Go through a directory, finding all files that match the pattern
+    of a prefix, followed by `<GPS timestamp>-<duration>`, followed
+    by a suffix. Yield the data in those files in chunks, as well
+    as the starting and ending time of the data from each file.
+    """
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     chunk_size = int(chunk_length * sample_rate)
 
@@ -78,6 +89,36 @@ def crawl_through_directory(
 
 @dataclass
 class ChunkedSegmentLoader:
+    """
+    Iterable context which, upon entering, launches chunked loading
+    of the files in `data_dir` in an asychronous process that gets closed
+    upon context exit. The object returned by `__enter__` is a iterator that,
+    for each file in `data_dir`, returns a generator that iterates through that
+    file's content (possibly with relative shifts between channels) in chunks
+    of length `chunk_length`.
+
+    Example usage:
+    ```python
+    data_dir = Path("/path/to/data")
+    loader = ChunkedSegmentLoader(
+        data_dir,
+        channels=["H1", "L1"],
+        chunk_length=1024,
+        sample_rate=2048,
+        shifts=[0, 1]
+    )
+    with loader:
+        # async loading has launched
+        for iterator in loader:
+            # each file in data_dir has its own iterator
+            for chunk in iterator:
+                # note that this won't be true in general for the
+                # last chunk in each file, which might be shorter
+                # than the specified chunk length
+                assert chunk.shape == (2, 2048 * 1024)
+    ```
+    """
+
     data_dir: Path
     channels: List[str]
     chunk_length: float
