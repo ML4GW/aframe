@@ -49,9 +49,10 @@ def crawl_through_directory(
     shifts: Optional[List[float]],
 ):
     """
-    Go through a directory, finding all files that match the given
-    pattern. Yield the data in those files in chunks, as well as the
-    starting and ending time of the data from each file.
+    Go through a directory, finding all files that match the pattern
+    of a prefix, followed by `<GPS timestamp>-<duration>`, followed
+    by a suffix. Yield the data in those files in chunks, as well
+    as the starting and ending time of the data from each file.
     """
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     chunk_size = int(chunk_length * sample_rate)
