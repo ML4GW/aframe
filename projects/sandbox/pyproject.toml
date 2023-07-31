@@ -164,7 +164,7 @@ commands.resnet = "${base.resnet}"
 [tool.typeo.scripts.export-model]
 # paths
 repository_directory = "${base.repository_directory}" 
-outdir = "${base.logdir}"
+logdir = "${base.logdir}"
 weights = "${base.basedir}/training/weights.pt"
 
 # input-output mapping info
