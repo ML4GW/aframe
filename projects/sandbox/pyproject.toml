@@ -2,7 +2,6 @@
 steps = [
     "datagen:deploy-background",
     "datagen:generate-waveforms",
-    "datagen:generate-glitches",
     "datagen:deploy-timeslide-waveforms",
     "train:train:resnet",
     "export:export-model:resnet",
@@ -109,7 +108,6 @@ sample_rate = "${base.sample_rate}"
 waveform_duration = "${base.waveform_duration}"
 force_generation = "${base.force_generation}"
 waveform_approximant = "${base.waveform_approximant}"
-cosmology = "${base.cosmology}"
 
 [tool.typeo.scripts.train]
 # input and output paths
@@ -166,7 +164,7 @@ commands.resnet = "${base.resnet}"
 [tool.typeo.scripts.export-model]
 # paths
 repository_directory = "${base.repository_directory}" 
-outdir = "${base.logdir}"
+logdir = "${base.logdir}"
 weights = "${base.basedir}/training/weights.pt"
 
 # input-output mapping info
@@ -218,7 +216,6 @@ reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
 spacing = 48
 buffer = 16
-cosmology = "${base.cosmology}"
 snr_threshold = 0 
 waveform_duration = "${base.waveform_duration}"
 waveform_approximant = "${base.waveform_approximant}"

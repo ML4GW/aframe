@@ -79,7 +79,7 @@ def get_norm_layer(groups: Optional[int] = None) -> nn.Module:
             num_groups = None if groups is None else min(num_channels, groups)
             super().__init__(num_channels, num_groups)
 
-    return GroupNorm
+    return NormLayer
 
 
 def convN(
