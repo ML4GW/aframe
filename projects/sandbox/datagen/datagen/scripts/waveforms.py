@@ -8,7 +8,6 @@ from datagen.utils.injection import generate_gw
 from typeo import scriptify
 
 from aframe.logging import configure_logging
-from aframe.priors.priors import convert_mdc_prior_samples
 
 
 @scriptify
@@ -87,7 +86,6 @@ def main(
     # sample gw parameters
     prior, detector_frame_prior = prior()
     params = prior.sample(num_signals)
-    params = convert_mdc_prior_samples(params)
 
     signals = generate_gw(
         params,

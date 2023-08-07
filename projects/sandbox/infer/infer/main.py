@@ -265,7 +265,7 @@ def main(
 
     callback = Callback(
         id=sequence_id,
-        sample_rate=inference_sampling_rate,
+        inference_sampling_rate=inference_sampling_rate,
         batch_size=batch_size,
         integration_window_length=integration_window_length,
         cluster_window_length=cluster_window_length,

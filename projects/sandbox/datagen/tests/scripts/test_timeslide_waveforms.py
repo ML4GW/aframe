@@ -9,10 +9,10 @@ from datagen.utils.timeslide_waveforms import (
     calc_shifts_required,
 )
 
-from aframe.priors.priors import mdc_prior_chirp_distance
+from aframe.priors.priors import end_o3_ratesandpops
 
 
-@pytest.fixture(params=[mdc_prior_chirp_distance])
+@pytest.fixture(params=[end_o3_ratesandpops])
 def prior(request):
     return request.param
 

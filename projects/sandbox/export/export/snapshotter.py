@@ -46,7 +46,7 @@ class BatchWhitener(torch.nn.Module):
         inference_sampling_rate: float,
         batch_size: int,
         fduration: float,
-        fftlength: float = 2,
+        fftlength: float,
         highpass: Optional[float] = None,
     ) -> None:
         super().__init__()
@@ -82,7 +82,7 @@ def add_streaming_input_preprocessor(
     sample_rate: float,
     inference_sampling_rate: float,
     fduration: float,
-    fftlength: float = 2,
+    fftlength: float,
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
 ) -> "ExposedTensor":

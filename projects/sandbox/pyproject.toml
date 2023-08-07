@@ -6,7 +6,6 @@ steps = [
     "train:train:resnet",
     "export:export-model:resnet",
     "infer:deploy-infer",
-    "mdc:deploy-mdc",
     "vizapp:vizapp"
 ]
 
@@ -19,13 +18,8 @@ logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
-hopeless_snr_thresh = 0
+hopeless_snr_thresh = 4
 
-# start/stop times reflect use of
-# --start-duration $((24 * 3600 * 10)) flag
-# when generating MDC test dataset.
-# train_stop is the start of the first segment
-# of the generated dataset.
 train_start = 1240579783
 train_stop = 1241443783  # 10 day train window
 test_stop = 1244035783 # 30 day test window
@@ -46,8 +40,8 @@ waveform_duration = 4
 reference_frequency = 50
 minimum_frequency = 20
 highpass = 32
-training_prior = "aframe.priors.priors.mdc_prior_chirp_distance"
-testing_prior = "aframe.priors.priors.mdc_prior_chirp_distance"
+training_prior = "aframe.priors.priors.end_o3_ratesandpops"
+testing_prior = "aframe.priors.priors.end_o3_ratesandpops"
 fduration = 1
 valid_frac = 0.25
 cosmology = "aframe.priors.cosmologies.planck"
@@ -124,7 +118,7 @@ max_lr = 1e-3
 lr_ramp_epochs = 9
 weight_decay = 0.0
 
-snr_thresh = 4
+snr_thresh = "${base.hopeless_snr_thresh}"
 max_min_snr = 12
 max_snr = 100
 snr_alpha = 3
@@ -175,7 +169,6 @@ kernel_length = "${base.kernel_length}"
 batch_size = "${base.inference_batch_size}"
 fduration = "${base.fduration}"
 highpass = "${base.highpass}"
-fftlength = 8
 psd_length = "${base.inference_psd_length}"
 
 # repo/triton parameters
@@ -216,7 +209,7 @@ reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
 spacing = 48
 buffer = 16
-snr_threshold = 0 
+snr_threshold = "${base.hopeless_snr_thresh}" 
 waveform_duration = "${base.waveform_duration}"
 waveform_approximant = "${base.waveform_approximant}"
 
@@ -258,56 +251,6 @@ psd_length = "${base.inference_psd_length}"
 
 # misc
 verbose = "${base.verbose}"
-
-
-[tool.typeo.scripts.deploy-mdc]
-# paths
-model_repo_dir = "${base.repository_directory}"
-data_dir = "${base.datadir}"
-output_dir = "${base.basedir}/mdc"
-log_dir = "${base.logdir}"
-
-# condor args
-accounting_group_user = "${base.accounting_group_user}"
-accounting_group = "${base.accounting_group}"
-
-# triton args
-model_name = "aframe-stream"
-model_version = -1
-image = "hermes/tritonserver:22.12"
-sequence_id = 1001
-
-# timeslide args
-Tb = "${base.Tb}"
-throughput = 100
-
-# data args
-sample_rate = "${base.sample_rate}"
-inference_sampling_rate = "${base.inference_sampling_rate}"
-batch_size = "${base.inference_batch_size}"
-ifos = "${base.ifos}"
-chunk_size = 4096
-
-# analysis args
-integration_window_length = 1
-cluster_window_length = 8
-fduration = "${base.fduration}"
-
-# misc
-verbose = "${base.verbose}"
-
-
-[tool.typeo.scripts.analyze]
-data_dir = "${base.basedir}/timeslide_injections/"
-write_dir = "${base.basedir}/timeslide_injections/"
-results_dir = "${base.basedir}/results/" 
-window_length = 1.0
-norm_seconds = [0, 10, 100, 1000]
-t_clust = 5
-max_tb = 604800
-force = false
-log_file = "${base.logdir}/analyze.log"
-verbose = false
 
 [tool.typeo.scripts.vizapp]
 source_prior = "${base.testing_prior}"

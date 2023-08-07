@@ -190,6 +190,7 @@ class TestValidator:
         mock.kernel_size = 16
         mock.pad_size = 4
         mock.num_views = 3
+        mock.snr_thresh = 4
 
         x = torch.arange(16, dtype=torch.float32)
         x = torch.stack([x, x])

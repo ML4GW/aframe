@@ -231,8 +231,8 @@ class Validator:
         self._injection_idx += len(waveforms)
 
         # threshold the SNRs of the injections to the desired value.
-        # if self.snr_thresh > 0:
-        #     waveforms = self.threshold_snrs(waveforms, psds)
+        if self.snr_thresh > 0:
+            waveforms = self.threshold_snrs(waveforms, psds)
 
         # now cut out a window symmetrically about the
         # coalescence time and inject it into the background

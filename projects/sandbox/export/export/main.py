@@ -34,7 +34,7 @@ def main(
     batch_size: int,
     fduration: float,
     psd_length: float,
-    fftlength: float = 8,
+    fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     weights: Optional[Path] = None,
     streams_per_gpu: int = 1,
@@ -180,6 +180,8 @@ def main(
     except KeyError:
         # if we don't, create one
         ensemble = repo.add(ensemble_name, platform=qv.Platform.ENSEMBLE)
+        # if fftlength isn't specified, calculate the default value
+        fftlength = fftlength or kernel_length + fduration
         whitened = add_streaming_input_preprocessor(
             ensemble,
             aframe.inputs["whitened"],

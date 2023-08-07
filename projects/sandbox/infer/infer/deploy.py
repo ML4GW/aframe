@@ -84,7 +84,7 @@ def get_ip_address() -> str:
     Currently not a general function.
     """
     nets = psutil.net_if_addrs()
-    return nets["enp1s0f0"][0].address
+    return nets["eno8303"][0].address
 
 
 @scriptify
@@ -99,7 +99,7 @@ def main(
     accounting_group: str,
     accounting_group_user: str,
     Tb: float,
-    shifts: float,
+    shifts: List[float],
     sample_rate: float,
     inference_sampling_rate: float,
     ifos: List[str],
