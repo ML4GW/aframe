@@ -135,7 +135,7 @@ def main(
     tensors, vertices = get_ifo_geometry(*ifos)
     df = 1 / waveform_duration
     try:
-        background_path = next(sorted(background_dir.iterdir()))
+        background_path = sorted(background_dir.iterdir())[0]
     except StopIteration:
         raise ValueError(
             f"No files in background data directory {background_dir}"
@@ -423,6 +423,8 @@ def deploy(
         clear=True,
         request_memory=request_memory,
         request_disk=request_disk,
+        stream_output=True,
+        stream_error=True,
     )
     dag_id = condor.submit(subfile)
     logging.info(f"Launching waveform generation jobs with dag id {dag_id}")
