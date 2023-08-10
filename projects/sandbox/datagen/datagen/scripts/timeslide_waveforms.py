@@ -135,13 +135,16 @@ def main(
     tensors, vertices = get_ifo_geometry(*ifos)
     df = 1 / waveform_duration
     try:
-        background_dir = next(background_dir.iterdir())
+        background_path = sorted(background_dir.iterdir())[0]
     except StopIteration:
         raise ValueError(
             f"No files in background data directory {background_dir}"
         )
+    logging.info(
+        f"Using background file {background_path} for psd calculation"
+    )
     psds = utils.load_psds(
-        background_dir, ifos, sample_rate=sample_rate, df=df
+        background_path, ifos, sample_rate=sample_rate, df=df
     )
 
     # loop until we've generated enough signals
@@ -420,6 +423,8 @@ def deploy(
         clear=True,
         request_memory=request_memory,
         request_disk=request_disk,
+        stream_output=True,
+        stream_error=True,
     )
     dag_id = condor.submit(subfile)
     logging.info(f"Launching waveform generation jobs with dag id {dag_id}")
