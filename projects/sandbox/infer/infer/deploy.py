@@ -42,11 +42,11 @@ def aggregate_results(output_directory: Path):
 def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
     r"""
     Calculate the number of shifts required to generate Tb
-    seconds of background.
+    seconds of background, not using the zero-lag data.
 
     The algebra to get this is gross but straightforward.
     Just solving
-    $$\sum_{i=0}^{N-1}(T - i\delta) \geq T_b$$
+    $$\sum_{i=1}^{N}(T - i\delta) \geq T_b$$
     for the lowest value of N, where \delta is the
     shift increment.
 
@@ -59,7 +59,7 @@ def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
     """
 
     discriminant = (T - delta / 2) ** 2 - 2 * delta * Tb
-    N = (T + delta / 2 - discriminant**0.5) / delta
+    N = (T - delta / 2 - discriminant**0.5) / delta
     return math.ceil(N)
 
 
