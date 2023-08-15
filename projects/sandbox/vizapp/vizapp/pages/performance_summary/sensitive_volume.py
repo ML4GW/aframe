@@ -111,20 +111,18 @@ class SensitiveVolumePlot:
         self.band_source = ColumnDataSource(dict(x=band_x))
         self.update()
 
-    def get_err(self, V, dV):
-        denom = np.sqrt(4 * np.pi) * 3 * V
-        return dV / denom ** (2 / 3)
-
     def get_sd_data(self, mu, std):
         # convert them both to volume units
         volume = mu * self.volume
         std = std * self.volume
 
-        # convert volume to distance, and use
-        # the distance of the upper and lower
-        # volume values as our distance bands
-        err = self.get_err(volume, std)
+        # convert volume to distance, then
+        # compute the distance error using
+        # the inverse of dV/dR
         distance = convert_to_distance(volume)
+        dV_dr = 4 * np.pi * distance**2
+        err = std / dV_dr
+
         low = distance - err
         high = distance + err
         return distance, low, high
