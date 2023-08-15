@@ -2,7 +2,7 @@
 name = "vizapp"
 version = "0.1.0"
 description = "Visualization application for analyzed aframe output"
-authors = ["Alec Gunny <alecg@.mit.edu>"]
+authors = ["Alec Gunny <alecg@mit.edu>"]
 license = "MIT"
 
 [tool.poetry.scripts]
