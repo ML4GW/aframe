@@ -59,105 +59,108 @@ def main(
     # misc args
     device: str = "cpu",
     verbose: bool = False,
-    **kwargs,
 ):
     """
-    Prepare a dataset of background, pre-computed glitches,
-    and pre-computed event waveforms to train and validate
-    a aframe architecture.
+    Prepare a dataset of background and pre-computed gravitational waves
+    to train and validate an aframe architecture.
 
     Args:
         background_dir:
             Path to directory containing background segments for all ifos.
-            The first of such segments will be loaded in for training.
-            Should be an HDF5 archive with a dataset
-            containing strain data for each ifo labeled `"ifo"`. Must
-            also contain an attribute `"t0"` indicating the start gpstime
-            of the strain data.
-        glitch_dataset:
-            Path to file containing short segments of data
-            with non-Gaussian noise transients. Should be
-            an HDF5 archive with datasets `"<IFO ID>_glitches"`,
-            where `IFO_ID` is the short ID for each interferometer
-            used for training (H1 and L1 for now). These glitches
-            will be used to randomly replace the corresponding
-            interferometer channel during training with some
-            probability given by `glitch_prob`. Note that the
-            samples selected for insertion on each channel are
-            sample independently, so glitches will be inserted
-            into both channels with probability `glitch_prob**2`.
+            The last of these segments will be used for validation if
+            `valid_frac` is not `None`. Each file should be an HDF5 archive
+            with a dataset containing strain data for each interferometer,
+            labeled by the values in `ifos`.
         waveform_dataset:
             Path to file containing pre-computed gravitational
-            wave polarization waveforms for binary-blackhole
-            merger events. Should be an HDF5 archive with a
-            `"signals"` dataset consisting of a tensor of shape
+            wave polarization waveforms for binary black hole
+            mergers. Should be an HDF5 archive with a `"signals"`
+            dataset consisting of a tensor of shape
             `(num_waveforms, num_polarizations, waveform_size)`.
             At data-loading time, extrinsic parameters will be
             sampled for these events, which will be used to project
             them to interferometer responses which will then be
             injected into the corresponding channel with probability
-            given by `waveform_prob`. Note that the samples selected
-            for injection will be chosen independently of those
-            selected for glitch insertion, so there is a nonzero
+            given by `waveform_prob`. Note that there is a nonzero
             likelihood that a waveform will be injected over
             a glitch. This will still be marked as a positive
             event in the training target.
-        glitch_prob:
-            The probability with which each sample in a batch
-            will have each of its interferometer channels
-            replaced with a glitch from the `glitch_dataset`.
-        waveform_prob:
-            The probability with which each sample in a batch
-            will have a BBH waveform injected into its background.
+        outdir:
+            Directory to which validation artifacts will be saved,
+            including best-performing model weights, training history,
+            and an optional subdirectory for periodic checkpointing.
+        logdir:
+            Directory to which log files will be saved
+        ifos:
+            List of interferometers that there is background data for
+            in each of the files of `background_dir`. Expected to be
+            given by prefix; e.g. "H1" for Hanford
+        batch_size:
+            Number of samples over which to compute each gradient update
+            during training.
+        snr_thresh:
+            During training, injected waveforms will be rescaled such that
+            their SNRs follow a power law. The power law starts with some
+            initial minimum (`max_min_snr`) which decreases over
+            `snr_decay_steps` to `snr_thresh`. For the validation set,
+            any waveforms with an SNR less than `snr_thresh` are scaled
+            so that they have an SNR of `snr_thresh`.
+        max_min_snr:
+            The initial minimum value of the SNR distribution to which
+            training injections will be scaled
+        max_snr:
+            The maximum of the SNR distribution to which training
+            injections will be scaled
+        snr_alpha:
+            The exponent of the power law distribution. See
+            `ml4gw.distributions.PowerLaw` for details.
+        snr_decay_steps:
+            The number of steps over which the minimum of the
+            power law distribution will decrease from
+            `max_min_snr` to `snr_thresh`
         sample_rate:
             The rate at which all relevant input data has
-            been sampled.
+            been sampled, specified in Hz
         kernel_length:
-            The length, in seconds, of each batch element
-            to produce during iteration.
-        batch_size:
-            Number of samples to over which to compute each
-            gradient update during training.
-        mean_snr:
-            Mean SNR of the log-normal distribution from which
-            to sample SNR values for injected waveforms at
-            data loading-time.
-        std_snr:
-            Standard deviation of the log-normal distribution
-            from which to sample SNR values for injected waveforms
-            at data loading-time.
-        min_snr:
-            Minimum SNR to use for SNR values for injected waveforms
-            at data loading-time. Samples drawn from the log-normal
-            SNR distribution below this value will be clipped to it.
-            If left as `None`, all sampled SNRs will be used as-is.
-        train_val_start:
-            The gpstime that indicates the start
-            of the contiguous training + validation background.
-            This will be used to ensure glitches from the training set
-            don't leak into the validation set when they are split.
-        train_val_stop:
-            The gpstime that indicates the end
-            of the training background. This will be used to ensure
-            glitches from the training set don't leak into the validation set
-        highpass:
-            Minimum frequency over which to compute SNR values
-            for waveform injection, in Hz. If left as `None`, the
-            SNR will be computed over all frequency bins.
-        batches_per_epoch:
-            Number of gradient updates in between each validation
-            step. Implicitly controls the rate at which the learning
-            can be decayed when training plateaus (since this is
-            based on validation scores).
+            The length, in seconds, of each batch element to
+            produce during iteration. This does not include
+            the length of data removed after whitening.
+        psd_length:
+            The length, in seconds, of background to use for
+            PSD calculation. This PSD will be used to whiten
+            the next `fduration + kernel_length` seconds of
+            data.
         fduration:
             Duration of the time domain filter used
             to whiten the data as a preprocessing step.
             Note that `fduration / 2` seconds worth of
             data will be cropped from both ends of the
-            kernel of length `kernel_length` before passing
-            it to the neural network.
+            data being whitened before it is passed to
+            the neural network.
+        highpass:
+            Minimum frequency over which to compute SNR values
+            for waveform injection, in Hz. If left as `None`, the
+            SNR will be computed over all frequency bins.
+        fftlength:
+            The length in seconds to use for FFT calculation when
+            estimating the PSDs used to whiten the data. If left
+            as `None`, the FFT length will be the same as the
+            length of the unwhitened kernel.
+        waveform_prob:
+            The probability with which each sample in a batch
+            will have a BBH waveform injected into its background.
+        swap_frac:
+            The fraction of kernels that will have a different
+            injection in each interferometer. These kernels will
+            be marked as background to teach the network that
+            true signals are coherent.
+        mute_frac:
+            The fraction of kernels that will have an injection
+            in only one interferometer. These kernels will be marked
+            as background to teach the network that true signals
+            are coincident.
         trigger_distance:
-            The max length, in seconds, from the center of
+            The maximum length, in seconds, from the center of
             each waveform or glitch segment that a sampled
             kernel's edge can fall. The default value of `0`
             means that every kernel must contain the center
@@ -173,21 +176,22 @@ def main(
             Distance, in seconds, between windows taken from
             the validation timeseries to pass to the network
             for validation.
-        monitor_metric:
-            Indicates whether model selection should be done
-            using measurements of recall against performance
-            on `"background"` or `"glitch"` data.
-        threshold:
-            Threshold of the indicated monitor metric against
-            which to select the best-performing model. If
-            `monitor_metric == "background"`, the allowed values
-            are `[1, 2, 3, 4, 5]`. If `monitor_metric == "glitch"`,
-            the allowed values are `[0.75, 0.9, 1]`.
+        num_valid_views:
+            During validation, `num_valid_view` copies of each
+            kernel will be made, each with an injection in a
+            different location within the kernel to make the
+            network more robust against edge effects
+        max_fpr:
+            The false positive rate up to which the area under
+            the ROC curve will be calculated during validation
+        valid_livetime:
+            The amount of background, in seconds, to create via
+            time shifts during validation
         early_stop:
-            Number of epochs without improvement in the indicated
-            `monitor_metric` at the indicated `threshold` before
-            training should be terminated. If left as `None`,
-            training will continue all the way through `max_epochs`.
+            Number of epochs without improvement of the validation
+            metric before training should be terminated. If left
+            as `None`, training will continue all the way through
+            `max_epochs`.
         checkpoint_every:
             Indicates the frequency with which model weights
             should be checkpointed regardless of validation
@@ -204,28 +208,29 @@ def main(
             at level `DEBUG`.
     """
 
-    # make out dir and configure logging file
+    # make output dirs and configure logging file
     outdir.mkdir(exist_ok=True, parents=True)
     logdir.mkdir(exist_ok=True, parents=True)
     configure_logging(logdir / "train.log", verbose)
 
-    # load background, infer ifos, and get start and end times
-    # of the combined training + validation period
+    # grab the names of the background files and determine the
+    # length of data that will be handed to the preprocessor
     background_fnames = train_utils.get_background_fnames(background_dir)
     sample_length = kernel_length + psd_length + fduration
     fftlength = fftlength or kernel_length + fduration
 
+    # create objects that we'll use for whitening the data
     psd_estimator = structures.PsdEstimator(
         psd_length, sample_rate, fftlength=fftlength, fast=highpass is not None
     )
     whitener = preprocessor.Whitener(fduration, sample_rate)
     whitener = whitener.to(device)
 
-    # load our waveforms and build some objects
-    # for augmenting their snrs
+    # load the waveforms
     waveforms, valid_waveforms = train_utils.get_waveforms(
         waveform_dataset, ifos, sample_rate, valid_frac
     )
+
     if valid_waveforms is not None:
         valid_fname = background_fnames.pop(-1)
         logging.info(f"Loading validation segment {valid_fname}")
@@ -268,9 +273,7 @@ def main(
     else:
         validator = None
 
-    # now construct an object that will make
-    # real-time augmentations to our training
-    # data as its loaded
+    # build some objects for augmenting waveform snrs
     waveform_duration = waveforms.shape[-1] / sample_rate
     rescaler = structures.SnrRescaler(sample_rate, waveform_duration, highpass)
     rescaler = rescaler.to(device)
@@ -282,6 +285,9 @@ def main(
         decay_steps=snr_decay_steps,
     )
 
+    # now construct an object that will make
+    # real-time augmentations to our training
+    # data as its loaded
     cross, plus = waveforms.transpose(1, 0, 2)
     augmentor = AframeBatchAugmentor(
         ifos,
@@ -311,6 +317,8 @@ def main(
     # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
     batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
+    # hard-coding this up here so nothing accidentally gets out of sync
+    chunks_per_epoch = 8
     train_dataset = structures.ChunkedDataloader(
         background_fnames,
         ifos=ifos,
@@ -321,8 +329,8 @@ def main(
         # or set some sensible defaults?
         reads_per_chunk=10,
         chunk_length=1024,
-        batches_per_chunk=int(batches_per_epoch / 8),
-        chunks_per_epoch=8,
+        batches_per_chunk=int(batches_per_epoch / chunks_per_epoch),
+        chunks_per_epoch=chunks_per_epoch,
         device=device,
         preprocessor=augmentor,
     )

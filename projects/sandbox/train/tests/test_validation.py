@@ -93,6 +93,7 @@ class TestValidator:
         mock.duration = 20
         mock.kernel_length = 2
         mock.stride = 1.5
+        mock.num_channels = 2
 
         steps = Validator.steps_for_shift(mock, 0)
         assert steps == 13
@@ -104,6 +105,7 @@ class TestValidator:
         mock = Mock()
         mock.sample_rate = 8
         mock.background = background
+        mock.num_channels = 2
 
         background = Validator.shift_background(mock, 0)
         np.testing.assert_array_equal(background, mock.background)
@@ -130,6 +132,7 @@ class TestValidator:
         mock.sample_rate = 8
         mock.duration = 16
         mock.batch_size = 4
+        mock.num_channels = 2
         mock.device = "cpu"
         mock.psd_estimator = psd_estimator
         mock.whitener = whitener

@@ -17,6 +17,70 @@ if TYPE_CHECKING:
 
 
 class AframeBatchAugmentor(torch.nn.Module):
+    """
+    Module to contain and compute all of the data
+    augmentations to be applied to the training set.
+    Currently uses kernel inversion/reversal, SNR
+    rescaling, random sampling of sky location
+    for each signal, and channel muting/swapping.
+
+    Args:
+        ifos:
+            List of interferometers that polarizations will be
+            projected onto. Expected to be given by prefix;
+            e.g. "H1" for Hanford.
+        sample_rate:
+            Sample rate at which polarizations have been
+            generated, specified in Hz
+        signal_prob:
+            Probability that a kernel will contain a signal
+        dec:
+            Distribution that the declination parameter will
+            be sampled from
+        psi:
+            Distribution that the psi parameter will be
+            sampled from
+        phi:
+            Distribution that the phi parameter will be
+            sampled from
+        psd_estimator:
+            Callable that takes a timeseries and returns a PSD
+            and a timeseries. Using the `PsdEstimator` in
+            `aframe.train.data_structures`, this will return
+            the PSD of an intial segment of the given timeseries
+            as well as the part of the timeseries not used for
+            PSD calculation.
+        whitener:
+            Callable that takes a timeseries and a PSD and returns the
+            whitened timeseries
+        trigger_distance:
+            The maximum length, in seconds, from the center of
+            each waveform or glitch segment that a sampled
+            kernel's edge can fall. The default value of `0`
+            means that every kernel must contain the center
+            of the corresponding segment (where the "trigger"
+            or its equivalent is assumed to lie).
+        mute_frac:
+            Fraction of batch that will have channels muted
+        swap_frac:
+            Fraction of batch that will have channels swapped
+        snr:
+            Callable function defining the distribution to which
+            injection SNRs will be scaled. If `None`, each
+            injection is randomly matched with and scaled to
+            the SNR of a different injection from the batch.
+        rescaler:
+            An `SnrRescaler` object with which to perform the
+            injection rescaling.
+        invert_prob:
+            Probability that a background kernel will be inverted
+        reverse_prob:
+            Probability that a background kernel will be reversed
+        **polarizations:
+            Dictionary containing the plus and cross polarizations
+            from the waveform dataset
+    """
+
     def __init__(
         self,
         ifos: List[str],
@@ -36,7 +100,6 @@ class AframeBatchAugmentor(torch.nn.Module):
         reverse_prob: float = 0.5,
         **polarizations: np.ndarray,
     ):
-
         super().__init__()
         signal_prob = signal_prob / (
             1 - (swap_frac + mute_frac - (swap_frac * mute_frac))
@@ -93,6 +156,10 @@ class AframeBatchAugmentor(torch.nn.Module):
         self.num_waveforms = num_waveforms
 
     def sample_responses(self, N: int, kernel_size: int, psds: torch.Tensor):
+        """
+        Sample sky location parameters, compute interferometer responses,
+        and perform SNR rescaling
+        """
         dec, psi, phi = self.dec(N), self.psi(N), self.phi(N)
         dec, psi, phi = (
             dec.to(self.tensors.device),

@@ -31,16 +31,29 @@ def split(X: Tensor, frac: float, axis: int) -> Tuple[Tensor, Tensor]:
 
 
 def _sort_key(fname: Path):
+    """
+    Return the intified value of the string between
+    the final two hypens of the given `Path`
+    """
     return int(fname.stem.split("-")[-2])
 
 
 def get_background_fnames(data_dir: Path):
+    """
+    Return list of background filenames in `data_dir` sorted
+    by GPS start time of the data, which is assumed to be
+    given in the file name between the final two hypens.
+    See `_sort_key`.
+    """
     fnames = data_dir.glob("*.hdf5")
     fnames = sorted(fnames, key=_sort_key)
     return list(fnames)
 
 
 def get_background(fname: Path):
+    """
+    Load the background from the given HDF5 file
+    """
     background = []
     with h5py.File(fname, "r") as f:
         ifos = list(f.keys())
@@ -56,8 +69,11 @@ def get_waveforms(
     sample_rate: float,
     valid_frac: float,
 ):
-    # perform train/val split of waveforms,
-    # and compute fixed validation responses
+    """
+    Load the training waveforms, and if `valid_frac` is not
+    `None`, perform the train/val split and compute fixed
+    validation responses
+    """
     with h5py.File(waveform_dataset, "r") as f:
         signals = f["signals"][:]
 
