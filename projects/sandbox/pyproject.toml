@@ -30,7 +30,7 @@ state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [3, 4, 6, 3], norm_groups = 16}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
-Tb = 5184000  # 60 days of background
+Tb = 31536000  # 1 year of background
 inference_sampling_rate = 16
 inference_batch_size = 128
 inference_psd_length = 64
@@ -114,15 +114,15 @@ outdir = "${base.basedir}/training"
 # optimization args
 batch_size = 384
 max_epochs = 200
-max_lr = 1e-3
-lr_ramp_epochs = 9
+max_lr = 0.000585
+lr_ramp_epochs = 23
 weight_decay = 0.0
 
 snr_thresh = "${base.hopeless_snr_thresh}"
 max_min_snr = 12
 max_snr = 100
 snr_alpha = 3
-snr_decay_steps = 768
+snr_decay_steps = 989
 
 # data args
 ifos = "${base.ifos}"
@@ -134,10 +134,9 @@ psd_length = "${base.training_psd_length}"
 
 # augmentation args
 trigger_distance = -0.75
-waveform_prob = 0.5
-
-swap_frac = 0.025
-mute_frac = 0.12
+waveform_prob = 0.277
+swap_frac = 0.014
+mute_frac = 0.055
 
 # validation args
 valid_frac = "${base.valid_frac}"
@@ -234,7 +233,7 @@ sequence_id = 1001
 # timeslide args
 Tb = "${base.Tb}"
 shifts = [0, 1]
-throughput = 320
+throughput = 80
 
 # data args
 sample_rate = "${base.sample_rate}"
