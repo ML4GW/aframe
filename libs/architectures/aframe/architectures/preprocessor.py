@@ -62,6 +62,7 @@ class Whitener(torch.nn.Module):
         # and divide it by the ASD of the background section.
         # If the ASD of any background bin hit inf, set the
         # corresponding bin to 0
+        target_size = X.size(-1) - self.fduration
         X_tilde = torch.fft.rfft(X.double(), norm="forward", dim=-1)
         X_tilde = X_tilde / psds**0.5
         X_tilde[torch.isnan(X_tilde)] = 0
@@ -72,8 +73,10 @@ class Whitener(torch.nn.Module):
         X = X.float() / (self.sample_rate) ** 0.5
 
         # slice off corrupted data at edges of kernel
-        pad = int(self.fduration // 2)
-        X = X[:, :, pad:-pad]
+        pad = X.size(-1) - target_size
+        pad_left = int(pad // 2)
+        pad_right = pad - pad_left
+        X = X[:, :, pad_left:-pad_right]
         return X
 
 

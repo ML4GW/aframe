@@ -53,9 +53,8 @@ class BatchWhitener(torch.nn.Module):
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
 
-        length = (batch_size - 1) / inference_sampling_rate
-        length += kernel_length + fduration
-        self.size = int(length * sample_rate)
+        self.size = (batch_size - 1) * self.stride_size + self.kernel_size
+        self.size += int(fduration * sample_rate)
 
         self.spectral_density = SpectralDensity(
             sample_rate,
