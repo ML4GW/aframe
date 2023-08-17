@@ -1,5 +1,4 @@
 import logging
-import math
 import re
 import shutil
 import time
@@ -13,6 +12,7 @@ from typeo import scriptify
 from aframe.analysis.ledger.events import EventSet, RecoveredInjectionSet
 from aframe.deploy import condor
 from aframe.logging import configure_logging
+from aframe.utils.timeslides import calc_shifts_required
 from hermes.aeriel.serve import serve
 from hermes.stillwater import ServerMonitor
 
@@ -37,30 +37,6 @@ def aggregate_results(output_directory: Path):
     background.write(output_directory / "background.h5")
     foreground.write(output_directory / "foreground.h5")
     shutil.rmtree(output_directory / "tmp")
-
-
-def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
-    r"""
-    Calculate the number of shifts required to generate Tb
-    seconds of background, not using the zero-lag data.
-
-    The algebra to get this is gross but straightforward.
-    Just solving
-    $$\sum_{i=1}^{N}(T - i\delta) \geq T_b$$
-    for the lowest value of N, where \delta is the
-    shift increment.
-
-    TODO: generalize to multiple ifos and negative
-    shifts, since e.g. you can in theory get the same
-    amount of Tb with fewer shifts if for each shift
-    you do its positive and negative. This should just
-    amount to adding a factor of 2 * number of ifo
-    combinations in front of the sum above.
-    """
-
-    discriminant = (T - delta / 2) ** 2 - 2 * delta * Tb
-    N = (T - delta / 2 - discriminant**0.5) / delta
-    return math.ceil(N)
 
 
 def get_num_shifts(data_dir: Path, Tb: float, shift: float) -> int:

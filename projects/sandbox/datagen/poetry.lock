@@ -62,6 +62,19 @@ type = "directory"
 url = "../../../libs/priors"
 
 [[package]]
+name = "aframe-utils"
+version = "0.1.0"
+description = "aframe utility functions"
+category = "main"
+optional = false
+python-versions = ">=3.8,<3.11"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../../../libs/utils"
+
+[[package]]
 name = "astropy"
 version = "5.2.2"
 description = "Astronomy and astrophysics core library"
@@ -592,7 +605,7 @@ description = "Tools for gravitational wave data discovery"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.11"
-develop = false
+develop = true
 
 [package.dependencies]
 ciecplib = "^0.7.1"
@@ -602,10 +615,8 @@ requests-gssapi = "^1.2.3"
 scipy = "<1.8"
 
 [package.source]
-type = "git"
-url = "https://github.com/ML4GW/mldatafind.git"
-reference = "main"
-resolved_reference = "60b455e3b7e2f7f920e12f3c67cdf7ccd317b6ea"
+type = "directory"
+url = "../../../mldatafind"
 
 [[package]]
 name = "numpy"
@@ -1047,14 +1058,15 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.8,<3.11"
-content-hash = "9281c31d680ae7e4fa36367df6b5a35843ad358984512599ea54543103448fa7"
+python-versions = ">=3.9,<3.11"
+content-hash = "b09014db5e427be8a6028764743d6a06702d4730bba889d4478eba57dbec94c1"
 
 [metadata.files]
 aframe-analysis = []
 aframe-deploy = []
 aframe-logging = []
 aframe-priors = []
+aframe-utils = []
 astropy = [
     {file = "astropy-5.2.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:66522e897daf3766775c00ef5c63b69beb0eb359e1f45d18745d0f0ca7f29cc1"},
     {file = "astropy-5.2.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:0ccf6f16cf7e520247ecc9d1a66dd4c3927fd60622203bdd1d06655ad81fa18f"},
