@@ -24,6 +24,7 @@ typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
 mldatafind = {path = "../../../mldatafind/", develop = true}
+dqsegdb2 = "^1.1.4"
 
 "aframe.analysis" = {path = "../../../libs/analysis", develop = true}
 "aframe.deploy" = {path = "../../../libs/deploy", develop = true}

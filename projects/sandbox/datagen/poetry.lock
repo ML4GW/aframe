@@ -1058,7 +1058,7 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11"
-content-hash = "b09014db5e427be8a6028764743d6a06702d4730bba889d4478eba57dbec94c1"
+content-hash = "522699289ef4059f20b8b084d9dad76fdc8be70db2027f85996de1c826fa4bf2"
 
 [metadata.files]
 aframe-analysis = []
