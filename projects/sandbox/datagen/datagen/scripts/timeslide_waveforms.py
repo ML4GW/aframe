@@ -164,7 +164,7 @@ def main(
             extra_keys = [
                 k for k in params.keys() if k not in parameters.keys()
             ]
-            for key in extra_keys():
+            for key in extra_keys:
                 params.pop(key)
 
         waveforms = generate_gw(
