@@ -4,10 +4,7 @@ import h5py
 import pytest
 import torch
 from datagen.scripts.timeslide_waveforms import main
-from datagen.utils.timeslide_waveforms import (
-    calc_segment_injection_times,
-    calc_shifts_required,
-)
+from datagen.utils.timeslide_waveforms import calc_segment_injection_times
 
 from aframe.priors.priors import end_o3_ratesandpops
 
@@ -94,18 +91,6 @@ def mock_psds(sample_rate, waveform_duration):
     n_psd_samples = int((sample_rate / 2) / (1 / waveform_duration)) + 1
     mock_psds = torch.randn(2, n_psd_samples)
     return mock_psds
-
-
-def test_calc_shifts_required():
-
-    # test that requiring 0 background time returns 0 shifts
-    shifts_required = calc_shifts_required(0, 30, 1)
-    assert shifts_required == 0
-
-    # need an extra shift to get 60 seconds of background
-    # due to the chopping off of livetime at the end of each segment
-    shifts_required = calc_shifts_required(60, 30, 1)
-    assert shifts_required == 3
 
 
 def test_main(
