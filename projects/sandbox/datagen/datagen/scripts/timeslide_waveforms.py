@@ -8,7 +8,6 @@ import datagen.utils.timeslide_waveforms as utils
 import numpy as np
 import torch
 from datagen.utils.injection import generate_gw
-from mldatafind.segments import query_segments
 from typeo import scriptify
 
 from aframe.analysis.ledger.injections import (
@@ -22,6 +21,7 @@ from ml4gw.gw import (
     compute_observed_strain,
     get_ifo_geometry,
 )
+from mldatafind.segments import query_segments
 
 
 @scriptify
