@@ -163,7 +163,7 @@ def main(
         # TODO: If https://git.ligo.org/lscsoft/bilby/-/merge_requests/1286
         # is merged, remove this
         if n_samples == 1:
-            params = {k: params[k] for k in parameters}
+            params = {k: params[k] for k in parameters if k in params}
 
         waveforms = generate_gw(
             params,
