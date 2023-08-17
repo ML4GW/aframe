@@ -160,12 +160,10 @@ def main(
         # be added into the sampled parameters, but only if
         # we're sampling exactly 1 time. This removes those
         # extra keys
+        # TODO: If https://git.ligo.org/lscsoft/bilby/-/merge_requests/1286
+        # is merged, remove this
         if n_samples == 1:
-            extra_keys = [
-                k for k in params.keys() if k not in parameters.keys()
-            ]
-            for key in extra_keys:
-                params.pop(key)
+            params = {k: params[k] for k in parameters}
 
         waveforms = generate_gw(
             params,
