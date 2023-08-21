@@ -67,6 +67,7 @@ def h5py_mock(background, glitches, glitch_times, waveforms, ifos):
             value = {}
             for ifo in ifos:
                 dataset = MagicMock()
+                dataset.__len__ = lambda: len(times)
                 dataset.__getitem__.side_effect = hoft.__getitem__
                 dataset.attrs = {"x0": times[0]}
                 value[ifo] = dataset

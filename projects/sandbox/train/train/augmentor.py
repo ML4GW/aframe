@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 
 import numpy as np
 import torch
-from train.data_structures import (
+from train.augmentations import (
     ChannelMuter,
     ChannelSwapper,
     SignalInverter,
@@ -10,10 +10,11 @@ from train.data_structures import (
 )
 
 import ml4gw.gw as gw
+from ml4gw.dataloading import ChunkedDataset
 from ml4gw.utils.slicing import sample_kernels
 
 if TYPE_CHECKING:
-    from train.data_structures import SnrRescaler
+    from train.augmentations import SnrRescaler
 
 
 class AframeBatchAugmentor(torch.nn.Module):
@@ -237,3 +238,18 @@ class AframeBatchAugmentor(torch.nn.Module):
             self.snr.step()
 
         return X, y
+
+
+class AugmentedDataset(ChunkedDataset):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.maps = []
+
+    def map(self, fn):
+        self.maps.append(fn)
+
+    def iter_epoch(self):
+        for X in super().iter_epoch():
+            for fn in self.maps:
+                X = fn(X)
+            yield X

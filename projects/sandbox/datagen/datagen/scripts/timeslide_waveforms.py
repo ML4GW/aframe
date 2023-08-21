@@ -143,9 +143,7 @@ def main(
     logging.info(
         f"Using background file {background_path} for psd calculation"
     )
-    psds = utils.load_psds(
-        background_path, ifos, sample_rate=sample_rate, df=df
-    )
+    psds = utils.load_psds(background_path, ifos, df=df)
 
     # loop until we've generated enough signals
     # with large enough snr to fill the segment,
