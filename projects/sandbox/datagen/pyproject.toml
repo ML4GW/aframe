@@ -17,18 +17,28 @@ generate-waveforms = "datagen.scripts.waveforms:main"
 generate-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:main"
 deploy-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:deploy"
 
+[tool.pinto]
+conda = {append_base_ld_library_path = true}
+
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.11"
+
+gwpy = "^2.1"
+bilby = "^1.4"
+pyomicron = "^2.0.5"
+lalsuite = "7.19"
 
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 torch = {version = "^1.10", source = "torch"}
 ml4gw = {path = "../../../ml4gw", develop = true}
-mldatafind = {git = "https://github.com/ML4GW/mldatafind.git", branch = "main"}
+mldatafind = {path = "../../../mldatafind", develop = true}
 
 "aframe.analysis" = {path = "../../../libs/analysis", develop = true}
 "aframe.deploy" = {path = "../../../libs/deploy", develop = true}
 "aframe.logging" = {path = "../../../libs/logging", develop = true}
 "aframe.priors" = {path = "../../../libs/priors", develop = true}
+"aframe.utils" = {path = "../../../libs/utils", develop = true}
+"dqsegdb2" = "<1.2.0" # pyomicron incompatibility
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3"

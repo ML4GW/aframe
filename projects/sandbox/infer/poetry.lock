@@ -62,6 +62,19 @@ type = "directory"
 url = "../../../libs/priors"
 
 [[package]]
+name = "aframe-utils"
+version = "0.1.0"
+description = "aframe utility functions"
+category = "main"
+optional = false
+python-versions = ">=3.8,<3.11"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../../../libs/utils"
+
+[[package]]
 name = "aiohttp"
 version = "3.8.5"
 description = "Async http client/server framework (asyncio)"
@@ -2143,13 +2156,14 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "1cb5a501cb7e3a5ac2f8d6096d308c1a9f91605f1af8122177b57bf9842b217f"
+content-hash = "ced22191005d6c7a08e5295cfa2e89291c7a19f0cb3ec86bbc9513d0077f4f64"
 
 [metadata.files]
 aframe-analysis = []
 aframe-deploy = []
 aframe-logging = []
 aframe-priors = []
+aframe-utils = []
 aiohttp = [
     {file = "aiohttp-3.8.5-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a94159871304770da4dd371f4291b20cac04e8c94f11bdea1c3478e557fbe0d8"},
     {file = "aiohttp-3.8.5-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:13bf85afc99ce6f9ee3567b04501f18f9f8dbbb2ea11ed1a2e079670403a7c84"},

@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import List, Tuple
 
 import h5py
-from mldatafind.authenticate import authenticate
-from mldatafind.io import fetch_timeseries
-from mldatafind.segments import query_segments
 from typeo import scriptify
 
 from aframe.deploy import condor
 from aframe.logging import configure_logging
+from mldatafind.authenticate import authenticate
+from mldatafind.io import fetch_timeseries
+from mldatafind.segments import query_segments
 
 
 def _intify(x: float):
