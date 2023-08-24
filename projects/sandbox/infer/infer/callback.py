@@ -120,6 +120,8 @@ class Callback:
         window_size = int(
             self.integration_window_length * self.inference_sampling_rate
         )
+        if window_size == 1:
+            return y
         window = np.ones((window_size,)) / window_size
         integrated = np.convolve(y, window, mode="full")
         return integrated[: -window_size + 1]

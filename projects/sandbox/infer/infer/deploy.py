@@ -60,7 +60,7 @@ def get_ip_address() -> str:
     Currently not a general function.
     """
     nets = psutil.net_if_addrs()
-    return nets["eno8303"][0].address
+    return nets["enp1s0f0"][0].address
 
 
 @scriptify

@@ -86,7 +86,13 @@ def batch_chunks(
         return
     else:
         if x.shape[-1] < step_size:
-            return
+            # It's fine that there's data available as long as it's
+            # less than step_size, but we still need to iterate the
+            # data loader to line up queue entries in loader.py
+            try:
+                x, _ = next(it)
+            except StopIteration:
+                return
         raise ValueError(
             "Data iterator expected to have {} "
             "steps, but data still available".format(num_steps)
