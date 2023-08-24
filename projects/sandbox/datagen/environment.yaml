@@ -1,4 +1,4 @@
-name: aframe-datagen-test
+name: aframe-datagen
 channels:
   - conda-forge
 dependencies:
