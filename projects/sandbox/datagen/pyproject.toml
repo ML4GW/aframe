@@ -21,7 +21,12 @@ deploy-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:deploy"
 conda = {append_base_ld_library_path = true}
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.11"
+
+gwpy = "^2.1"
+bilby = "^1.4"
+pyomicron = "^2.0.5"
+lalsuite = "7.19"
 
 typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 torch = {version = "^1.10", source = "torch"}

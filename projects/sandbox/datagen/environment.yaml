@@ -1,21 +1,13 @@
-name: aframe-datagen
+name: aframe-datagen-test
 channels:
   - conda-forge
 dependencies:
   - python=3.9
   - libgcc
-  - gwpy
-  - astropy
-  - matplotlib
   # frame file I/O dependencies
   - python-ldas-tools-framecpp
   - python-nds2-client
   # omicron dependencies
   - python-ligo-lw
-  - pyomicron
   - omicron>=4.0.0
-  - dqsegdb2
   - uproot
-  # injection dependencies
-  - bilby
-  - lalsuite
