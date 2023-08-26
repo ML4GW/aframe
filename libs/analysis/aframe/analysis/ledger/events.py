@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, TypeVar, Union
+from typing import List, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -50,6 +50,20 @@ class TimeSlideEventSet(Ledger):
         nb = self.nb(threshold)
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
 
+    def apply_vetos(self, vetos: np.ndarray):
+        # TimeSlideEventSet does not have shift information,
+        # so apply vetoes as if the shift is zero
+        mask = np.logical_and(
+            vetos[:, :1] < self.time, vetos[:, 1:] > self.time
+        )
+
+        # mark a background event as vetoed
+        # if it falls into _any_ of the segments
+        veto_mask = mask.any(axis=0)
+
+        # TODO: have an 'inplace=False' option that returns a new object?
+        return self[~veto_mask]
+
 
 @dataclass
 class EventSet(TimeSlideEventSet):
@@ -66,6 +80,21 @@ class EventSet(TimeSlideEventSet):
         shifts = np.array([shift] * len(event_set))
         d = {k: getattr(event_set, k) for k in event_set.__dataclass_fields__}
         return cls(shift=shifts, **d)
+
+    def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
+        # idx corresponds to the index of the shift
+        # (i.e. which ifo to apply vetoes for)
+        shifts = self.shift[:, idx]
+        times = self.time + shifts
+
+        mask = np.logical_and(vetos[:, :1] < times, vetos[:, 1:] > times)
+
+        # mark a background event as vetoed
+        # if it falls into _any_ of the segments
+        veto_mask = mask.any(axis=0)
+
+        # TODO: have an 'inplace=False' option that returns a new object?
+        return self[~veto_mask]
 
 
 # inherit from TimeSlideEventSet since injection

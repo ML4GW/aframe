@@ -36,6 +36,23 @@ class TestTimeSlideEventSet:
         assert obj.far(5) == 2.5
         assert (obj.far(np.array([5, 5.5])) == np.array([2.5, 2])).all()
 
+    def test_apply_vetos(self):
+        det_stats = np.array([1, 2, 3])
+        times = np.array([0, 2, 4])
+        set = events.TimeSlideEventSet(det_stats, times, 100)
+        vetos = np.array([[0.5, 1.5], [3.5, 4.5]])
+
+        result = set.apply_vetos(vetos)
+        expected = events.TimeSlideEventSet(
+            detection_statistic=np.array([1, 2]), time=np.array([0, 2])
+        )
+
+        assert np.array_equal(
+            result.detection_statistic, expected.detection_statistic
+        )
+        assert np.array_equal(result.time, expected.time)
+        assert result.Tb == 100
+
     # TODO: add a test for significance that doen'st
     # just replicate the logic of the function itself
 
@@ -82,6 +99,38 @@ class TestEventSet:
         assert len(subobj) == 2
         assert (subobj.detection_statistic == np.arange(5, 7)).all()
         assert (subobj.shift == np.array([0, 1])).all()
+
+    def test_apply_vetos(self):
+        det_stats = np.arange(5)
+        times = np.arange(5)
+        shifts = np.array([[0, 1]] * 2 + [[0, 2]] * 2 + [[0, 3]])
+        obj = events.EventSet(det_stats, times, 100, shifts)
+
+        # apply vetoes to the first shift
+        result = obj.apply_vetos(np.array([[0.5, 1.5], [3.5, 4.5]]), idx=0)
+        expected = events.EventSet(
+            detection_statistic=np.array([0, 2, 3]),
+            time=np.array([0, 2, 3]),
+            Tb=100,
+            shift=np.array([[0, 1]] + [[0, 2]] * 2),
+        )
+        assert all(result.time == expected.time)
+        assert (result.shift == expected.shift).all()
+        assert all(result.detection_statistic == expected.detection_statistic)
+        assert result.Tb == expected.Tb
+
+        # apply vetoes to the second shift
+        result = obj.apply_vetos(np.array([[0.5, 1.5], [3.5, 4.5]]), idx=1)
+        expected = events.EventSet(
+            detection_statistic=np.array([1, 3, 4]),
+            time=np.array([1, 3, 4]),
+            Tb=100,
+            shift=np.array([[0, 1]] + [[0, 2]] + [[0, 3]]),
+        )
+        assert all(result.time == expected.time)
+        assert (result.shift == expected.shift).all()
+        assert all(result.detection_statistic == expected.detection_statistic)
+        assert result.Tb == expected.Tb
 
 
 class TestRecoveredInjectionSet:
