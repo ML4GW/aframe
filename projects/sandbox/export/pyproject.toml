@@ -13,7 +13,6 @@ export-model = "export.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-gwpy = "^2.1"
 
 # TODO: this cryptography constraint seems to be
 # necessary for cross-platform builds, though it

@@ -16,6 +16,7 @@ torch = {version = "^1.12", source = "torch"}
 
 "aframe.architectures" = {path = "../architectures", develop = true}
 "aframe.logging" = {path = "../logging", develop = true}
+h5py = "^3.9.0"
 
 [[tool.poetry.source]]
 name = "torch"
