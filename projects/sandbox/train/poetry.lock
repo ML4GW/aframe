@@ -1601,7 +1601,7 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "ff429f64e256b3f746d3620e902bade7e5e4d7141ecc82b991330b6f591a2a45"
+content-hash = "a256c516015f064a56ced882d37a6be16926d8d820d7890b0d9d27acab91ae65"
 
 [metadata.files]
 aframe-architectures = []

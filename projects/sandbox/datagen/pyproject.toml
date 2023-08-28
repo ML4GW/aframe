@@ -22,7 +22,7 @@ conda = {append_base_ld_library_path = true}
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-
+h5py = "^3.9.0"
 gwpy = "^2.1"
 bilby = "^1.4"
 pyomicron = "^2.0.5"
