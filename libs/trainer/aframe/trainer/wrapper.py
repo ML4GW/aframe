@@ -26,8 +26,7 @@ def _configure_wrapper(f, wrapper):
 
     for param in train_sig.parameters.values():
         if (
-            param.name
-            not in ("train_dataset", "valid_dataset", "architecture")
+            param.name not in ("train_dataset", "validator", "architecture")
             and param.name not in f_sig.parameters
         ):
             parameters.append(param)

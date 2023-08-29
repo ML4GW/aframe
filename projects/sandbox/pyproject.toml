@@ -129,7 +129,7 @@ ifos = "${base.ifos}"
 sample_rate = "${base.sample_rate}"
 kernel_length = "${base.kernel_length}"
 fduration = "${base.fduration}"
-highpass = "${base.minimum_frequency}"
+highpass = "${base.highpass}"
 psd_length = "${base.training_psd_length}"
 
 # augmentation args

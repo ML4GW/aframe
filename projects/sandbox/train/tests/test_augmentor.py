@@ -82,9 +82,8 @@ def test_bbhnet_batch_augmentor(
     )
 
     X = torch.zeros((32, 2, size))
-    y = torch.zeros((32, 1))
 
-    X, y = augmentor(X, y)
+    X, y = augmentor(X)
     assert (X[::2] == 2).all().item()
     assert (X[1::2] == 0).all().item()
     assert (y[::2] == 1).all().item()
@@ -156,7 +155,6 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(
         assert str(exc.value).startswith("Probability must be")
 
     X = torch.zeros((32, 2, size))
-    y = torch.zeros((32, 1))
     augmentor = AframeBatchAugmentor(
         sample_rate=sample_rate,
         ifos=["H1", "L1"],
@@ -196,7 +194,7 @@ def test_bbhnet_batch_augmentor_with_swapping_and_muting(
     augmentor.swapper.forward = mock_channel_swapper
 
     with patch("torch.rand", return_value=value):
-        X, y = augmentor(X, y)
+        X, y = augmentor(X)
 
         if swap_frac + mute_frac == 0:
             assert (y > 0).all().item()

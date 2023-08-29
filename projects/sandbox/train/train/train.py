@@ -60,6 +60,7 @@ def main(
     # misc args
     device: str = "cpu",
     verbose: bool = False,
+    **kwargs,
 ):
     """
     Prepare a dataset of background and pre-computed gravitational waves
