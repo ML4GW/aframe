@@ -19,10 +19,11 @@ sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
 hopeless_snr_thresh = 4
+global_seed = 42
 
 train_start = 1240579783
 train_stop = 1241443783  # 10 day train window
-test_stop = 1244035783 # 30 day test window
+test_stop = 1241875783  # 1244035783 # 30 day test window
 
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
@@ -30,7 +31,7 @@ state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [3, 4, 6, 3], norm_groups = 16}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
-Tb = 31536000  # 1 year of background
+Tb = 864000  # 31536000  # 1 year of background
 inference_sampling_rate = 2
 inference_batch_size = 128
 inference_psd_length = 64
@@ -187,6 +188,7 @@ datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 accounting_group = "${base.accounting_group}"
 accounting_group_user = "${base.accounting_group_user}"
+seed = "${base.global_seed}"
 
 # background parameters
 start = "${base.train_stop}"
