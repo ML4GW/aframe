@@ -1,6 +1,7 @@
 import logging
+import random
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import h5py
 import numpy as np
@@ -23,6 +24,7 @@ def main(
     waveform_approximant: str = "IMRPhenomPv2",
     force_generation: bool = False,
     verbose: bool = False,
+    seed: Optional[int] = None,
 ):
     """
     Simulates a set of BBH plus and cross polarization waveforms
@@ -64,8 +66,12 @@ def main(
     # make dirs
     datadir.mkdir(exist_ok=True, parents=True)
     logdir.mkdir(exist_ok=True, parents=True)
-
     configure_logging(logdir / "generate_waveforms.log", verbose)
+
+    if seed is not None:
+        logging.info(f"Seeding data generation with seed {seed}")
+        np.random.seed(seed)
+        random.seed(seed)
 
     # check if signal file already exists
     signal_file = datadir / "signals.h5"

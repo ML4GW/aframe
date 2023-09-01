@@ -19,6 +19,7 @@ sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
 hopeless_snr_thresh = 4
+global_seed = 42
 
 train_start = 1240579783
 train_stop = 1241443783  # 10 day train window
@@ -36,7 +37,7 @@ inference_batch_size = 128
 inference_psd_length = 64
 training_psd_length = 8
 
-waveform_duration = 4
+waveform_duration = 8
 reference_frequency = 50
 minimum_frequency = 20
 highpass = 32
@@ -187,6 +188,7 @@ datadir = "${base.datadir}"
 logdir = "${base.logdir}"
 accounting_group = "${base.accounting_group}"
 accounting_group_user = "${base.accounting_group_user}"
+seed = "${base.global_seed}"
 
 # background parameters
 start = "${base.train_stop}"

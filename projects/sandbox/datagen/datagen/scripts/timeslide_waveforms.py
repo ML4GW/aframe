@@ -1,8 +1,10 @@
 import logging
+import random
 import shutil
 from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional
+from zlib import adler32
 
 import datagen.utils.timeslide_waveforms as utils
 import numpy as np
@@ -44,6 +46,7 @@ def main(
     output_dir: Path,
     log_file: Optional[Path] = None,
     verbose: bool = False,
+    seed: Optional[int] = None,
 ):
     """
     Generates the waveforms for a single segment.
@@ -110,6 +113,16 @@ def main(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     configure_logging(log_file, verbose=verbose)
+
+    if seed is not None:
+        fingerprint = str((start, stop) + tuple(shifts))
+        worker_hash = adler32(fingerprint.encode())
+        logging.info(
+            "Seeding data generation with seed {}, "
+            "augmented by worker seed {}".format(seed, worker_hash)
+        )
+        np.random.seed(seed + worker_hash)
+        random.seed(seed + worker_hash)
 
     prior, detector_frame_prior = prior()
 
@@ -273,6 +286,7 @@ def deploy(
     request_disk: int = 1024,
     force_generation: bool = False,
     verbose: bool = False,
+    seed: Optional[int] = None,
 ) -> None:
     """
     Deploy condor jobs to generate waveforms for all segments
@@ -418,6 +432,8 @@ def deploy(
     arguments += f"--prior {prior} "
     arguments += f"--output-dir {outdir}/tmp-$(ProcID) "
     arguments += f"--log-file {logdir}/$(ProcID).log "
+    if seed:
+        arguments += f"--seed {seed} "
 
     # create submit file by hand: pycondor doesn't support
     # "queue ... from" syntax
