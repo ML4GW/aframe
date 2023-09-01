@@ -11,6 +11,18 @@ def chirp_mass(m1, m2):
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
 
 
+def mass_condition_uniform(reference_params, mass_1):
+    """
+    Return a dictionary that can be interpreted by Bilby's
+    `ConditionalUniform` to set the maximum value of `mass_2`
+    to be whatever was drawn for `mass_1`
+    """
+    return dict(
+        minimum=reference_params["minimum"],
+        maximum=mass_1,
+    )
+
+
 def mass_condition_powerlaw(reference_params, mass_1):
     """
     Return a dictionary that can be interpreted by Bilby's
