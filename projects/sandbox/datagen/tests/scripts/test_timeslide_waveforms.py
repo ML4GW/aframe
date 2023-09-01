@@ -108,7 +108,6 @@ def test_main(
     mock_psds,
     tmp_path,
 ):
-
     start, stop = 0, 1000
     background_mock = MagicMock()
     background_mock.iterdir = lambda: iter([None])
@@ -179,3 +178,89 @@ def test_main(
                 assert len(data) == num_rejected
                 if key == "snr":
                     assert all(data < snr_threshold)
+
+
+def test_main_for_seeding(prior, waveform_approximant, tmp_path):
+    background_mock = MagicMock()
+    background_mock.iterdir = lambda: iter([None])
+    mock_compute_network_snr = create_mock_compute_network_snr(4)
+    ml4gw_mock = patch(
+        "datagen.scripts.timeslide_waveforms.compute_network_snr",
+        new=mock_compute_network_snr,
+    )
+    load_mock = patch(
+        "datagen.utils.timeslide_waveforms.load_psds",
+        return_value=mock_psds,
+    )
+
+    def run_main(shift, seed, i):
+        torch.manual_seed(seed)
+        with load_mock, ml4gw_mock:
+            return main(
+                0,
+                100,
+                shifts=[0, shift],
+                background_dir=background_mock,
+                spacing=6,
+                buffer=4,
+                waveform_duration=3,
+                prior=prior,
+                minimum_frequency=20,
+                reference_frequency=20,
+                sample_rate=256,
+                waveform_approximant=waveform_approximant,
+                highpass=32,
+                snr_threshold=4,
+                ifos=["H1", "L1"],
+                output_dir=tmp_path / f"test-{i}.h5",
+                seed=seed,
+            )
+
+    def compare(x1, x2, key, equal):
+        x1, x2 = x1[key][:], x2[key][:]
+        if equal:
+            assert (x1 == x2).all(), key
+        else:
+            assert (x1 != x2).all(), key
+
+    def verify_datasets(results1, results2, equal):
+        output_fname1, rejected_params1 = results1
+        output_fname2, rejected_params2 = results2
+
+        f1 = h5py.File(output_fname1)
+        f2 = h5py.File(output_fname2)
+        with f1, f2:
+            for dataset in ["parameters", "waveforms"]:
+                for key in f1[dataset].keys():
+                    if key in ["gps_time", "shift", "snr"] and not equal:
+                        # timestamps should be equal in all cases
+                        # 0 values of shifts will be same
+                        # we're faking SNRs so those will be same too
+                        continue
+                    compare(f1[dataset], f2[dataset], key, equal)
+
+        f1 = h5py.File(rejected_params1)
+        f2 = h5py.File(rejected_params2)
+        with f1, f2:
+            dataset = "parameters"
+            for key in f1[dataset].keys():
+                if key == "snr" and not equal:
+                    continue
+                compare(f1[dataset], f2[dataset], key, equal)
+
+    # check that running with the same seed
+    # generates the same results
+    results1 = run_main(1, 42, 1)
+    results2 = run_main(1, 42, 2)
+    verify_datasets(results1, results2, True)
+
+    # now check that running with the same seed but
+    # using different shift generates different results
+    results3 = run_main(2, 42, 3)
+    verify_datasets(results1, results3, False)
+
+    # finally verify that using this shift/seed
+    # combination again once again generates
+    # identical results
+    results4 = run_main(2, 42, 4)
+    verify_datasets(results3, results4, True)
