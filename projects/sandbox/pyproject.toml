@@ -37,7 +37,7 @@ inference_batch_size = 128
 inference_psd_length = 64
 training_psd_length = 8
 
-waveform_duration = 4
+waveform_duration = 8
 reference_frequency = 50
 minimum_frequency = 20
 highpass = 32
