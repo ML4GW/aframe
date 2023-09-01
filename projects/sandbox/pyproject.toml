@@ -23,7 +23,7 @@ global_seed = 42
 
 train_start = 1240579783
 train_stop = 1241443783  # 10 day train window
-test_stop = 1241875783  # 1244035783 # 30 day test window
+test_stop = 1244035783 # 30 day test window
 
 channel = "DCS-CALIB_STRAIN_CLEAN_C01"
 frame_type = "HOFT_C01"
@@ -31,7 +31,7 @@ state_flag = "DCS-ANALYSIS_READY_C01:1"
 resnet = {layers = [3, 4, 6, 3], norm_groups = 16}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
-Tb = 864000  # 31536000  # 1 year of background
+Tb = 31536000  # 1 year of background
 inference_sampling_rate = 2
 inference_batch_size = 128
 inference_psd_length = 64
