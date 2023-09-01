@@ -172,18 +172,6 @@ def end_o3_ratesandpops(
     return prior, detector_frame_prior
 
 
-def mass_condition_uniform(reference_params, mass_1):
-    """
-    Return a dictionary that can be interpreted by Bilby's
-    `ConditionalUniform` to set the maximum value of `mass_2`
-    to be whatever was drawn for `mass_1`
-    """
-    return dict(
-        minimum=reference_params["minimum"],
-        maximum=mass_1,
-    )
-
-
 def power_law_dip_break():
     """
     Create a Bilby `PriorDict` from a set of sampled parameters
@@ -216,7 +204,7 @@ def gaussian_masses(
     """
     Construct a gaussian bilby prior for masses.
 
-    Masses are defined in the detector frame.
+    Masses are defined in the source frame.
 
     Args:
         m1:
@@ -245,7 +233,7 @@ def gaussian_masses(
         name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
     )
 
-    detector_frame_prior = True
+    detector_frame_prior = False
     return prior, detector_frame_prior
 
 
@@ -269,7 +257,7 @@ def log_normal_masses(
     """
     Construct a log normal bilby prior for masses.
 
-    Masses are defined in the detector frame.
+    Masses are defined in the source frame.
 
     Args:
         m1:
@@ -303,5 +291,5 @@ def log_normal_masses(
         name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
     )
 
-    detector_frame_prior = True
+    detector_frame_prior = False
     return prior, detector_frame_prior
