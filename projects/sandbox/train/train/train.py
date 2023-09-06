@@ -3,6 +3,7 @@ from math import pi
 from pathlib import Path
 from typing import List, Optional
 
+import torch
 from train import utils as train_utils
 from train import validation as valid_utils
 from train.augmentations import SnrRescaler, SnrSampler
@@ -11,6 +12,7 @@ from train.augmentor import AframeBatchAugmentor, AugmentedDataset
 from aframe.architectures.preprocessor import PsdEstimator
 from aframe.logging import configure_logging
 from aframe.trainer import trainify
+from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.distributions import Cosine, Uniform
 from ml4gw.transforms import Whiten
 
@@ -229,7 +231,7 @@ def main(
     # create objects that we'll use for whitening the data
     fast = highpass is not None
     psd_estimator = PsdEstimator(
-        window_length, sample_rate, fftlength, fast=fast
+        window_length, sample_rate, fftlength, fast=fast, average="median"
     )
     whitener = Whiten(fduration, sample_rate, highpass).to(device)
 
@@ -324,24 +326,29 @@ def main(
     waveforms_per_batch = batch_size * waveform_prob
     batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
 
-    # hard-coding this up here so nothing accidentally gets out of sync
-    chunks_per_epoch = 8
-    train_dataset = AugmentedDataset(
-        background_fnames,
+    train_dataset = Hdf5TimeSeriesDataset(
+        fnames=background_fnames,
         channels=ifos,
-        kernel_length=sample_length,
-        sample_rate=sample_rate,
+        kernel_size=int(sample_length * sample_rate),
         batch_size=batch_size,
-        # TODO: do we just add args for all of these,
-        # or set some sensible defaults?
-        reads_per_chunk=10,
-        chunk_length=1024,
-        batches_per_chunk=int(batches_per_epoch / chunks_per_epoch),
-        chunks_per_epoch=chunks_per_epoch,
+        batches_per_epoch=batches_per_epoch,
         coincident=False,
-        device=device,
-        pin_memory="cuda" in device,
     )
-    train_dataset.map(augmentor)
 
-    return train_dataset, validator, None
+    kwargs = {}
+    if seed is not None:
+        g = torch.Generator()
+        g.manual_seed(seed)
+        kwargs["generator"] = g
+        kwargs["worker_init_fn"] = train_utils.seed_worker
+
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset,
+        num_workers=4,
+        pin_memory=True,
+        pin_memory_device=device,
+        **kwargs,
+    )
+    train_it = AugmentedDataset(train_dataloader, augmentor, device)
+
+    return train_it, validator, None

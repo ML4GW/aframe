@@ -10,7 +10,6 @@ from train.augmentations import (
 )
 
 import ml4gw.gw as gw
-from ml4gw.dataloading import ChunkedDataset
 from ml4gw.utils.slicing import sample_kernels
 
 if TYPE_CHECKING:
@@ -241,16 +240,15 @@ class AframeBatchAugmentor(torch.nn.Module):
         return X, y
 
 
-class AugmentedDataset(ChunkedDataset):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.maps = []
+class AugmentedDataset:
+    def __init__(self, dataloader, fn, device):
+        self.dataloader = dataloader
+        self.fn = fn
+        self.device = device
 
-    def map(self, fn):
-        self.maps.append(fn)
+    def __len__(self):
+        return len(self.dataloader)
 
-    def iter_epoch(self):
-        for X in super().iter_epoch():
-            for fn in self.maps:
-                X = fn(X)
-            yield X
+    def __iter__(self):
+        for X in self.dataloader:
+            yield self.fn(X[0].to(self.device))

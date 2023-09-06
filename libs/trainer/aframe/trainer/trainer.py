@@ -32,7 +32,7 @@ def train_for_one_epoch(
         with torch.autocast("cuda", enabled=scaler is not None):
             predictions = model(samples)
             loss = criterion(predictions, targets)
-        train_loss += loss.item()
+        train_loss += loss.item() * len(samples)
         samples_seen += len(samples)
 
         if scaler is not None:
