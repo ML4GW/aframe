@@ -341,12 +341,12 @@ def main(
         g.manual_seed(seed)
         kwargs["generator"] = g
         kwargs["worker_init_fn"] = train_utils.seed_worker
-
+    if "cuda" in device:
+        kwargs["pin_memory"] = True
+        kwargs["pin_memory_device"] = device
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         num_workers=4,
-        pin_memory=True,
-        pin_memory_device=device,
         **kwargs,
     )
     train_it = AugmentedDataset(train_dataloader, augmentor, device)
