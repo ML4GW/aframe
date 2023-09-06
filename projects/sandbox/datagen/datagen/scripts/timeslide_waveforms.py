@@ -280,7 +280,6 @@ def deploy(
     logdir: Path,
     accounting_group_user: str,
     accounting_group: str,
-    state_flag: Optional[str] = None,
     request_memory: int = 6000,
     request_disk: int = 1024,
     force_generation: bool = False,
