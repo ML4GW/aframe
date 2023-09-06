@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 import h5py
+from datagen.utils import get_channels, get_state_flags
 from typeo import scriptify
 
 from aframe.deploy import condor
@@ -215,13 +216,31 @@ def main(
     Returns: The `Path` of the output file
     """
     authenticate()
-    channels = [f"{ifo}:{channel}" for ifo in ifos]
-    data = fetch_timeseries(channels, start, stop)
-    data = data.resample(sample_rate)
-    for ifo in ifos:
-        data[ifo] = data.pop(f"{ifo}:{channel}")
+    channels = get_channels(ifos, channel)
 
-    data.write(writepath)
+    # handles https://github.com/gwpy/gwpy/issues/1612.
+    # remove once https://github.com/gwpy/gwpy/pull/1665
+    # has been merged, and we have updated gwpy to relevant version
+    try:
+        data = fetch_timeseries(channels, start, stop)
+    except ValueError as e:
+        # only catch ValueError if it's due to above issue
+        # otherwise raise the error as normal and have
+        # condor retry mechanism resolve it
+        msg = str(e)
+        logging.info(msg)
+        if msg.startswith("["):
+            logging.warning(f"Skipping segment due to ValueError: {e}")
+            return
+        else:
+            raise e
+    data = data.resample(sample_rate)
+    for ifo, channel in zip(ifos, channels):
+        data[ifo] = data.pop(channel)
+
+    # write using chunked storage for huge performance increases
+    # when loading data and training and inference times
+    data.write(writepath, chunks=(131072,), compression=None)
     return writepath
 
 
@@ -235,13 +254,13 @@ def deploy(
     ifos: List[str],
     sample_rate: float,
     channel: str,
-    state_flag: str,
     datadir: Path,
     logdir: Path,
     accounting_group: str,
     accounting_group_user: str,
+    state_flag: str = "DATA",
     max_segment_length: float = 20000,
-    request_memory: int = 32768,
+    request_memory: int = 32678,
     request_disk: int = 1024,
     force_generation: bool = False,
     verbose: bool = False,
@@ -271,10 +290,6 @@ def deploy(
             in Hz
         channel:
             Channel from which to fetch the timeseries
-        state_flag:
-            Identifier for which segments to use. Descriptions of flags
-            and there usage can be found here:
-            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags
         datadir:
             Directory to which data will be written
         logdir:
@@ -283,6 +298,12 @@ def deploy(
             Username of the person running the condor jobs
         accounting_group:
             Accounting group for the condor jobs
+        state_flag:
+            Identifier for which segments to use. Descriptions of flags
+            and there usage can be found here:
+            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags. The default,
+            "DATA", specifes use of segments defined in the open data release.
+            See gwosc.org for more information
         max_segment_length:
             Maximum length of a segment in seconds. Note that doing
             consecutive runs while changing `max_segment_length` will
@@ -308,8 +329,10 @@ def deploy(
     # first query segments that meet minimum length
     # requirement during the requested training period
     # authenticate()
+
+    state_flags = get_state_flags(ifos, state_flag)
     train_segments = query_segments(
-        [f"{ifo}:{state_flag}" for ifo in ifos],
+        state_flags,
         train_start,
         train_stop,
         minimum_train_length,
@@ -320,7 +343,7 @@ def deploy(
         )
 
     test_segments = query_segments(
-        [f"{ifo}:{state_flag}" for ifo in ifos],
+        state_flags,
         train_stop,
         test_stop,
         minimum_test_length,
@@ -377,9 +400,10 @@ def deploy(
         periodic_release="(HoldReasonCode =?= 26 || HoldReasonCode =?= 34) && (JobStatus == 5)",  # noqa
         periodic_remove="(JobStatus == 1) && MemoryUsage >= 7G",
         use_x509userproxy=True,
+        max_retries=5,
         **kwargs,
     )
     dag_id = condor.submit(subfile)
     logging.info(f"Launching background generation jobs with dag id {dag_id}")
-    condor.watch(dag_id, condordir, held=True)
+    condor.watch(dag_id, condordir, held=False)
     logging.info("Completed background generation jobs")

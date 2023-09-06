@@ -1,3 +1,5 @@
+import logging
+import re
 import time
 from pathlib import Path
 from typing import List, Tuple
@@ -76,3 +78,18 @@ def calc_segment_injection_times(
     spacing += waveform_duration
     injection_times = np.arange(start + buffer, stop - buffer, spacing)
     return injection_times
+
+
+def segments_from_directory(path: Path):
+    fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
+    segments = []
+    for fname in path.iterdir():
+        match = fname_re.search(fname.name)
+        if match is None:
+            logging.warning(f"Couldn't parse file {fname.name}")
+
+        start = float(match.group("t0"))
+        duration = float(match.group("length"))
+        stop = start + duration
+        segments.append([start, stop])
+    return segments

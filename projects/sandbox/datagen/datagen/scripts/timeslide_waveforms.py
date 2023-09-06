@@ -23,7 +23,6 @@ from ml4gw.gw import (
     compute_observed_strain,
     get_ifo_geometry,
 )
-from mldatafind.segments import query_segments
 
 
 @scriptify
@@ -261,7 +260,6 @@ def main(
 def deploy(
     start: float,
     stop: float,
-    state_flag: str,
     Tb: float,
     ifos: List[str],
     shifts: Iterable[float],
@@ -282,6 +280,7 @@ def deploy(
     logdir: Path,
     accounting_group_user: str,
     accounting_group: str,
+    state_flag: Optional[str] = None,
     request_memory: int = 6000,
     request_disk: int = 1024,
     force_generation: bool = False,
@@ -296,10 +295,6 @@ def deploy(
             GPS time of the beginning of the testing dataset
         stop:
             GPS time of the end of the testing dataset
-        state_flag:
-            Identifier for which segments to use. Descriptions of flags
-            and there usage can be found here:
-            https://wiki.ligo.org/DetChar/DataQuality/AligoFlags
         Tb:
             The length of background time in seconds to be generated via
             time shifts
@@ -401,10 +396,8 @@ def deploy(
         )
         return
 
-    # query segments and calculate shifts required
-    # to accumulate desired background livetime
-    state_flags = [f"{ifo}:{state_flag}" for ifo in ifos]
-    segments = query_segments(state_flags, start, stop, min_segment_length)
+    # parse relevant segments based on files in background directory
+    segments = utils.segments_from_directory(datadir / "test" / "background")
     shifts_required = utils.get_num_shifts(segments, Tb, max(shifts))
 
     # create text file from which the condor job will read
