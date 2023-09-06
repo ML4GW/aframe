@@ -1,7 +1,4 @@
 import logging
-import re
-import sys
-from io import StringIO
 from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
@@ -72,36 +69,26 @@ class H5Dataset(np.ndarray):
 
 @pytest.fixture
 def h5py_mock(background, glitches, glitch_times, waveforms, ifos):
-    def mock(fname, _):
+    def mock(fname, mode):
         fname = str(fname)
         obj = Mock()
 
         if "background" in fname:
             hoft, times = background
             value = {ifo: hoft.view(H5Dataset) for ifo in ifos}
-            # for ifo in ifos:
-            #     dataset = MagicMock()
-            #     dataset.__len__ = lambda: len(times)
-            #     dataset.__getitem__.side_effect = hoft.__getitem__
-            #     dataset.attrs = {"x0": times[0]}
-            #     value[ifo] = dataset
-        elif "glitches" in fname:
-            value = {ifo: {} for ifo in ifos}
-            for i, ifo in enumerate(ifos):
-                sign = (-1) ** i
-                value[ifo]["glitches"] = sign * glitches
-                value[ifo]["times"] = glitch_times
         elif "signals" in fname:
             zeros = np.zeros((len(waveforms),))
             value = {i: zeros for i in ["dec", "ra", "psi"]}
             value["signals"] = waveforms
-        else:
+        elif "history" in fname or "batch" in fname and mode == "w":
             value = {}
+        else:
+            raise ValueError(fname)
 
         def exit(_, *exc_args):
-            if "history" in fname:
-                print("train_loss: ", value["train_loss"][0])
-            return obj
+            if "history" in fname and mode == "w":
+                with open(fname, "w") as f:
+                    f.write(str(value["train_loss"][0]))
 
         obj.__enter__ = lambda obj: value
         obj.__exit__ = exit
@@ -259,29 +246,16 @@ def test_train_for_seed(tmp_path, h5py_mock):
                 seed=seed,
             )
 
-        out = sys.stdout
-        new_out = StringIO()
-        sys.stdout = new_out
-        try:
-            train(
-                lambda n: ResNet(n, layers=[1, 1]),
-                outdir=tmp_path,
-                train_dataset=train_dataset,
-                validator=validator,
-                preprocessor=preprocessor,
-                max_epochs=1,
-            )
-        except Exception:
-            sys.stdout = out
-            print(new_out.getvalue())
-            raise
-        finally:
-            sys.stdout = out
-
-        train_loss = re.search("(?<=train_loss:  )[0-9.]+", new_out.getvalue())
-        if train_loss is None:
-            raise ValueError(new_out.getvalue())
-        return train_loss.group(0)
+        train(
+            lambda n: ResNet(n, layers=[1, 1]),
+            outdir=tmp_path,
+            train_dataset=train_dataset,
+            validator=validator,
+            preprocessor=preprocessor,
+            max_epochs=1,
+        )
+        with open(outdir / "history.h5", "r") as f:
+            return float(f.read())
 
     train_loss = run_pipeline(42, 0)
     assert run_pipeline(42, 1) == train_loss
