@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from typing import List, Tuple, TypeVar
 
@@ -8,6 +9,18 @@ import torch
 import ml4gw.gw as gw
 
 Tensor = TypeVar("Tensor", np.ndarray, torch.Tensor)
+
+
+def seed_everything(seed: int):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def split(X: Tensor, frac: float, axis: int) -> Tuple[Tensor, Tensor]:

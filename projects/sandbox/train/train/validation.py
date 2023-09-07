@@ -386,8 +386,7 @@ class Validator:
 
             X, psd = self.inject(X, psd)
             y = self.predict(model, X, psd)
-            y = y.reshape(self.num_views, -1)
-            y = y.mean(dim=0)
+            y = y.reshape(self.num_views, -1).mean(0)
             inj_preds.append(y)
 
         preds = torch.cat(preds)

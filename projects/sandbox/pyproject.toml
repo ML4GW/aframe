@@ -151,6 +151,7 @@ checkpoint_every = 3
 device = "cuda"
 profile = false
 use_amp = true
+seed = "${base.global_seed}"
 
 # arch parameters
 commands.resnet = "${base.resnet}"
