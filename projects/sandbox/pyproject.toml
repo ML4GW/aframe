@@ -18,7 +18,7 @@ logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
-hopeless_snr_thresh = 5
+hopeless_snr_thresh = 3
 global_seed = 42
 
 train_start = 1240579783
