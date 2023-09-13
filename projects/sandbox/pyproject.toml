@@ -18,7 +18,7 @@ logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
-hopeless_snr_thresh = 4
+hopeless_snr_thresh = 3
 global_seed = 42
 
 train_start = 1240579783
@@ -32,7 +32,7 @@ resnet = {layers = [3, 4, 6, 3], norm_groups = 16}
 repository_directory = "${BASE_DIR}/model_repo/" 
 force_generation = false
 Tb = 31536000  # 1 year of background
-inference_sampling_rate = 2
+inference_sampling_rate = 4
 inference_batch_size = 128
 inference_psd_length = 64
 training_psd_length = 8
@@ -208,7 +208,7 @@ prior = "${base.testing_prior}"
 minimum_frequency = "${base.minimum_frequency}"
 reference_frequency = "${base.reference_frequency}"
 highpass = "${base.highpass}"
-spacing = 48
+spacing = 16
 buffer = 16
 snr_threshold = "${base.hopeless_snr_thresh}" 
 waveform_duration = "${base.waveform_duration}"
