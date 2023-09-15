@@ -24,6 +24,7 @@ conda = {append_base_ld_library_path = true}
 python = ">=3.9,<3.11"
 h5py = "^3.9.0"
 gwpy = "^2.1"
+gwosc = "<0.7"
 bilby = "^1.4"
 pyomicron = "^2.0.5"
 lalsuite = "7.19"
