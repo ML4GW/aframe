@@ -95,6 +95,8 @@ def main(
     y, err = compute.sensitive_volume(
         foreground.detection_statistic, weights, thresholds
     )
+    y *= v0
+    err *= v0
 
     plots = utils.make_grid(mass_combos)
     for i, (p, color) in enumerate(zip(plots, utils.palette)):
