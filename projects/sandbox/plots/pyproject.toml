@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "plots"
+version = "0.0.1"
+description = "Aframe performance summary plots"
+authors = ["Alec Gunny"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+bokeh = "^3.0"
+scipy = "^1.7"
+h5py = "^3.5"
+gwpy = "^3.0.2"
+typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
+
+"aframe.analysis" = {path = "../../../libs/analysis", develop = true}
+"aframe.logging" = {path = "../../../libs/logging", develop = true}
+"aframe.priors" = {path = "../../../libs/priors", develop = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
