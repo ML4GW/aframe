@@ -6,7 +6,7 @@ steps = [
     "train:train:resnet",
     "export:export-model:resnet",
     "infer:deploy-infer",
-    "vizapp:vizapp"
+    "plots:sensitive-volume"
 ]
 
 [tool.typeo.base]
@@ -253,19 +253,12 @@ psd_length = "${base.inference_psd_length}"
 # misc
 verbose = "${base.verbose}"
 
-[tool.typeo.scripts.vizapp]
-source_prior = "${base.testing_prior}"
-timeslides_results_dir = "${base.basedir}/timeslide_injections/"
-timeslides_strain_dir = "${base.datadir}/timeslide_injections"
-ifos = "${base.ifos}"
-start = "${base.train_stop}"
-stop = "${base.test_stop}"
-veto_definer_file = "./vetoes/H1L1-HOFT_C01_O3_CBC.xml"
-gate_paths = {"H1" = "./vetoes/H1-O3_GATES_1238166018-31197600.txt" , "L1" = "./vetoes/L1-O3_GATES_1238166018-31197600.txt"}
-train_data_dir = "${base.datadir}"
-sample_rate = "${base.sample_rate}"
-fduration = "${base.fduration}"
-valid_frac = "${base.valid_frac}"
-logdir = "${base.basedir}"
-cosmology = "${base.cosmology}"
-verbose = true
+[tool.typeo.scripts.sensitive-volume]
+background_file = "${base.basedir}/infer/background.h5"
+foreground_file = "${base.basedir}/infer/foreground.h5"
+rejected_params = "${base.datadir}/test/rejected-parameters.h5"
+output_fname = "${base.basedir}/infer/sensitive-volume.html"
+log_file = "${base.basedir}/log/sensitive_volume.log"
+max_far = 1000
+sigma = 0.1
+verbose = "${base.verbose}"

@@ -4,6 +4,9 @@ version = "0.0.1"
 description = "Aframe performance summary plots"
 authors = ["Alec Gunny"]
 
+[tool.poetry.scripts]
+sensitive-volume = "plots.sensitive_volume:main"
+
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 bokeh = "^3.0"
