@@ -237,17 +237,6 @@ def gaussian_masses(
     return prior, detector_frame_prior
 
 
-def get_log_normal_params(mean, std):
-    """
-    Calculate the mean and standard deviation of the normal
-    distribution associated with the lognormal distribution
-    defined by the given mean and standard deviation
-    """
-    sigma = np.log((std / mean) ** 2 + 1) ** 0.5
-    mu = 2 * np.log(mean / (mean**2 + std**2) ** 0.25)
-    return mu, sigma
-
-
 def log_normal_masses(
     m1: float,
     m2: float,
@@ -277,10 +266,8 @@ def log_normal_masses(
     """
     prior = PriorDict(conversion_function=mass_constraints)
 
-    mu1, sigma1 = get_log_normal_params(m1, sigma)
-    mu2, sigma2 = get_log_normal_params(m2, sigma)
-    prior["mass_1"] = LogNormal(name="mass_1", mu=mu1, sigma=sigma1)
-    prior["mass_2"] = LogNormal(name="mass_2", mu=mu2, sigma=sigma2)
+    prior["mass_1"] = LogNormal(name="mass_1", mu=np.log(m1), sigma=sigma)
+    prior["mass_2"] = LogNormal(name="mass_2", mu=np.log(m2), sigma=sigma)
     prior["mass_ratio"] = Constraint(0.02, 1)
 
     prior["redshift"] = UniformSourceFrame(

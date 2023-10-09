@@ -18,7 +18,7 @@ logdir = "${BASE_DIR}/log"
 sample_rate = 2048
 kernel_length = 1.5
 ifos = ['H1', 'L1']
-hopeless_snr_thresh = 3
+hopeless_snr_thresh = 4
 global_seed = 42
 
 train_start = 1240579783
@@ -235,7 +235,7 @@ sequence_id = 1001
 # timeslide args
 Tb = "${base.Tb}"
 shifts = [0, 1]
-throughput = 640
+throughput = 1000
 
 # data args
 sample_rate = "${base.sample_rate}"
