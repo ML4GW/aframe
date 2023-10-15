@@ -6,7 +6,9 @@ steps = [
     "train:train:resnet",
     "export:export-model:resnet",
     "infer:deploy-infer",
-    "plots:sensitive-volume"
+    "plots:sensitive-volume",
+    "plots:1D-param-hist",
+    "plots:2D-param-hist"
 ]
 
 [tool.typeo.base]
@@ -262,41 +264,6 @@ log_file = "${base.basedir}/log/sensitive_volume.log"
 max_far = 1000
 sigma = 0.1
 verbose = "${base.verbose}"
-
-
-[tool.typeo.scripts.analyze]
-data_dir = "${base.basedir}/timeslide_injections/"
-write_dir = "${base.basedir}/timeslide_injections/"
-results_dir = "${base.basedir}/results/" 
-window_length = 1.0
-norm_seconds = [0, 10, 100, 1000]
-t_clust = 5
-max_tb = 604800
-force = false
-log_file = "${base.logdir}/analyze.log"
-verbose = false
-
-[tool.typeo.scripts.vizapp]
-source_prior = "${base.testing_prior}"
-datadir = "${base.datadir}"
-basedir = "${base.basedir}"
-ifos = "${base.ifos}"
-start = "${base.train_stop}"
-stop = "${base.test_stop}"
-background_length = 64
-kernel_length = 1
-sample_rate = "${base.sample_rate}"
-fduration = "${base.fduration}"
-veto_definer_file = "./vetoes/H1L1-HOFT_C01_O3_CBC.xml"
-gate_paths = {"H1" = "./vetoes/H1-O3_GATES_1238166018-31197600.txt" , "L1" = "./vetoes/L1-O3_GATES_1238166018-31197600.txt"}
-inference_sampling_rate = "${base.inference_sampling_rate}"
-valid_frac = "${base.valid_frac}"
-#logdir = "${base.basedir}"
-cosmology = "${base.cosmology}"
-verbose = true
-integration_length = 1
-# arch parameters
-commands.resnet = "${base.resnet}"
 
 [tool.typeo.scripts.1D_param_hist]
 foreground_file = "${base.basedir}/infer/foreground.h5"
