@@ -18,6 +18,8 @@ typeo = {git = "https://github.com/ML4GW/typeo.git", branch = "main"}
 "aframe.analysis" = {path = "../../../libs/analysis", develop = true}
 "aframe.logging" = {path = "../../../libs/logging", develop = true}
 "aframe.priors" = {path = "../../../libs/priors", develop = true}
+python-ligo-lw = "^1.8.3"
+lalsuite = "^7.19"
 
 [build-system]
 requires = ["poetry-core"]

@@ -150,3 +150,19 @@ class RecoveredInjectionSet(TimeSlideEventSet, InterferometerResponseSet):
 
         idx = cls.get_idx_for_shift(events.time, responses.gps_time)
         return cls.join(events[idx], responses)
+
+    def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
+        # idx corresponds to the index of the shift
+        # (i.e. which ifo to apply vetoes for)
+        shifts = self.shift[:, idx]
+        times = self.time + shifts
+
+        mask = np.logical_and(vetos[:, :1] < times, vetos[:, 1:] > times)
+
+        # mark a background event as vetoed
+        # if it falls into _any_ of the segments
+        veto_mask = mask.any(axis=0)
+
+        # TODO: Should we adjust the num_injections parameter?
+        # or maybe add a num_vetoed parameter?
+        return self[~veto_mask]
