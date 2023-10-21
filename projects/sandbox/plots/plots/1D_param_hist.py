@@ -32,22 +32,8 @@ def main(
         for k in rejected.keys()
     }
 
-    labels = [
-        "mass_1",
-        "mass_2",
-        "redshift",
-        "psi",
-        "a_1",
-        "a_2",
-        "tilt_1",
-        "tilt_2",
-        "phi_12",
-        "phi_jl",
-        "ra",
-        "dec",
-        "theta_jn",
-        "snr",
-    ]
+    labels = list(rejected.keys())
+    labels.remove("phase")
 
     logging.info("Read in:")
     logging.info(f"\t{len(foreground)} foreground events")
@@ -92,7 +78,7 @@ def create_figure(x_var: str, data: dict, dist: str):
     elif dist == "Rej":
         title = "Normalized Rejected Distribution of {}".format(x_var)
     else:
-        logging.info("Not a Supported Distribution")
+        raise ValueError(f"{dist} is not a supported distribution")
 
     hist_dict = data
     hist = hist_dict[x_var][0]

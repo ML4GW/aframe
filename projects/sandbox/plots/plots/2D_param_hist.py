@@ -32,22 +32,8 @@ def main(
         for k in rejected.keys()
     }
 
-    labels = [
-        "mass_1",
-        "mass_2",
-        "redshift",
-        "psi",
-        "a_1",
-        "a_2",
-        "tilt_1",
-        "tilt_2",
-        "phi_12",
-        "phi_jl",
-        "ra",
-        "dec",
-        "theta_jn",
-        "snr",
-    ]
+    labels = list(rejected.keys())
+    labels.remove("phase")
 
     logging.info("Read in:")
     logging.info(f"\t{len(foreground)} foreground events")
@@ -79,7 +65,7 @@ def main(
     save(grid, filename=output_fname)
 
 
-def create_figure(x_var: str, y_var: str, data: dict[float], dist: str):
+def create_figure(x_var: str, y_var: str, data: dict, dist: str):
     if dist == "Fore":
         title = "2D Normalized Foreground Distribution"
     elif dist == "All":
@@ -87,7 +73,7 @@ def create_figure(x_var: str, y_var: str, data: dict[float], dist: str):
     elif dist == "Rej":
         title = "2D Normalized Rejected Distribution"
     else:
-        logging.info("Not a Supported Distribution")
+        raise ValueError(f"{dist} is not a supported distribution")
 
     (
         H,
