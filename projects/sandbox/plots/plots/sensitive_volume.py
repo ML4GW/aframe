@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import h5py
 import numpy as np
 from astropy.cosmology import Planck15 as cosmology
 from bokeh.io import save
@@ -76,6 +77,7 @@ def main(
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
     ifos = ["H1", "L1"]
+
     veto_parser = VetoParser(
         VETO_DEFINER_FILE,
         GATE_PATHS,
@@ -87,16 +89,16 @@ def main(
     catalog_vetos = get_catalog_vetoes(start, stop)
     categories = ["CAT1", "CAT2", "CAT3", "GATES", "CATALOG"]
     for cat in categories:
-        if cat == "CATALOG":
-            vetos = catalog_vetos
-        else:
-            vetos = veto_parser.get_vetoes(cat)
         for i, ifo in enumerate(ifos):
+            if cat == "CATALOG":
+                vetos = catalog_vetos
+            else:
+                vetos = veto_parser.get_vetoes(cat)[ifo]
             back_count = len(background)
             fore_count = len(foreground)
-            if len(vetos[ifo]) > 0:
-                background = background.apply_vetos(vetos[ifo], i)
-                foreground = foreground.apply_vetos(vetos[ifo], i)
+            if len(vetos) > 0:
+                background = background.apply_vetos(vetos, i)
+                foreground = foreground.apply_vetos(vetos, i)
             logging.info(
                 f"\t{back_count - len(background)} {cat} "
                 f"background events removed for ifo {ifo}"
@@ -151,10 +153,12 @@ def main(
     y *= v0
     err *= v0
 
-    # save raw data
-    np.savetxt(
-        output_dir / "sensitive-volume.txt", np.stack([thresholds, y, err]).T
-    )
+    with h5py.File(output_dir / "sensitive-volume.h5", "w") as f:
+        f.create_dataset("thresholds", data=thresholds)
+        for i, combo in enumerate(mass_combos):
+            g = f.create_group("-".join(map(str, combo)))
+            g.create_dataset("sv", data=y[i])
+            g.create_dataset("err", data=err[i])
 
     plots = utils.make_grid(mass_combos)
     for i, (p, color) in enumerate(zip(plots, utils.palette)):
