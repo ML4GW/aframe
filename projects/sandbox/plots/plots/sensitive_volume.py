@@ -8,7 +8,7 @@ from bokeh.io import save
 from bokeh.layouts import gridplot
 from plots import compute, utils
 from plots.gwtc3 import catalog_results
-from plots.vetoes import VetoParser
+from plots.vetoes import VetoParser, get_catalog_vetoes
 from typeo import scriptify
 
 from aframe.analysis.ledger.events import EventSet, RecoveredInjectionSet
@@ -49,7 +49,7 @@ def main(
     background_file: Path,
     foreground_file: Path,
     rejected_params: Path,
-    output_fname: Path,
+    output_dir: Path,
     log_file: Optional[Path] = None,
     max_far: float = 1000,
     sigma: float = 0.1,
@@ -83,9 +83,14 @@ def main(
         stop,
         ifos,
     )
-    categories = ["CAT1", "CAT2", "CAT3", "GATES"]
+
+    catalog_vetos = get_catalog_vetoes(start, stop)
+    categories = ["CAT1", "CAT2", "CAT3", "GATES", "CATALOG"]
     for cat in categories:
-        vetos = veto_parser.get_vetoes(cat)
+        if cat == "CATALOG":
+            vetos = catalog_vetos
+        else:
+            vetos = veto_parser.get_vetoes(cat)
         for i, ifo in enumerate(ifos):
             back_count = len(background)
             fore_count = len(foreground)
@@ -100,8 +105,6 @@ def main(
                 f"\t{fore_count - len(foreground)} {cat} "
                 f"foreground events removed for ifo {ifo}"
             )
-
-    # TODO: Should probably also remove injections in vetoe segments
 
     logging.info("Computing data likelihood under source prior")
     source, _ = end_o3_ratesandpops(cosmology)
@@ -147,6 +150,11 @@ def main(
     )
     y *= v0
     err *= v0
+
+    # save raw data
+    np.savetxt(
+        output_dir / "sensitive-volume.txt", np.stack([thresholds, y, err]).T
+    )
 
     plots = utils.make_grid(mass_combos)
     for i, (p, color) in enumerate(zip(plots, utils.palette)):
@@ -199,7 +207,7 @@ def main(
                 p.legend.title_text_font_style = "bold"
 
     grid = gridplot(plots, toolbar_location="right", ncols=2)
-    save(grid, filename=output_fname)
+    save(grid, filename=output_dir / "sensitive_volume.html")
 
 
 if __name__ == "__main__":
