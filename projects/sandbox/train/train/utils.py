@@ -1,6 +1,6 @@
 import random
 from pathlib import Path
-from typing import List, Tuple, TypeVar
+from typing import Iterable, List, Tuple, TypeVar
 
 import h5py
 import numpy as np
@@ -51,7 +51,7 @@ def _sort_key(fname: Path):
     return int(fname.stem.split("-")[-2])
 
 
-def get_background_fnames(data_dir: Path):
+def get_background_fnames(data_dir: Path, min_valid_duration: float):
     """
     Return list of background filenames in `data_dir` sorted
     by GPS start time of the data, which is assumed to be
@@ -60,20 +60,31 @@ def get_background_fnames(data_dir: Path):
     """
     fnames = data_dir.glob("*.hdf5")
     fnames = sorted(fnames, key=_sort_key)
-    return list(fnames)
+    durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
+
+    valid_fnames = []
+    valid_duration = 0
+    while valid_duration < min_valid_duration:
+        fname, duration = fnames.pop(-1), durations.pop(-1)
+        valid_duration += duration
+        valid_fnames.append(fname)
+    return list(fnames), valid_fnames
 
 
-def get_background(fname: Path):
+def get_background(fnames: Iterable[Path]):
     """
-    Load the background from the given HDF5 file
+    Load the background from the given HDF5 files
     """
-    background = []
-    with h5py.File(fname, "r") as f:
-        ifos = list(f.keys())
-        for ifo in ifos:
-            hoft = f[ifo][:]
-            background.append(hoft)
-    return np.stack(background)
+    data = []
+    for fname in fnames:
+        background = []
+        with h5py.File(fname, "r") as f:
+            ifos = list(f.keys())
+            for ifo in ifos:
+                hoft = f[ifo][:]
+                background.append(hoft)
+        data.append(np.stack(background))
+    return np.stack(data)
 
 
 def get_waveforms(

@@ -41,7 +41,7 @@ class TestValidator:
     @pytest.fixture
     def background(self):
         x = np.arange(128)
-        return np.stack([x, -x])
+        return np.stack([x, -x])[None]
 
     @pytest.fixture
     def waveforms(self):
@@ -81,7 +81,8 @@ class TestValidator:
             device="cpu",
         )
 
-        assert validator.duration == 16
+        assert validator.num_segments == 1
+        assert validator.durations == [16]
         assert validator.kernel_size == 32
         assert validator.stride_size == 4
         assert validator.pool_size == 8
@@ -104,11 +105,11 @@ class TestValidator:
     def test_shift_background(self, background):
         mock = Mock()
         mock.sample_rate = 8
-        mock.background = background
+        mock.current_segment = background[0]
         mock.num_channels = 2
 
         background = Validator.shift_background(mock, 0)
-        np.testing.assert_array_equal(background, mock.background)
+        np.testing.assert_array_equal(background, mock.current_segment)
 
         background = Validator.shift_background(mock, 1)
         assert background.shape == (2, 120)
@@ -128,7 +129,7 @@ class TestValidator:
 
     def test_iter_shift(self, background, psd_estimator, whitener):
         mock = Mock()
-        mock.background = background
+        mock.current_segment = background[0]
         mock.sample_rate = 8
         mock.duration = 16
         mock.batch_size = 4
