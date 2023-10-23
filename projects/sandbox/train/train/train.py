@@ -247,7 +247,11 @@ def main(
     )
 
     if valid_waveforms is not None:
-        logging.info(f"Loading validation segments {valid_fnames}")
+        logging.info(
+            "Loading validation segments "
+            f"{','.join(fname.stem for fname in valid_fnames)} "
+            f"from directory {background_dir}"
+        )
         valid_background = train_utils.get_background(valid_fnames)
 
         # set up a tracker which will perform evaluation,
@@ -330,7 +334,6 @@ def main(
     # and to balance compute vs. validation resolution
     waveforms_per_batch = batch_size * waveform_prob
     batches_per_epoch = int(4 * len(waveforms) / waveforms_per_batch)
-    print(background_fnames, type(background_fnames))
     train_dataset = Hdf5TimeSeriesDataset(
         fnames=background_fnames,
         channels=ifos,
