@@ -6,6 +6,8 @@ authors = ["Alec Gunny"]
 
 [tool.poetry.scripts]
 sensitive-volume = "plots.sensitive_volume:main"
+1D-param-hist = "plots.1D_param_hist:main"
+2D-param-hist = "plots.2D_param_hist:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
