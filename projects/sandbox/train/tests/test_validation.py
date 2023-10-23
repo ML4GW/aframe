@@ -91,7 +91,7 @@ class TestValidator:
 
     def test_steps_for_shift(self):
         mock = Mock()
-        mock.duration = 20
+        mock.current_duration = 20
         mock.kernel_length = 2
         mock.stride = 1.5
         mock.num_channels = 2
@@ -131,7 +131,7 @@ class TestValidator:
         mock = Mock()
         mock.current_segment = background[0]
         mock.sample_rate = 8
-        mock.duration = 16
+        mock.current_duration = 16
         mock.batch_size = 4
         mock.num_channels = 2
         mock.device = "cpu"

@@ -146,7 +146,7 @@ class Validator:
         background:
             Tensor containing background data for each interferometer.
             Expected to be of shape
-            ∂`(num_segments, num_channels, num_samples)`.
+            `(num_segments, num_channels, num_samples)`.
         waveforms:
             Tensor containing injections for each interferometer
         psd_estimator:

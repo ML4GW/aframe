@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
@@ -136,7 +137,7 @@ def test_train(
         "background-10000-1024.h5",
         "background-20024-1024.h5",
     ]
-    valid_fnames = ["background-21048-15001.h5"]
+    valid_fnames = [Path("background-21048-15001.h5")]
     background_fnames_mock = patch(
         "train.utils.get_background_fnames",
         return_value=(background_fnames, valid_fnames),
@@ -199,7 +200,7 @@ def test_train_for_seed(tmp_path, h5py_mock):
         "background-10000-1024.h5",
         "background-20024-1024.h5",
     ]
-    valid_fnames = ["background-21048-15001.h5"]
+    valid_fnames = [Path("background-21048-15001.h5")]
     waveforms_mock = patch(
         "train.utils.get_waveforms",
         return_value=(
