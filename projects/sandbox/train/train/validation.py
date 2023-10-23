@@ -1,3 +1,4 @@
+import itertools
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -143,7 +144,9 @@ class Validator:
             checkpoints, and determines if training should be
             stopped
         background:
-            Tensor containing background data for each interferometer
+            Tensor containing background data for each interferometer.
+            Expected to be of shape
+            `(num_segments, num_channels, num_samples)`.
         waveforms:
             Tensor containing injections for each interferometer
         psd_estimator:
@@ -232,8 +235,12 @@ class Validator:
 
     def __post_init__(self):
         self.auroc = BinaryAUROC(max_fpr=self.max_fpr)
-        self.duration = self.background.shape[-1] / self.sample_rate
-        self.num_channels = len(self.background)
+        self.num_segments = self.background.shape[0]
+        self.durations = [
+            background.shape[-1] / self.sample_rate
+            for background in self.background
+        ]
+        self.num_channels = self.background.shape[1]
         self.kernel_size = int(self.kernel_length * self.sample_rate)
         self.stride_size = int(self.stride * self.sample_rate)
         self.pool_size = int(self.pool_length / self.stride)
@@ -252,7 +259,7 @@ class Validator:
         shift = abs(shift)  # doesn't matter which direction
         max_shift = shift * (self.num_channels - 1)
         return (
-            self.duration - max_shift - self.kernel_length
+            self.current_duration - max_shift - self.kernel_length
         ) // self.stride + 1
 
     def shift_background(self, shift: float):
@@ -261,11 +268,11 @@ class Validator:
         the first being shifted by `n * shift` seconds
         """
         if not shift:
-            return self.background
+            return self.current_segment
 
         shift_size = int(abs(shift) * self.sample_rate)
         max_shift_size = shift_size * (self.num_channels - 1)
-        remainder_size = self.background.shape[-1] - max_shift_size
+        remainder_size = self.current_segment.shape[-1] - max_shift_size
         start_idxs = [i * shift_size for i in range(self.num_channels)]
         if shift < 0:
             start_idxs.reverse()
@@ -273,7 +280,9 @@ class Validator:
         return np.stack(
             [
                 ifo_background[start : start + remainder_size]
-                for start, ifo_background in zip(start_idxs, self.background)
+                for start, ifo_background in zip(
+                    start_idxs, self.current_segment
+                )
             ]
         )
 
@@ -404,7 +413,14 @@ class Validator:
         predictions, inj_predictions = [], []
         T = 0
         i = 1
+        seg_it = itertools.cycle(range(self.num_segments))
         while T < self.livetime:
+            j = next(seg_it)
+            self.current_segment, self.current_duration = (
+                self.background[j],
+                self.durations[j],
+            )
+
             shift = i * self.shift
             preds, inj_preds = self.infer_shift(model, shift)
             predictions.append(preds)
@@ -414,10 +430,15 @@ class Validator:
             # do the positive and negative shifts
             # for each shift value
             max_shift = abs(shift) * (self.num_channels - 1)
-            T += self.duration - max_shift
-            i *= -1
-            if i > 0:
-                i += 1
+            T += self.current_duration - max_shift
+
+            # increment the shift counter
+            # once we've analyzed all the segments
+            # at this current shift
+            if j == (self.num_segments - 1):
+                i *= -1
+                if i > 0:
+                    i += 1
 
         predictions = torch.cat(predictions)
         inj_predictions = torch.cat(inj_predictions)
