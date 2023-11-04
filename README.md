@@ -36,14 +36,14 @@ mkdir -p ~/cilogon_cert ~/aframe/data ~/aframe/results
 ```
 
 You'll also want to set the `KRB5_KTNAME` and `X509_USER_PROXY` environment variables (for data authentication) 
-and the `LIGO_USER` and `LIGO_GROUP` environment variables (for submitting jobs to condor) in 
-your `~/.bash_profile` so that they are set every time you login:
+and the `LIGO_USERNAME` and `LIGO_GROUP` environment variables (for submitting jobs to condor) in 
+your `~/.bash_profile` (or, the equivalent for whichever shell you are using) so that they are set every time you login:
 
 ```console
 echo export KRB5_KTNAME=~/.kerberos/ligo.org.keytab >> ~/.bash_profile
 echo export X509_USER_PROXY=~/cilogon_cert/CERT_KEY.pem >> ~/.bash_profile
-echo export LIGO_USER=$USER >> ~/.bash_profile
-echo export LIGO_USER=ligo.dev.o4.cbc.explore.test >> ~/.bash_profile
+echo export LIGO_USERNAME=$USER >> ~/.bash_profile
+echo export LIGO_GROUP=ligo.dev.o4.cbc.explore.test >> ~/.bash_profile
 ```
 
 Finally, running
