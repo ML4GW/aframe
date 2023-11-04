@@ -10,9 +10,15 @@ authors = [
 license = "MIT"
 
 [tool.poetry.scripts]
+# background
 generate-background = "datagen.scripts.background:main"
 deploy-background = "datagen.scripts.background:deploy"
+
+# glitches
 generate-glitches = "datagen.scripts.glitches:main"
+collect-glitches = "datagen.scripts.glitches:collect_glitches"
+
+# timeslide waveforms
 generate-waveforms = "datagen.scripts.waveforms:main"
 generate-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:main"
 deploy-timeslide-waveforms = "datagen.scripts.timeslide_waveforms:deploy"
