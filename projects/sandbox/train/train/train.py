@@ -234,6 +234,12 @@ def main(
     sample_length = window_length + psd_length
     fftlength = fftlength or window_length
 
+    if psd_length < window_length:
+        raise ValueError(
+	     "Can't have psd length shorter than "
+	     "window length, {} < {}".format(psd_length, window_length)
+        )
+
     # create objects that we'll use for whitening the data
     fast = highpass is not None
     psd_estimator = PsdEstimator(
