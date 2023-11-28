@@ -12,6 +12,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, ':build:')"
     permissions:
       contents: read
       packages: write
@@ -50,7 +51,7 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity build --sandbox /tmp/app train.def && tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
+          -c 'singularity build --sandbox /tmp/app apptainer.def && tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
 
     # now copy the fs contents into an empty
     # container and push it to the registry
