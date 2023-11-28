@@ -12,7 +12,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, ':build:')"
+
+    # only run container build if commit message explicitly asks for it
+    if: "contains(github.event.head_commit.message, ':build:')"
     permissions:
       contents: read
       packages: write
@@ -47,7 +49,7 @@ jobs:
         docker run \
           --rm \
           -v ${{ github.workspace }}:/opt/aframe \
-          --workdir /opt/aframe/aframe/train \
+          --workdir /opt/aframe/projects/${{ matrix.project }} \
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
