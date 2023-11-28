@@ -66,4 +66,4 @@ jobs:
       run: |
         export TAG_LC=${TAG,,}
         cat app.tar.gz | docker import --change "ENV PATH=${{ env.path }}" - ${TAG_LC}
-        docker push ${{env.tag }}
+        docker push ${TAG_LC}
