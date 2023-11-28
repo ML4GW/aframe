@@ -58,7 +58,7 @@ jobs:
     - 
       name: build docker image
       env:
-        tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ gitub.ref_name }}
+        tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
         path: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       run: |
         export TAG_LC=${TAG,,}
