@@ -1,9 +1,0 @@
-[submodule "hermes"]
-	path = hermes
-	url = git@github.com:ML4GW/hermes.git
-[submodule "ml4gw"]
-	path = ml4gw
-	url = git@github.com:ML4GW/ml4gw.git
-[submodule "mldatafind"]
-	path = mldatafind
-	url = git@github.com:ML4GW/mldatafind.git

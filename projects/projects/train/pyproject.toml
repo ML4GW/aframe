@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "train"
+version = "0.1.0"
+description = "Train aframe"
+authors = [
+    "Ethan Marx <ethan.marx@ligo.org>",
+    "Alec Gunny <alecg@mit.edu>",
+    "Will Benoit <benoit090@umn.edu>"
+]
+license = "MIT"
+#readme = "README.md"
+
+[tool.poetry.scripts]
+train = "train.main:main"
+
+[tool.poetry.dependencies]
+# core dependencies
+python = ">=3.9,<3.11"
+torchmetrics = "^0.11"
+lightning = "^2.0"
+jsonargparse = {version = "^4.17", extras = ["signatures"]}
+
+# plotting/logging dependencies
+wandb = "^0.15"
+bokeh = "^3.0"
+
+# hyperparameter search
+ray = {version = "^2.8.0", extras = ["default", "tune"]}
+
+# dependencies for s3 support. Should probably put these
+# in their own group, but only including boto3 separately
+# to restrict its version because the whl downloads during
+# the solve were insanely slow
+boto3 = "^1.30"
+fsspec = {version = "^2023.10", extras=["s3"]}
+
+# local deps
+utils = {path = "../utils", develop = true}
+ml4gw = {path = "../../ml4gw", develop = true}
+aframe = {path = "../..", develop = true}
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu116"
+secondary = true
+default = false
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

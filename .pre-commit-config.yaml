@@ -5,24 +5,19 @@ repos:
   - id: isort
     name: isort (python)
 - repo: https://github.com/psf/black
-  rev: 22.3.0
+  rev: 23.10.1
   hooks:
-    - id: black
-      additional_dependencies: ["click==8.0.4"]
-      language_version: python3.9
-      args:
-      - "--config"
-      - "./pyproject.toml"
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
-    hooks:
-    - id: end-of-file-fixer
-    - id: check-yaml
--   repo: https://github.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-    - id: flake8
-- repo: https://github.com/dhruvmanila/remove-print-statements
-  rev: v0.5.2  
+  - id: black
+    language_version: python3
+    args:
+    - "--config"
+    - "./pyproject.toml"
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
   hooks:
-  - id: remove-print-statements
+  - id: end-of-file-fixer
+  - id: check-yaml
+- repo: https://github.com/pycqa/flake8
+  rev: 3.9.2
+  hooks:
+  - id: flake8
