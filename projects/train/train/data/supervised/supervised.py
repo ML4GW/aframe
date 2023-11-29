@@ -15,7 +15,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         mute_frac: Optional[float] = None,
         **kwargs,
     ) -> None:
-        super.__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         upweight, cross_term = 1, 1
         if swap_frac is not None and 0 < swap_frac < 1:
             self.swapper = aug.ChannelSwapper(swap_frac)
@@ -30,7 +30,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             self.swapper = None
 
         if mute_frac is not None and 0 < mute_frac < 1:
-            self.mute = aug.ChannelMuter(mute_frac)
+            self.muter = aug.ChannelMuter(mute_frac)
             upweight -= mute_frac
             cross_term *= mute_frac
         elif mute_frac is not None:
@@ -72,19 +72,17 @@ class SupervisedAframeDataset(BaseAframeDataset):
         idx = torch.where(mask)[0]
         if self.swapper is not None:
             kernels, swap_indices = self.swapper(kernels)
-            mask[idx[swap_indices]] = 0
         if self.muter is not None:
             kernels, mute_indices = self.muter(kernels)
-            mask[idx[mute_indices]] = 0
-
-        kernels, swap_indices = self.swapper(kernels)
-        kernels, mute_indices = self.muter(kernels)
 
         # inject the IFO responses and whiten
         X[mask] += kernels
         X = self.whitener(X, psds)
 
-        # make labels
+        # make labels, turning off injection mask where
+        # we swapped or muted
+        mask[idx[swap_indices]] = 0
+        mask[idx[mute_indices]] = 0
         y = torch.zeros((X.size(0), 1), device=X.device)
         y[mask] += 1
         return X, y

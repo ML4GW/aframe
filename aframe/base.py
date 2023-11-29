@@ -1,14 +1,18 @@
+import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
 
+import kr8s
 import law
 import luigi
 from law.contrib import singularity
+from ray_kube import KubernetesRayCluster
 
 from aframe.config import aframe as Config
 
 root = Path(__file__).resolve().parent.parent
+logger = logging.getLogger("luigi-interface")
 
 
 class AframeSandbox(singularity.SingularitySandbox):
@@ -19,6 +23,19 @@ class AframeSandbox(singularity.SingularitySandbox):
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
         return volumes
+
+
+law.config.update(
+    {
+        "aframe": {
+            "stagein_dir_name": "stagein",
+            "stageout_dir_name": "stageout",
+            "law_executable": "law",
+        },
+        "aframe_env": {},
+        "aframe_volumes": {},
+    }
+)
 
 
 class AframeTask(law.SandboxTask):
@@ -37,6 +54,10 @@ class AframeTask(law.SandboxTask):
             raise ValueError(
                 f"Could not find path to container image {self.image}"
             )
+
+    @property
+    def singularity_forward_law(self) -> bool:
+        return False
 
     @property
     def ifos(self):
@@ -64,3 +85,45 @@ class AframeTask(law.SandboxTask):
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
         return env
+
+
+class AframeRayTask(AframeTask):
+    container = luigi.Parameter(default="")
+    kubeconfig = luigi.Parameter(default="")
+    namespace = luigi.Parameter(default="")
+    label = luigi.Parameter(default="")
+
+    def configure_cluster(self, cluster):
+        return cluster
+
+    def sandbox_before_run(self):
+        if not self.container:
+            self.cluster = None
+            return
+
+        api = kr8s.api(kubeconfig=self.kubeconfig or None)
+        cluster = KubernetesRayCluster(
+            self.container,
+            num_workers=self.cfg.ray_worker.replicas,
+            worker_cpus=self.cfg.ray_worker.cpus,
+            worker_memory=self.cfg.ray_worker.memory,
+            gpus_per_worker=self.cfg.ray_worker.gpus,
+            head_cpus=self.cfg.ray_head.cpus,
+            head_memory=self.cfg.ray_head.memory,
+            min_gpu_memory=self.cfg.ray_worker.min_gpu_memory,
+            api=api,
+            label=self.label or None,
+        )
+        cluster = self.configure_cluster(cluster)
+
+        self.__logger.info("Creating ray cluster")
+        cluster.create()
+        cluster.wait()
+        self.__logger.info("ray cluster online")
+        self.cluster = cluster
+
+    def sandbox_after_run(self):
+        if self.cluster is not None:
+            self.__logger.info("Deleting ray cluster")
+            self.cluster.delete()
+            self.cluster = None

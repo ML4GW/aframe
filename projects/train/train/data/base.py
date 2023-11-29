@@ -14,7 +14,7 @@ from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
-from train.validation import get_timeslides
+from train.metrics import get_timeslides
 from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
@@ -204,8 +204,8 @@ class BaseAframeDataset(pl.LightningDataModule):
                 *params,
                 snrs=self.hparams.snr_thresh,
                 psds=psd,
-                cross=cross.to(device),
-                plus=plus.to(device),
+                cross=cross[slc].to(device),
+                plus=plus[slc].to(device),
             )
             responses.append(response.cpu())
         return torch.cat(responses, dim=0)
@@ -252,13 +252,14 @@ class BaseAframeDataset(pl.LightningDataModule):
         total = int(len(dataset) * self.hparams.valid_frac)
         stop, start = self.get_slice_bounds(total, world_size, rank)
 
-        self._logger.info(f"Loading {stop - start} validation signals")
+        self._logger.info(f"Loading {start - stop} validation signals")
         start, stop = -start, -stop or None
         cross, plus = self.load_signals(dataset, start, stop)
 
         params = {}
         for param in ["dec", "psi", "ra"]:
             params[param] = torch.Tensor(f[param][start:stop])
+        params["phi"] = params.pop("ra")
         return cross, plus, params
 
     def load_val_background(self, f):
@@ -293,7 +294,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def setup(self, stage: str) -> None:
         device = self.get_local_device()
-        world_size, rank = self.get_world_size_and_rank
+        world_size, rank = self.get_world_size_and_rank()
         self._logger = self.get_logger(world_size, rank)
 
         with h5py.File(self.train_fnames[0], "r") as f:
@@ -380,10 +381,8 @@ class BaseAframeDataset(pl.LightningDataModule):
             # much data from CPU to GPU. Once everything is
             # on-device, pre-inject signals into background.
             shift = self.timeslides[timeslide_idx].shift_size
-            (X_bg, psd_bg), (X_fg, psd_fg) = self.build_val_batches(
-                background, signals
-            )
-            batch = (shift, (X_bg, psd_bg), (X_fg, psd_fg))
+            X_bg, X_fg = self.build_val_batches(background, signals)
+            batch = (shift, X_bg, X_fg)
         return batch
 
     def pad_waveforms(self, waveforms, kernel_size):

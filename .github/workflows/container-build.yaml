@@ -28,14 +28,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    - 
-      name: build docker image
-      env:
-        tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
-        path: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      run: |
-        export TAG_LC=${tag,,}
-        echo $TAG_LC
 
     - 
       name: Log in to the Container registry

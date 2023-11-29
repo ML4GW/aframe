@@ -4,6 +4,7 @@ import lightning.pytorch as pl
 import torch
 
 from train.architectures import Architecture
+from train.callbacks import ModelCheckpoint
 from train.metrics import TimeSlideAUROC
 
 Tensor = torch.Tensor
@@ -143,8 +144,8 @@ class AframeBase(pl.LightningModule):
         )
 
     def configure_callbacks(self) -> Sequence[pl.Callback]:
-        checkpoint = pl.callbacks.ModelCheckpoint(
-            monitor=self.metric_name,
+        checkpoint = ModelCheckpoint(
+            monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
             save_last=True,
             auto_insert_metric_name=False,

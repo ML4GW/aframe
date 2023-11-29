@@ -1,5 +1,6 @@
 from typing import Literal, Optional
 
+from torch import Tensor
 from torchtyping import TensorType
 
 from ml4gw.nn.resnet_1d import NormLayer, ResNet1D
@@ -18,7 +19,7 @@ class SupervisedArchitecture(Architecture):
     """
 
     def forward(
-        self, X: TensorType["batch", "channels", ...]
+        self, X: Tensor  # Type["batch", "channels", ...]
     ) -> TensorType["batch", 1]:
         raise NotImplementedError
 
@@ -35,7 +36,7 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
         stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
         norm_layer: Optional[NormLayer] = None,
     ) -> None:
-        super.__init__(
+        super().__init__(
             num_ifos,
             layers=layers,
             classes=1,

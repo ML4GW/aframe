@@ -9,10 +9,11 @@ authors = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9,<3.11"
 luigi = "^3.0"
 law = "^0.1"
 jupyter = "^1.0"
+ray-kube = {git = "git@github.com:EthanMarx/ray-kube.git", branch = "main"}
 
 
 [build-system]
