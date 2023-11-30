@@ -1,0 +1,23 @@
+# commented args (i.e. comments with colon at end 
+# to illustrate a value needs to be filled out)
+# represent values filled out
+# by the export task at run time. To build a functional
+# standalone config, add these in yourself.
+
+# logfile: 
+# weights:
+# repository_directory:
+num_ifos: 2
+kernel_length: 1.5
+inference_sampling_rate: 16
+sample_rate: 2048
+batch_size: 512
+fduration: 2
+psd_length: 64
+fftlength: 2
+highpass: 32
+streams_per_gpu: 1
+aframe_instances: 1
+platform: TENSORRT
+clean: false
+verbose: false
