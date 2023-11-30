@@ -20,7 +20,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        project: [train]
+        project: [train, export]
 
     steps:
     - 
