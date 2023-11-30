@@ -5,7 +5,10 @@
 # the large memory footprints of our containers without
 # toppling over the GitHub runner nodes this executes on.
 name: container-build 
-on: push
+on: 
+  push:
+  pull_request:
+
 env:
   REGISTRY: ghcr.io
 
