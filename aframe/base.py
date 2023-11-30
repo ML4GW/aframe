@@ -48,7 +48,7 @@ class AframeTask(law.SandboxTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not os.path.isabs(self.image):
-            self.image = os.path.join(Config().container_root, self.image)
+            self.image = os.path.join(self.cfg.container_root, self.image)
 
         if not os.path.exists(self.image):
             raise ValueError(

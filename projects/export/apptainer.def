@@ -9,7 +9,15 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../ml4gw /opt/aframe/ml4gw
 ../../hermes /opt/aframe/hermes
+~/.ssh /root/.ssh
 
 %post
+# install ssh and git for pip installs
+# from directly from git directories
+apt-get update
+apt-get install -y --no-install-recommends \
+    git \
+    ssh
+ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
 cd /opt/aframe/projects/export
 pip install -e . 

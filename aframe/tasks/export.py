@@ -1,13 +1,10 @@
 import os
-import shlex
-import sys
 
 import law
 import luigi
-import kr8s
-from aframe.base import AframeTask, logger
+
+from aframe.base import AframeTask
 from aframe.config import Defaults
-from aframe.utils import stream_command
 
 
 class ExportLocal(AframeTask):
@@ -18,10 +15,13 @@ class ExportLocal(AframeTask):
         self.config = self.config or Defaults.EXPORT
 
     def output(self):
+        # TODO: custom file target that checks for existence
+        # of all necessary model repo directories and files
         return law.LocalFileTarget(self.cfg.repository_directory)
-    
+
     def run(self):
         from export import cli
+
         cli(
             self.config,
             os.path.join(self.logdir, "export.log"),
@@ -40,7 +40,3 @@ class ExportLocal(AframeTask):
             self.cfg.clean,
             self.cfg.verbose,
         )
-
-
-        
-        
