@@ -12,6 +12,7 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../ml4gw /opt/aframe/ml4gw
 
+
 %post
 # need git to install ray-kube
 # TODO: longer term, this should probably just
@@ -32,3 +33,4 @@ python -m pip install poetry 'virtualenv==20.4.7'
 poetry config virtualenvs.create false
 cd /opt/aframe/projects/train
 poetry install
+
