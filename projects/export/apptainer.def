@@ -1,0 +1,15 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/tritonserver:22.12-py3
+Stage: build
+
+%files
+. /opt/aframe/projects/export/
+../utils /opt/aframe/projects/utils
+../../aframe /opt/aframe/aframe
+../../pyproject.toml /opt/aframe/pyproject.toml
+../../ml4gw /opt/aframe/ml4gw
+../../hermes /opt/aframe/hermes
+
+%post
+cd /opt/aframe/projects/export
+pip install -e . 
