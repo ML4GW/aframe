@@ -33,6 +33,22 @@ class ray_head(luigi.Config):
     cpus = luigi.IntParameter(default=2)
     memory = luigi.Parameter(default="1G")
 
+class data(luigi.Config):
+    kernel_length = luigi.FloatParameter(default=1.5)
+    inference_sampling_rate = luigi.FloatParameter(default=16)
+    sample_rate = luigi.FloatParameter(default=2048)
+    inference_batch_size = luigi.IntParameter(default=512)
+    fduration = luigi.FloatParameter(default=2)
+    inference_psd_length = luigi.FloatParameter(default=64)
+    fftlength = luigi.FloatParameter(default=2)
+    highpass = luigi.FloatParameter(default=32)
+
+class export(luigi.Config):
+    streams_per_gpu = luigi.IntParameter(default=1)
+    aframe_instances = luigi.IntParameter(default=None)
+    platform = luigi.Parameter(default="onnx")
+    clean = luigi.BoolParameter(default=False)
+
 
 class aframe(luigi.Config):
     """
@@ -50,7 +66,9 @@ class aframe(luigi.Config):
     s3 = s3()
     ray_worker = ray_worker()
     ray_head = ray_head()
-
+    data = data()
+    export = export()
 
 class Defaults:
     TRAIN = os.path.join(project_base, "train", "config.yaml")
+    EXPORT = os.path.join(project_base, "export", "config.yaml")
