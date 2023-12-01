@@ -1,11 +1,11 @@
 import logging
-from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 from export.snapshotter import add_streaming_input_preprocessor
 
 import hermes.quiver as qv
+
 
 def scale_model(model, instances):
     """
@@ -45,7 +45,7 @@ def export(
 
     Args:
         weights:
-            Path to a set of trained weights that will be exported 
+            Path to a set of trained weights that will be exported
             to a model_repository.
         repository_directory:
             Directory to which to save the models and their
@@ -96,12 +96,11 @@ def export(
             Key word arguments specific to the export platform
     """
 
-    # load in the model graph 
+    # load in the model graph
     logging.info("Initializing model graph")
     graph = nn = torch.jit.load(weights)
     graph.eval()
     logging.info(f"Initialize:\n{nn}")
-    
 
     # instantiate a model repository at the
     # indicated location. Split up the preprocessor
@@ -190,7 +189,3 @@ def export(
         6e10
     )
     snapshotter.config.write()
-
-
-if __name__ == "__main__":
-    main()

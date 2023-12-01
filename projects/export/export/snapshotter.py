@@ -1,11 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 
-from utils.preprocessing import (
-    BackgroundSnapshotter,
-    BatchWhitener,
-)
 from hermes.quiver import Platform
 from hermes.quiver.streaming import utils as streaming_utils
+from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 if TYPE_CHECKING:
     from hermes.quiver.model import EnsembleModel, ExposedTensor

@@ -33,6 +33,7 @@ class ray_head(luigi.Config):
     cpus = luigi.IntParameter(default=2)
     memory = luigi.Parameter(default="1G")
 
+
 class data(luigi.Config):
     kernel_length = luigi.FloatParameter(default=1.5)
     inference_sampling_rate = luigi.FloatParameter(default=16)
@@ -42,6 +43,7 @@ class data(luigi.Config):
     inference_psd_length = luigi.FloatParameter(default=64)
     fftlength = luigi.FloatParameter(default=2)
     highpass = luigi.FloatParameter(default=32)
+
 
 class export(luigi.Config):
     streams_per_gpu = luigi.IntParameter(default=1)
@@ -68,6 +70,7 @@ class aframe(luigi.Config):
     ray_head = ray_head()
     data = data()
     export = export()
+
 
 class Defaults:
     TRAIN = os.path.join(project_base, "train", "config.yaml")
