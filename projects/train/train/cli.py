@@ -31,7 +31,6 @@ def main(args=None):
         seed_everything_default=101588,
         args=args,
     )
-    print("HEY")
 
     # CSV Logger and WandB logger use different
     # names for this variable. Unfortunate.
