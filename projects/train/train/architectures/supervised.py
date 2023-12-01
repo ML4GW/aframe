@@ -18,6 +18,12 @@ class SupervisedArchitecture(Architecture):
     corresponding to a detection statistic.
     """
 
+    # TODO: torchtyping doesn't support ellipsis at the
+    # end, but I want to use that here because we could
+    # have either one or two dimensions at the end
+    # depending on whether we're in the time or time-frequency
+    # domain. Moving ml4gw to jaxtyping should be able to
+    # handle this.
     def forward(
         self, X: Tensor  # Type["batch", "channels", ...]
     ) -> TensorType["batch", 1]:

@@ -1,0 +1,12 @@
+tune:
+  # name:
+  # address:
+  num_workers: 2
+  gpus_per_worker: 2
+  cpus_per_gpu: 8
+  num_samples: 16
+  min_epochs: 8
+  max_epochs: 100
+  reduction_factor: 2
+  # storage_dir:
+  # temp_dir:

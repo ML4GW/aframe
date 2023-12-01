@@ -31,7 +31,10 @@ def main(args=None):
         seed_everything_default=101588,
         args=args,
     )
+    print("HEY")
 
+    # CSV Logger and WandB logger use different
+    # names for this variable. Unfortunate.
     log_dir = cli.trainer.logger.log_dir or cli.trainer.logger.save_dir
     if not log_dir.startswith("s3://"):
         os.makedirs(log_dir, exist_ok=True)

@@ -71,6 +71,21 @@ class AframeBase(pl.LightningModule):
         """
         raise NotImplementedError
 
+    # define some hacky callbacks that can be
+    # used during the `self.score` method of
+    # downstream child classes to record more
+    # detailed plots during the course of training
+    def on_validation_epoch_start(self):
+        self.validating = True
+
+    def on_validation_epoch_end(self):
+        self.validating = False
+
+    def on_validation_score(self, *tensors):
+        for cb in self.trainer.callbacks:
+            if hasattr(cb, "on_validation_score"):
+                cb.on_validation_score(self.trainer, self, *tensors)
+
     def score(self, X: Tensor) -> Tensor:
         """
         Override this method to produce a detection
@@ -89,13 +104,23 @@ class AframeBase(pl.LightningModule):
     def training_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         loss = self.train_step(batch)
 
+        # TODO: maybe check if our model has a .loss
+        # attribute and if so include it as a loss
+        # term, this way models can do arbitrary things
+        # to penalize themselves if desired. Should probably
+        # just be added to whatever pops out of
+        # self.compute_loss_fn, under the assumption that the
+        # model has applied the appropriate scale to this
+        # value. More complicated functionality can be
+        # achieved by subclasses in self.train_step.
+
         # if our train step returned a dictionary of losses,
         # log them all separately then combine them into a
         # single loss via `compute_loss_fn`
         if isinstance(loss, dict):
             for name, value in loss.items():
                 self.log(
-                    f"{name}_loss",
+                    name,
                     value.mean(),
                     on_step=True,
                     on_epoch=True,
@@ -104,6 +129,7 @@ class AframeBase(pl.LightningModule):
                 )
             loss = self.compute_loss_fn(**loss)
 
+        loss = loss.mean()
         self.log(
             "train_loss",
             loss,

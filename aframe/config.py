@@ -23,8 +23,8 @@ class s3(luigi.Config):
 
 class ray_worker(luigi.Config):
     replicas = luigi.IntParameter(default=2)
-    cpus = luigi.IntParameter(default=8)
     gpus = luigi.IntParameter(default=1)
+    cpus_per_gpu = luigi.IntParameter(default=8)
     memory = luigi.Parameter(default="10G")
     min_gpu_memory = luigi.IntParameter(default=0)
 

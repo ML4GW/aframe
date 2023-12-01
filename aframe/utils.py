@@ -11,9 +11,6 @@ def read_stream(stream, process, q):
     try:
         it = iter(stream.readline, b"")
         while True:
-            # ret_code = process.poll()
-            # if ret_code:
-            #     break
             try:
                 line = next(it)
             except StopIteration:

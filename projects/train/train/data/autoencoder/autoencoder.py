@@ -7,6 +7,10 @@ Tensor = torch.Tensor
 
 
 class AutoencoderAframeDataset(BaseAframeDataset):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.hparams.waveform_prob = 1
+
     @torch.no_grad()
     def augment(self, X: Tensor) -> tuple[Tensor, Tensor]:
         """
@@ -30,4 +34,4 @@ class AutoencoderAframeDataset(BaseAframeDataset):
         )
         X += kernels
         X = self.whitener(X, psds)
-        return X, psds
+        return X

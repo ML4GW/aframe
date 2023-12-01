@@ -30,7 +30,7 @@ law.config.update(
         "aframe": {
             "stagein_dir_name": "stagein",
             "stageout_dir_name": "stageout",
-            "law_executable": "law",
+            "law_executable": "/usr/local/bin/law",
         },
         "aframe_env": {},
         "aframe_volumes": {},
@@ -102,12 +102,14 @@ class AframeRayTask(AframeTask):
             return
 
         api = kr8s.api(kubeconfig=self.kubeconfig or None)
+        num_gpus = self.cfg.ray_worker.gpus
+        worker_cpus = self.cfg.ray_worker.cpus_per_gpu * num_gpus
         cluster = KubernetesRayCluster(
             self.container,
             num_workers=self.cfg.ray_worker.replicas,
-            worker_cpus=self.cfg.ray_worker.cpus,
+            worker_cpus=worker_cpus,
             worker_memory=self.cfg.ray_worker.memory,
-            gpus_per_worker=self.cfg.ray_worker.gpus,
+            gpus_per_worker=num_gpus,
             head_cpus=self.cfg.ray_head.cpus,
             head_memory=self.cfg.ray_head.memory,
             min_gpu_memory=self.cfg.ray_worker.min_gpu_memory,
@@ -116,14 +118,14 @@ class AframeRayTask(AframeTask):
         )
         cluster = self.configure_cluster(cluster)
 
-        self.__logger.info("Creating ray cluster")
+        logger.info("Creating ray cluster")
         cluster.create()
         cluster.wait()
-        self.__logger.info("ray cluster online")
+        logger.info("ray cluster online")
         self.cluster = cluster
 
     def sandbox_after_run(self):
         if self.cluster is not None:
-            self.__logger.info("Deleting ray cluster")
+            logger.info("Deleting ray cluster")
             self.cluster.delete()
             self.cluster = None

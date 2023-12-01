@@ -11,6 +11,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
     def __init__(
         self,
         *args,
+        waveform_prob: float,
         swap_frac: Optional[float] = None,
         mute_frac: Optional[float] = None,
         **kwargs,

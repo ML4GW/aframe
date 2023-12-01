@@ -2622,7 +2622,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-ena
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11"
-content-hash = "2fc165a62c9c82d542f741a3130d7f3f06a23daf00e475b5022b072b551bb44f"
+content-hash = "87f45595578a5705966c382f77b4636a07de698c262ae8a64559e6a2f12d8ccc"
 
 [metadata.files]
 aframe = []

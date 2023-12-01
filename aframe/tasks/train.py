@@ -1,11 +1,12 @@
 import os
 import shlex
 import sys
+from configparser import ConfigParser
 
 import law
 import luigi
 
-from aframe.base import AframeTask, logger
+from aframe.base import AframeRayTask, AframeTask, logger
 from aframe.config import Defaults
 from aframe.utils import stream_command
 
@@ -87,3 +88,50 @@ class TrainLocal(TrainBase):
     def output(self):
         dir = law.LocalDirectoryTarget(self.run_dir)
         return dir.child("model.pt", type="f")
+
+
+class TuneRemote(TrainBase, AframeRayTask):
+    search_space = luigi.Parameter()
+    num_samples = luigi.IntParameter()
+    min_epochs = luigi.IntParameter()
+    max_epochs = luigi.IntParameter()
+    reduction_factor = luigi.IntParameter()
+
+    def configure_cluster(self, cluster):
+        config = ConfigParser.read(self.cfg.s3.credentials)
+        keys = ["aws_access_key_id", "aws_secret_access_key"]
+        secret = {}
+        for key in keys:
+            try:
+                value = config["default"][key]
+            except KeyError:
+                raise ValueError(
+                    "aws credentials file {} is missing "
+                    "key {} in default table".format(
+                        self.cfg.s3.credentials, key
+                    )
+                )
+            secret[key] = value
+        cluster.add_secret("s3-credentials", env=secret)
+
+        # TODO: add AWS_ENDPOINT_URL to cluster environment
+
+    def run(self):
+        from train.tune import cli as main
+
+        args = self.get_args()
+        args.append(f"--tune.num_workers={self.cfg.ray_worker.replicas}")
+        args.append(
+            "--tune.gpus_per_worker="
+            + str(self.cfg.ray_worker.gpus_per_worker)
+        )
+        args.append(
+            "--tune.cpus_per_gpu=" + str(self.cfg.ray_worker.cpus_per_gpu)
+        )
+        args.append("--tune.num_samples={self.num_samples}")
+        args.append("--tune.min_epochs={self.min_epochs}")
+        args.append("--tune.max_epochs={self.max_epochs}")
+        args.append("--tune.reduction_factor={self.reduction_factor}")
+        args.append("--tune.storage_dir={self.run_dir}/ray")
+
+        main(args)

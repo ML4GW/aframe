@@ -1,0 +1,71 @@
+# commented args represent values filled out
+# by train task at run time. To build a functional
+# standalone config, add these in
+
+model:
+  class_path: train.model.AutoencoderAframe
+  init_args:
+    # architecture
+    arch:
+      class_path: train.architectures.autoencoder.ConvolutionalAutoencoder
+      init_args:
+        encode_channels: [16, 64, 256, 1024]
+        kernel_size: 7
+        stride: 2
+        output_activation:
+          class_path: torch.nn.Identity
+        skip_connection:
+          class_path: ml4gw.nn.autoencoder.ConcatSkipConnect
+    metric:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+
+    # optimization params
+    max_shift: 0.005
+    learning_rate: 0.000585
+    pct_lr_ramp: 0.115
+data:
+  class_path: train.data.AutoencoderAframeDataset
+  init_args:
+    # loading args
+    # data_dir:
+    # ifos:
+
+    # preprocessing args
+    batch_size: 512
+    kernel_length: 1.5
+    psd_length: 8
+    fduration: 1
+    highpass: 32
+    fftlength: null
+
+    # augmentation args
+    snr_thresh: 4
+    max_snr: 100
+    snr_alpha: 3
+    trigger_pad: -0.75
+
+    # validation args
+    valid_frac: 0.25
+    valid_stride: 0.5
+    num_valid_views: 4
+    valid_livetime: 86400
+trainer:
+  # by default, use a local CSV logger.
+  # Options in train task for using a
+  # wandb logger instead
+  logger:
+    - class_path: lightning.pytorch.loggers.CSVLogger
+      init_args:
+        # save_dir:
+        flush_logs_every_n_steps: 10
+  # devices:
+  # strategy: set to ddp if len(devices) > 1
+  precision: 16-mixed
+  accelerator: auto
+  max_epochs: 100
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 20
+  benchmark: true
