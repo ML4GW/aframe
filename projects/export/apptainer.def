@@ -11,5 +11,8 @@ Stage: build
 ../../hermes /opt/aframe/hermes
 
 %post
+apt-get update
+apt-get install -y --no-install-recommends git
+
 cd /opt/aframe/projects/export
 pip install -e . 

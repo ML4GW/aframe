@@ -38,6 +38,7 @@ class data(luigi.Config):
     kernel_length = luigi.FloatParameter(default=1.5)
     inference_sampling_rate = luigi.FloatParameter(default=16)
     sample_rate = luigi.FloatParameter(default=2048)
+    batch_size = luigi.IntParameter(default=512)
     inference_batch_size = luigi.IntParameter(default=512)
     fduration = luigi.FloatParameter(default=2)
     inference_psd_length = luigi.FloatParameter(default=64)
@@ -46,9 +47,13 @@ class data(luigi.Config):
 
 
 class export(luigi.Config):
+    repository_directory = luigi.Parameter(
+        default=os.path.join(os.getenv("RUN_DIR", ""), "model_repo")
+    )
+    weights = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter(default=1)
     aframe_instances = luigi.IntParameter(default=None)
-    platform = luigi.Parameter(default="onnx")
+    platform = luigi.Parameter(default="TENSORRT")
     clean = luigi.BoolParameter(default=False)
 
 
