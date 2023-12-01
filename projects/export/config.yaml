@@ -5,7 +5,7 @@
 # standalone config, add these in yourself.
 
 # logfile: 
-# weights:
+# weights: 
 # repository_directory:
 num_ifos: 2
 kernel_length: 1.5

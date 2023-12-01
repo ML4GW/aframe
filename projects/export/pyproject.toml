@@ -23,6 +23,11 @@ utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
 jsonargparse = "^4.27.1"
 
+
+# hard-pin the tensorrt version for compatability with
+# Triton. This corresponds to Triton container 22.12-py3
+tensorrt = "8.5.1.7"
+
 [tool.poetry.dependencies."hermes.quiver"]
 path = "../../hermes/hermes/hermes.quiver"
 develop = true
