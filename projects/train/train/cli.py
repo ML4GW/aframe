@@ -41,6 +41,7 @@ def main(args=None):
         configure_logging(log_file)
     else:
         configure_logging()
+
     cli.trainer.fit(cli.model, cli.datamodule)
 
 
