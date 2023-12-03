@@ -1,0 +1,25 @@
+name: aframe-data
+channels:
+  - conda-forge
+dependencies:
+  # python/env dependencies
+  - python=3.9
+  - pip
+  - poetry
+  - jsonargparse
+  # need these for utils lib
+  # TODO: add constraints for better pinning
+  - bokeh
+  - scipy
+  - h5py
+  # general GW/auth deps
+  - gwpy
+  - bilby>1.4,<2
+  - libgcc
+  - krb5
+  # frame file I/O dependencies
+  - python-ldas-tools-framecpp<3.0.0
+  - python-nds2-client
+  # luigi / law
+  - luigi
+  - law

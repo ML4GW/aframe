@@ -1,23 +1,14 @@
 import law
-import luigi
 
 from aframe.base import AframeTask, logger
-from aframe.config import Defaults
+from aframe.tasks.export.base import ExportParams
 
 
-class ExportLocal(AframeTask):
-    config = luigi.Parameter(default="")
-    weights = luigi.Parameter(default="")
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.config = self.config or Defaults.EXPORT
-        self.cfg = self.cfg.export
-
+class ExportLocal(AframeTask, ExportParams):
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
-        return law.LocalFileTarget(self.cfg.repository_directory)
+        return law.LocalFileTarget(self.repository_directory)
 
     def configure_args(self):
         positional = [
@@ -33,26 +24,26 @@ class ExportLocal(AframeTask):
             "--config",
             self.config,
             "--logfile",
-            self.cfg.logfile,
+            self.logfile,
             "--weights",
             self.weights,
             "--repository_directory",
-            self.cfg.repository_directory,
+            self.repository_directory,
             "--num_ifos",
-            self.cfg.num_ifos,
+            self.num_ifos,
             "--batch_size",
-            self.cfg.batch_size,
+            self.batch_size,
             "--psd_length",
-            self.cfg.psd_length,
+            self.psd_length,
         ]
         for arg in positional:
-            args.extend([f"--{arg}", getattr(self.cfg, arg)])
+            args.extend([f"--{arg}", getattr(self, arg)])
         return args
 
     def configure_optional_args(self, args: list[str]) -> list[str]:
         for arg in ["fftlength", "highpass", "platform"]:
             try:
-                x = getattr(self.cfg, arg)
+                x = getattr(self, arg)
             except AttributeError:
                 continue
             else:
@@ -70,4 +61,5 @@ class ExportLocal(AframeTask):
 
         args = self.get_args()
         logger.debug(f"Running Export with arguments {' '.join(args)}")
-        main(args=args)
+
+        main(args=self.get_args())

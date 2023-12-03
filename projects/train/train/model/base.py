@@ -174,6 +174,7 @@ class AframeBase(pl.LightningModule):
         # that will be used for downstream export
         # and inference tasks
         best_model = ModelCheckpoint(
+            dirpath="/home/ethan.marx/aframe/aframev2/run/train",
             monitor="valid_auroc",
             filename="model.pt",
             save_top_k=1,
@@ -183,6 +184,7 @@ class AframeBase(pl.LightningModule):
         )
         # checkpoint for saving multiple best models
         checkpoint = ModelCheckpoint(
+            dirpath="/home/ethan.marx/aframe/aframev2/run/train/checkpoints",
             monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
             save_last=True,

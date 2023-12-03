@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "data"
+version = "0.0.1"
+description = "aframe data generation scripts"
+authors = ["Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+license = "MIT"
+#readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11" 
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

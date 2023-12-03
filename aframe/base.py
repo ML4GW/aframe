@@ -9,7 +9,7 @@ import luigi
 from law.contrib import singularity
 from ray_kube import KubernetesRayCluster
 
-from aframe.config import aframe as Config
+from aframe.config import ray_head, ray_worker
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
@@ -38,17 +38,21 @@ law.config.update(
 )
 
 
-class AframeTask(law.SandboxTask):
-    image = luigi.Parameter()
+class AframeBaseParams(law.Task):
     dev = luigi.BoolParameter(default=False)
     gpus = luigi.Parameter(default="")
+    container_root = luigi.Parameter(
+        default=os.getenv("AFRAME_CONTAINER_ROOT", "")
+    )
 
-    cfg = Config()
+
+class AframeTask(law.SandboxTask, AframeBaseParams):
+    image = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not os.path.isabs(self.image):
-            self.image = os.path.join(self.cfg.container_root, self.image)
+            self.image = os.path.join(self.container_root, self.image)
 
         if not os.path.exists(self.image):
             raise ValueError(
@@ -59,9 +63,9 @@ class AframeTask(law.SandboxTask):
     def singularity_forward_law(self) -> bool:
         return False
 
-    @property
-    def ifos(self):
-        return self.cfg.ifos
+    # @property
+    # def ifos(self):
+    #    return self.cfg.ifos
 
     @property
     def sandbox(self):
@@ -106,17 +110,17 @@ class AframeRayTask(AframeTask):
             return
 
         api = kr8s.api(kubeconfig=self.kubeconfig or None)
-        num_gpus = self.cfg.ray_worker.gpus
-        worker_cpus = self.cfg.ray_worker.cpus_per_gpu * num_gpus
+        num_gpus = ray_worker().gpus
+        worker_cpus = ray_worker().cpus_per_gpu * num_gpus
         cluster = KubernetesRayCluster(
             self.container,
-            num_workers=self.cfg.ray_worker.replicas,
+            num_workers=ray_worker().replicas,
             worker_cpus=worker_cpus,
-            worker_memory=self.cfg.ray_worker.memory,
+            worker_memory=ray_worker().memory,
             gpus_per_worker=num_gpus,
-            head_cpus=self.cfg.ray_head.cpus,
-            head_memory=self.cfg.ray_head.memory,
-            min_gpu_memory=self.cfg.ray_worker.min_gpu_memory,
+            head_cpus=ray_head().cpus,
+            head_memory=ray_head().memory,
+            min_gpu_memory=ray_worker().min_gpu_memory,
             api=api,
             label=self.label or None,
         )
