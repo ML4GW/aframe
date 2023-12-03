@@ -7,4 +7,5 @@ ignore = W503, E203  # ignore for consistency with black
 # ignore asterisk imports and unused
 # import errors in __init__ files
 per-file-ignores = 
-    **/__init__.py:F401,F403
+    **/__init__.py:F401,F403,E402
+    

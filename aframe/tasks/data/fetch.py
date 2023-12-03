@@ -11,10 +11,10 @@ from aframe.tasks.data.workflow import LDGCondorWorkflow
 class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
+    data_dir = luigi.Parameter()
     sample_rate = luigi.FloatParameter()
     min_duration = luigi.FloatParameter(default=0)
     max_duration = luigi.FloatParameter(default=-1)
-    data_dir = luigi.Parameter()
     prefix = luigi.Parameter(default="background")
     flags = luigi.ListParameter(default=["DCS-ANALYSIS_READY_C01:1"])
     segments_file = luigi.Parameter(default="")

@@ -21,6 +21,9 @@ class base(Config):
     run_dir = luigi.Parameter(default=os.getenv("RUN_DIR", ""))
     data_dir = luigi.Parameter(default=os.getenv("DATA_DIR", ""))
     # data generation parameters
+    train_start = luigi.FloatParameter()
+    train_stop = luigi.FloatParameter()
+    test_stop = luigi.FloatParameter()
     sample_rate = luigi.FloatParameter(default=2048)
     # data conditioning / preprocessing parameters
     fduration = luigi.FloatParameter(default=2)
@@ -42,6 +45,31 @@ class base(Config):
     @property
     def num_ifos(self):
         return len(self.ifos)
+
+
+class train_background(Config):
+    start = luigi.FloatParameter(default=base().train_start)
+    end = luigi.FloatParameter(default=base().train_stop)
+    data_dir = luigi.Parameter(
+        os.path.join(base().data_dir, "train", "background")
+    )
+    sample_rate = luigi.FloatParameter(default=base().sample_rate)
+    min_duration = luigi.FloatParameter()
+    max_duration = luigi.FloatParameter(default=-1)
+    flags = luigi.ListParameter()
+    channels = luigi.ListParameter()
+
+
+class train_waveforms(Config):
+    num_signals = luigi.IntParameter()
+    waveform_duration = luigi.FloatParameter()
+    sample_rate = luigi.FloatParameter(default=base().sample_rate)
+    output_file = luigi.Parameter(
+        default=os.path.join(base().data_dir, "train", "signals.hdf5")
+    )
+    minimum_frequency = luigi.FloatParameter(default=20)
+    reference_frequency = luigi.FloatParameter(default=20)
+    waveform_approximant = luigi.Parameter(default="IMRPhenomPv2")
 
 
 class train(Config):
@@ -85,5 +113,7 @@ class export(Config):
 
 
 class SandboxConfig(luigi.Config):
+    train_background = train_background()
+    train_waveforms = train_waveforms()
     export = export()
     train = train()
