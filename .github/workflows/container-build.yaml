@@ -7,8 +7,6 @@
 name: container-build 
 on: 
   push:
-  pull_request:
-
 env:
   REGISTRY: ghcr.io
 
