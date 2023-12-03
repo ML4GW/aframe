@@ -14,7 +14,6 @@ class base(luigi.Config):
     kernel_length = luigi.FloatParameter(default=1.5)
     inference_sampling_rate = luigi.FloatParameter(default=16)
     sample_rate = luigi.FloatParameter(default=2048)
-    batch_size = luigi.IntParameter(default=512)
     inference_batch_size = luigi.IntParameter(default=512)
     fduration = luigi.FloatParameter(default=2)
     inference_psd_length = luigi.FloatParameter(default=64)
@@ -61,7 +60,7 @@ class ray_head(luigi.Config):
 
 # config for export task
 # some parameters inherit a default from base.
-# Still make them luigi.Parameters to accommodate use cases
+# still make them luigi.Parameters to accommodate use cases
 # where one might want to override the base default.
 
 
@@ -93,6 +92,14 @@ class export(luigi.Config):
 
 class train(luigi.Config):
     ifos = luigi.ListParameter(default=base().ifos)
+    kernel_length = luigi.FloatParameter(default=base().kernel_length)
+    highpass = luigi.FloatParameter(default=base().highpass)
+    fftlength = luigi.FloatParameter(default=base().fftlength)
+    fduration = luigi.FloatParameter(default=base().fduration)
+    wandb = wandb()
+    s3 = s3()
+    ray_worker = ray_worker()
+    ray_head = ray_head()
 
 
 class aframe(luigi.Config):
@@ -105,10 +112,6 @@ class aframe(luigi.Config):
             "AFRAME_CONTAINER_ROOT", os.path.expanduser("~/aframe/images")
         )
     )
-    wandb = wandb()
-    s3 = s3()
-    ray_worker = ray_worker()
-    ray_head = ray_head()
     export = export()
     train = train()
 
