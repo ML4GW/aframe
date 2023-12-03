@@ -39,7 +39,7 @@ class TrainBase(AframeTask):
                 for v in value.split(","):
                     args.append(f"--trainer.logger.{key}+={v}")
         return args
-    
+
     def configure_profiler(self, args: list[str]) -> None:
         args.append("--trainer.profiler=PytorchProfiler")
         args.append("--trainer.profiler.profile_memory")
@@ -67,10 +67,10 @@ class TrainBase(AframeTask):
         else:
             args.append(f"--trainer.logger.save_dir={self.run_dir}")
 
-        args.append(f"--trainer.logger.name=train_logs")
+        args.append("--trainer.logger.name=train_logs")
         if self.profile:
             args = self.configure_profiler(args)
-        
+
         return args
 
     def run(self):
@@ -101,7 +101,9 @@ class TrainLocal(TrainBase):
 
     def output(self):
         # TODO: more robust method for finding model.pt
-        dir = law.LocalDirectoryTarget(os.path.join(self.run_dir, "train_logs", "version_0"))
+        dir = law.LocalDirectoryTarget(
+            os.path.join(self.run_dir, "train_logs", "version_0")
+        )
         return dir.child("model.pt", type="f")
 
 

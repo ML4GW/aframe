@@ -1,13 +1,13 @@
 import law
 import luigi
-import os
+
 from aframe.base import AframeTask, logger
-from aframe.config import Defaults, export
+from aframe.config import Defaults
+
 
 class ExportLocal(AframeTask):
     config = luigi.Parameter(default="")
     weights = luigi.Parameter(default="")
-    
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -27,7 +27,7 @@ class ExportLocal(AframeTask):
             "fduration",
             "streams_per_gpu",
             "aframe_instances",
-            #"clean",
+            # "clean",
         ]
         args = [
             "--config",
@@ -51,7 +51,7 @@ class ExportLocal(AframeTask):
 
     def configure_optional_args(self, args: list[str]) -> list[str]:
         for arg in ["fftlength", "highpass", "platform"]:
-            try: 
+            try:
                 x = getattr(self.cfg, arg)
             except AttributeError:
                 continue
@@ -67,6 +67,7 @@ class ExportLocal(AframeTask):
 
     def run(self):
         from export.cli import main
+
         args = self.get_args()
         logger.debug(f"Running Export with arguments {' '.join(args)}")
         main(args=args)

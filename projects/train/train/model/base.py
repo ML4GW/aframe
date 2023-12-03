@@ -170,7 +170,7 @@ class AframeBase(pl.LightningModule):
         )
 
     def configure_callbacks(self) -> Sequence[pl.Callback]:
-        # checkpoint for saving best model 
+        # checkpoint for saving best model
         # that will be used for downstream export
         # and inference tasks
         best_model = ModelCheckpoint(
