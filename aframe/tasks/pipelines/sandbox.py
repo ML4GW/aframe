@@ -17,8 +17,9 @@ class SandboxExport(ExportLocal):
         self.weights = self.input().path
 
     def requires(self):
-        # expicitly pass parameters that should not
-        # be inherited from the export task
+        # expicitly pass parameters image and config parameters
+        # b/c these are common parameters that should 
+        # not be inherited from the export task
         return TrainLocal.req(self, image="train.sif", config=Defaults.TRAIN)
 
 

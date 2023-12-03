@@ -170,6 +170,18 @@ class AframeBase(pl.LightningModule):
         )
 
     def configure_callbacks(self) -> Sequence[pl.Callback]:
+        # checkpoint for saving best model 
+        # that will be used for downstream export
+        # and inference tasks
+        best_model = ModelCheckpoint(
+            monitor="valid_auroc",
+            filename="model.pt",
+            save_top_k=1,
+            save_last=False,
+            auto_insert_metric_name=False,
+            mode="max",
+        )
+        # checkpoint for saving multiple best models
         checkpoint = ModelCheckpoint(
             monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
@@ -177,7 +189,7 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
-        callbacks = [checkpoint]
+        callbacks = [checkpoint, best_model]
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStop(
                 monitor=self.metric_name,

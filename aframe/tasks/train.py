@@ -17,6 +17,7 @@ class TrainBase(AframeTask):
     config = luigi.Parameter(default="")
     seed = luigi.IntParameter(default=101588)
     use_wandb = luigi.BoolParameter()
+    profile = luigi.BoolParameter(default=False)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -38,6 +39,11 @@ class TrainBase(AframeTask):
                 for v in value.split(","):
                     args.append(f"--trainer.logger.{key}+={v}")
         return args
+    
+    def configure_profiler(self, args: list[str]) -> None:
+        args.append("--trainer.profiler=PytorchProfiler")
+        args.append("--trainer.profiler.profile_memory")
+        return args
 
     def get_args(self):
         args = [
@@ -45,7 +51,7 @@ class TrainBase(AframeTask):
             self.config,
             "--seed_everything",
             str(self.seed),
-            f"--data.ifos=[{','.join(self.cfg.ifos)}]",
+            f"--data.ifos=[{','.join(self.cfg.train.ifos)}]",
             "--data.data_dir",
             self.data_dir,
         ]
@@ -54,9 +60,17 @@ class TrainBase(AframeTask):
                 "Can't run W&B experiment without specifying an API key. "
                 "Try setting the WANDB_API_KEY environment variable."
             )
+        # wandb logger uses save_dir, csv logger uses log_dir :(
         elif self.use_wandb:
             args = self.configure_wandb(args)
-        args.append(f"--trainer.logger.save_dir={self.run_dir}")
+            args.append(f"--trainer.logger.log_dir={self.run_dir}")
+        else:
+            args.append(f"--trainer.logger.save_dir={self.run_dir}")
+
+        args.append(f"--trainer.logger.name=train_logs")
+        if self.profile:
+            args = self.configure_profiler(args)
+        
         return args
 
     def run(self):
@@ -86,7 +100,8 @@ class TrainLocal(TrainBase):
         stream_command(cmd)
 
     def output(self):
-        dir = law.LocalDirectoryTarget(self.run_dir)
+        # TODO: more robust method for finding model.pt
+        dir = law.LocalDirectoryTarget(os.path.join(self.run_dir, "train_logs", "version_0"))
         return dir.child("model.pt", type="f")
 
 

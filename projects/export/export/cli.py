@@ -25,7 +25,6 @@ def main(args=None):
     configure_logging(logfile, verbose)
 
     args = args.as_dict()
-    print(args)
     export(**args)
 
 

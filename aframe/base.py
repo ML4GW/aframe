@@ -81,6 +81,10 @@ class AframeTask(law.SandboxTask):
         for envvar, value in os.environ.items():
             if envvar.startswith("AFRAME_"):
                 env[envvar] = value
+        # set data and run dirs as env variable in sandbox
+        # so they get mapped into the sandbox
+        for envvar in ["DATA_DIR", "RUN_DIR"]:
+            env[envvar] = os.getenv(envvar, "")
 
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
