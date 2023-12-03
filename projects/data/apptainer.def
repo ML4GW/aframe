@@ -1,0 +1,40 @@
+Bootstrap: docker
+From: mambaorg/micromamba:1.5
+Stage: build
+
+%files
+. /opt/aframe/projects/data/
+../utils /opt/aframe/projects/utils
+../../aframe /opt/aframe/aframe
+../../pyproject.toml /opt/aframe/pyproject.toml
+
+%post
+mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
+
+# install git for pip installation
+apt-get update
+apt-get install -y --no-install-recommends git
+
+# activate micromamba and create environment from lockfile
+/bin/bash /root/.bashrc
+micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
+
+# pip install our remaining packages, avoiding
+# installing dependencies since we don't want
+# to touch the libraries resolved by conda.
+# also install yoshi itself to be able to execute
+# tasks inside the container
+micromamba run -p /opt/env python -m \
+    pip install --no-deps --no-build-isolation \
+        -e /opt/aframe/projects/data/ \
+        -e /opt/aframe/
+
+# initialize our shell so that we can execute
+# commands in our environment at run time
+micromamba shell init --shell=bash --root-prefix=~/micromamba
+
+%runscript
+#!/bin/bash
+eval "$(micromamba shell hook --shell bash)"
+micromamba activate /opt/env
+exec "$@"

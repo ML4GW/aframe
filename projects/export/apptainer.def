@@ -14,5 +14,16 @@ Stage: build
 apt-get update
 apt-get install -y --no-install-recommends git
 
+# installing the local package editably via pip
+# works, but none of the dependencies (e.g. ml4gw)
+# are installed editably, so we'll opt for using
+# the full poetry machinery without using a
+# virtual environment. Note that this can potentially
+# cause issues if the poetry install makes changes to
+# the virtualenv package in the base environment, so
+# we'll hard pin it to the value we need.
+# TODO: there's got to be a better solution here
+python -m pip install poetry 'virtualenv==20.4.7'
+poetry config virtualenvs.create false
 cd /opt/aframe/projects/export
-pip install -e . 
+poetry install
