@@ -1,6 +1,7 @@
 # commented args represent values filled out
 # by train task at run time. To build a functional
-# standalone config, add these in
+# standalone config, add these in.
+
 
 model:
   class_path: train.model.SupervisedAframe
@@ -32,10 +33,10 @@ data:
 
     # preprocessing args
     batch_size: 400
-    kernel_length: 1.5
+    # kernel_length:
     psd_length: 8
-    fduration: 1
-    highpass: 32
+    # fduration:
+    # highpass: 
     fftlength: null
 
     # augmentation args
@@ -61,16 +62,16 @@ trainer:
       init_args:
         # save_dir:
         flush_logs_every_n_steps: 10
-  # configurable in train task via profile boolean
+  # uncomment below if you want to profile
   # profiler:
-  #  class_path: lightning.pytorch.profilers.PyTorchProfiler
-  #  dict_kwargs:
-  #    profile_memory: true
+    # class_path: lightning.pytorch.profilers.PyTorchProfiler
+    # dict_kwargs:
+      # profile_memory: true
   # devices:
   # strategy: set to ddp if len(devices) > 1
   precision: 16-mixed
   accelerator: auto
-  max_epochs: 1
+  max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
   benchmark: true

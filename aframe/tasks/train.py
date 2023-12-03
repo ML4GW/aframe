@@ -17,7 +17,6 @@ class TrainBase(AframeTask):
     config = luigi.Parameter(default="")
     seed = luigi.IntParameter(default=101588)
     use_wandb = luigi.BoolParameter()
-    profile = luigi.BoolParameter(default=False)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -25,7 +24,12 @@ class TrainBase(AframeTask):
             raise ValueError("Must specify data directory")
         if not self.run_dir:
             raise ValueError("Must specify run root directory")
+        # pytorch lightning config file that will be used
+        # as base config for training
         self.config = self.config or Defaults.TRAIN
+        # luigi config object, that will be used
+        # to override the base pytorch lightning config
+        self.cfg = self.cfg.train
 
     def configure_wandb(self, args: list[str]) -> None:
         args.append("--trainer.logger=WandbLogger")
@@ -40,9 +44,18 @@ class TrainBase(AframeTask):
                     args.append(f"--trainer.logger.{key}+={v}")
         return args
 
-    def configure_profiler(self, args: list[str]) -> None:
-        args.append("--trainer.profiler=PytorchProfiler")
-        args.append("--trainer.profiler.profile_memory")
+    def configure_data_args(self, args: list[str]) -> None:
+        # configure ONLY the data arguments that
+        # are shared by multiple tasks so that we can specify them
+        # in one place (the aframe config) and have them overwrite
+        # the defaults set in the train projects config.yaml.
+        # Arguments that are only used in the train project
+        # (e.g. model architecture config, training hyperparams,
+        # logging, profiling, etc.) should be specified in the
+        # should be configured in the train projects config.yaml file.
+        args.append("--data.kernel_length=" + str(self.cfg.kernel_length))
+        args.append("--data.fduration=" + str(self.cfg.fduration))
+        args.append("--data.highpass=" + str(self.cfg.highpass))
         return args
 
     def get_args(self):
@@ -51,10 +64,11 @@ class TrainBase(AframeTask):
             self.config,
             "--seed_everything",
             str(self.seed),
-            f"--data.ifos=[{','.join(self.cfg.train.ifos)}]",
+            f"--data.ifos=[{','.join(self.cfg.ifos)}]",
             "--data.data_dir",
             self.data_dir,
         ]
+        args = self.configure_data_args(args)
         if self.use_wandb and not self.cfg.wandb.api_key:
             raise ValueError(
                 "Can't run W&B experiment without specifying an API key. "
@@ -68,8 +82,6 @@ class TrainBase(AframeTask):
             args.append(f"--trainer.logger.save_dir={self.run_dir}")
 
         args.append("--trainer.logger.name=train_logs")
-        if self.profile:
-            args = self.configure_profiler(args)
 
         return args
 
