@@ -520,7 +520,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         except AttributeError:
             waveform_prob = 1
         waveforms_per_batch = self.hparams.batch_size * waveform_prob
-        steps_per_epoch = int(4 * num_waveforms / waveforms_per_batch)
+        steps_per_epoch = 10 # int(4 * num_waveforms / waveforms_per_batch)
 
         # TODO: potentially introduce chunking here via
         # chunk_size/batches_per_chunk class args that

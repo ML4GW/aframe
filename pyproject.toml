@@ -17,6 +17,9 @@ ray-kube = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "main"}
 kr8s = "^0.10.0"
 
 
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

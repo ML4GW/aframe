@@ -31,7 +31,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 512
+    batch_size: 400
     kernel_length: 1.5
     psd_length: 8
     fduration: 1
@@ -61,6 +61,11 @@ trainer:
       init_args:
         # save_dir:
         flush_logs_every_n_steps: 10
+  # configurable in train task via profile boolean
+  # profiler:
+  #  class_path: lightning.pytorch.profilers.PyTorchProfiler
+  #  dict_kwargs:
+  #    profile_memory: true
   # devices:
   # strategy: set to ddp if len(devices) > 1
   precision: 16-mixed

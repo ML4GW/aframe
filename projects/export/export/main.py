@@ -33,7 +33,7 @@ def export(
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
-    platform: qv.Platform = qv.Platform.ONNX,
+    platform: qv.Platform = qv.Platform.TENSORRT,
     clean: bool = False,
     verbose: bool = False,
     **kwargs,
