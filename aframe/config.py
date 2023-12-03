@@ -4,7 +4,8 @@ import luigi
 
 project_base = "/opt/aframe/projects"
 
-# base config that stores parameters 
+
+# base config that stores parameters
 # common to multiple tasks
 class base(luigi.Config):
     ifos = luigi.ListParameter(default=["H1", "L1"])
@@ -19,10 +20,10 @@ class base(luigi.Config):
     inference_psd_length = luigi.FloatParameter(default=64)
     fftlength = luigi.FloatParameter(default=2.0)
     highpass = luigi.FloatParameter(default=32.0)
-    
+
     @property
     def logdir(self):
-        return os.path.join(self.run_dir , "logs")
+        return os.path.join(self.run_dir, "logs")
 
     @property
     def num_ifos(self):
@@ -57,38 +58,48 @@ class ray_head(luigi.Config):
     cpus = luigi.IntParameter(default=2)
     memory = luigi.Parameter(default="1G")
 
+
 # config for export task
-# some parameters inherit a default from base. 
-# Still make them luigi.Parameters to accommodate use cases 
+# some parameters inherit a default from base.
+# Still make them luigi.Parameters to accommodate use cases
 # where one might want to override the base default.
- 
+
+
 class export(luigi.Config):
     fftlength = luigi.FloatParameter(default=base().fftlength)
     fduration = luigi.FloatParameter(default=base().fduration)
     kernel_length = luigi.FloatParameter(default=base().kernel_length)
-    inference_sampling_rate = luigi.FloatParameter(default=base().inference_sampling_rate)
+    inference_sampling_rate = luigi.FloatParameter(
+        default=base().inference_sampling_rate
+    )
     sample_rate = luigi.FloatParameter(default=base().sample_rate)
     fduration = luigi.FloatParameter(default=base().fduration)
-    repository_directory = luigi.Parameter(default=os.path.join(base().run_dir, "model_repo"))
+    repository_directory = luigi.Parameter(
+        default=os.path.join(base().run_dir, "model_repo")
+    )
     streams_per_gpu = luigi.IntParameter(default=2)
     aframe_instances = luigi.IntParameter(default=2)
     # TODO: resolve enum platform parsing error
-    #platform = luigi.Parameter(default="TENSORRT")
+    # platform = luigi.Parameter(default="TENSORRT")
     clean = luigi.BoolParameter(default=False)
     num_ifos = luigi.IntParameter(default=base().num_ifos)
     batch_size = luigi.IntParameter(default=base().inference_batch_size)
     psd_length = luigi.FloatParameter(default=base().inference_psd_length)
     highpass = luigi.FloatParameter(default=base().highpass)
-    logfile = luigi.Parameter(default=os.path.join(base().logdir, "export.log"))
+    logfile = luigi.Parameter(
+        default=os.path.join(base().logdir, "export.log")
+    )
 
 
 class train(luigi.Config):
     ifos = luigi.ListParameter(default=base().ifos)
 
+
 class aframe(luigi.Config):
     """
     Global config for aframe experiments
     """
+
     container_root = luigi.Parameter(
         default=os.getenv(
             "AFRAME_CONTAINER_ROOT", os.path.expanduser("~/aframe/images")

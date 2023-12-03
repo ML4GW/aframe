@@ -33,4 +33,3 @@ python -m pip install poetry 'virtualenv==20.4.7'
 poetry config virtualenvs.create false
 cd /opt/aframe/projects/train
 poetry install
-

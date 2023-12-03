@@ -18,7 +18,7 @@ class SandboxExport(ExportLocal):
 
     def requires(self):
         # expicitly pass parameters image and config parameters
-        # b/c these are common parameters that should 
+        # b/c these are common parameters that should
         # not be inherited from the export task
         return TrainLocal.req(self, image="train.sif", config=Defaults.TRAIN)
 
