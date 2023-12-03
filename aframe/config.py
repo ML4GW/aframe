@@ -21,7 +21,7 @@ class base(luigi.Config):
     highpass = luigi.FloatParameter(default=32.0)
 
     @property
-    def logdir(self):
+    def log_dir(self):
         return os.path.join(self.run_dir, "logs")
 
     @property
@@ -86,7 +86,7 @@ class export(luigi.Config):
     psd_length = luigi.FloatParameter(default=base().inference_psd_length)
     highpass = luigi.FloatParameter(default=base().highpass)
     logfile = luigi.Parameter(
-        default=os.path.join(base().logdir, "export.log")
+        default=os.path.join(base().log_dir, "export.log")
     )
 
 
