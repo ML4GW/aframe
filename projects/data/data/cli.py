@@ -2,16 +2,22 @@ import logging
 import os
 from typing import Callable
 
+from data.authenticate import authenticate
 from data.find import DataQualityDict
 from data.injection import WaveformGenerator, write_waveforms
 from data.utils import configure_logging
-from gwpy.io.kerberos import kinit
 from gwpy.timeseries import TimeSeries, TimeSeriesDict
 from jsonargparse import ActionConfigFile, ArgumentParser
 
 
 def fetch(
-    start: float, end: float, channels: list[str], sample_rate: float
+    start: float,
+    end: float,
+    channels: list[str],
+    sample_rate: float,
+    n_proc: int = 1,
+    verbose: bool = True,
+    allow_tape: bool = True,
 ) -> TimeSeriesDict:
     """
     Simple wrapper to annotate and simplify
@@ -27,7 +33,14 @@ def fetch(
     X = TimeSeriesDict()
     for channel in channels:
         logging.info(f"Fetching data for channel {channel}")
-        X[channel] = TimeSeries.get(channel, start, end, verbose=True)
+        X[channel] = TimeSeries.get(
+            channel,
+            start,
+            end,
+            verbose=verbose,
+            allow_tape=allow_tape,
+            n_proc=n_proc,
+        )
 
     logging.info(f"Data downloaded, resampling to {sample_rate}Hz")
     return X.resample(sample_rate)
@@ -65,10 +78,7 @@ def main(args=None):
     # TODO: more robust method of finding kinit path in container;
     # Also, this will break if running outside of the container:
     # need to handle that case as well
-    kinit(
-        username=os.getenv("LIGO_USERNAME"),
-        exe="/opt/env/bin/kinit",
-    )
+    authenticate()
 
     if args.subcommand == "query":
         args = args.query.as_dict()

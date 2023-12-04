@@ -51,7 +51,12 @@ class base(luigi.Config):
 class train_background(Config):
     start = luigi.FloatParameter(default=base().train_start)
     end = luigi.FloatParameter(default=base().train_stop)
-    data_dir = luigi.Parameter(os.path.join(base().data_dir, "train"))
+    segments_file = luigi.Parameter(
+        default=os.path.join(base().data_dir, "train", "segments.txt")
+    )
+    data_dir = luigi.Parameter(
+        os.path.join(base().data_dir, "train", "background")
+    )
     condor_directory = luigi.Parameter(
         os.path.join(base().data_dir, "train", "condor")
     )
