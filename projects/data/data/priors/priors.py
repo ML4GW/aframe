@@ -13,11 +13,7 @@ from bilby.core.prior import (
     Uniform,
 )
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
-from data.priors.utils import (
-    mass_condition_powerlaw,
-    mass_constraints,
-    read_priors_from_file,
-)
+from data.priors.utils import mass_condition_powerlaw, mass_constraints
 
 # default cosmology
 COSMOLOGY = cosmo.Planck15
@@ -167,29 +163,6 @@ def end_o3_ratesandpops(
     spin_prior = uniform_spin()
     for key, value in spin_prior.items():
         prior[key] = value
-    detector_frame_prior = False
-    return prior, detector_frame_prior
-
-
-def power_law_dip_break():
-    """
-    Create a Bilby `PriorDict` from a set of sampled parameters
-    following the Power Law + Dip + Break model,
-    see https://dcc.ligo.org/LIGO-T2100512/public
-
-    Masses are defined in the source frame.
-
-    Returns:
-        prior:
-            `PriorDict` describing the binary black hole population
-        detector_frame_prior:
-            Boolean indicating which frame masses are defined in
-    """
-    prior = uniform_extrinsic()
-    event_file = "./event_files/\
-        O1O2O3all_mass_h_iid_mag_iid_tilt_powerlaw_redshift_maxP_events_bbh.h5"
-    prior |= read_priors_from_file(event_file)
-
     detector_frame_prior = False
     return prior, detector_frame_prior
 
