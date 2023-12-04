@@ -51,7 +51,7 @@ class AframeBase(law.Task):
 
 
 # base class for tasks that require a container
-class AframeSandboxTask(law.SandboxTask, AframeBase):
+class AframeSandboxTask(AframeBase, law.SandboxTask):
     dev = luigi.BoolParameter(default=False)
     image = luigi.Parameter()
     container_root = luigi.Parameter(

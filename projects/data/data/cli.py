@@ -3,8 +3,8 @@ from data.fetch.main import main as fetch
 from data.fetch.main import parser as fetch_parser
 from data.segments.main import main as query_segments
 from data.segments.main import parser as query_parser
-from data.timeslide_waveforms.main import main as generate_timeslide_waveforms
-from data.timeslide_waveforms.main import parser as timeslide_parser
+from data.timeslide_waveforms.merge import main as generate_timeslide_waveforms
+from data.timeslide_waveforms.merge import parser as timeslide_parser
 from data.waveforms.main import main as generate_waveforms
 from data.waveforms.main import parser as waveform_parser
 from jsonargparse import ActionConfigFile, ArgumentParser

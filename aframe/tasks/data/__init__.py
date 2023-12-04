@@ -8,5 +8,5 @@ DATAFIND_ENV_VARS = [
 ]
 from .fetch import Fetch
 from .query import Query
-from .timeslide_waveforms import TimeslideWaveforms
+from .timeslide_waveforms import *
 from .waveforms import GenerateWaveforms

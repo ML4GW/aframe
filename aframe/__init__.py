@@ -1,2 +1,2 @@
-from .base import AframeRayTask, AframeTask
+from .base import AframeGPUTask, AframeRayTask, AframeSandboxTask
 from .tasks import *
