@@ -15,7 +15,7 @@ def fetch(
     end: float,
     channels: list[str],
     sample_rate: float,
-    n_proc: int = 1,
+    nproc: int = 1,
     verbose: bool = True,
     allow_tape: bool = True,
 ) -> TimeSeriesDict:
@@ -39,7 +39,7 @@ def fetch(
             end,
             verbose=verbose,
             allow_tape=allow_tape,
-            n_proc=n_proc,
+            nproc=nproc,
         )
 
     logging.info(f"Data downloaded, resampling to {sample_rate}Hz")
