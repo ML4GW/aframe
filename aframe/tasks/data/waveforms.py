@@ -9,6 +9,7 @@ class GenerateWaveforms(AframeDataTask):
     sample_rate = luigi.FloatParameter()
     waveform_duration = luigi.FloatParameter()
     output_file = luigi.Parameter()
+    prior = luigi.Parameter()
     minimum_frequency = luigi.FloatParameter(default=20)
     reference_frequency = luigi.FloatParameter(default=20)
     waveform_approximant = luigi.Parameter(default="IMRPhenomPv2")
@@ -16,23 +17,30 @@ class GenerateWaveforms(AframeDataTask):
     def output(self):
         return law.LocalFileTarget(self.output_file)
 
-    @property
-    def command(self):
+    def get_args(self):
         args = [
-            "--num-signals",
+            "waveforms",
+            "--num_signals",
             str(self.num_signals),
-            "--sample-rate",
+            "--sample_rate",
             str(self.sample_rate),
-            "--waveform-duration",
+            "--waveform_duration",
             str(self.waveform_duration),
-            "--output-file",
+            "--output_file",
             self.output().path,
-            "--minimum-frequency",
+            "--minimum_frequency",
             str(self.minimum_frequency),
-            "--reference-frequency",
+            "--reference_frequency",
             str(self.reference_frequency),
-            "--waveform-approximant",
-            self.waveform_approximant,
+            "--waveform_approximant",
+            str(self.waveform_approximant),
+            "--prior",
+            str(self.prior),
         ]
 
-        return self.cli + args
+        return args
+
+    def run(self):
+        from data.cli import main
+
+        main(args=self.get_args())

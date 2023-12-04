@@ -1,6 +1,7 @@
 import shlex
 import sys
 from configparser import ConfigParser
+from typing import TYPE_CHECKING
 
 import law
 import luigi
@@ -10,6 +11,9 @@ from aframe.config import ray_worker
 from aframe.tasks.train.base import TrainBase
 from aframe.tasks.train.config import s3, wandb
 from aframe.utils import stream_command
+
+if TYPE_CHECKING:
+    from ray_kube import KubernetesRayCluster
 
 
 class TrainLocal(TrainBase):
@@ -46,7 +50,7 @@ class TuneRemote(TrainBase, AframeRayTask):
     max_epochs = luigi.IntParameter()
     reduction_factor = luigi.IntParameter()
 
-    def configure_cluster(self, cluster):
+    def configure_cluster(self, cluster: "KubernetesRayCluster"):
         config = ConfigParser.read(s3().credentials)
         keys = ["aws_access_key_id", "aws_secret_access_key"]
         secret = {}
@@ -60,8 +64,7 @@ class TuneRemote(TrainBase, AframeRayTask):
                 )
             secret[key] = value
         cluster.add_secret("s3-credentials", env=secret)
-
-        # TODO: add AWS_ENDPOINT_URL to cluster environment
+        cluster.set_env("AWS_ENDPOINT_URL", s3().endpoint_url)
 
     def run(self):
         from train.tune import cli as main

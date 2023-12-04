@@ -19,6 +19,8 @@ kr8s = "^0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
+jsonargparse = "^4.27.1"
+conda-lock = "^2.5.1"
 
 [build-system]
 requires = ["poetry-core"]

@@ -9,10 +9,11 @@ from aframe.tasks.data import DATAFIND_ENV_VARS
 
 class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     condor_directory = luigi.Parameter()
-    accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USER"))
+    accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
     request_disk = luigi.Parameter(default="1 GB")
     request_memory = luigi.Parameter(default="1 GB")
+    request_cpus = luigi.IntParameter(default=1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,8 +61,12 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         environment += f'PATH={os.getenv("PATH")}"'
 
         config.custom_content.append(("environment", environment))
+        config.custom_content.append(("stream_error", "True"))
+        config.custom_content.append(("stream_output", "True"))
+
         config.custom_content.append(("request_memory", self.request_memory))
         config.custom_content.append(("request_disk", self.request_disk))
+        config.custom_content.append(("request_cpus", self.request_cpus))
         config.custom_content.append(
             ("accounting_group", self.accounting_group)
         )
@@ -72,19 +77,25 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         config.custom_content.append(
             (
                 "log",
-                os.path.join(self.log_dir, f"{self.name}-$(Cluster).log"),
+                os.path.join(
+                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).log"
+                ),
             )
         )
         config.custom_content.append(
             (
                 "output",
-                os.path.join(self.log_dir, f"{self.name}-$(Cluster).out"),
+                os.path.join(
+                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).out"
+                ),
             )
         )
         config.custom_content.append(
             (
                 "error",
-                os.path.join(self.log_dir, f"{self.name}-$(Cluster).err"),
+                os.path.join(
+                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).err"
+                ),
             )
         )
         return config

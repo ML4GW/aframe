@@ -22,12 +22,15 @@ micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
 # pip install our remaining packages, avoiding
 # installing dependencies since we don't want
 # to touch the libraries resolved by conda.
-# also install yoshi itself to be able to execute
+# also install aframe itself to be able to execute
 # tasks inside the container
 micromamba run -p /opt/env python -m \
     pip install --no-deps --no-build-isolation \
         -e /opt/aframe/projects/data/ \
-        -e /opt/aframe/
+       
+# we wan't to install deps of aframe (e.g. luigi, law, etc.) 
+micromamba run -p /opt/env python -m \
+    pip install -e /opt/aframe/
 
 # initialize our shell so that we can execute
 # commands in our environment at run time

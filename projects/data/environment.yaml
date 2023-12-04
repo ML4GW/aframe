@@ -14,12 +14,23 @@ dependencies:
   - h5py
   # general GW/auth deps
   - gwpy
+  - gwosc
+  - lalsuite
+  - astropy
   - bilby>1.4,<2
   - libgcc
+  # auth libs
   - krb5
+  - ciecplib
+  - requests-gssapi
   # frame file I/O dependencies
   - python-ldas-tools-framecpp<3.0.0
   - python-nds2-client
+  - python-ligo-lw
   # luigi / law
   - luigi
   - law
+  # omicron
+  - pyomicron
+  - omicron>=4.0.0 
+  - uproot

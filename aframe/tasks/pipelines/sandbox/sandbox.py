@@ -7,21 +7,19 @@ from aframe.tasks.pipelines.sandbox.config import SandboxConfig
 config = SandboxConfig()
 
 
-class SandboxTrainDatagen:
+class SandboxTrainDatagen(law.WrapperTask, AframeBaseParams):
     def requires(self):
         yield Fetch.req(
-            self, image="fetch.sif", **config.train_background.to_dict()
+            self, image="data.sif", **config.train_background.to_dict()
         )
         yield GenerateWaveforms.req(
-            self, image="generate.sif", **config.train_waveforms.to_dict()
+            self, image="data.sif", **config.train_waveforms.to_dict()
         )
 
 
 class SandboxTrain(TrainLocal):
     def requires(self):
-        return SandboxTrainDatagen.req(
-            self, image="data.sif", **config.train_background.to_dict()
-        )
+        return SandboxTrainDatagen.req(self)
 
 
 class SandboxExport(ExportLocal):
