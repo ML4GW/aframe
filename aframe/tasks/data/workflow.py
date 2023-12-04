@@ -74,28 +74,15 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             ("accounting_group_user", self.accounting_group_user)
         )
 
-        config.custom_content.append(
-            (
-                "log",
-                os.path.join(
-                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).log"
-                ),
+        for output in ["log", "output", "error"]:
+            ext = output[:3]
+            config.custom_content.append(
+                (
+                    output,
+                    os.path.join(
+                        self.htcondor_log_dir.path,
+                        f"{self.name}-$(Cluster).{ext}",
+                    ),
+                )
             )
-        )
-        config.custom_content.append(
-            (
-                "output",
-                os.path.join(
-                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).out"
-                ),
-            )
-        )
-        config.custom_content.append(
-            (
-                "error",
-                os.path.join(
-                    self.htcondor_log_dir.path, f"{self.name}-$(Cluster).err"
-                ),
-            )
-        )
         return config
