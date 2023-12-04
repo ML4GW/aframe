@@ -14,6 +14,13 @@ class Config(_Config):
         return {key: getattr(self, key) for key in self.get_param_names()}
 
 
+# BIG TODO: law supports
+# 1. parsing environment variables
+# 2. referencing other config sections (i.e. a base)
+# so, we can remove the "hack" where we infer
+# base parameters via default values
+
+
 # base config that stores parameters
 # common to multiple tasks
 class base(luigi.Config):
@@ -33,7 +40,10 @@ class base(luigi.Config):
     # training parameters
     kernel_length = luigi.FloatParameter()
     # waveform parameters
+    waveform_approximant = luigi.Parameter(default="IMRPhenomPv2")
     waveform_duration = luigi.FloatParameter(default=8.0)
+    minimum_frequency = luigi.FloatParameter(default=20)
+    reference_frequency = luigi.FloatParameter(default=20)
     # inference / export parameters
     inference_psd_length = luigi.FloatParameter(default=64)
     inference_sampling_rate = luigi.FloatParameter(default=16)
@@ -76,9 +86,11 @@ class train_waveforms(Config):
     output_file = luigi.Parameter(
         default=os.path.join(base().data_dir, "train", "signals.hdf5")
     )
-    minimum_frequency = luigi.FloatParameter(default=20)
-    reference_frequency = luigi.FloatParameter(default=20)
-    waveform_approximant = luigi.Parameter(default="IMRPhenomPv2")
+    minimum_frequency = luigi.FloatParameter(default=base().minimum_frequency)
+    reference_frequency = luigi.FloatParameter(
+        default=base().reference_frequency
+    )
+    waveform_approximant = luigi.Parameter(default=base().waveform_approximant)
 
 
 class train(Config):
@@ -121,8 +133,34 @@ class export(Config):
     aframe_instances = luigi.IntParameter(default=2)
 
 
+class timeslide_waveforms(Config):
+    shifts = luigi.ListParameter()
+    spacing = luigi.FloatParameter()
+    buffer = luigi.FloatParameter()
+    prior = luigi.Parameter()
+    snr_threshold = luigi.FloatParameter()
+
+    start = luigi.FloatParameter(default=base().train_stop)
+    stop = luigi.FloatParameter(default=base().test_stop)
+    ifos = luigi.ListParameter(default=base().ifos)
+    sample_rate = luigi.FloatParameter(default=base().sample_rate)
+    minimum_frequency = luigi.FloatParameter(default=base().minimum_frequency)
+    reference_frequency = luigi.FloatParameter(
+        default=base().reference_frequency
+    )
+    waveform_duration = luigi.FloatParameter(default=base().waveform_duration)
+    waveform_approximant = luigi.Parameter(default=base().waveform_approximant)
+    highpass = luigi.FloatParameter(default=base().highpass)
+    background_dir = luigi.Parameter(
+        default=os.path.join(base().data_dir, "test", "background")
+    )
+    output_dir = luigi.Parameter(default=os.path.join(base().data_dir, "test"))
+    seed = luigi.IntParameter(default=101588)
+
+
 class SandboxConfig(luigi.Config):
     train_background = train_background()
     train_waveforms = train_waveforms()
     export = export()
     train = train()
+    timeslide_waveforms = timeslide_waveforms()

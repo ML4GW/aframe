@@ -26,6 +26,7 @@ class TimeSlideWaveformsParams(AframeDataTask):
     highpass = luigi.FloatParameter()
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
+    seed = luigi.OptionalParameter(default=None)
     segments_file = luigi.Parameter(default="")
 
 
@@ -79,9 +80,50 @@ class TimeslideWaveforms(
         reqs["data"] = Fetch.req(self)
         return reqs
 
+    # TODO: this is getting a bit messy. I think we should
+    # find a way to annotate arguments that will get passed
+    # to the command line like below, and define a generic
+    # get_args method that handles the rest.
     def get_args(self):
         start, stop, shift = self.branch_data
-        return []
+        return [
+            "--start",
+            str(start),
+            "--stop",
+            str(stop),
+            "--ifos",
+            "H1 L1",
+            "--shifts",
+            ",".join([str(shift)]),
+            "--spacing",
+            str(self.spacing),
+            "--buffer",
+            str(self.buffer),
+            "--prior",
+            self.prior,
+            "--minimum_frequency",
+            str(self.minimum_frequency),
+            "--reference_frequency",
+            str(self.reference_frequency),
+            "--sample_rate",
+            str(self.sample_rate),
+            "--waveform_duration",
+            str(self.waveform_duration),
+            "--waveform_approximant",
+            self.waveform_approximant,
+            "--highpass",
+            str(self.highpass),
+            "--snr_threshold",
+            str(self.snr_threshold),
+            "--seed",
+            str(self.seed),
+            "--verbose",
+            str(self.verbose),
+            "--background_dir",
+            str(self.background_dir),
+            "--output_dir",
+            str(self.data_dir),
+        ]
 
     @workflow_condition.output
     def output(self):
@@ -110,3 +152,6 @@ class MergeTimeslideWaveforms(law.Task):
             law.LocalFileTarget(self.waveform_file),
             law.LocalFileTarget(self.rejected_file),
         ]
+
+    def run(self):
+        pass

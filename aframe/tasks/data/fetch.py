@@ -109,6 +109,8 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
             self.data_dir,
             "--channels",
             "[" + ",".join(self.channels) + "]",
+            "--verbose",
+            self.verbose,
         ]
         return args
 
