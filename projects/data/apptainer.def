@@ -25,7 +25,7 @@ micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
 # also install aframe itself to be able to execute
 # tasks inside the container
 micromamba run -p /opt/env python -m \
-    pip install --no-deps --no-build-isolation \
+    pip install --no-build-isolation \
         -e /opt/aframe/projects/data/ \
        
 # we wan't to install deps of aframe (e.g. luigi, law, etc.) 
