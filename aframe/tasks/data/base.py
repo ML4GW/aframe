@@ -29,7 +29,7 @@ class AframeDataSandbox(AframeSandbox):
 
     @property
     def data_directories(self):
-        return ["/cvmfs", "/hdfs", "/gpfs", "/ceph", "/hadoop"]
+        return ["/cvmfs", "/hdfs", "/gpfs", "/ceph", "/hadoop", "/archive"]
 
     def _get_volumes(self):
         volumes = super()._get_volumes()
