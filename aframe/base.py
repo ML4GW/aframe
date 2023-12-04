@@ -26,7 +26,7 @@ class AframeSandbox(singularity.SingularitySandbox):
     def config(cls):
         config = {}
         default = config_defaults(None).pop("singularity_sandbox")
-        default["law_executable"] = "/opt/env/bin/law"
+        default["law_executable"] = "/usr/local/bin/law"
         default["forward_law"] = False
         postfix = cls.sandbox_type
         config[f"singularity_sandbox_{postfix}"] = default
