@@ -1,7 +1,7 @@
 import law
 import luigi
 
-from aframe.base import AframeTask
+from aframe.base import AframeSandboxTask
 from aframe.config import Defaults
 from aframe.tasks.train.config import wandb
 
@@ -18,7 +18,7 @@ class TrainParams(law.Task):
     fduration = luigi.FloatParameter()
 
 
-class TrainBase(AframeTask, TrainParams):
+class TrainBase(AframeSandboxTask, TrainParams):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not self.data_dir:

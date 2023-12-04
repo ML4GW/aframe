@@ -4,8 +4,9 @@ import luigi
 from aframe.tasks import (
     ExportLocal,
     Fetch,
+    GenerateTimeslideWaveforms,
     GenerateWaveforms,
-    TimeslideWaveforms,
+    MergeTimeslideWaveforms,
     TrainLocal,
 )
 from aframe.tasks.pipelines.sandbox.config import SandboxConfig
@@ -44,6 +45,19 @@ class SandboxExport(ExportLocal):
         )
 
 
+# requires background training files for calculating snr
+class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
+    def requires(self):
+        return Fetch.req(
+            self, image="data.sif", **config.train_background.to_dict()
+        )
+
+
+class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
+    def requires(self):
+        return SandboxGenerateTimeslideWaveforms.req(self)
+
+
 class Sandbox(law.WrapperTask):
     dev = luigi.BoolParameter(default=False)
     gpus = luigi.Parameter(default="")
@@ -52,6 +66,6 @@ class Sandbox(law.WrapperTask):
         yield SandboxExport.req(
             self, image="export.sif", **config.export.to_dict()
         )
-        yield TimeslideWaveforms.req(
+        yield SandboxTimeslideWaveforms.req(
             self, image="data.sif", **config.timeslide_waveforms.to_dict()
         )

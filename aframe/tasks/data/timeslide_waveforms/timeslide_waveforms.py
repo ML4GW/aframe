@@ -1,4 +1,6 @@
+import glob
 import os
+import shutil
 
 import law
 import luigi
@@ -14,6 +16,7 @@ class TimeSlideWaveformsParams(AframeDataTask):
     end = luigi.FloatParameter()
     Tb = luigi.FloatParameter()
     data_dir = luigi.Parameter()
+    out_dir = luigi.Parameter()
     shifts = luigi.ListParameter()
     spacing = luigi.FloatParameter()
     buffer = luigi.FloatParameter()
@@ -26,11 +29,12 @@ class TimeSlideWaveformsParams(AframeDataTask):
     highpass = luigi.FloatParameter()
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
+    background_dir = luigi.Parameter()
     seed = luigi.OptionalParameter(default=None)
     segments_file = luigi.Parameter(default="")
 
 
-class TimeslideWaveforms(
+class GenerateTimeslideWaveforms(
     TimeSlideWaveformsParams, law.LocalWorkflow, LDGCondorWorkflow
 ):
     def __init__(self, *args, **kwargs):
@@ -77,15 +81,23 @@ class TimeslideWaveforms(
     # require directory of segments
     def workflow_requires(self):
         reqs = super().workflow_requires()
-        reqs["data"] = Fetch.req(self)
+        reqs["data"] = Fetch.req(
+            self, data_dir=os.path.join(self.data_dir, "background")
+        )
         return reqs
+
+    @property
+    def tmp_dir(self):
+        return os.path.join(self.out_dir, f"tmp-{self.branch}")
 
     # TODO: this is getting a bit messy. I think we should
     # find a way to annotate arguments that will get passed
     # to the command line like below, and define a generic
-    # get_args method that handles the rest.
+    # get_args method that handles parsing them to CLI based
+    # on their parameter type.
     def get_args(self):
         start, stop, shift = self.branch_data
+
         return [
             "--start",
             str(start),
@@ -122,13 +134,17 @@ class TimeslideWaveforms(
             "--background_dir",
             str(self.background_dir),
             "--output_dir",
-            str(self.data_dir),
+            self.tmp_dir,
         ]
 
     @workflow_condition.output
     def output(self):
-        fname = f"tmp-{self.branch}.hdf5"
-        return law.LocalFileTarget(os.path.join(self.data_dir, fname))
+        return [
+            law.LocalFileTarget(os.path.join(self.tmp_dir, "wavforms.hdf5")),
+            law.LocalFileTarget(
+                os.path.join(self.tmp_dir, "rejected-parameters.hdf5")
+            ),
+        ]
 
     def run(self):
         from data.cli import main
@@ -136,16 +152,16 @@ class TimeslideWaveforms(
         main(args=self.get_args())
 
 
-class MergeTimeslideWaveforms(law.Task):
+class MergeTimeslideWaveforms(TimeSlideWaveformsParams):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.waveform_file = os.path.join(self.data_dir, "waveforms.hdf5")
+        self.waveform_file = os.path.join(self.out_dir, "waveforms.hdf5")
         self.rejected_file = os.path.join(
-            self.data_dir, "rejected-parameters.hdf5"
+            self.out_dir, "rejected-parameters.hdf5"
         )
 
     def requires(self):
-        return TimeslideWaveforms.req()
+        return GenerateTimeslideWaveforms.req(self)
 
     def output(self):
         return [
@@ -153,5 +169,27 @@ class MergeTimeslideWaveforms(law.Task):
             law.LocalFileTarget(self.rejected_file),
         ]
 
+    @property
+    def collection(self):
+        return self.input()["collection"]
+
+    @property
+    def waveform_files(self):
+        return [self.collection[i][0] for i in self.collection]
+
+    @property
+    def rejected_parameters(self):
+        return [self.collection[i][1] for i in self.collection]
+
     def run(self):
-        pass
+        from ledger.injections import InjectionParameterSet, LigoResponseSet
+
+        LigoResponseSet.merge(
+            self.waveform_files, self.waveform_file, clean=True
+        )
+        InjectionParameterSet.merge(
+            self.rejected_parameters, self.rejected_file, clean=True
+        )
+        # clean up temporary directories
+        for dirname in glob.glob(os.path.join(self.out_dir, "tmp-*")):
+            shutil.rmtree(dirname)

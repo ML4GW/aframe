@@ -10,6 +10,7 @@ from data.waveforms.injection import (
     WaveformGenerator,
     convert_to_detector_frame,
 )
+from jsonargparse import ArgumentParser
 from ledger.injections import InjectionParameterSet, LigoResponseSet
 
 from ml4gw.gw import (
@@ -19,7 +20,7 @@ from ml4gw.gw import (
 )
 
 
-def main(
+def timeslide_waveforms(
     start: float,
     stop: float,
     ifos: List[str],
@@ -226,12 +227,21 @@ def main(
     parameters["num_injections"] = num_injections
 
     response_set = LigoResponseSet(**parameters)
-    waveform_fname = output_dir / "waveforms.h5"
+    waveform_fname = output_dir / "waveforms.hdf5"
     utils.io_with_blocking(response_set.write, waveform_fname)
 
-    rejected_fname = output_dir / "rejected-parameters.h5"
+    rejected_fname = output_dir / "rejected-parameters.hdf5"
     utils.io_with_blocking(rejected_params.write, rejected_fname)
 
     # TODO: compute probability of all parameters against
     # source and all target priors here then save them somehow
     return waveform_fname, rejected_fname
+
+
+parser = ArgumentParser()
+parser.add_function_arguments(timeslide_waveforms)
+
+
+def main(args):
+    args = args.timeslide_waveforms.as_dict()
+    timeslide_waveforms(args)
