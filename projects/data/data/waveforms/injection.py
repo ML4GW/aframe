@@ -8,6 +8,14 @@ from bilby.gw.source import lal_binary_black_hole as lal_bbh
 from bilby.gw.waveform_generator import WaveformGenerator as BilbyGenerator
 
 
+def convert_to_detector_frame(samples: Dict[str, np.ndarray]):
+    """Converts mass parameters from source to detector frame"""
+    for key in ["mass_1", "mass_2", "chirp_mass", "total_mass"]:
+        if key in samples:
+            samples[key] = samples[key] * (1 + samples["redshift"])
+    return samples
+
+
 class WaveformGenerator(BilbyGenerator):
     def __init__(
         self,
@@ -42,15 +50,16 @@ class WaveformGenerator(BilbyGenerator):
 
     def __call__(
         self,
-        sample_params: Dict[List, str],
+        sample_params: Dict[str, np.ndarray],
     ):
         """Generate raw gravitational-wave signals, pre-interferometer projection.
         Args:
             sample_params:
-                Dictionary of GW parameters where key is the parameter name
-                and value is a list of the parameters. Typically generated
-                from calling`prior.sample()` where `prior` is a bilby
-                PriorDict object.
+                Dictionary of CBC parameters *defined in the source frame*.
+                The key is the parameter name
+                and value is a np.ndarray of the parameters.
+                Typically generated from calling`prior.sample()`
+                where `prior` is a bilby PriorDict object, for example.
         Returns:
             An (n_samples, 2, waveform_size) array,
             containing both polarizations
