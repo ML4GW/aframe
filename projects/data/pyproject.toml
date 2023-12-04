@@ -9,6 +9,9 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11" 
 
+# local deps
+utils = {path = "../utils", develop = true}
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

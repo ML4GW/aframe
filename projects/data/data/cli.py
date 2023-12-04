@@ -5,9 +5,10 @@ from typing import Callable
 from data.authenticate import authenticate
 from data.find import DataQualityDict
 from data.injection import WaveformGenerator, write_waveforms
-from data.utils import configure_logging
 from gwpy.timeseries import TimeSeries, TimeSeriesDict
 from jsonargparse import ActionConfigFile, ArgumentParser
+
+from utils.logging import configure_logging
 
 
 def fetch(
