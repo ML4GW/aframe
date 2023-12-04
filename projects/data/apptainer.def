@@ -21,18 +21,17 @@ apt-get install -y --no-install-recommends git
 /bin/bash /root/.bashrc
 micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
 
-# pip install our remaining packages, avoiding
-# installing dependencies since we don't want
-# to touch the libraries resolved by conda.
-# also install aframe itself to be able to execute
-# tasks inside the container
+# install poetry so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
     pip install --no-build-isolation \
-        -e /opt/aframe/projects/data/ \
-       
-# we wan't to install deps of aframe (e.g. luigi, law, etc.) 
-micromamba run -p /opt/env python -m \
-    pip install -e /opt/aframe/
+	poetry 'virtualenv==20.4.7' 
+
+micromamba run -p /opt/env \
+    poetry config virtualenvs.create false
+
+cd /opt/aframe/projects/data/
+micromamba run -p /opt/env \
+    poetry install 
 
 # initialize our shell so that we can execute
 # commands in our environment at run time
