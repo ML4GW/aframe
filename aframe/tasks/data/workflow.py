@@ -28,8 +28,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             {
                 "job": {
                     "job_file_dir": self.job_file_dir,
-                    "job_file_dir_cleanup": "false",
-                    "job_file_dir_mkdtemp": "false",
+                    "job_file_dir_cleanup": "True",
+                    "job_file_dir_mkdtemp": "False",
                 }
             }
         )
