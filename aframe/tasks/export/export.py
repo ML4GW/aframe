@@ -1,10 +1,10 @@
 import law
 
-from aframe.base import AframeTask, logger
+from aframe.base import AframeGPUTask, logger
 from aframe.tasks.export.base import ExportParams
 
 
-class ExportLocal(AframeTask, ExportParams):
+class ExportLocal(AframeGPUTask, ExportParams):
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files

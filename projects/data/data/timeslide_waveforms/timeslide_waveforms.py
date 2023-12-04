@@ -24,7 +24,6 @@ def main(
     stop: float,
     ifos: List[str],
     shifts: List[float],
-    background_dir: Path,
     spacing: float,
     buffer: float,
     prior: Callable,
@@ -35,9 +34,8 @@ def main(
     waveform_approximant: str,
     highpass: float,
     snr_threshold: float,
+    background_dir: Path,
     output_dir: Path,
-    log_file: Optional[Path] = None,
-    verbose: bool = False,
     seed: Optional[int] = None,
 ):
     """

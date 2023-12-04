@@ -42,16 +42,21 @@ class AframeSandbox(singularity.SingularitySandbox):
 law.config.update(AframeSandbox.config())
 
 
-class AframeBaseParams(law.Task):
+# keep parameters here that
+# all tasks should inherit.
+# maybe just remove this if
+# we're only keeping verbose here
+class AframeBase(law.Task):
+    verbose = luigi.BoolParameter(default=False)
+
+
+# base class for tasks that require a container
+class AframeSandboxTask(law.SandboxTask, AframeBase):
     dev = luigi.BoolParameter(default=False)
-    gpus = luigi.Parameter(default="")
+    image = luigi.Parameter()
     container_root = luigi.Parameter(
         default=os.getenv("AFRAME_CONTAINER_ROOT", "")
     )
-
-
-class AframeTask(law.SandboxTask, AframeBaseParams):
-    image = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,15 +76,6 @@ class AframeTask(law.SandboxTask, AframeBaseParams):
     def sandbox(self):
         return f"aframe::{self.image}"
 
-    @property
-    def singularity_args(self) -> Callable:
-        def arg_getter():
-            if self.gpus:
-                return ["--nv"]
-            return []
-
-        return arg_getter
-
     def sandbox_env(self, _):
         env = {}
         for envvar, value in os.environ.items():
@@ -90,12 +86,29 @@ class AframeTask(law.SandboxTask, AframeBaseParams):
         for envvar in ["DATA_DIR", "RUN_DIR"]:
             env[envvar] = os.getenv(envvar, "")
 
+
+# containerized tasks that require local gpus
+class AframeGPUTask(AframeSandboxTask):
+    gpus = luigi.Parameter(default="")
+
+    def sandbox_env(self, _):
+        env = super().sandbox_env(_)
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
         return env
 
+    @property
+    def singularity_args(self) -> Callable:
+        def arg_getter():
+            if self.gpus:
+                return ["--nv"]
+            return []
 
-class AframeRayTask(AframeTask):
+        return arg_getter
+
+
+# containerized tasks that require a ray cluster
+class AframeRayTask(AframeBase):
     container = luigi.Parameter(default="")
     kubeconfig = luigi.Parameter(default="")
     namespace = luigi.Parameter(default="")

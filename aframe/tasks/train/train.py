@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import law
 import luigi
 
-from aframe.base import AframeRayTask, logger
+from aframe.base import AframeGPUTask, AframeRayTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import TrainBase
 from aframe.tasks.train.config import s3, wandb
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ray_kube import KubernetesRayCluster
 
 
-class TrainLocal(TrainBase):
+class TrainLocal(TrainBase, AframeGPUTask):
     def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
         if wandb().api_key:
