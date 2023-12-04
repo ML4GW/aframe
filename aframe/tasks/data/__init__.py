@@ -4,6 +4,7 @@ DATAFIND_ENV_VARS = [
     "GWDATAFIND_SERVER",
     "NDSSERVER",
     "LIGO_USERNAME",
+    "DEFAULT_SEGMENT_SERVER",
 ]
 from .fetch import Fetch
 from .query import Query
