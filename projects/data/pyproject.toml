@@ -11,6 +11,7 @@ python = ">=3.9,<3.11"
 
 # local deps
 utils = {path = "../utils", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
 
 [build-system]
 requires = ["poetry-core"]
