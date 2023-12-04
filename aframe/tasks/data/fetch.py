@@ -96,15 +96,16 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
             self.job_log = log_file.path
 
         args = [
-            "fetch" "--start",
+            "fetch",
+            "--start",
             str(start),
             "--end",
             str(start + duration),
-            "--sample-rate",
+            "--sample_rate",
             str(self.sample_rate),
             "--prefix",
             self.prefix,
-            "--output-directory",
+            "--output_directory",
             self.data_dir,
             "--channels",
             "[" + ",".join(self.channels) + "]",

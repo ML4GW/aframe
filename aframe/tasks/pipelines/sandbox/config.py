@@ -1,5 +1,6 @@
 import os
 
+import law
 import luigi
 from luigi import Config as _Config
 
@@ -15,11 +16,11 @@ class Config(_Config):
 
 # base config that stores parameters
 # common to multiple tasks
-class base(Config):
+class base(luigi.Config):
     # general parameters
     ifos = luigi.ListParameter(default=["H1", "L1"])
     run_dir = luigi.Parameter(default=os.getenv("RUN_DIR", ""))
-    data_dir = luigi.Parameter(default=os.getenv("DATA_DIR", ""))
+    data_dir = law.Parameter(default=os.getenv("DATA_DIR", ""))
     # data generation parameters
     train_start = luigi.FloatParameter()
     train_stop = luigi.FloatParameter()
@@ -50,9 +51,11 @@ class base(Config):
 class train_background(Config):
     start = luigi.FloatParameter(default=base().train_start)
     end = luigi.FloatParameter(default=base().train_stop)
-    data_dir = luigi.Parameter(
-        os.path.join(base().data_dir, "train", "background")
+    data_dir = luigi.Parameter(os.path.join(base().data_dir, "train"))
+    condor_directory = luigi.Parameter(
+        os.path.join(base().data_dir, "train", "condor")
     )
+    log_dir = luigi.Parameter(os.path.join(base().log_dir, "train"))
     sample_rate = luigi.FloatParameter(default=base().sample_rate)
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)
@@ -63,6 +66,7 @@ class train_background(Config):
 class train_waveforms(Config):
     num_signals = luigi.IntParameter()
     waveform_duration = luigi.FloatParameter()
+    prior = luigi.Parameter()
     sample_rate = luigi.FloatParameter(default=base().sample_rate)
     output_file = luigi.Parameter(
         default=os.path.join(base().data_dir, "train", "signals.hdf5")

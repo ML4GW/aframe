@@ -15,18 +15,23 @@ class Query(AframeDataTask):
     def output(self):
         return law.LocalFileTarget(self.output_file)
 
-    @property
-    def command(self):
+    def get_args(self):
         args = [
+            "query",
             "--start",
             str(self.start),
             "--end",
             str(self.end),
-            "--output-file",
+            "--output_file",
             self.output().path,
         ]
         for flag in self.flags:
             args.append("--flags+=" + self.ifo + ":" + flag)
         if self.min_duration > 0:
             args.append(f"--min_duration={self.min_duration}")
-        return self.cli + args
+        return args
+
+    def run(self):
+        from data.cli import main
+
+        main(args=self.get_args())

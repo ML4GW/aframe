@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 
 import law
+import luigi
+from law.contrib.singularity.config import config_defaults
 
 from aframe.base import AframeSandbox, AframeTask
 from aframe.tasks.data import DATAFIND_ENV_VARS
@@ -11,6 +13,19 @@ root = Path(__file__).resolve().parent.parent.parent
 
 class AframeDataSandbox(AframeSandbox):
     sandbox_type = "aframe_datagen"
+
+    def get_custom_config_section_postfix(self):
+        return self.sandbox_type
+
+    @classmethod
+    def config(cls):
+        config = {}
+        default = config_defaults(None).pop("singularity_sandbox")
+        default["law_executable"] = "/opt/env/bin/law"
+        default["forward_law"] = False
+        postfix = cls.sandbox_type
+        config[f"singularity_sandbox_{postfix}"] = default
+        return config
 
     @property
     def data_directories(self):
@@ -27,20 +42,12 @@ class AframeDataSandbox(AframeSandbox):
         return volumes
 
 
-law.config.update(
-    {
-        "aframe_datagen": {
-            "stagein_dir_name": "stagein",
-            "stageout_dir_name": "stageout",
-            "law_executable": "/usr/local/bin/law",
-        },
-        "aframe_datagen_env": {},
-        "aframe_datagen_volumes": {},
-    }
-)
+law.config.update(AframeDataSandbox.config())
 
 
 class AframeDataTask(AframeTask):
+    job_log = luigi.Parameter(default="")
+
     @property
     def sandbox(self):
         return f"aframe_datagen::{self.image}"

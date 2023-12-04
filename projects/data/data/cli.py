@@ -1,11 +1,12 @@
 import logging
 import os
+from typing import Callable
 
 from data.find import DataQualityDict
 from data.injection import WaveformGenerator, write_waveforms
 from data.utils import configure_logging
 from gwpy.io.kerberos import kinit
-from gwpy.timeseries import TimeSeriesDict
+from gwpy.timeseries import TimeSeries, TimeSeriesDict
 from jsonargparse import ActionConfigFile, ArgumentParser
 
 
@@ -23,9 +24,10 @@ def fetch(
             end - start, start
         )
     )
-    X = TimeSeriesDict.get(
-        start=start, end=end, channels=channels, verbose=True
-    )
+    X = TimeSeriesDict()
+    for channel in channels:
+        logging.info(f"Fetching data for channel {channel}")
+        X[channel] = TimeSeries.get(channel, start, end, verbose=True)
 
     logging.info(f"Data downloaded, resampling to {sample_rate}Hz")
     return X.resample(sample_rate)
@@ -34,34 +36,35 @@ def fetch(
 def main(args=None):
     query_parser = ArgumentParser()
     query_parser.add_method_arguments(DataQualityDict, "query_segments")
-    query_parser.add_argument("--output-file", "-o", type=str)
+    query_parser.add_argument("--output_file", "-o", type=str)
 
     fetch_parser = ArgumentParser()
     fetch_parser.add_function_arguments(fetch)
-    fetch_parser.add_argument("--sample-rate", type=float)
-    fetch_parser.add_argument("--output-directory", "-o", type=str)
-    fetch_parser.add_argument("--prefix", "-p", type=str, default="deepclean")
+    fetch_parser.add_argument("--output_directory", "-o", type=str)
+    fetch_parser.add_argument("--prefix", "-p", type=str, default="background")
 
-    generate_parser = ArgumentParser()
-    generate_parser.add_function_arguments(WaveformGenerator)
-    generate_parser.add_argument("--output-file", "-o", type=str)
-    generate_parser.add_argument("--prior", type=callable)
-    generate_parser.add_argument("--n-samples", type=int)
+    waveform_parser = ArgumentParser()
+    waveform_parser.add_function_arguments(WaveformGenerator)
+    waveform_parser.add_argument("--output_file", "-o", type=str)
+    waveform_parser.add_argument("--prior", type=Callable)
+    waveform_parser.add_argument("--num_signals", type=int)
 
     parser = ArgumentParser()
     parser.add_argument("--config", action=ActionConfigFile)
-    parser.add_argument("--log-file", type=str, default=None)
+    parser.add_argument("--log_file", type=str, default=None)
     parser.add_argument("--verbose", type=bool, default=False)
 
     subcommands = parser.add_subcommands()
     subcommands.add_subcommand("query", query_parser)
     subcommands.add_subcommand("fetch", fetch_parser)
-    subcommands.add_subcommand("generate", generate_parser)
+    subcommands.add_subcommand("waveforms", waveform_parser)
 
     args = parser.parse_args(args)
     configure_logging(args.log_file, args.verbose)
 
-    # TODO: more robust method of finding kinit path in container
+    # TODO: more robust method of finding kinit path in container;
+    # Also, this will break if running outside of the container:
+    # need to handle that case as well
     kinit(
         username=os.getenv("LIGO_USERNAME"),
         exe="/opt/env/bin/kinit",
@@ -100,9 +103,10 @@ def main(args=None):
         X.write(fname, format="hdf5")
 
     elif args.subcommand == "waveforms":
-        args = args.generate.as_dict()
+        args = args.waveforms.as_dict()
         output_file = args.pop("output_file")
         prior = args.pop("prior")
+        prior, _ = prior()
         num_signals = args.pop("num_signals")
 
         generator = WaveformGenerator(**args)

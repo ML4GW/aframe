@@ -7,6 +7,7 @@ import kr8s
 import law
 import luigi
 from law.contrib import singularity
+from law.contrib.singularity.config import config_defaults
 from ray_kube import KubernetesRayCluster
 
 from aframe.config import ray_head, ray_worker
@@ -18,6 +19,19 @@ logger = logging.getLogger("luigi-interface")
 class AframeSandbox(singularity.SingularitySandbox):
     sandbox_type = "aframe"
 
+    def get_custom_config_section_postfix(self):
+        return self.sandbox_type
+
+    @classmethod
+    def config(cls):
+        config = {}
+        default = config_defaults(None).pop("singularity_sandbox")
+        default["law_executable"] = "/opt/env/bin/law"
+        default["forward_law"] = False
+        postfix = cls.sandbox_type
+        config[f"singularity_sandbox_{postfix}"] = default
+        return config
+
     def _get_volumes(self):
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
@@ -25,17 +39,7 @@ class AframeSandbox(singularity.SingularitySandbox):
         return volumes
 
 
-law.config.update(
-    {
-        "aframe": {
-            "stagein_dir_name": "stagein",
-            "stageout_dir_name": "stageout",
-            "law_executable": "/usr/local/bin/law",
-        },
-        "aframe_env": {},
-        "aframe_volumes": {},
-    }
-)
+law.config.update(AframeSandbox.config())
 
 
 class AframeBaseParams(law.Task):
@@ -62,10 +66,6 @@ class AframeTask(law.SandboxTask, AframeBaseParams):
     @property
     def singularity_forward_law(self) -> bool:
         return False
-
-    # @property
-    # def ifos(self):
-    #    return self.cfg.ifos
 
     @property
     def sandbox(self):
