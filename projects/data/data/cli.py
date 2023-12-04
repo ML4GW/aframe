@@ -33,8 +33,9 @@ def fetch(
     )
     X = TimeSeriesDict()
     for channel in channels:
+        ifo = channel.split(":")[0]
         logging.info(f"Fetching data for channel {channel}")
-        X[channel] = TimeSeries.get(
+        X[ifo] = TimeSeries.get(
             channel,
             start,
             end,
