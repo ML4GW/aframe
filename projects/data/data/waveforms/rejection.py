@@ -41,9 +41,9 @@ def rejection_sample(
     generator = WaveformGenerator(
         waveform_duration,
         sample_rate,
-        minimum_frequency,
-        reference_frequency,
-        waveform_approximant,
+        minimum_frequency=minimum_frequency,
+        reference_frequency=reference_frequency,
+        waveform_approximant=waveform_approximant,
     )
 
     # create a dictionary to store accepted

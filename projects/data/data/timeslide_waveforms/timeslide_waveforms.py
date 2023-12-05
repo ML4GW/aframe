@@ -13,7 +13,7 @@ def timeslide_waveforms(
     start: float,
     end: float,
     ifos: List[str],
-    shifts: List[float],
+    shift: float,
     spacing: float,
     buffer: float,
     prior: Callable,
@@ -24,7 +24,7 @@ def timeslide_waveforms(
     waveform_approximant: str,
     highpass: float,
     snr_threshold: float,
-    background_dir: Path,
+    psd_file: Path,
     output_dir: Path,
     seed: Optional[int] = None,
 ):
@@ -93,13 +93,13 @@ def timeslide_waveforms(
 
     # seed process based on start, end and shift
     if seed is not None:
-        utils.seed_worker(start, end, shifts, seed)
+        utils.seed_worker(start, end, shift, seed)
 
     # calculate the injecitn times, determining
     # the number of samples we'll need to generate
     injection_times = utils.calc_segment_injection_times(
         start,
-        end - max(shifts),  # TODO: should account for uneven last batch too
+        end - shift,  # TODO: should account for uneven last batch too
         spacing,
         buffer,
         waveform_duration,
@@ -108,16 +108,8 @@ def timeslide_waveforms(
 
     # calculate psd that will be used for snr calculation
     df = 1 / waveform_duration
-    try:
-        background_path = sorted(background_dir.iterdir())[0]
-    except StopIteration:
-        raise ValueError(
-            f"No files in background data directory {background_dir}"
-        )
-    logging.info(
-        f"Using background file {background_path} for psd calculation"
-    )
-    psds = utils.load_psds(background_path, ifos, df=df)
+    logging.info(f"Using background file {psd_file} for psd calculation")
+    psds = utils.load_psds(psd_file, ifos, df=df)
 
     # perform the rejection sampling
     parameters, rejected_params = rejection_sample(
@@ -137,8 +129,9 @@ def timeslide_waveforms(
     # now, set the injection times and shifts,
     # and create the LigoResponseSet object
     parameters["gps_time"] = injection_times
-    parameters["shift"] = np.array([shifts for _ in range(n_samples)])
+    parameters["shift"] = np.array([shift for _ in range(n_samples)])
 
+    output_dir.mkdir(parents=True, exist_ok=True)
     response_set = LigoResponseSet(**parameters)
     waveform_fname = output_dir / "waveforms.hdf5"
     utils.io_with_blocking(response_set.write, waveform_fname)
@@ -157,4 +150,4 @@ parser.add_function_arguments(timeslide_waveforms)
 
 def main(args):
     args = args.timeslide_waveforms.as_dict()
-    timeslide_waveforms(args)
+    timeslide_waveforms(**args)

@@ -26,8 +26,8 @@ class Config(_Config):
 class base(luigi.Config):
     # general parameters
     ifos = luigi.ListParameter(default=["H1", "L1"])
-    run_dir = luigi.Parameter(default=os.getenv("RUN_DIR", ""))
-    data_dir = law.Parameter(default=os.getenv("DATA_DIR", ""))
+    run_dir = luigi.Parameter(default=os.getenv("AFRAME_RUN_DIR", ""))
+    data_dir = law.Parameter(default=os.getenv("AFRAME_DATA_DIR", ""))
     # data generation parameters
     train_start = luigi.FloatParameter()
     train_stop = luigi.FloatParameter()
@@ -170,9 +170,6 @@ class timeslide_waveforms(Config):
     waveform_duration = luigi.FloatParameter(default=base().waveform_duration)
     waveform_approximant = luigi.Parameter(default=base().waveform_approximant)
     highpass = luigi.FloatParameter(default=base().highpass)
-    background_dir = luigi.Parameter(
-        default=os.path.join(base().data_dir, "test", "background")
-    )
     data_dir = luigi.Parameter(
         default=os.path.join(base().data_dir, "test", "timeslide_waveforms")
     )
