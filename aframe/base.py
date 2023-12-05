@@ -46,12 +46,12 @@ law.config.update(AframeSandbox.config())
 # all tasks should inherit.
 # maybe just remove this if
 # we're only keeping verbose here
-class AframeBase(law.Task):
-    verbose = luigi.BoolParameter(default=False)
+# class AframeBase(law.Task):
+#    verbose = luigi.BoolParameter(default=False)
 
 
 # base class for tasks that require a container
-class AframeSandboxTask(AframeBase, law.SandboxTask):
+class AframeSandboxTask(law.SandboxTask):
     dev = luigi.BoolParameter(default=False)
     image = luigi.Parameter()
     container_root = luigi.Parameter(
@@ -85,6 +85,7 @@ class AframeSandboxTask(AframeBase, law.SandboxTask):
         # so they get mapped into the sandbox
         for envvar in ["DATA_DIR", "RUN_DIR"]:
             env[envvar] = os.getenv(envvar, "")
+        return env
 
 
 # containerized tasks that require local gpus
@@ -92,7 +93,7 @@ class AframeGPUTask(AframeSandboxTask):
     gpus = luigi.Parameter(default="")
 
     def sandbox_env(self, _):
-        env = super().sandbox_env(_)
+        env = super().sandbox_env()
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
         return env
@@ -108,7 +109,7 @@ class AframeGPUTask(AframeSandboxTask):
 
 
 # containerized tasks that require a ray cluster
-class AframeRayTask(AframeBase):
+class AframeRayTask(AframeSandboxTask):
     container = luigi.Parameter(default="")
     kubeconfig = luigi.Parameter(default="")
     namespace = luigi.Parameter(default="")

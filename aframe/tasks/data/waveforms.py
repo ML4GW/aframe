@@ -1,6 +1,7 @@
 import law
 import luigi
 
+from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
 
 
@@ -41,6 +42,8 @@ class GenerateWaveforms(AframeDataTask):
         return args
 
     def run(self):
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         from data.cli import main
 
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         main(args=self.get_args())

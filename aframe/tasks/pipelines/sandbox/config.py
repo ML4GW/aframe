@@ -139,10 +139,11 @@ class timeslide_waveforms(Config):
     buffer = luigi.FloatParameter()
     prior = luigi.Parameter()
     snr_threshold = luigi.FloatParameter()
-
+    Tb = luigi.FloatParameter()
     start = luigi.FloatParameter(default=base().train_stop)
-    stop = luigi.FloatParameter(default=base().test_stop)
+    end = luigi.FloatParameter(default=base().test_stop)
     ifos = luigi.ListParameter(default=base().ifos)
+    psd_length = luigi.FloatParameter(default=base().inference_psd_length)
     sample_rate = luigi.FloatParameter(default=base().sample_rate)
     minimum_frequency = luigi.FloatParameter(default=base().minimum_frequency)
     reference_frequency = luigi.FloatParameter(
@@ -153,6 +154,9 @@ class timeslide_waveforms(Config):
     highpass = luigi.FloatParameter(default=base().highpass)
     background_dir = luigi.Parameter(
         default=os.path.join(base().data_dir, "test", "background")
+    )
+    data_dir = luigi.Parameter(
+        default=os.path.join(base().data_dir, "test", "timeslide_waveforms")
     )
     output_dir = luigi.Parameter(default=os.path.join(base().data_dir, "test"))
     seed = luigi.IntParameter(default=101588)

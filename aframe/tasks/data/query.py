@@ -1,6 +1,7 @@
 import law
 import luigi
 
+from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
 
 
@@ -29,9 +30,12 @@ class Query(AframeDataTask):
             args.append("--flags+=" + self.ifo + ":" + flag)
         if self.min_duration > 0:
             args.append(f"--min_duration={self.min_duration}")
+
         return args
 
     def run(self):
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         from data.cli import main
 
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         main(args=self.get_args())

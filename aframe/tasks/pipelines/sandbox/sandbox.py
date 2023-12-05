@@ -1,3 +1,5 @@
+import os
+
 import law
 import luigi
 
@@ -54,8 +56,16 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
 
 
 class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
+    @property
+    def condor_directory(self):
+        data_dir = config.timeslide_waveforms.data_dir
+        return os.path.join(data_dir, "test", "condor")
+
     def requires(self):
-        return SandboxGenerateTimeslideWaveforms.req(self)
+        return SandboxGenerateTimeslideWaveforms.req(
+            self,
+            condor_directory=self.condor_directory,
+        )
 
 
 class Sandbox(law.WrapperTask):
@@ -66,6 +76,7 @@ class Sandbox(law.WrapperTask):
         yield SandboxExport.req(
             self, image="export.sif", **config.export.to_dict()
         )
+
         yield SandboxTimeslideWaveforms.req(
             self, image="data.sif", **config.timeslide_waveforms.to_dict()
         )
