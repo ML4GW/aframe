@@ -48,6 +48,30 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     def job_file_dir(self):
         return self.htcondor_output_directory().child("jobs", type="d").path
 
+    @property
+    def law_config(self):
+        path = os.getenv("LAW_CONFIG_FILE", "")
+        return path
+
+    def build_environment(self):
+        # set necessary env variables for
+        # required for LDG data access
+        environment = '"'
+        for envvar in DATAFIND_ENV_VARS:
+            environment += f"{envvar}={os.getenv(envvar)} "
+
+        # forward current path and law config
+        environment += f'PATH={os.getenv("PATH")} '
+        environment += f"LAW_CONFIG_FILE={self.law_config} "
+
+        # forward any env variables that start with AFRAME_
+        # that the law config may need to parse
+        for envvar, value in os.environ.items():
+            if envvar.startswith("AFRAME_"):
+                environment += f"{envvar}={value} "
+        environment += '"'
+        return environment
+
     def htcondor_output_directory(self):
         return law.LocalDirectoryTarget(self.condor_directory)
 
@@ -55,11 +79,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         return True
 
     def htcondor_job_config(self, config, job_num, branches):
-        environment = '"'
-        for envvar in DATAFIND_ENV_VARS:
-            environment += f"{envvar}={os.getenv(envvar)} "
-        environment += f'PATH={os.getenv("PATH")}"'
-
+        environment = self.build_environment()
         config.custom_content.append(("environment", environment))
         config.custom_content.append(("stream_error", "True"))
         config.custom_content.append(("stream_output", "True"))

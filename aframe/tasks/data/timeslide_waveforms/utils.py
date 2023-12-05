@@ -1,18 +1,18 @@
 import logging
 import math
 import re
-from pathlib import Path
 from typing import List, Tuple
 
+from law.target.base import Target
 
-def segments_from_directory(path: Path):
-    path = Path(path)
+
+def segments_from_paths(paths: List[Target]):
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     segments = []
-    for fname in path.iterdir():
-        match = fname_re.search(fname.name)
+    for fname in paths:
+        match = fname_re.search(fname.path)
         if match is None:
-            logging.warning(f"Couldn't parse file {fname.name}")
+            logging.warning(f"Couldn't parse file {fname.path}")
 
         start = float(match.group("t0"))
         duration = float(match.group("length"))

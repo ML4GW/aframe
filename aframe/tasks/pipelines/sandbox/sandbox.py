@@ -50,14 +50,22 @@ class SandboxExport(ExportLocal):
 class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
     def workflow_requires(self):
         reqs = {}
-        # requires a background training segment for calculating snr
-        reqs["train"] = Fetch.req(
-            self, image="data.sif", **config.train_background.to_dict()
-        )
         # requires background testing segments
         # to determine number of waveforms to generate
-        reqs["test"] = Fetch.req(
+        reqs["test_segments"] = Fetch.req(
             self, image="data.sif", **config.test_background.to_dict()
+        )
+        return reqs
+
+    def requires(self):
+        reqs = {}
+        # requires a background training segment for calculating snr
+        # TODO: how to specify just the last segment?
+        reqs["train_segments"] = Fetch.req(
+            self,
+            branch=-1,
+            image="data.sif",
+            **config.train_background.to_dict()
         )
         return reqs
 
@@ -66,7 +74,7 @@ class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
     @property
     def condor_directory(self):
         data_dir = config.timeslide_waveforms.data_dir
-        return os.path.join(data_dir, "test", "condor")
+        return os.path.join(data_dir, "condor")
 
     def requires(self):
         return SandboxGenerateTimeslideWaveforms.req(
@@ -78,13 +86,13 @@ class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
 
 
 class Sandbox(law.WrapperTask):
-    dev = luigi.BoolParameter(default=False, significant=False)
-    gpus = luigi.Parameter(default="", significant=False)
+    dev = luigi.BoolParameter(default=False)
+    gpus = luigi.Parameter(default="")
 
     def requires(self):
-        yield SandboxExport.req(
-            self, image="export.sif", **config.export.to_dict()
-        )
+        # yield SandboxExport.req(
+        #    self, image="export.sif", **config.export.to_dict()
+        # )
 
         yield SandboxTimeslideWaveforms.req(
             self, image="data.sif", **config.timeslide_waveforms.to_dict()
