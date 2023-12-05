@@ -30,7 +30,7 @@ class ExportLocal(AframeGPUTask, ExportParams):
             "--repository_directory",
             self.repository_directory,
             "--num_ifos",
-            self.num_ifos,
+            str(len(self.ifos)),
             "--batch_size",
             self.batch_size,
             "--psd_length",

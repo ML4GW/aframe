@@ -3,6 +3,7 @@ import os
 import law
 import luigi
 
+from aframe.pipelines.sandbox.config import SandboxConfig
 from aframe.tasks import (
     ExportLocal,
     Fetch,
@@ -11,7 +12,6 @@ from aframe.tasks import (
     MergeTimeslideWaveforms,
     TrainLocal,
 )
-from aframe.tasks.pipelines.sandbox.config import SandboxConfig
 
 config = SandboxConfig()
 
@@ -21,10 +21,20 @@ class SandboxTrainDatagen(law.WrapperTask):
 
     def requires(self):
         yield Fetch.req(
-            self, image="data.sif", **config.train_background.to_dict()
+            self,
+            image="data.sif",
+            condor_directory=os.path.join(config.data_dir, "condor", "train"),
+            data_dir=os.path.join(config.data_dir, "train", "background"),
+            segments_file=os.path.join(
+                config.data_dir, "train", "segments.txt"
+            ),
+            **config.train_background.to_dict(),
         )
         yield GenerateWaveforms.req(
-            self, image="data.sif", **config.train_waveforms.to_dict()
+            self,
+            image="data.sif",
+            output_file=os.path.join(config.data_dir, "train", "signals.hdf5"),
+            **config.train_waveforms.to_dict(),
         )
 
 
@@ -43,7 +53,11 @@ class SandboxExport(ExportLocal):
         # b/c these are common parameters that should
         # not be inherited from the export task
         return SandboxTrain.req(
-            self, image="train.sif", **config.train.to_dict()
+            self,
+            image="train.sif",
+            data_dir=os.path.join(config.data_dir, "train"),
+            run_dir=config.run_dir,
+            **config.train.to_dict(),
         )
 
 
@@ -53,7 +67,14 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
         # requires background testing segments
         # to determine number of waveforms to generate
         reqs["test_segments"] = Fetch.req(
-            self, image="data.sif", **config.test_background.to_dict()
+            self,
+            image="data.sif",
+            condor_directory=os.path.join(config.data_dir, "condor", "test"),
+            data_dir=os.path.join(config.data_dir, "test", "background"),
+            segments_file=os.path.join(
+                config.data_dir, "test", "segments.txt"
+            ),
+            **config.test_background.to_dict(),
         )
         return reqs
 
@@ -65,23 +86,37 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             self,
             branch=-1,
             image="data.sif",
-            **config.train_background.to_dict()
+            condor_directory=os.path.join(config.data_dir, "condor", "train"),
+            data_dir=os.path.join(config.data_dir, "train", "background"),
+            segments_file=os.path.join(
+                config.data_dir, "train", "segments.txt"
+            ),
+            **config.train_background.to_dict(),
         )
         return reqs
 
 
 class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
     @property
+    def data_dir(self):
+        return os.path.join(config.data_dir, "test")
+
+    @property
+    def output_dir(self):
+        return os.path.join(config.run_dir, "timeslide_waveforms")
+
+    @property
     def condor_directory(self):
-        data_dir = config.timeslide_waveforms.data_dir
-        return os.path.join(data_dir, "condor")
+        return os.path.join(config.data_dir, "condor", "timeslide_waveforms")
 
     def requires(self):
         return SandboxGenerateTimeslideWaveforms.req(
             self,
             image="data.sif",
+            data_dir=self.data_dir,
+            output_dir=self.output_dir,
             condor_directory=self.condor_directory,
-            **config.timeslide_waveforms.to_dict()
+            **config.timeslide_waveforms.to_dict(),
         )
 
 
@@ -90,9 +125,15 @@ class Sandbox(law.WrapperTask):
     gpus = luigi.Parameter(default="")
 
     def requires(self):
-        # yield SandboxExport.req(
-        #    self, image="export.sif", **config.export.to_dict()
-        # )
+        yield SandboxExport.req(
+            self,
+            image="export.sif",
+            repository_directory=os.path.join(
+                config.base.run_dir, "model_repo"
+            ),
+            logfile=os.path.join(config.base.log_dir, "export.log"),
+            **config.export.to_dict(),
+        )
 
         yield SandboxTimeslideWaveforms.req(
             self, image="data.sif", **config.timeslide_waveforms.to_dict()

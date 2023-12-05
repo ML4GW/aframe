@@ -19,7 +19,7 @@ class ExportParams(law.Task):
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
     clean = luigi.BoolParameter()
-    num_ifos = luigi.IntParameter()
+    ifos = luigi.ListParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
