@@ -52,10 +52,10 @@ law.config.update(AframeSandbox.config())
 
 # base class for tasks that require a container
 class AframeSandboxTask(law.SandboxTask):
-    dev = luigi.BoolParameter(default=False)
+    dev = luigi.BoolParameter(default=False, significant=False)
     image = luigi.Parameter()
     container_root = luigi.Parameter(
-        default=os.getenv("AFRAME_CONTAINER_ROOT", "")
+        default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
     )
 
     def __init__(self, *args, **kwargs):
@@ -90,10 +90,10 @@ class AframeSandboxTask(law.SandboxTask):
 
 # containerized tasks that require local gpus
 class AframeGPUTask(AframeSandboxTask):
-    gpus = luigi.Parameter(default="")
+    gpus = luigi.Parameter(default="", significant=False)
 
     def sandbox_env(self, _):
-        env = super().sandbox_env()
+        env = super().sandbox_env(_)
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
         return env
@@ -110,10 +110,10 @@ class AframeGPUTask(AframeSandboxTask):
 
 # containerized tasks that require a ray cluster
 class AframeRayTask(AframeSandboxTask):
-    container = luigi.Parameter(default="")
-    kubeconfig = luigi.Parameter(default="")
-    namespace = luigi.Parameter(default="")
-    label = luigi.Parameter(default="")
+    container = luigi.Parameter(default="", significant=False)
+    kubeconfig = luigi.Parameter(default="", significant=False)
+    namespace = luigi.Parameter(default="", significant=False)
+    label = luigi.Parameter(default="", significant=False)
 
     def configure_cluster(self, cluster):
         return cluster

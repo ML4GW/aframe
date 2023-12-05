@@ -1,5 +1,3 @@
-import logging
-
 from data.authenticate import authenticate
 from data.fetch.main import main as fetch
 from data.fetch.main import parser as fetch_parser
@@ -15,11 +13,10 @@ from utils.logging import configure_logging
 
 
 def main(args=None):
-    logging.info(args)
     parser = ArgumentParser()
     parser.add_argument("--config", action=ActionConfigFile)
     parser.add_argument("--log_file", type=str, default=None)
-    # parser.add_argument("--verbose", type=bool, default=False)
+    parser.add_argument("--verbose", type=bool, default=False)
 
     subcommands = parser.add_subcommands()
     subcommands.add_subcommand("query", query_parser)
@@ -28,7 +25,6 @@ def main(args=None):
     subcommands.add_subcommand("timeslide-waveforms", timeslide_parser)
 
     args = parser.parse_args(args)
-    logging.info(args)
     configure_logging(args.log_file, args.verbose)
     authenticate()
 

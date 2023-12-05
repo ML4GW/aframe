@@ -70,7 +70,25 @@ class train_background(Config):
     condor_directory = luigi.Parameter(
         os.path.join(base().data_dir, "train", "condor")
     )
-    log_dir = luigi.Parameter(os.path.join(base().log_dir, "train"))
+    sample_rate = luigi.FloatParameter(default=base().sample_rate)
+    min_duration = luigi.FloatParameter()
+    max_duration = luigi.FloatParameter(default=-1)
+    flags = luigi.ListParameter()
+    channels = luigi.ListParameter()
+
+
+class test_background(Config):
+    start = luigi.FloatParameter(default=base().train_stop)
+    end = luigi.FloatParameter(default=base().test_stop)
+    segments_file = luigi.Parameter(
+        default=os.path.join(base().data_dir, "test", "segments.txt")
+    )
+    data_dir = luigi.Parameter(
+        os.path.join(base().data_dir, "test", "background")
+    )
+    condor_directory = luigi.Parameter(
+        os.path.join(base().data_dir, "test", "condor")
+    )
     sample_rate = luigi.FloatParameter(default=base().sample_rate)
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)
@@ -168,3 +186,4 @@ class SandboxConfig(luigi.Config):
     export = export()
     train = train()
     timeslide_waveforms = timeslide_waveforms()
+    test_background = test_background()
