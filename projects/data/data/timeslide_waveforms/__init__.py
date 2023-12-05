@@ -1,1 +1,1 @@
-from .timeslide_waveforms import main
+from .timeslide_waveforms import main, parser

@@ -7,14 +7,7 @@ import numpy as np
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
-
-from aframe.analysis.ledger.ledger import (
-    PATH,
-    Ledger,
-    metadata,
-    parameter,
-    waveform,
-)
+from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 
 
 @dataclass

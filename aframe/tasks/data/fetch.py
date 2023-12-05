@@ -3,6 +3,7 @@ import os
 import law
 import luigi
 
+from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.query import Query
 from aframe.tasks.data.workflow import LDGCondorWorkflow
@@ -109,12 +110,12 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
             self.data_dir,
             "--channels",
             "[" + ",".join(self.channels) + "]",
-            "--verbose",
-            self.verbose,
         ]
         return args
 
     def run(self):
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         from data.cli import main
 
+        logger.debug(f"Running with args: {' '.join(self.get_args())}")
         main(args=self.get_args())

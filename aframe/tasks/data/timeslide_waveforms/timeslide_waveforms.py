@@ -14,9 +14,10 @@ from aframe.tasks.data.workflow import LDGCondorWorkflow
 class TimeSlideWaveformsParams(AframeDataTask):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
+    ifos = luigi.ListParameter()
     Tb = luigi.FloatParameter()
     data_dir = luigi.Parameter()
-    out_dir = luigi.Parameter()
+    output_dir = luigi.Parameter()
     shifts = luigi.ListParameter()
     spacing = luigi.FloatParameter()
     buffer = luigi.FloatParameter()
@@ -72,9 +73,10 @@ class GenerateTimeslideWaveforms(
     @workflow_condition.create_branch_map
     def create_branch_map(self):
         branch_map, i = {}, 1
-        for start, stop in self.segments:
+        for start, end in self.segments:
             for shift in self.shifts_required:
-                branch_map[i] = (start, stop, shift)
+                # add psd_length to account for the burn in of psd calculation
+                branch_map[i] = (start + self.psd_length, end, shift)
                 i += 1
         return
 
@@ -88,7 +90,7 @@ class GenerateTimeslideWaveforms(
 
     @property
     def tmp_dir(self):
-        return os.path.join(self.out_dir, f"tmp-{self.branch}")
+        return os.path.join(self.output_dir, f"tmp-{self.branch}")
 
     # TODO: this is getting a bit messy. I think we should
     # find a way to annotate arguments that will get passed
@@ -96,15 +98,15 @@ class GenerateTimeslideWaveforms(
     # get_args method that handles parsing them to CLI based
     # on their parameter type.
     def get_args(self):
-        start, stop, shift = self.branch_data
+        start, end, shift = self.branch_data
 
         return [
             "--start",
             str(start),
-            "--stop",
-            str(stop),
+            "--end",
+            str(end),
             "--ifos",
-            "H1 L1",
+            f"--data.ifos=[{','.join(self.ifos)}]",
             "--shifts",
             ",".join([str(shift)]),
             "--spacing",
@@ -155,9 +157,9 @@ class GenerateTimeslideWaveforms(
 class MergeTimeslideWaveforms(TimeSlideWaveformsParams):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.waveform_file = os.path.join(self.out_dir, "waveforms.hdf5")
+        self.waveform_file = os.path.join(self.output_dir, "waveforms.hdf5")
         self.rejected_file = os.path.join(
-            self.out_dir, "rejected-parameters.hdf5"
+            self.output_dir, "rejected-parameters.hdf5"
         )
 
     def requires(self):
@@ -191,5 +193,5 @@ class MergeTimeslideWaveforms(TimeSlideWaveformsParams):
             self.rejected_parameters, self.rejected_file, clean=True
         )
         # clean up temporary directories
-        for dirname in glob.glob(os.path.join(self.out_dir, "tmp-*")):
+        for dirname in glob.glob(os.path.join(self.output_dir, "tmp-*")):
             shutil.rmtree(dirname)
