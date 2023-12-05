@@ -4,6 +4,7 @@ import shutil
 
 import law
 import luigi
+from luigi.util import inherits
 
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.fetch import Fetch
@@ -11,7 +12,7 @@ from aframe.tasks.data.timeslide_waveforms import utils
 from aframe.tasks.data.workflow import LDGCondorWorkflow
 
 
-class TimeSlideWaveformsParams(AframeDataTask):
+class TimeSlideWaveformsParams(law.Task):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     ifos = luigi.ListParameter()
@@ -35,8 +36,11 @@ class TimeSlideWaveformsParams(AframeDataTask):
     segments_file = luigi.Parameter(default="")
 
 
+@inherits(TimeSlideWaveformsParams)
 class GenerateTimeslideWaveforms(
-    TimeSlideWaveformsParams, law.LocalWorkflow, LDGCondorWorkflow
+    law.LocalWorkflow,
+    LDGCondorWorkflow,
+    AframeDataTask,
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,7 +60,7 @@ class GenerateTimeslideWaveforms(
     # is still the case.
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
-        return self.input()["data"]["collection"].exists()
+        return self.input()["test"]["collection"].exists()
 
     @property
     def shifts_required(self):
@@ -64,7 +68,8 @@ class GenerateTimeslideWaveforms(
 
     @property
     def segments(self):
-        return utils.segments_from_directory(self.input()["data"])
+        d = os.path.dirname(self.input()["test"]["collection"].targets[1].path)
+        return utils.segments_from_directory(d)
 
     @property
     def max_shift(self):
@@ -72,13 +77,13 @@ class GenerateTimeslideWaveforms(
 
     @workflow_condition.create_branch_map
     def create_branch_map(self):
-        branch_map, i = {}, 1
+        branch_map, i = {}, 0
         for start, end in self.segments:
-            for shift in self.shifts_required:
+            for shift in range(self.shifts_required):
                 # add psd_length to account for the burn in of psd calculation
                 branch_map[i] = (start + self.psd_length, end, shift)
                 i += 1
-        return
+        return branch_map
 
     # require directory of segments
     def workflow_requires(self):
@@ -154,7 +159,8 @@ class GenerateTimeslideWaveforms(
         main(args=self.get_args())
 
 
-class MergeTimeslideWaveforms(TimeSlideWaveformsParams):
+@inherits(TimeSlideWaveformsParams)
+class MergeTimeslideWaveforms(AframeDataTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_file = os.path.join(self.output_dir, "waveforms.hdf5")

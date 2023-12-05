@@ -19,7 +19,7 @@ LigoResponseSetFields = Dict[str, Union[np.ndarray, float]]
 
 
 def rejection_sample(
-    n_samples: int,
+    num_signals: int,
     prior: Callable,
     ifos: List[str],
     minimum_frequency: float,
@@ -30,6 +30,7 @@ def rejection_sample(
     highpass: float,
     snr_threshold: float,
     psds: torch.Tensor,
+    return_raw: bool = False,
 ) -> Tuple[LigoResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
@@ -47,13 +48,13 @@ def rejection_sample(
 
     # create a dictionary to store accepted
     # parameters, waveforms, and metadata
-    zeros = np.zeros((n_samples,))
+    zeros = np.zeros((num_signals,))
     parameters = defaultdict(lambda: zeros.copy())
 
     # allocate memory for our waveforms up front
     waveform_size = int(sample_rate * waveform_duration)
     for ifo in ifos:
-        empty = np.zeros((n_samples, waveform_size))
+        empty = np.zeros((num_signals, waveform_size))
         parameters[ifo.lower()] = empty
 
     prior, detector_frame_prior = prior()
@@ -63,8 +64,8 @@ def rejection_sample(
     # keeping track of the number of signals rejected
     num_injections, idx = 0, 0
     rejected_params = InjectionParameterSet()
-    while n_samples > 0:
-        params = prior.sample(n_samples)
+    while num_signals > 0:
+        params = prior.sample(num_signals)
         if not detector_frame_prior:
             params = convert_to_detector_frame(params)
         # If a Bilby PriorDict has a conversion function, any
@@ -74,7 +75,7 @@ def rejection_sample(
         # extra keys
         # TODO: If https://git.ligo.org/lscsoft/bilby/-/merge_requests/1286
         # is merged, remove this
-        if n_samples == 1:
+        if num_signals == 1:
             params = {k: params[k] for k in parameters if k in params}
 
         waveforms = generator(params)
@@ -119,11 +120,15 @@ def rejection_sample(
         for key, value in params.items():
             parameters[key][start:end] = value[mask]
 
-        # do the same for our accepted projected waveforms
-        projected = projected[mask].numpy()
+        # insert either the projected waveforms or the raw waveforms
+        if not return_raw:
+            signals = projected[mask].numpy()
+        else:
+            signals = waveforms[mask].numpy()
+
         for i, ifo in enumerate(ifos):
             key = ifo.lower()
-            parameters[key][start:end] = projected[:, i]
+            parameters[key][start:end] = signals[:, i]
 
         # subtract off the number of samples we accepted
         # from the number we'll need to sample next time,
@@ -131,7 +136,7 @@ def rejection_sample(
         # accepted samples and therefore risk overestimating
         # our total number of injections
         idx += num_accepted
-        n_samples -= num_accepted
+        num_signals -= num_accepted
 
     parameters["sample_rate"] = sample_rate
     parameters["duration"] = waveform_duration

@@ -333,7 +333,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         psd = self.psd_estimator.spectral_density(val_background.double())
 
         self._logger.info("Loading waveforms")
-        with h5py.File(f"{self.data_dir}/signals.h5", "r") as f:
+        with h5py.File(f"{self.data_dir}/signals.hdf5", "r") as f:
             cross, plus = self.load_train_signals(f, world_size, rank)
             try:
                 waveform_prob = self.hparams.waveform_prob

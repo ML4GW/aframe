@@ -20,7 +20,6 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
     flags = luigi.ListParameter(default=["DCS-ANALYSIS_READY_C01:1"])
     segments_file = luigi.Parameter(default="")
     channels = luigi.ListParameter(default=["H1:GDS-CALIB_STRAIN"])
-    log_dir = luigi.OptionalParameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,8 +28,9 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
             self.segments_file = os.path.join(self.data_dir, "segments.txt")
 
         if self.job_log and not os.path.isabs(self.job_log):
-            os.makedirs(self.log_dir, exist_ok=True)
-            self.job_log = os.path.join(self.log_dir, self.job_log)
+            log_dir = os.path.join(self.data_dir, "logs")
+            os.makedirs(log_dir, exist_ok=True)
+            self.job_log = os.path.join(log_dir, self.job_log)
 
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
