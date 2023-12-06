@@ -37,6 +37,8 @@ micromamba run -p /opt/env \
 # commands in our environment at run time
 micromamba shell init --shell=bash --root-prefix=~/micromamba
 
+export PATH=/opt/env/bin:$PATH
+
 %runscript
 #!/bin/bash
 eval "$(micromamba shell hook --shell bash)"
