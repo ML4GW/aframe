@@ -538,7 +538,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.trainer.accelerator, pl.accelerators.CUDAAccelerator
         )
         local_world_size = len(self.trainer.device_ids)
-        num_workers = min(6, int(os.cpu_count() / local_world_size))
+        num_workers = min(2, int(os.cpu_count() / local_world_size))
         dataloader = torch.utils.data.DataLoader(
             dataset, num_workers=num_workers, pin_memory=pin_memory
         )

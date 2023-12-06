@@ -30,6 +30,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
                     "job_file_dir": self.job_file_dir,
                     "job_file_dir_cleanup": "True",
                     "job_file_dir_mkdtemp": "False",
+                    "htcondor_job_file_dir_cleanup": True,
                 }
             }
         )
