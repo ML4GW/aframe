@@ -28,6 +28,7 @@ class SandboxTrainDatagen(law.WrapperTask):
             segments_file=os.path.join(
                 config.data_dir, "train", "segments.txt"
             ),
+            request_cpus=3,
             **config.train_background.to_dict(),
         )
         yield GenerateWaveforms.req(
@@ -74,6 +75,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             segments_file=os.path.join(
                 config.data_dir, "test", "segments.txt"
             ),
+            request_cpus=3,
             **config.test_background.to_dict(),
         )
         return reqs
@@ -91,6 +93,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             segments_file=os.path.join(
                 config.data_dir, "train", "segments.txt"
             ),
+            request_cpus=3,
             **config.train_background.to_dict(),
         )
         return reqs

@@ -8,7 +8,7 @@ def fetch(
     end: float,
     channels: list[str],
     sample_rate: float,
-    nproc: int = 1,
+    nproc: int = 3,
     verbose: bool = True,
     allow_tape: bool = True,
 ) -> TimeSeriesDict:
@@ -23,6 +23,7 @@ def fetch(
             end - start, start
         )
     )
+
     X = TimeSeriesDict()
     for channel in channels:
         ifo = channel.split(":")[0]

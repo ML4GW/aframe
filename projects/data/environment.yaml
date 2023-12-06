@@ -13,8 +13,8 @@ dependencies:
   - scipy
   - h5py
   # general GW/auth deps
-  - gwpy
-  - gwosc
+  - gwpy<3
+  - gwosc<0.7
   - lalsuite
   - astropy
   - bilby>1.4,<2
