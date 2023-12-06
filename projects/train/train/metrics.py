@@ -274,7 +274,12 @@ def get_timeslides(
             # stop the current timeslide at the index
             # that gives us the desired number of steps
             num_steps = steps_per_dev - current_steps + 1
-            stop = timeslide.start + kernel_size + num_steps * stride_size
+            stop = (
+                timeslide.start
+                + timeslide.max_shift
+                + kernel_size
+                + num_steps * stride_size
+            )
             new = timeslide.new_bounds(stop=stop)
 
             # add this truncated timeslide to our current list,
@@ -299,4 +304,5 @@ def get_timeslides(
 
     # retrieve just the timeslides we need for this device
     global_rank = torch.distributed.get_rank()
+
     return timeslides_per_dev[global_rank]
