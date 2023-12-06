@@ -106,7 +106,7 @@ class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
 
     @property
     def output_dir(self):
-        return os.path.join(config.run_dir, "timeslide_waveforms")
+        return os.path.join(config.data_dir, "timeslide_waveforms")
 
     @property
     def condor_directory(self):
