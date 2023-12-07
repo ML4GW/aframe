@@ -305,4 +305,18 @@ def get_timeslides(
     # retrieve just the timeslides we need for this device
     global_rank = torch.distributed.get_rank()
 
-    return timeslides_per_dev[global_rank]
+    # TODO: fix me: this is a hack to get around
+    # the fact that the timeslides in total don't
+    # combine to the same number of batches, leading
+    # to hanging when validating with distributed training;
+    # we should probably just move to a simpler method
+    # for distributing the timeslides
+    lengths = []
+    for i, dev in enumerate(timeslides_per_dev):
+        length = 0
+        for ts in dev:
+            length += len(ts)
+        lengths.append(length)
+    minimum = min(lengths)
+
+    return timeslides_per_dev[global_rank], minimum
