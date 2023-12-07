@@ -4,7 +4,7 @@ import lightning.pytorch as pl
 import torch
 
 from train.architectures import Architecture
-from train.callbacks import ModelCheckpoint
+from train.callbacks import ModelCheckpoint, SaveAugmentedBatch
 from train.metrics import TimeSlideAUROC
 
 Tensor = torch.Tensor
@@ -173,15 +173,6 @@ class AframeBase(pl.LightningModule):
         # checkpoint for saving best model
         # that will be used for downstream export
         # and inference tasks
-        best_model = ModelCheckpoint(
-            dirpath="/home/ethan.marx/aframe/aframev2/run/train",
-            monitor="valid_auroc",
-            filename="model.pt",
-            save_top_k=1,
-            save_last=False,
-            auto_insert_metric_name=False,
-            mode="max",
-        )
         # checkpoint for saving multiple best models
         checkpoint = ModelCheckpoint(
             dirpath="/home/ethan.marx/aframe/aframev2/run/train/checkpoints",
@@ -191,7 +182,8 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
-        callbacks = [checkpoint, best_model]
+        save = SaveAugmentedBatch()
+        callbacks = [checkpoint, save]
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStop(
                 monitor=self.metric_name,
