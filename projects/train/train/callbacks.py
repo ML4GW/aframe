@@ -1,8 +1,10 @@
 import os
 
+import h5py
 import s3fs
 import torch
 from lightning import pytorch as pl
+from lightning.pytorch.callbacks import Callback
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
@@ -27,3 +29,16 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         else:
             with open(os.path.join(save_dir, "model.pt"), "wb") as f:
                 torch.jit.save(trace, f)
+
+
+class SaveAugmentedBatch(Callback):
+    def on_train_start(self, trainer, pl_module):
+        if trainer.global_rank == 0:
+            device = pl_module.device
+            X = next(iter(trainer.train_dataloader))
+            X = X.to(device)
+            X, y = trainer.datamodule.augment(X[0])
+            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+            with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
+                f["X"] = X.cpu().numpy()
+                f["y"] = y.cpu().numpy()
