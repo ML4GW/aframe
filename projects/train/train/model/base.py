@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Sequence, Union
 
 import lightning.pytorch as pl
@@ -46,6 +47,7 @@ class AframeBase(pl.LightningModule):
         self.model = arch
         self.metric = metric
         self.save_hyperparameters(ignore=["arch", "metric"])
+        self._logger = self.get_logger()
 
     def forward(self, X: Tensor) -> Tensor:
         """
@@ -70,6 +72,10 @@ class AframeBase(pl.LightningModule):
         using `compute_loss_fn`, which should be overridden in that case.
         """
         raise NotImplementedError
+
+    def get_logger(self):
+        logger_name = "AframeModel"
+        return logging.getLogger(logger_name)
 
     # define some hacky callbacks that can be
     # used during the `self.score` method of
@@ -201,6 +207,8 @@ class AframeBase(pl.LightningModule):
             world_size = torch.distributed.get_world_size()
         except RuntimeError:
             world_size = 1
+        world_size = torch.distributed.get_world_size()
+
         lr = self.hparams.learning_rate * world_size
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
         optimizer = torch.optim.AdamW(self.model.parameters(), lr)

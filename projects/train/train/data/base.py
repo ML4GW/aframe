@@ -511,7 +511,9 @@ class BaseAframeDataset(pl.LightningDataModule):
             shuffle=False,
             pin_memory=False,
         )
-        return ZippedDataset(background_dataset, signal_loader)
+        x = ZippedDataset(background_dataset, signal_loader)
+        self._logger.info(f"Val dataset length: {len(x)}")
+        return x
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         num_waveforms = self.waveform_sampler.num_waveforms
