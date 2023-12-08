@@ -1,1 +1,1 @@
-from .infer import TritonServer
+from .infer import InferLocal

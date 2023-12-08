@@ -34,11 +34,11 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
 
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
-        return self.input()["segments"].exists()
+        return self.workflow_input()["segments"].exists()
 
     @workflow_condition.create_branch_map
     def create_branch_map(self):
-        segments = self.input()["segments"].load().splitlines()[1:]
+        segments = self.workflow_input()["segments"].load().splitlines()[1:]
         branch_map, i = {}, 1
         for row in segments:
             row = row.split("\t")

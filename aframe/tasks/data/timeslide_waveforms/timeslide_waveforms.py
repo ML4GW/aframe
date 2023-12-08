@@ -2,15 +2,21 @@ import glob
 import os
 import shutil
 from pathlib import Path
+from typing import TypedDict
 
 import law
 import luigi
 from luigi.util import inherits
 
+import aframe.utils as utils
 from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
-from aframe.tasks.data.timeslide_waveforms import utils
 from aframe.tasks.data.workflow import LDGCondorWorkflow
+
+
+class TsWorkflowRequires(TypedDict):
+    test_segments: law.Task
+    train_segments: law.Task
 
 
 class TimeSlideWaveformsParams(law.Task):
@@ -54,7 +60,7 @@ class GenerateTimeslideWaveforms(
             self.job_log = os.path.join(self.log_dir, self.job_log)
 
     # the workflow requires the testing segments
-    def workflow_requires(self):
+    def workflow_requires(self) -> TsWorkflowRequires:
         raise NotImplementedError
 
     # each workflow branch requires a training
@@ -70,7 +76,7 @@ class GenerateTimeslideWaveforms(
     # TODO: check if this is still the case.
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
-        return self.input()["test_segments"].collection.exists()
+        return self.workflow_input()["test_segments"].collection.exists()
 
     @property
     def shifts_required(self):
@@ -80,7 +86,9 @@ class GenerateTimeslideWaveforms(
 
     @property
     def test_segments(self):
-        paths = list(self.input()["test_segments"].collection.targets.values())
+        paths = list(
+            self.workflow_input()["test_segments"].collection.targets.values()
+        )
         return utils.segments_from_paths(paths)
 
     @property

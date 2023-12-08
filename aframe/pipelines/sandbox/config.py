@@ -33,6 +33,7 @@ class base(luigi.Config):
     max_duration = luigi.FloatParameter()
     flags = luigi.ListParameter()
     channels = luigi.ListParameter()
+    shifts = luigi.ListParameter()
     # data conditioning / preprocessing parameters
     fduration = luigi.FloatParameter()
     fftlength = luigi.FloatParameter()
@@ -131,6 +132,19 @@ class timeslide_waveforms(Config):
     seed = luigi.IntParameter(base().seed)
 
 
+class infer(Config):
+    inference_sampling_rate = luigi.FloatParameter()
+    batch_size = luigi.IntParameter()
+    psd_length = luigi.FloatParameter()
+    cluster_window_length = luigi.FloatParameter()
+    integration_window_length = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    Tb = luigi.FloatParameter()
+    shifts = luigi.ListParameter()
+    sequence_id = luigi.IntParameter()
+    triton_image = luigi.Parameter()
+
+
 class SandboxConfig(luigi.Config):
     base = base()
     train_background = train_background()
@@ -139,6 +153,7 @@ class SandboxConfig(luigi.Config):
     train = train()
     timeslide_waveforms = timeslide_waveforms()
     test_background = test_background()
+    infer = infer()
 
     @property
     def data_dir(self):

@@ -9,6 +9,7 @@ from aframe.tasks import (
     Fetch,
     GenerateTimeslideWaveforms,
     GenerateWaveforms,
+    InferLocal,
     MergeTimeslideWaveforms,
     TrainLocal,
 )
@@ -75,7 +76,6 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             segments_file=os.path.join(
                 config.data_dir, "test", "segments.txt"
             ),
-            request_cpus=3,
             **config.test_background.to_dict(),
         )
         return reqs
@@ -93,7 +93,6 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             segments_file=os.path.join(
                 config.data_dir, "train", "segments.txt"
             ),
-            request_cpus=3,
             **config.train_background.to_dict(),
         )
         return reqs
@@ -123,12 +122,10 @@ class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
         )
 
 
-class Sandbox(law.WrapperTask):
-    dev = luigi.BoolParameter(default=False)
-    gpus = luigi.Parameter(default="")
-
+class SandboxInfer(InferLocal):
     def requires(self):
-        yield SandboxExport.req(
+        reqs = {}
+        reqs["export"] = SandboxExport.req(
             self,
             image="export.sif",
             repository_directory=os.path.join(
@@ -137,7 +134,33 @@ class Sandbox(law.WrapperTask):
             logfile=os.path.join(config.base.log_dir, "export.log"),
             **config.export.to_dict(),
         )
-
-        yield SandboxTimeslideWaveforms.req(
+        reqs["waveforms"] = SandboxTimeslideWaveforms.req(
             self, image="data.sif", **config.timeslide_waveforms.to_dict()
+        )
+        reqs["data"] = Fetch.req(
+            self,
+            image="data.sif",
+            condor_directory=os.path.join(config.data_dir, "condor", "test"),
+            data_dir=os.path.join(config.data_dir, "test", "background"),
+            segments_file=os.path.join(
+                config.data_dir, "test", "segments.txt"
+            ),
+            **config.test_background.to_dict(),
+        )
+        return reqs
+
+
+class Sandbox(law.WrapperTask):
+    dev = luigi.BoolParameter(default=False)
+    gpus = luigi.Parameter(default="")
+
+    def requires(self):
+        # simply call infer, which will
+        # call all necessary downstream tasks!
+        yield SandboxInfer.req(
+            self,
+            image="infer.sif",
+            server_log=os.path.join(config.base.log_dir, "server.log"),
+            output_dir=os.path.join(config.base.run_dir, "infer"),
+            **config.infer.to_dict(),
         )
