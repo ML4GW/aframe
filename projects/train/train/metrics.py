@@ -312,7 +312,7 @@ def get_timeslides(
     # we should probably just move to a simpler method
     # for distributing the timeslides
     lengths = []
-    for i, dev in enumerate(timeslides_per_dev):
+    for dev in enumerate(timeslides_per_dev):
         length = 0
         for ts in dev:
             length += len(ts)

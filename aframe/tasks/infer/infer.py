@@ -7,11 +7,11 @@ from typing import TypedDict
 import law
 import luigi
 import psutil
-from law.contrib import htcondor
 from luigi.util import inherits
 
 import aframe.utils as utils
 from aframe.base import AframeGPUTask, AframeSandboxTask
+from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
 
@@ -46,6 +46,7 @@ class InferenceParams(law.Task):
     Tb = luigi.FloatParameter()
     shifts = luigi.ListParameter()
     sequence_id = luigi.IntParameter()
+    model_name = luigi.Parameter()
 
 
 @inherits(InferenceParams)
@@ -148,7 +149,7 @@ class InferLocal(AframeGPUTask):
 
 
 @inherits(InferenceParams)
-class Clients(htcondor.HTCondorWorkflow, AframeSandboxTask):
+class Clients(StaticMemoryWorkflow, AframeSandboxTask):
     shifts_required = luigi.IntParameter()
     background_fnames = luigi.ListParameter()
     injection_set_fname = luigi.Parameter()
@@ -191,7 +192,7 @@ class Clients(htcondor.HTCondorWorkflow, AframeSandboxTask):
         os.makedirs(self.tmp_dir, exist_ok=True)
         infer(
             ip=f"{self.ip}:8001",
-            model_name="aframe",
+            model_name=self.model_name,
             model_version=-1,
             shifts=shifts,
             background_fname=fname,

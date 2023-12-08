@@ -5,11 +5,11 @@ import luigi
 
 from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
+from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
 from aframe.tasks.data.query import Query
-from aframe.tasks.data.workflow import LDGCondorWorkflow
 
 
-class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
+class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     data_dir = luigi.Parameter()
