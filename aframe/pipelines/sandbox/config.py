@@ -15,8 +15,9 @@ class Config(_Config):
 
 # base config that stores parameters
 # common to multiple tasks
-
-
+# TODO: when https://github.com/riga/law/issues/170
+# is resolved, remove the need for base class,
+# and simply revert to old pinto style config interpolation
 class base(luigi.Config):
     # general parameters
     seed = luigi.IntParameter(default=1122)
@@ -34,6 +35,7 @@ class base(luigi.Config):
     flags = luigi.ListParameter()
     channels = luigi.ListParameter()
     shifts = luigi.ListParameter()
+    Tb = luigi.FloatParameter()
     # data conditioning / preprocessing parameters
     fduration = luigi.FloatParameter()
     fftlength = luigi.FloatParameter()
@@ -143,6 +145,15 @@ class infer(Config):
     shifts = luigi.ListParameter()
     sequence_id = luigi.IntParameter()
     triton_image = luigi.Parameter()
+    model_name = luigi.Parameter()
+
+    @property
+    def server_log(self):
+        return os.path.join(base().log_dir, "server.log")
+
+    @property
+    def output_dir(self):
+        return os.path.join(base().run_dir, "infer")
 
 
 class SandboxConfig(luigi.Config):

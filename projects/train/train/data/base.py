@@ -29,9 +29,10 @@ Tensor = torch.Tensor
 # https://github.com/Lightning-AI/lightning/issues/16830,
 # we should switch to using a CombinedLoader for validation
 class ZippedDataset(torch.utils.data.IterableDataset):
-    def __init__(self, *datasets):
+    def __init__(self, *datasets, minimum: Optional[int] = None):
         super().__init__()
         self.datasets = datasets
+        self.minimum = minimum
 
     def __len__(self):
         lengths = []
@@ -40,7 +41,7 @@ class ZippedDataset(torch.utils.data.IterableDataset):
                 lengths.append(len(dset))
             except Exception as e:
                 raise e from None
-        return min(lengths)
+        return self.minimum or min(lengths)
 
     def __iter__(self):
         return zip(*self.datasets)
@@ -319,7 +320,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # which waveforms to subsample
         with h5py.File(self.valid_fnames[0], "r") as f:
             val_background = self.load_val_background(f)
-        self.timeslides = get_timeslides(
+        self.timeslides, self.valid_loader_length = get_timeslides(
             val_background,
             self.hparams.valid_livetime,
             self.sample_rate,
@@ -511,9 +512,9 @@ class BaseAframeDataset(pl.LightningDataModule):
             shuffle=False,
             pin_memory=False,
         )
-        x = ZippedDataset(background_dataset, signal_loader)
-        self._logger.info(f"Val dataset length: {len(x)}")
-        return x
+        return ZippedDataset(
+            background_dataset, signal_loader, minimum=self.valid_loader_length
+        )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         num_waveforms = self.waveform_sampler.num_waveforms

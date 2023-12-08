@@ -29,7 +29,6 @@ class SandboxTrainDatagen(law.WrapperTask):
             segments_file=os.path.join(
                 config.data_dir, "train", "segments.txt"
             ),
-            request_cpus=3,
             **config.train_background.to_dict(),
         )
         yield GenerateWaveforms.req(
@@ -160,7 +159,7 @@ class Sandbox(law.WrapperTask):
         yield SandboxInfer.req(
             self,
             image="infer.sif",
-            server_log=os.path.join(config.base.log_dir, "server.log"),
-            output_dir=os.path.join(config.base.run_dir, "infer"),
+            server_log=config.infer.server_log,
+            output_dir=config.infer.output_dir,
             **config.infer.to_dict(),
         )
