@@ -274,6 +274,7 @@ def get_timeslides(
             # stop the current timeslide at the index
             # that gives us the desired number of steps
             num_steps = steps_per_dev - current_steps + 1
+
             stop = (
                 timeslide.start
                 + timeslide.max_shift
@@ -293,6 +294,8 @@ def get_timeslides(
             # should this be + stride_size - kernel_size?
             start = stop - stride_size - kernel_size
             timeslide = timeslide.new_bounds(start=start)
+        elif current_steps + timeslide.num_steps == steps_per_dev:
+            break
         else:
             # if this timeslide won't put us over, add the
             # whole thing as is and try to move on to the next
@@ -301,9 +304,6 @@ def get_timeslides(
                 timeslide = next(it)
             except StopIteration:
                 break
-
-    # retrieve just the timeslides we need for this device
-    global_rank = torch.distributed.get_rank()
 
     # TODO: fix me: this is a hack to get around
     # the fact that the timeslides in total don't
@@ -319,4 +319,5 @@ def get_timeslides(
         lengths.append(length)
     minimum = min(lengths)
 
+    global_rank = torch.distributed.get_rank()
     return timeslides_per_dev[global_rank], minimum
