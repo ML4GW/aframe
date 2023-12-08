@@ -22,7 +22,7 @@ model:
         pool_length: 8
 
     # optimization params
-    learning_rate: 0.04095 #0.000585
+    learning_rate: 0.000585
     pct_lr_ramp: 0.115
 data:
   class_path: train.data.TimeDomainSupervisedAframeDataset
@@ -41,7 +41,7 @@ data:
 
     # augmentation args
     waveform_prob: 0.277
-    snr_thresh: 4
+    snr_thresh: 40
     max_snr: 100
     snr_alpha: 3
     swap_frac: 0.014

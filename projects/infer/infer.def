@@ -1,0 +1,13 @@
+Bootstrap: docker
+From: python:3.10.12-slim-bullseye
+Stage: build
+
+%files
+. /opt/aframe/projects/infer
+../../hermes /opt/aframe/hermes
+
+%post
+python -m pip install poetry 'virtualenv==20.4.7'
+poetry config virtualenvs.create false
+cd /opt/aframe/aframe/train
+poetry install
