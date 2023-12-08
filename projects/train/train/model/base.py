@@ -203,9 +203,15 @@ class AframeBase(pl.LightningModule):
         return callbacks
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
-            self.model.parameters(), self.hparams.learning_rate
-        )
+        # scale lr by number of GPUs
+        # https://arxiv.org/pdf/1706.02677.pdf
+        try:
+            world_size = torch.distributed.get_world_size()
+        except RuntimeError:
+            world_size = 1
+        lr = self.hparams.learning_rate * world_size
+        self._logger.info(f"Scaled lr by {world_size} to {lr}")
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             pct_start=self.hparams.pct_lr_ramp,

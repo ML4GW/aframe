@@ -274,6 +274,7 @@ def get_timeslides(
             # stop the current timeslide at the index
             # that gives us the desired number of steps
             num_steps = steps_per_dev - current_steps + 1
+
             stop = (
                 timeslide.start
                 + timeslide.max_shift
@@ -293,6 +294,8 @@ def get_timeslides(
             # should this be + stride_size - kernel_size?
             start = stop - stride_size - kernel_size
             timeslide = timeslide.new_bounds(start=start)
+        elif current_steps + timeslide.num_steps == steps_per_dev:
+            break
         else:
             # if this timeslide won't put us over, add the
             # whole thing as is and try to move on to the next
@@ -302,7 +305,19 @@ def get_timeslides(
             except StopIteration:
                 break
 
-    # retrieve just the timeslides we need for this device
-    global_rank = torch.distributed.get_rank()
+    # TODO: fix me: this is a hack to get around
+    # the fact that the timeslides in total don't
+    # combine to the same number of batches, leading
+    # to hanging when validating with distributed training;
+    # we should probably just move to a simpler method
+    # for distributing the timeslides
+    lengths = []
+    for i, dev in enumerate(timeslides_per_dev):
+        length = 0
+        for ts in dev:
+            length += len(ts)
+        lengths.append(length)
+    minimum = min(lengths)
 
-    return timeslides_per_dev[global_rank]
+    global_rank = torch.distributed.get_rank()
+    return timeslides_per_dev[global_rank], minimum
