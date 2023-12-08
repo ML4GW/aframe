@@ -52,6 +52,9 @@ class Infer(law.SandboxTask):
         nets = psutil.net_if_addrs()
         return nets["enp1s0f0"][0].address
 
+    def requires(self):
+        pass
+
     def run(self):
         from hermes.aeriel.serve import serve
 
