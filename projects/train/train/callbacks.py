@@ -9,6 +9,7 @@ from lightning.pytorch.callbacks import Callback
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def on_train_end(self, trainer, pl_module):
+        torch.cuda.empty_cache()
         module = pl_module.__class__.load_from_checkpoint(
             self.best_model_path, arch=pl_module.model, metric=pl_module.metric
         )
