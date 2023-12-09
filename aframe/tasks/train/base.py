@@ -59,7 +59,6 @@ class TrainBase(AframeSandboxTask, TrainParams):
             self.config,
             "--seed_everything",
             str(self.seed),
-            # "--data.ifos=[H1,L1]",
             f"--data.ifos=[{','.join(self.ifos)}]",
             "--data.data_dir",
             self.data_dir,
