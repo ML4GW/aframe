@@ -47,6 +47,16 @@ class InferenceParams(law.Task):
     shifts = luigi.ListParameter()
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
+    model_version = luigi.IntParameter()
+
+
+class Test(luigi.Task):
+    def output(self):
+        return law.LocalFileTarget("/home/ethan.marx/test.txt")
+
+    def run(self):
+        with self.output().open("w") as f:
+            f.write("test")
 
 
 @inherits(InferenceParams)
@@ -54,6 +64,7 @@ class InferLocal(AframeGPUTask):
     server_log = luigi.Parameter()
     output_dir = luigi.Parameter()
     triton_image = luigi.Parameter()
+    clients_per_gpu = luigi.IntParameter(default=5)
 
     env_path = get_poetry_env(INFER_DIR)
     sandbox = f"venv::{env_path}"
@@ -71,6 +82,10 @@ class InferLocal(AframeGPUTask):
         raise NotImplementedError
 
     @property
+    def parallel_jobs(self):
+        return self.clients_per_gpu * len(self.gpus)
+
+    @property
     def foreground_output(self):
         return os.path.join(self.output_dir, "foreground.h5")
 
@@ -80,15 +95,18 @@ class InferLocal(AframeGPUTask):
 
     @property
     def model_repo_dir(self):
-        return self.input()["export"].output().path
+        return self.input()["export"].path
 
     @property
     def background_fnames(self):
-        return list(self.input()["data"].collection.targets.values())
+        return [
+            str(f.path)
+            for f in self.input()["data"].collection.targets.values()
+        ]
 
     @property
     def injection_set_fname(self):
-        return self.input()["waveforms"].output().path
+        return self.input()["waveforms"][0].path
 
     @property
     def segments(self):
@@ -122,6 +140,7 @@ class InferLocal(AframeGPUTask):
         # enter the context manager, and launch
         # triton client jobs via conder
         with instance:
+            yield Test()
             outputs = yield Clients.req(
                 self,
                 image="infer.sif",
@@ -129,6 +148,7 @@ class InferLocal(AframeGPUTask):
                 injection_set_fname=self.injection_set_fname,
                 shifts_required=self.shifts_required,
                 sequence_id=self.sequence_id,
+                condor_directory=os.path.join(self.output_dir, "condor"),
             )
 
             background_fnames = [o.path for o in outputs[1]]
@@ -149,14 +169,11 @@ class InferLocal(AframeGPUTask):
 
 
 @inherits(InferenceParams)
-class Clients(StaticMemoryWorkflow, AframeSandboxTask):
+class Clients(AframeSandboxTask, StaticMemoryWorkflow):
     shifts_required = luigi.IntParameter()
     background_fnames = luigi.ListParameter()
     injection_set_fname = luigi.Parameter()
     sequence_id = luigi.IntParameter()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def create_branch_map(self):
         branch_map, i = {}, 0
@@ -193,7 +210,7 @@ class Clients(StaticMemoryWorkflow, AframeSandboxTask):
         infer(
             ip=f"{self.ip}:8001",
             model_name=self.model_name,
-            model_version=-1,
+            model_version=self.model_version,
             shifts=shifts,
             background_fname=fname,
             injection_set_fname=self.injection_set_fname,

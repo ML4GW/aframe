@@ -69,9 +69,9 @@ trainer:
       # profile_memory: true
   # devices:
   # strategy: set to ddp if len(devices) > 1
-  #precision: 16-mixed
+  # precision: 16-mixed
   accelerator: auto
-  max_epochs: 150
+  max_epochs: 5
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
   benchmark: true
