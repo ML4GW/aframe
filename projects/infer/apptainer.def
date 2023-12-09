@@ -7,6 +7,7 @@ Stage: build
 ../utils /opt/aframe/projects/utils
 ../../hermes /opt/aframe/hermes
 ../../ml4gw /opt/aframe/ml4gw
+../../libs/ledger /opt/aframe/libs/ledger/
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 

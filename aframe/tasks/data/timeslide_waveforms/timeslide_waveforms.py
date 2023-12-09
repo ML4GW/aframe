@@ -38,7 +38,7 @@ class TimeSlideWaveformsParams(law.Task):
     highpass = luigi.FloatParameter()
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
-    seed = luigi.OptionalParameter(default=None)
+    seed = luigi.IntParameter()
     segments_file = luigi.Parameter(default="")
     # verbose = luigi.BoolParameter(default=False)
 
@@ -205,11 +205,11 @@ class MergeTimeslideWaveforms(AframeDataTask):
 
     @property
     def waveform_files(self):
-        return map(Path, [targets[0].path for targets in self.targets])
+        return list(map(Path, [targets[0].path for targets in self.targets]))
 
     @property
     def rejected_parameter_files(self):
-        return map(Path, [targets[1].path for targets in self.targets])
+        return list(map(Path, [targets[1].path for targets in self.targets]))
 
     def run(self):
         from ledger.injections import InjectionParameterSet, LigoResponseSet

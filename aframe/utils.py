@@ -5,11 +5,10 @@ import re
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import List, Tuple
-
-from law.target.base import Target
 
 
 def read_stream(stream, process, q):
@@ -57,11 +56,11 @@ def stream_command(command: list[str]):
         ) from None
 
 
-def segments_from_paths(paths: List[Target]):
+def segments_from_paths(paths: List[Path]):
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     segments = []
     for fname in paths:
-        match = fname_re.search(fname.path)
+        match = fname_re.search(str(fname))
         if match is None:
             logging.warning(f"Couldn't parse file {fname.path}")
 

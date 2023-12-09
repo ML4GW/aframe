@@ -146,6 +146,8 @@ class infer(Config):
     sequence_id = luigi.IntParameter()
     triton_image = luigi.Parameter()
     model_name = luigi.Parameter()
+    clients_per_gpu = luigi.IntParameter()
+    model_version = luigi.IntParameter()
 
     @property
     def server_log(self):
