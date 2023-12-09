@@ -47,7 +47,7 @@ class TrainBase(AframeSandboxTask, TrainParams):
         # Arguments that are only used in the train project
         # (e.g. model architecture config, training hyperparams,
         # logging, profiling, etc.) should be specified in the
-        # should be configured in the train projects config.yaml file.
+        # train projects config.yaml file.
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.highpass=" + str(self.highpass))

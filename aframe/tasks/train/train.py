@@ -1,15 +1,17 @@
 import shlex
 import sys
+from collections import defaultdict
 from configparser import ConfigParser
 from typing import TYPE_CHECKING
 
 import law
 import luigi
+from luigi.contrib.kubernetes import KubernetesJobTask
 
 from aframe.base import AframeGPUTask, AframeRayTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import TrainBase
-from aframe.tasks.train.config import s3, wandb
+from aframe.tasks.train.config import nautilus_urls, s3, wandb
 from aframe.utils import stream_command
 
 if TYPE_CHECKING:
@@ -43,6 +45,63 @@ class TrainLocal(TrainBase, AframeGPUTask):
         return dir.child("model.pt", type="f")
 
 
+class TrainRemote(TrainBase, KubernetesJobTask):
+    container = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+    min_gpu_memory = luigi.IntParameter(default=15000)
+    request_gpus = luigi.IntParameter(default=1)
+    request_cpus = luigi.IntParameter(default=1)
+    request_cpu_memory = luigi.Parameter()
+
+    def get_s3_url(self):
+        # if user specified an external nautilus url,
+        # map to the corresponding internal url
+        url = s3().endpoint_url
+        if url in nautilus_urls:
+            return nautilus_urls[url]
+        return url
+
+    @property
+    def gpu_constraints(self):
+        spec = defaultdict(dict)
+        spec["affinity"]["nodeAffinity"][
+            "requiredDuringSchedulingIgnoredDuringExecution"
+        ] = {
+            "nodeSelectorTerms": [
+                {
+                    "matchExpressions": [
+                        {
+                            "key": "nvidia.com/gpu.memory",
+                            "operator": "Gt",
+                            "values": [f"{self.min_gpu_memory}"],
+                        }
+                    ]
+                }
+            ]
+        }
+        return spec
+
+    def spec_schema(self):
+        spec = self.gpu_constraints
+        spec["containers"] = (
+            [
+                {
+                    "name": "train",
+                    "image": self.container,
+                    "command": ["python", "-m", "train"],
+                    "args": self.get_args(),
+                    "resources": {
+                        "limits": {
+                            "memory": self.request_cpu_memory,
+                            "cpu": self.request_cpus,
+                            "nvidia.com/gpu": self.request_gpus,
+                        }
+                    },
+                }
+            ],
+        )
+        return spec
+
+
 class TuneRemote(TrainBase, AframeRayTask):
     search_space = luigi.Parameter()
     num_samples = luigi.IntParameter()
@@ -64,7 +123,16 @@ class TuneRemote(TrainBase, AframeRayTask):
                 )
             secret[key] = value
         cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env("AWS_ENDPOINT_URL", s3().endpoint_url)
+        cluster.set_env("AWS_ENDPOINT_URL", self.get_s3_url())
+        return cluster
+
+    def get_s3_url(self):
+        # if user specified an external nautilus url,
+        # map to the corresponding internal url
+        url = s3().endpoint_url
+        if url in nautilus_urls:
+            return nautilus_urls[url]
+        return url
 
     def run(self):
         from train.tune import cli as main
