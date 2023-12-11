@@ -6,7 +6,7 @@ from aframe.config import Defaults
 from aframe.tasks.train.config import wandb
 
 
-class TrainParams(law.Task):
+class TrainBase(law.Task):
     config = luigi.Parameter(default=Defaults.TRAIN)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     data_dir = luigi.Parameter()
@@ -17,8 +17,6 @@ class TrainParams(law.Task):
     highpass = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
 
-
-class TrainBase(AframeSandboxTask, TrainParams):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not self.data_dir:
@@ -80,3 +78,7 @@ class TrainBase(AframeSandboxTask, TrainParams):
 
     def run(self):
         raise NotImplementedError
+
+
+class LocalTrainBase(AframeSandboxTask, TrainBase):
+    pass

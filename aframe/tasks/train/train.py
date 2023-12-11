@@ -1,24 +1,33 @@
+import json
+import os
 import shlex
 import sys
-from collections import defaultdict
 from configparser import ConfigParser
 from typing import TYPE_CHECKING
 
 import law
 import luigi
+import yaml
 from luigi.contrib.kubernetes import KubernetesJobTask
+from luigi.contrib.s3 import S3Target
 
 from aframe.base import AframeGPUTask, AframeRayTask, logger
 from aframe.config import ray_worker
-from aframe.tasks.train.base import TrainBase
+from aframe.tasks.train.base import LocalTrainBase, TrainBase
 from aframe.tasks.train.config import nautilus_urls, s3, wandb
 from aframe.utils import stream_command
+
+
+class LawS3Target(S3Target):
+    def complete(self):
+        return self.exists()
+
 
 if TYPE_CHECKING:
     from ray_kube import KubernetesRayCluster
 
 
-class TrainLocal(TrainBase, AframeGPUTask):
+class TrainLocal(LocalTrainBase, AframeGPUTask):
     def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
         if wandb().api_key:
@@ -45,24 +54,55 @@ class TrainLocal(TrainBase, AframeGPUTask):
         return dir.child("model.pt", type="f")
 
 
-class TrainRemote(TrainBase, KubernetesJobTask):
-    container = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+class TrainRemote(KubernetesJobTask, TrainBase):
+    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=1)
     request_cpus = luigi.IntParameter(default=1)
     request_cpu_memory = luigi.Parameter()
 
-    def get_s3_url(self):
+    @property
+    def name(self):
+        return self.__class__.__name__.lower()
+
+    @property
+    def kubernetes_namespace(self):
+        return "bbhnet"
+
+    def get_internal_s3_url(self):
         # if user specified an external nautilus url,
-        # map to the corresponding internal url
+        # map to the corresponding internal url,
+        # since the internal url is what is used by the
+        # kubernetes cluster to access s3
         url = s3().endpoint_url
         if url in nautilus_urls:
             return nautilus_urls[url]
         return url
 
+    def get_config(self):
+        with open(self.config, "r") as f:
+            doc = yaml.safe_load(f)
+            json_string = json.dumps(doc)
+        return json_string
+
+    def get_args(self):
+        # get args from base class, remove the first two
+        # which reference the config file, since we'll
+        # need to set this as an environment variable of
+        # raw yaml content to run remotely.
+        args = super().get_args()
+        args = args[2:]
+        args = ["--config", self.get_config()] + args
+        return args
+
+    def output(self):
+        return LawS3Target(os.path.join(self.data_dir, "model.pt"))
+
     @property
     def gpu_constraints(self):
-        spec = defaultdict(dict)
+        spec = {}
+        spec["affinity"] = {}
+        spec["affinity"]["nodeAffinity"] = {}
         spec["affinity"]["nodeAffinity"][
             "requiredDuringSchedulingIgnoredDuringExecution"
         ] = {
@@ -80,26 +120,35 @@ class TrainRemote(TrainBase, KubernetesJobTask):
         }
         return spec
 
+    @property
     def spec_schema(self):
         spec = self.gpu_constraints
-        spec["containers"] = (
-            [
-                {
-                    "name": "train",
-                    "image": self.container,
-                    "command": ["python", "-m", "train"],
-                    "args": self.get_args(),
-                    "resources": {
-                        "limits": {
-                            "memory": self.request_cpu_memory,
-                            "cpu": self.request_cpus,
-                            "nvidia.com/gpu": self.request_gpus,
-                        }
+        spec["containers"] = [
+            {
+                "name": "train",
+                "image": self.image,
+                "command": ["python", "-m", "train"],
+                "args": self.get_args(),
+                "resources": {
+                    "limits": {
+                        "memory": f"{self.request_cpu_memory}",
+                        "cpu": f"{self.request_cpus}",
+                        "nvidia.com/gpu": f"{self.request_gpus}",
                     },
-                }
-            ],
-        )
+                    "requests": {
+                        "memory": f"{self.request_cpu_memory}",
+                        "cpu": f"{self.request_cpus}",
+                        "nvidia.com/gpu": f"{self.request_gpus}",
+                    },
+                },
+            }
+        ]
         return spec
+
+    def run(self):
+        with open("./test.yaml", "w") as f:
+            yaml.dump(self.spec_schema, f)
+        super().run()
 
 
 class TuneRemote(TrainBase, AframeRayTask):
@@ -126,7 +175,7 @@ class TuneRemote(TrainBase, AframeRayTask):
         cluster.set_env("AWS_ENDPOINT_URL", self.get_s3_url())
         return cluster
 
-    def get_s3_url(self):
+    def get_internal_s3_url(self):
         # if user specified an external nautilus url,
         # map to the corresponding internal url
         url = s3().endpoint_url
