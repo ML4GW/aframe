@@ -2,7 +2,6 @@ import json
 import os
 import shlex
 import sys
-from configparser import ConfigParser
 from typing import TYPE_CHECKING
 
 import law
@@ -13,7 +12,7 @@ from luigi.contrib.s3 import S3Target
 
 from aframe.base import AframeGPUTask, AframeRayTask, logger
 from aframe.config import ray_worker
-from aframe.tasks.train.base import LocalTrainBase, TrainBase
+from aframe.tasks.train.base import LocalTrainBase, RemoteTrainBase
 from aframe.tasks.train.config import nautilus_urls, s3, wandb
 from aframe.utils import stream_command
 
@@ -54,7 +53,7 @@ class TrainLocal(LocalTrainBase, AframeGPUTask):
         return dir.child("model.pt", type="f")
 
 
-class TrainRemote(KubernetesJobTask, TrainBase):
+class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=1)
@@ -68,16 +67,6 @@ class TrainRemote(KubernetesJobTask, TrainBase):
     @property
     def kubernetes_namespace(self):
         return "bbhnet"
-
-    def get_internal_s3_url(self):
-        # if user specified an external nautilus url,
-        # map to the corresponding internal url,
-        # since the internal url is what is used by the
-        # kubernetes cluster to access s3
-        url = s3().endpoint_url
-        if url in nautilus_urls:
-            return nautilus_urls[url]
-        return url
 
     def get_config(self):
         with open(self.config, "r") as f:
@@ -121,6 +110,23 @@ class TrainRemote(KubernetesJobTask, TrainBase):
         return spec
 
     @property
+    def backoff_limit(self):
+        return 1
+
+    @property
+    def secret(self):
+        from kr8s.objects import Secret
+
+        spec = {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {"name": "s3-credentials", "type": "Opaque"},
+        }
+        spec["stringData"] = self.get_s3_credentials()
+
+        return Secret(resource=spec)
+
+    @property
     def spec_schema(self):
         spec = self.gpu_constraints
         spec["containers"] = [
@@ -141,17 +147,23 @@ class TrainRemote(KubernetesJobTask, TrainBase):
                         "nvidia.com/gpu": f"{self.request_gpus}",
                     },
                 },
+                "envFrom": [{"secretRef": {"name": "s3-credentials"}}],
+                "env": [
+                    {
+                        "name": "AWS_ENDPOINT_URL",
+                        "value": self.get_internal_s3_url(),
+                    }
+                ],
             }
         ]
         return spec
 
     def run(self):
-        with open("./test.yaml", "w") as f:
-            yaml.dump(self.spec_schema, f)
+        self.secret.create()
         super().run()
 
 
-class TuneRemote(TrainBase, AframeRayTask):
+class TuneRemote(RemoteTrainBase, AframeRayTask):
     search_space = luigi.Parameter()
     num_samples = luigi.IntParameter()
     min_epochs = luigi.IntParameter()
@@ -159,20 +171,9 @@ class TuneRemote(TrainBase, AframeRayTask):
     reduction_factor = luigi.IntParameter()
 
     def configure_cluster(self, cluster: "KubernetesRayCluster"):
-        config = ConfigParser.read(s3().credentials)
-        keys = ["aws_access_key_id", "aws_secret_access_key"]
-        secret = {}
-        for key in keys:
-            try:
-                value = config["default"][key]
-            except KeyError:
-                raise ValueError(
-                    "aws credentials file {} is missing "
-                    "key {} in default table".format(s3().credentials, key)
-                )
-            secret[key] = value
+        secret = self.get_s3_credentials()
         cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env("AWS_ENDPOINT_URL", self.get_s3_url())
+        cluster.set_env("AWS_ENDPOINT_URL", self.get_internal_s3_url())
         return cluster
 
     def get_internal_s3_url(self):
