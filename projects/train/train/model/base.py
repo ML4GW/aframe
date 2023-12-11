@@ -175,7 +175,6 @@ class AframeBase(pl.LightningModule):
         # and inference tasks
         # checkpoint for saving multiple best models
         checkpoint = ModelCheckpoint(
-            dirpath="/home/ethan.marx/aframe/aframev2/run/train/checkpoints",
             monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
             save_last=True,
