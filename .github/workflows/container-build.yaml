@@ -7,12 +7,6 @@
 name: container-build 
 on: 
   push:
-  pull_request:
-   types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
 env:
   REGISTRY: ghcr.io
 
@@ -30,6 +24,9 @@ jobs:
         project: [train, export, data]
 
     steps:
+    -
+      name: Delete huge unnecessary tools folder
+      run: rm -rf /opt/hostedtoolcache
     - 
       name: Checkout repository
       uses: actions/checkout@v4
