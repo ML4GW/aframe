@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING
 import law
 import luigi
 import yaml
+from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
 from luigi.contrib.s3 import S3Target
 
 from aframe.base import AframeGPUTask, AframeRayTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import LocalTrainBase, RemoteTrainBase
-from aframe.tasks.train.config import nautilus_urls, s3, wandb
+from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
 
 
@@ -115,8 +116,6 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     @property
     def secret(self):
-        from kr8s.objects import Secret
-
         spec = {
             "apiVersion": "v1",
             "kind": "Secret",
@@ -175,14 +174,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         cluster.add_secret("s3-credentials", env=secret)
         cluster.set_env("AWS_ENDPOINT_URL", self.get_internal_s3_url())
         return cluster
-
-    def get_internal_s3_url(self):
-        # if user specified an external nautilus url,
-        # map to the corresponding internal url
-        url = s3().endpoint_url
-        if url in nautilus_urls:
-            return nautilus_urls[url]
-        return url
 
     def run(self):
         from train.tune import cli as main
