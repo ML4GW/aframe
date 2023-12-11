@@ -8,6 +8,11 @@ name: container-build
 on: 
   push:
   pull_request:
+   types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 env:
   REGISTRY: ghcr.io
 
