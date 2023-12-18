@@ -158,8 +158,6 @@ class Sandbox(law.WrapperTask):
         # call all necessary downstream tasks!
         yield SandboxInfer.req(
             self,
-            image="infer.sif",
-            server_log=config.infer.server_log,
             output_dir=config.infer.output_dir,
             **config.infer.to_dict(),
         )

@@ -11,7 +11,7 @@ from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
 from luigi.contrib.s3 import S3Target
 
-from aframe.base import AframeGPUTask, AframeRayTask, logger
+from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import LocalTrainBase, RemoteTrainBase
 from aframe.tasks.train.config import wandb

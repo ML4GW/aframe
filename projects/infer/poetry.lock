@@ -3423,6 +3423,25 @@ files = [
 pyasn1 = ">=0.4.6,<0.6.0"
 
 [[package]]
+name = "PyCondor"
+version = "0.7.0.dev0"
+description = "Python utility for HTCondor"
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.dependencies]
+click = "*"
+
+[package.extras]
+dev = ["flake8", "numpydoc", "pytest", "pytest-cov", "sphinx", "sphinx-click", "sphinx_rtd_theme", "twine"]
+
+[package.source]
+type = "directory"
+url = "../../pycondor"
+
+[[package]]
 name = "pycparser"
 version = "2.21"
 description = "C parser in Python"
@@ -4992,4 +5011,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "97c2bfcab67e8373cbea4bd3af027948b6073f294b8c2ed2f578db92dc66bc92"
+content-hash = "68594dcd3fc912460de69c3bbdaeb18bfc43c9fb3c7f10be1a805356b06c741c"

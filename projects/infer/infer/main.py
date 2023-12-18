@@ -18,7 +18,7 @@ def infer(
             sequence.id,
             sequence.duration,
             sequence.background_fname,
-            sequence.shifts,
+            sequence.shifts / sequence.sample_rate,
             sequence.t0,
         )
     )

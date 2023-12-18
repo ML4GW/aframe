@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple, TypeVar, Union
+from typing import List, Tuple, TypeVar
 
 import numpy as np
 from ledger.injections import InterferometerResponseSet
@@ -10,9 +10,10 @@ F = TypeVar("F", np.ndarray, float)
 
 
 @dataclass
-class TimeSlideEventSet(Ledger):
+class EventSet(Ledger):
     detection_statistic: np.ndarray = parameter()
-    time: np.ndarray = parameter()
+    gps_time: np.ndarray = parameter()
+    shift: np.ndarray = parameter()
     Tb: float = metadata(default=0)
 
     @classmethod
@@ -20,6 +21,12 @@ class TimeSlideEventSet(Ledger):
         if key == "Tb":
             return ours + theirs
         return Ledger.compare_metadata(key, ours, theirs)
+
+    def get_shift(self, shift):
+        mask = self.shift == shift
+        if self.shift.ndim == 2:
+            mask = mask.all(axis=-1)
+        return self[mask]
 
     def nb(self, threshold: F) -> F:
         try:
@@ -64,91 +71,39 @@ class TimeSlideEventSet(Ledger):
         return self[~veto_mask]
 
 
-@dataclass
-class EventSet(TimeSlideEventSet):
-    shift: np.ndarray = parameter()
-
-    def get_shift(self, shift):
-        mask = self.shift == shift
-        if self.shift.ndim == 2:
-            mask = mask.all(axis=-1)
-        return self[mask]
-
-    @classmethod
-    def from_timeslide(cls, event_set: TimeSlideEventSet, shift: List[float]):
-        shifts = np.array([shift] * len(event_set))
-        d = {k: getattr(event_set, k) for k in event_set.__dataclass_fields__}
-        return cls(shift=shifts, **d)
-
-    def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
-        # idx corresponds to the index of the shift
-        # (i.e. which ifo to apply vetoes for)
-        shifts = self.shift[:, idx]
-        times = self.time + shifts
-
-        mask = np.logical_and(vetos[:, :1] < times, vetos[:, 1:] > times)
-
-        # mark a background event as vetoed
-        # if it falls into _any_ of the segments
-        veto_mask = mask.any(axis=0)
-
-        # TODO: have an 'inplace=False' option that returns a new object?
-        return self[~veto_mask]
-
-
 # inherit from TimeSlideEventSet since injection
 # will already have shift information recorded
 @dataclass
-class RecoveredInjectionSet(TimeSlideEventSet, InterferometerResponseSet):
+class RecoveredInjectionSet(InterferometerResponseSet):
+    detection_statistic: np.ndarray = parameter()
+    detection_time: np.ndarray = parameter()
+
     @classmethod
-    def compare_metadata(cls, key, ours, theirs):
-        if key == "num_injections":
-            return InterferometerResponseSet.compare_metadata(
-                key, ours, theirs
+    def recover(cls, events: EventSet, injections: InterferometerResponseSet):
+        obj = cls()
+        for shift in np.unique(events.shift, axis=-1):
+            # get the all events and injections at the current shift
+            evs = events.get_shift(shift)
+            injs = injections.get_shift(shift)
+
+            # for each injection, find the event closest to it in time
+            # TODO: should this just look _after_ the event?
+            diffs = np.abs(injs.gps_time[:, None] - evs.gps_time)
+            idx = diffs.argmin(axis=-1)
+            evs = evs[idx]
+
+            # create a RecoveredInjection object for just this
+            # shift and then append it onto our running ledger
+            fields = set(cls.__dataclass_fields__)
+            fields &= set(injs.__dataclass_fields__)
+            kwargs = {k: getattr(injs, k) for k in fields}
+            subobj = cls(
+                detection_statistic=evs.detection_statistic,
+                detection_time=evs.gps_time,
+                **kwargs
             )
-        return EventSet.compare_metadata(key, ours, theirs)
-
-    @staticmethod
-    def get_idx_for_shift(
-        event_times: np.ndarray, injection_times: np.ndarray
-    ) -> np.ndarray:
-        diffs = np.abs(injection_times[:, None] - event_times)
-        return diffs.argmin(axis=-1)
-
-    @classmethod
-    def join(
-        cls, events: TimeSlideEventSet, responses: InterferometerResponseSet
-    ):
-        kwargs = {}
-        for obj in [events, responses]:
-            for key in obj.__dataclass_fields__:
-                if key in cls.__dataclass_fields__:
-                    value = getattr(obj, key)
-                    kwargs[key] = value
-        return cls(**kwargs)
-
-    @classmethod
-    def recover(
-        cls,
-        events: Union[TimeSlideEventSet, EventSet],
-        responses: InterferometerResponseSet,
-    ):
-        if isinstance(events, EventSet):
-            obj = cls()
-            for shift in events.shift.unique(axis=-1):
-                shift_events = events.get_shift(shift)
-                shift_responses = responses.get_shift(shift)
-                idx = cls.get_idx_for_shift(
-                    shift_events.time, shift_responses.gps_time
-                )
-                shift_events = shift_events[idx]
-                subobj = cls.join(shift_events, shift_responses)
-                obj.append(subobj)
-            obj.Tb = events.Tb
-            return obj
-
-        idx = cls.get_idx_for_shift(events.time, responses.gps_time)
-        return cls.join(events[idx], responses)
+            obj.append(subobj)
+        return obj
 
     def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
         # idx corresponds to the index of the shift

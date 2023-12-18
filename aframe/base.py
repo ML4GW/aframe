@@ -42,18 +42,38 @@ class AframeSandbox(singularity.SingularitySandbox):
 law.config.update(AframeSandbox.config())
 
 
-# keep parameters here that
-# all tasks should inherit.
-# maybe just remove this if
-# we're only keeping verbose here
-# class AframeBase(law.Task):
-#    verbose = luigi.BoolParameter(default=False)
-
-
 # base class for tasks that require a container
 class AframeSandboxTask(law.SandboxTask):
+    gpus = luigi.Parameter(default="", significant=False)
+
+    @property
+    def sandbox(self):
+        return None
+
+    def sandbox_env(self, _):
+        env = {}
+        for envvar, value in os.environ.items():
+            if envvar.startswith("AFRAME_"):
+                env[envvar] = value
+        # set data and run dirs as env variable in sandbox
+        # so they get mapped into the sandbox
+        for envvar in ["DATA_DIR", "RUN_DIR"]:
+            env[envvar] = os.getenv(envvar, "")
+
+        if self.gpus:
+            env["CUDA_VISIBLE_DEVICES"] = self.gpus
+        return env
+
+    @property
+    def num_gpus(self):
+        if self.gpus:
+            return len(self.gpus.split(","))
+        return 0
+
+
+class AframeSingularityTask(AframeSandboxTask):
     dev = luigi.BoolParameter(default=False, significant=False)
-    image = luigi.Parameter()
+    image = luigi.Parameter(default="")
     container_root = luigi.Parameter(
         default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
     )
@@ -69,36 +89,6 @@ class AframeSandboxTask(law.SandboxTask):
             )
 
     @property
-    def singularity_forward_law(self) -> bool:
-        return False
-
-    @property
-    def sandbox(self):
-        return f"aframe::{self.image}"
-
-    def sandbox_env(self, _):
-        env = {}
-        for envvar, value in os.environ.items():
-            if envvar.startswith("AFRAME_"):
-                env[envvar] = value
-        # set data and run dirs as env variable in sandbox
-        # so they get mapped into the sandbox
-        for envvar in ["DATA_DIR", "RUN_DIR"]:
-            env[envvar] = os.getenv(envvar, "")
-        return env
-
-
-# containerized tasks that require local gpus
-class AframeGPUTask(AframeSandboxTask):
-    gpus = luigi.Parameter(default="", significant=False)
-
-    def sandbox_env(self, _):
-        env = super().sandbox_env(_)
-        if self.gpus:
-            env["CUDA_VISIBLE_DEVICES"] = self.gpus
-        return env
-
-    @property
     def singularity_args(self) -> Callable:
         def arg_getter():
             if self.gpus:
@@ -107,9 +97,16 @@ class AframeGPUTask(AframeSandboxTask):
 
         return arg_getter
 
+    @property
+    def sandbox(self):
+        return f"aframe:{self.image}"
+
+    def singularity_forward_law(self) -> bool:
+        return False
+
 
 # containerized tasks that require a ray cluster
-class AframeRayTask(AframeSandboxTask):
+class AframeRayTask(AframeSingularityTask):
     container = luigi.Parameter(default="", significant=False)
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)

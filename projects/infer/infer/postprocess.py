@@ -1,6 +1,5 @@
 import numpy as np
-
-from aframe.ledger.events import DetectedEvent
+from ledger.events import EventSet
 
 
 class Postprocessor:
@@ -46,7 +45,7 @@ class Postprocessor:
         integrated = np.convolve(y, window, mode="full")
         return integrated[: -window_size + 1]
 
-    def cluster(self, y) -> DetectedEvent:
+    def cluster(self, y) -> EventSet:
         # initial our search index to be in the first
         # half window of the timeseries. Then all we
         # need to know is whether there's a louder event
@@ -82,7 +81,7 @@ class Postprocessor:
         events = np.array(events)
         times = np.array(times)
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
-        return DetectedEvent(events, times, shifts, Tb)
+        return EventSet(events, times, shifts, Tb)
 
     def __call__(self, y):
         y = y[self.offset :]
