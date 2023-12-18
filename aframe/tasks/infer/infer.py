@@ -9,9 +9,7 @@ import luigi
 import psutil
 from luigi.util import inherits
 
-import aframe.utils as utils
-from aframe.base import AframeGPUTask, AframeSandboxTask
-from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
+from aframe.base import AframeSandboxTask
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
 
@@ -23,7 +21,7 @@ def get_poetry_env(path):
             ["poetry", "env", "info", "-p"], cwd=path
         )
     except subprocess.CalledProcessError:
-        logging.warning("Infer dir is not a valid poetry env")
+        logging.warning("Infer directory is not a valid poetry environment")
     else:
         output = output.decode("utf-8").strip()
     return output
@@ -37,6 +35,7 @@ class InferRequires(TypedDict):
 
 class InferenceParams(law.Task):
     output_dir = luigi.Parameter()
+    ifos = luigi.ListParameter()
     inference_sampling_rate = luigi.FloatParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
@@ -48,24 +47,12 @@ class InferenceParams(law.Task):
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
-
-
-class Test(luigi.Task):
-    def output(self):
-        return law.LocalFileTarget("/home/ethan.marx/test.txt")
-
-    def run(self):
-        with self.output().open("w") as f:
-            f.write("test")
+    triton_image = luigi.Parameter()
+    clients_per_gpu = luigi.IntParameter()
 
 
 @inherits(InferenceParams)
-class InferLocal(AframeGPUTask):
-    server_log = luigi.Parameter()
-    output_dir = luigi.Parameter()
-    triton_image = luigi.Parameter()
-    clients_per_gpu = luigi.IntParameter(default=5)
-
+class InferLocal(AframeSandboxTask):
     env_path = get_poetry_env(INFER_DIR)
     sandbox = f"venv::{env_path}"
 
@@ -82,16 +69,16 @@ class InferLocal(AframeGPUTask):
         raise NotImplementedError
 
     @property
-    def parallel_jobs(self):
-        return self.clients_per_gpu * len(self.gpus)
+    def num_parallel_jobs(self):
+        return self.clients_per_gpu * self.num_gpus
 
     @property
     def foreground_output(self):
-        return os.path.join(self.output_dir, "foreground.h5")
+        return os.path.join(self.output_dir, "foreground.hdf5")
 
     @property
     def background_output(self):
-        return os.path.join(self.output_dir, "background.h5")
+        return os.path.join(self.output_dir, "background.hdf5")
 
     @property
     def model_repo_dir(self):
@@ -108,15 +95,6 @@ class InferLocal(AframeGPUTask):
     def injection_set_fname(self):
         return self.input()["waveforms"][0].path
 
-    @property
-    def segments(self):
-        return utils.segments_from_paths(self.background_fnames)
-
-    @property
-    def shifts_required(self):
-        max_shift = max(self.shifts)
-        return utils.get_num_shifts(self.segments, self.Tb, max_shift)
-
     def output(self):
         return [
             law.LocalFileTarget(self.foreground_output),
@@ -124,95 +102,22 @@ class InferLocal(AframeGPUTask):
         ]
 
     def run(self):
-        import shutil
+        from infer.deploy import deploy
 
-        from ledger.events import EventSet, RecoveredInjectionSet
+        from aframe import utils
 
-        from hermes.aeriel.serve import serve
+        segments = utils.segments_from_paths(self.background_fnames)
+        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
 
-        # initialize a triton server contextmanager
-        instance = serve(
-            model_repo_dir=self.model_repo_dir,
+        deploy(
+            ip_address=self.get_ip_address(),
             image=self.triton_image,
-            log_file=self.server_log,
-            wait=True,
-        )
-        # enter the context manager, and launch
-        # triton client jobs via conder
-        with instance:
-            yield Test()
-            outputs = yield Clients.req(
-                self,
-                image="infer.sif",
-                background_fnames=self.background_fnames,
-                injection_set_fname=self.injection_set_fname,
-                shifts_required=self.shifts_required,
-                sequence_id=self.sequence_id,
-                condor_directory=os.path.join(self.output_dir, "condor"),
-            )
-
-            background_fnames = [o.path for o in outputs[1]]
-            foreground_fnames = [o.path for o in outputs[0]]
-
-            # aggregate results
-            background, foreground = EventSet(), RecoveredInjectionSet()
-            for b, f in zip(background_fnames, foreground_fnames):
-                bckground = EventSet.read(b)
-                frground = RecoveredInjectionSet.read(f)
-
-                background.append(bckground)
-                foreground.append(frground)
-
-            background.write(self.background_output)
-            foreground.write(self.foreground_output)
-            shutil.rmtree(self.output_dir / "tmp")
-
-
-@inherits(InferenceParams)
-class Clients(AframeSandboxTask, StaticMemoryWorkflow):
-    shifts_required = luigi.IntParameter()
-    background_fnames = luigi.ListParameter()
-    injection_set_fname = luigi.Parameter()
-    sequence_id = luigi.IntParameter()
-
-    def create_branch_map(self):
-        branch_map, i = {}, 0
-        for fname in self.background_fnames:
-            for i in range(self.shifts_required):
-                seq_id = self.sequence_id + 2 * i
-                shifts = [(i + 1) * shift for shift in self.shifts]
-            branch_map[i] = (fname, shifts, seq_id)
-        return branch_map
-
-    @property
-    def tmp_dir(self):
-        return os.path.join(self.output_dir, "tmp", f"output-{self.branch}")
-
-    @property
-    def foreground_output(self):
-        return os.path.join(self.tmp_dir, "foreground.h5")
-
-    @property
-    def background_output(self):
-        return os.path.join(self.tmp_dir, "background.h5")
-
-    def output(self):
-        return [
-            law.LocalFileTarget(self.foreground_output),
-            law.LocalFileTarget(self.background_output),
-        ]
-
-    def run(self):
-        from infer import infer
-
-        fname, shifts, seq_id = self.branch_data
-        os.makedirs(self.tmp_dir, exist_ok=True)
-        infer(
-            ip=f"{self.ip}:8001",
             model_name=self.model_name,
-            model_version=self.model_version,
-            shifts=shifts,
-            background_fname=fname,
+            model_repo_dir=self.model_repo_dir,
+            ifos=self.ifos,
+            shifts=self.shifts,
+            num_shifts=num_shifts,
+            background_fnames=self.background_fnames,
             injection_set_fname=self.injection_set_fname,
             batch_size=self.batch_size,
             psd_length=self.psd_length,
@@ -220,5 +125,7 @@ class Clients(AframeSandboxTask, StaticMemoryWorkflow):
             inference_sampling_rate=self.inference_sampling_rate,
             integration_window_length=self.integration_window_length,
             cluster_window_length=self.cluster_window_length,
-            sequence_id=seq_id,
+            output_dir=Path(self.output_dir),
+            model_version=self.model_version,
+            num_parallel_jobs=self.num_parallel_jobs,
         )

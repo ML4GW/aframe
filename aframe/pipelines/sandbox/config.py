@@ -136,6 +136,7 @@ class timeslide_waveforms(Config):
 
 class infer(Config):
     inference_sampling_rate = luigi.FloatParameter()
+    ifos = luigi.ListParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     cluster_window_length = luigi.FloatParameter()
@@ -148,10 +149,6 @@ class infer(Config):
     model_name = luigi.Parameter()
     clients_per_gpu = luigi.IntParameter()
     model_version = luigi.IntParameter()
-
-    @property
-    def server_log(self):
-        return os.path.join(base().log_dir, "server.log")
 
     @property
     def output_dir(self):

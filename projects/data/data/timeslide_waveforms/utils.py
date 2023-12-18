@@ -10,8 +10,8 @@ import torch
 from gwpy.timeseries import TimeSeriesDict
 
 
-def seed_worker(start: float, stop: float, shift: float, seed: int):
-    fingerprint = str((start, stop) + (shift, shift))
+def seed_worker(start: float, stop: float, shifts: List[float], seed: int):
+    fingerprint = str((start, stop) + tuple(shifts))
     worker_hash = adler32(fingerprint.encode())
     logging.info(
         "Seeding data generation with seed {}, "

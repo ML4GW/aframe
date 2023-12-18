@@ -107,9 +107,10 @@ class GenerateTimeslideWaveforms(
     def create_branch_map(self):
         branch_map, i = {}, 0
         for start, end in self.test_segments:
-            for shift in range(self.shifts_required):
+            for j in range(self.shifts_required):
+                shift = [(j + 1) * shift for shift in self.shifts]
                 # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (start + self.psd_length, end, shift + 1)
+                branch_map[i] = (start + self.psd_length, end, shift)
                 i += 1
         return branch_map
 
@@ -130,8 +131,7 @@ class GenerateTimeslideWaveforms(
             "--end",
             str(end),
             f"--ifos=[{','.join(self.ifos)}]",
-            "--shift",
-            str(shift),
+            f"--shifts=[{','.join(map(str, shift))}]",
             "--spacing",
             str(self.spacing),
             "--buffer",

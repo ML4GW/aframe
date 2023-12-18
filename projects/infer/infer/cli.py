@@ -5,8 +5,8 @@ from infer.data import Sequence
 from infer.main import infer
 from infer.postprocess import Postprocessor
 
-from aframe.logging import configure_logging
 from hermes.aeriel.client import InferenceClient
+from utils.logging import configure_logging
 
 
 def build_parser():
@@ -40,11 +40,11 @@ def main(args=None):
     cfg = parser.parse_args(args)
 
     if cfg.outdir is not None:
-        os.makedirs(cfg.outdir, parents=True, exist_ok=True)
+        os.makedirs(cfg.outdir, exist_ok=True)
 
     if cfg.logfile is not None:
         logdir = os.path.dirname(cfg.logfile)
-        os.makedirs(logdir, parents=True, exist_ok=True)
+        os.makedirs(logdir, exist_ok=True)
     configure_logging(cfg.logfile, verbose=cfg.verbose)
 
     cfg = parser.instantiate_classes(cfg)

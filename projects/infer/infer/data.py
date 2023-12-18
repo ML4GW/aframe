@@ -4,10 +4,9 @@ from zlib import adler32
 
 import h5py
 import numpy as np
+from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.injections import LigoResponseSet
 from ratelimiter import RateLimiter
-
-from aframe.ledger.events import DetectedEvent, RecoveredInjection
-from aframe.ledger.injections import LigoResponse
 
 
 class Sequence:
@@ -36,7 +35,7 @@ class Sequence:
             self.duration = self.size / self.sample_rate
 
         # use this to load in our injections up front
-        self.injection_set = LigoResponse.read(
+        self.injection_set = LigoResponseSet.read(
             injection_set_fname,
             start=self.t0,
             end=self.t0 + self.duration,
@@ -126,5 +125,5 @@ class Sequence:
         if self.done:
             return tuple(self._sequences[self.id + i] for i in range(2))
 
-    def recover(self, foreground: DetectedEvent) -> RecoveredInjection:
-        return RecoveredInjection.recover(foreground, self.injection_set)
+    def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
+        return RecoveredInjectionSet.recover(foreground, self.injection_set)
