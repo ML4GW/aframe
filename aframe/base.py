@@ -42,8 +42,9 @@ class AframeSandbox(singularity.SingularitySandbox):
 law.config.update(AframeSandbox.config())
 
 
-# base class for tasks that require a container
+# base class for any sandbox task (singularity, poetry env, etc.)
 class AframeSandboxTask(law.SandboxTask):
+    dev = luigi.BoolParameter(default=False, significant=False)
     gpus = luigi.Parameter(default="", significant=False)
 
     @property
@@ -71,8 +72,8 @@ class AframeSandboxTask(law.SandboxTask):
         return 0
 
 
+# class for tasks that are run in a singularity image
 class AframeSingularityTask(AframeSandboxTask):
-    dev = luigi.BoolParameter(default=False, significant=False)
     image = luigi.Parameter(default="")
     container_root = luigi.Parameter(
         default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
@@ -99,10 +100,10 @@ class AframeSingularityTask(AframeSandboxTask):
 
     @property
     def sandbox(self):
-        return f"aframe:{self.image}"
+        return f"aframe::{self.image}"
 
     def singularity_forward_law(self) -> bool:
-        return False
+        return True
 
 
 # containerized tasks that require a ray cluster

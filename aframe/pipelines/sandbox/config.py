@@ -32,7 +32,7 @@ class base(luigi.Config):
     sample_rate = luigi.FloatParameter()
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter()
-    flags = luigi.ListParameter()
+    flag = luigi.Parameter()
     channels = luigi.ListParameter()
     shifts = luigi.ListParameter()
     Tb = luigi.FloatParameter()
@@ -68,12 +68,19 @@ class train_background(Config):
     sample_rate = luigi.FloatParameter()
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter()
-    flags = luigi.ListParameter()
+    flag = luigi.Parameter()
     channels = luigi.ListParameter()
+    ifos = luigi.ListParameter()
 
 
-class test_background(train_background):
-    pass
+class test_background(Config):
+    start = luigi.FloatParameter()
+    end = luigi.FloatParameter()
+    sample_rate = luigi.FloatParameter()
+    min_duration = luigi.FloatParameter()
+    max_duration = luigi.FloatParameter()
+    flag = luigi.Parameter()
+    channels = luigi.ListParameter()
 
 
 class train_waveforms(Config):

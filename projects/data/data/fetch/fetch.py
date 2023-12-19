@@ -28,6 +28,7 @@ def fetch(
     for channel in channels:
         ifo = channel.split(":")[0]
         logging.info(f"Fetching data for channel {channel}")
+
         X[ifo] = TimeSeries.get(
             channel,
             start,
