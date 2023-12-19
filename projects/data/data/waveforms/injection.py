@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import h5py
 import numpy as np
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole as lal_bbh
+from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator as BilbyGenerator
 
 
@@ -22,9 +22,7 @@ class WaveformGenerator(BilbyGenerator):
         waveform_duration: float,
         sample_rate: float,
         minimum_frequency: float = 20,
-        reference_frequency: float = 20,
-        frequency_domain_source_model: Callable = lal_bbh,
-        parameter_conversion: Callable = convert_to_lal_binary_black_hole_parameters,  # noqa
+        reference_frequency: float = 50,
         waveform_approximant: str = "IMRPhenomPv2",
     ):
         self.sample_rate = sample_rate
@@ -35,8 +33,8 @@ class WaveformGenerator(BilbyGenerator):
         super().__init__(
             duration=waveform_duration,
             sampling_frequency=sample_rate,
-            frequency_domain_source_model=frequency_domain_source_model,
-            parameter_conversion=parameter_conversion,
+            frequency_domain_source_model=lal_binary_black_hole,
+            parameter_conversion=convert_to_lal_binary_black_hole_parameters,
             waveform_arguments={
                 "waveform_approximant": waveform_approximant,
                 "reference_frequency": reference_frequency,

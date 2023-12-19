@@ -318,7 +318,11 @@ class BaseAframeDataset(pl.LightningDataModule):
         # compute which timeslides we'll do on this device
         # if we're doing distributed training so we'll know
         # which waveforms to subsample
-        with h5py.File(self.valid_fnames[0], "r") as f:
+        valid_segment = self.valid_fnames[0]
+        self._logger.info(
+            f"Loading validation background from segment {valid_segment}"
+        )
+        with h5py.File(valid_segment, "r") as f:
             val_background = self.load_val_background(f)
         self.timeslides, self.valid_loader_length = get_timeslides(
             val_background,
