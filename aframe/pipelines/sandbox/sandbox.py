@@ -2,6 +2,7 @@ import os
 
 import law
 import luigi
+from luigi.util import inherits
 
 from aframe.pipelines.sandbox.config import SandboxConfig
 from aframe.tasks import (
@@ -12,7 +13,9 @@ from aframe.tasks import (
     InferLocal,
     MergeTimeslideWaveforms,
     TrainLocal,
+    TrainRemote,
 )
+from aframe.tasks.train.base import TrainParameters
 
 config = SandboxConfig()
 
@@ -39,9 +42,18 @@ class SandboxTrainDatagen(law.WrapperTask):
         )
 
 
-class SandboxTrain(TrainLocal):
+@inherits(TrainParameters)
+class SandboxTrain(law.Task):
     def requires(self):
         return SandboxTrainDatagen.req(self)
+
+    def run(self):
+        # if user specified s3, run remotely,
+        # otherwise run locally
+        if self.data_dir.startswith("s3://"):
+            yield TrainRemote.req(self)
+        else:
+            yield TrainLocal.req(self)
 
 
 class SandboxExport(ExportLocal):

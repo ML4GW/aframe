@@ -9,19 +9,12 @@ import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
-from luigi.contrib.s3 import S3Target
 
 from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
-
-
-class LawS3Target(S3Target):
-    def complete(self):
-        return self.exists()
-
 
 if TYPE_CHECKING:
     from ray_kube import KubernetesRayCluster

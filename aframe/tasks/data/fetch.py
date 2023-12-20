@@ -3,7 +3,7 @@ import os
 import law
 import luigi
 
-from aframe.base import logger
+from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
 from aframe.tasks.data.query import Query
@@ -72,11 +72,9 @@ class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
         start, duration = self.branch_data
         start = int(float(start))
         duration = int(float(duration))
-        fname = f"{self.prefix}-{start}-{duration}.hdf5"
-
-        target = law.LocalDirectoryTarget(self.data_dir)
-        target = target.child(fname, type="f")
-        return target
+        fname = "{}-{}-{}.hdf5".format(self.prefix, start, duration)
+        fname = os.path.join(self.data_dir, fname)
+        return s3_or_local(fname, self.client)
 
     def get_args(self):
         start, duration = self.branch_data
@@ -115,8 +113,20 @@ class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
         return args
 
     def run(self):
-        logger.debug(f"Running with args: {' '.join(self.get_args())}")
-        from data.cli import main
+        import h5py
+        from data.fetch.fetch import fetch
 
-        logger.debug(f"Running with args: {' '.join(self.get_args())}")
-        main(args=self.get_args())
+        start, duration = self.branch_data
+        start = int(float(start))
+        duration = int(float(duration))
+
+        X = fetch(
+            start,
+            start + duration,
+            self.channels,
+            self.sample_rate,
+        )
+
+        with self.output().open("w") as f:
+            with h5py.File(f, "w") as h5file:
+                X.write(h5file, format="hdf5")

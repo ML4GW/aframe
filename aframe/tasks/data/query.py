@@ -6,6 +6,7 @@ from aframe.tasks.data.base import AframeDataTask
 
 
 class Query(AframeDataTask):
+    retry_count = 3
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     output_file = luigi.Parameter()
