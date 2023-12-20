@@ -1,7 +1,10 @@
+import importlib
+
 import law
 import luigi
+from luigi.util import inherits
 
-from aframe.base import logger
+from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 
 
@@ -12,47 +15,50 @@ class WaveformParams(law.Task):
     output_file = luigi.Parameter()
     prior = luigi.Parameter()
     minimum_frequency = luigi.FloatParameter(default=20)
-    reference_frequency = luigi.FloatParameter(default=20)
+    reference_frequency = luigi.FloatParameter(default=50)
     waveform_approximant = luigi.Parameter(default="IMRPhenomPv2")
 
 
-class GenerateWaveforms(AframeDataTask, WaveformParams):
+@inherits(WaveformParams)
+class GenerateWaveforms(AframeDataTask):
     def output(self):
-        return law.LocalFileTarget(self.output_file)
+        return s3_or_local(self.output_file, client=self.client)
 
-    def get_args(self):
-        args = [
-            "waveforms",
-            "--num_signals",
-            str(self.num_signals),
-            "--sample_rate",
-            str(self.sample_rate),
-            "--waveform_duration",
-            str(self.waveform_duration),
-            "--output_file",
-            self.output().path,
-            "--minimum_frequency",
-            str(self.minimum_frequency),
-            "--reference_frequency",
-            str(self.reference_frequency),
-            "--waveform_approximant",
-            str(self.waveform_approximant),
-            "--prior",
-            str(self.prior),
-        ]
+    def load_prior(self):
+        module_path, prior = self.prior.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        prior = getattr(module, prior)
 
-        return args
+        return prior
 
     def run(self):
-        from data.cli import main
+        from data.waveforms.injection import (
+            WaveformGenerator,
+            convert_to_detector_frame,
+            write_waveforms,
+        )
 
-        logger.debug(f"Running with args: {' '.join(self.get_args())}")
-        main(args=self.get_args())
+        generator = WaveformGenerator(
+            self.waveform_duration,
+            self.sample_rate,
+            self.minimum_frequency,
+            self.reference_frequency,
+            waveform_approximant=self.waveform_approximant,
+        )
+        prior = self.load_prior()
+        prior, detector_frame_prior = prior()
+        samples = prior.sample(self.num_signals)
+        if not detector_frame_prior:
+            samples = convert_to_detector_frame(samples)
+        signals = generator(samples)
+        with self.output().open("w") as f:
+            write_waveforms(f, signals, samples, generator)
 
 
 # for validation waveforms, utilize rejection sampling
 # to generate waveforms with same distribution as testing set
-class ValidationWaveforms(WaveformParams):
+@inherits(WaveformParams)
+class ValidationWaveforms(law.Task):
     ifos = luigi.ListParameter()
     snr_threshold = luigi.FloatParameter()
     highpass = luigi.FloatParameter()

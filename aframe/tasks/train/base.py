@@ -2,11 +2,25 @@ from configparser import ConfigParser
 
 import law
 import luigi
+from luigi.util import inherits
 
 from aframe.config import Defaults
 from aframe.tasks.train.config import nautilus_urls, s3, wandb
 
 
+class TrainParameters(law.Task):
+    config = luigi.Parameter(default=Defaults.TRAIN)
+    ifos = luigi.ListParameter(default=["H1", "L1"])
+    data_dir = luigi.Parameter()
+    run_dir = luigi.Parameter()
+    seed = luigi.IntParameter(default=101588)
+    use_wandb = luigi.BoolParameter(default=False)
+    kernel_length = luigi.FloatParameter()
+    highpass = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+
+
+@inherits(TrainParameters)
 class TrainBase(law.Task):
     config = luigi.Parameter(default=Defaults.TRAIN)
     ifos = luigi.ListParameter(default=["H1", "L1"])
