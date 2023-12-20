@@ -24,6 +24,8 @@ model:
     # optimization params
     learning_rate: 0.000585
     pct_lr_ramp: 0.115
+    # early stop
+    patience: null
 data:
   class_path: train.data.TimeDomainSupervisedAframeDataset
   init_args:
