@@ -190,7 +190,7 @@ class AframeBase(pl.LightningModule):
         save = SaveAugmentedBatch()
         callbacks = [checkpoint, save]
         if self.hparams.patience is not None:
-            early_stop = pl.callbacks.EarlyStop(
+            early_stop = pl.callbacks.EarlyStopping(
                 monitor=self.metric_name,
                 patience=self.hparams.patience,
                 mode="max",
