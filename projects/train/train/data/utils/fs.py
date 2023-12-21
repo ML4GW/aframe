@@ -105,7 +105,7 @@ def download_training_data(bucket: str, data_dir: str):
             logging.info(f"Object {f} already downloaded")
 
     # now download our signal data
-    path = "signals.h5"
+    path = "signals.hdf5"
     target = f"{data_dir}/{path}"
     if not os.path.exists(target):
         logging.info(f"Downloading {path} to {target}")

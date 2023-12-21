@@ -1,12 +1,13 @@
+from configparser import ConfigParser
+
 import law
 import luigi
 
-from aframe.base import AframeSandboxTask
 from aframe.config import Defaults
-from aframe.tasks.train.config import wandb
+from aframe.tasks.train.config import nautilus_urls, s3, wandb
 
 
-class TrainParams(law.Task):
+class TrainBase(law.Task):
     config = luigi.Parameter(default=Defaults.TRAIN)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     data_dir = luigi.Parameter()
@@ -17,8 +18,6 @@ class TrainParams(law.Task):
     highpass = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
 
-
-class TrainBase(AframeSandboxTask, TrainParams):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not self.data_dir:
@@ -47,7 +46,7 @@ class TrainBase(AframeSandboxTask, TrainParams):
         # Arguments that are only used in the train project
         # (e.g. model architecture config, training hyperparams,
         # logging, profiling, etc.) should be specified in the
-        # should be configured in the train projects config.yaml file.
+        # train projects config.yaml file.
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.highpass=" + str(self.highpass))
@@ -59,7 +58,6 @@ class TrainBase(AframeSandboxTask, TrainParams):
             self.config,
             "--seed_everything",
             str(self.seed),
-            # "--data.ifos=[H1,L1]",
             f"--data.ifos=[{','.join(self.ifos)}]",
             "--data.data_dir",
             self.data_dir,
@@ -81,3 +79,31 @@ class TrainBase(AframeSandboxTask, TrainParams):
 
     def run(self):
         raise NotImplementedError
+
+
+class RemoteTrainBase(TrainBase):
+    def get_s3_credentials(self):
+        config = ConfigParser()
+        config.read("/home/ethan.marx/.aws/credentials")
+        keys = ["aws_access_key_id", "aws_secret_access_key"]
+        secret = {}
+        for key in keys:
+            try:
+                value = config["default"][key]
+            except KeyError:
+                raise ValueError(
+                    "aws credentials file {} is missing "
+                    "key {} in default table".format(s3().credentials, key)
+                )
+            secret[key.upper()] = value
+        return secret
+
+    def get_internal_s3_url(self):
+        # if user specified an external nautilus url,
+        # map to the corresponding internal url,
+        # since the internal url is what is used by the
+        # kubernetes cluster to access s3
+        url = s3().endpoint_url
+        if url in nautilus_urls:
+            return nautilus_urls[url]
+        return url
