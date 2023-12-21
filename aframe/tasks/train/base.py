@@ -3,7 +3,6 @@ from configparser import ConfigParser
 import law
 import luigi
 
-from aframe.base import AframeSandboxTask
 from aframe.config import Defaults
 from aframe.tasks.train.config import nautilus_urls, s3, wandb
 
@@ -108,7 +107,3 @@ class RemoteTrainBase(TrainBase):
         if url in nautilus_urls:
             return nautilus_urls[url]
         return url
-
-
-class LocalTrainBase(AframeSandboxTask, TrainBase):
-    pass
