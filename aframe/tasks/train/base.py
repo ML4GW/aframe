@@ -8,7 +8,7 @@ from aframe.config import Defaults
 from aframe.tasks.train.config import nautilus_urls, s3, wandb
 
 
-class TrainParameters(law.Task):
+class TrainBaseParameters(law.Task):
     config = luigi.Parameter(default=Defaults.TRAIN)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     data_dir = luigi.Parameter()
@@ -20,18 +20,20 @@ class TrainParameters(law.Task):
     fduration = luigi.FloatParameter()
 
 
-@inherits(TrainParameters)
+class RemoteParameters(law.Task):
+    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+    min_gpu_memory = luigi.IntParameter(default=15000)
+    request_gpus = luigi.IntParameter(default=1)
+    request_cpus = luigi.IntParameter(default=1)
+    request_cpu_memory = luigi.Parameter()
+
+
+class TrainParameters(TrainBaseParameters, RemoteParameters):
+    pass
+
+
+@inherits(TrainBaseParameters)
 class TrainBase(law.Task):
-    config = luigi.Parameter(default=Defaults.TRAIN)
-    ifos = luigi.ListParameter(default=["H1", "L1"])
-    data_dir = luigi.Parameter()
-    run_dir = luigi.Parameter()
-    seed = luigi.IntParameter(default=101588)
-    use_wandb = luigi.BoolParameter(default=False)
-    kernel_length = luigi.FloatParameter()
-    highpass = luigi.FloatParameter()
-    fduration = luigi.FloatParameter()
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not self.data_dir:
@@ -95,6 +97,7 @@ class TrainBase(law.Task):
         raise NotImplementedError
 
 
+@inherits(RemoteParameters)
 class RemoteTrainBase(TrainBase):
     def get_s3_credentials(self):
         config = ConfigParser()

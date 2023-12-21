@@ -45,8 +45,9 @@ def export(
 
     Args:
         weights:
-            Path to a set of trained weights that will be exported
-            to a model_repository.
+            File Like object or Path representing
+            a set of trained weights that will be
+            exported to a model_repository.
         repository_directory:
             Directory to which to save the models and their
             configs

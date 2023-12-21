@@ -13,6 +13,23 @@ class Config(_Config):
         return {key: getattr(self, key) for key in self.get_param_names()}
 
 
+def parse_dir(path: str) -> tuple[str, str]:
+    """
+    Parse a path of the form s3://bucket/remote/dir:/path/to/dir
+    into a tuple of the form (remote, local).
+
+    If the path does not start with s3:// then the remote
+    component will be None.
+    """
+    if path.startswith("s3://"):
+        remote = path.replace("s3://", "")
+        remote, *local = remote.split(":")
+        local = local[0] if local else None
+        return remote, local
+    else:
+        return None, local
+
+
 # base config that stores parameters
 # common to multiple tasks
 # TODO: when https://github.com/riga/law/issues/170
@@ -173,9 +190,21 @@ class SandboxConfig(luigi.Config):
     infer = infer()
 
     @property
-    def data_dir(self):
-        return self.base.data_dir
+    def data_remote(self):
+        remote, _ = parse_dir(self.base.data_dir)
+        return remote
 
     @property
-    def run_dir(self):
-        return self.base.run_dir
+    def data_local(self):
+        _, local = parse_dir(self.base.data_dir)
+        return local
+
+    @property
+    def run_remote(self):
+        remote, _ = parse_dir(self.base.run_dir)
+        return remote
+
+    @property
+    def run_local(self):
+        _, local = parse_dir(self.base.run_dir)
+        return local

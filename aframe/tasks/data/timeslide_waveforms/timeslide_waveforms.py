@@ -67,11 +67,11 @@ class GenerateTimeslideWaveforms(
         raise NotImplementedError
 
     # for now, require that testing segments exist.
-    # in principle, we could just require that segments
+    # in principle, we could just require that the segments __file__
     # exist since we only need the start and stop times,
     # but there were some instances where gwpy would not
     # successfully download all of the segments.
-    # TODO: check if this is still the case.
+    # TODO: check if this is still the case with gwpy.
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
         return self.workflow_input()["test_segments"].collection.exists()
@@ -93,7 +93,7 @@ class GenerateTimeslideWaveforms(
     def psd_segment(self):
         return list(
             self.input()["train_segments"].collection.targets.values()
-        )[-1].path
+        )[-1]
 
     @property
     def max_shift(self):
@@ -114,54 +114,6 @@ class GenerateTimeslideWaveforms(
                 i += 1
         return branch_map
 
-    # TODO: this is getting a bit messy. I think we should
-    # find a way to annotate arguments that will get passed
-    # to the command line like below, and define a generic
-    # get_args method that handles parsing them to CLI based
-    # on their parameter type. Or, get rid of CLI altogether.
-    # I think it's really only useful for the train jobs
-    # where the pytorch lightning config.yaml is actually useful
-    def get_args(self):
-        start, end, shift = self.branch_data
-
-        return [
-            "timeslide_waveforms",
-            "--start",
-            str(start),
-            "--end",
-            str(end),
-            f"--ifos=[{','.join(self.ifos)}]",
-            f"--shifts=[{','.join(map(str, shift))}]",
-            "--spacing",
-            str(self.spacing),
-            "--buffer",
-            str(self.buffer),
-            "--prior",
-            self.prior,
-            "--minimum_frequency",
-            str(self.minimum_frequency),
-            "--reference_frequency",
-            str(self.reference_frequency),
-            "--sample_rate",
-            str(self.sample_rate),
-            "--waveform_duration",
-            str(self.waveform_duration),
-            "--waveform_approximant",
-            self.waveform_approximant,
-            "--highpass",
-            str(self.highpass),
-            "--snr_threshold",
-            str(self.snr_threshold),
-            "--seed",
-            str(self.seed),
-            # "--verbose",
-            # str(self.verbose),
-            "--psd_file",
-            str(self.psd_segment),
-            "--output_dir",
-            self.tmp_dir,
-        ]
-
     @workflow_condition.output
     def output(self):
         return [
@@ -172,13 +124,34 @@ class GenerateTimeslideWaveforms(
         ]
 
     def run(self):
-        from data.cli import main
+        import io
 
-        logger.debug(
-            "Running timeslide-waveforms with args: "
-            f"{' '.join(self.get_args())}"
+        from data.timeslide_waveforms.timeslide_waveforms import (
+            timeslide_waveforms,
         )
-        main(args=self.get_args())
+
+        start, end, shift = self.branch_data
+        with self.psd_segment().open("r") as psd_file:
+            psd_file = io.BytesIO(psd_file.read())
+            timeslide_waveforms(
+                start,
+                end,
+                self.ifos,
+                shift,
+                self.spacing,
+                self.buffer,
+                self.prior,
+                self.minimum_frequency,
+                self.reference_frequency,
+                self.sample_rate,
+                self.waveform_duration,
+                self.waveform_approximant,
+                self.highpass,
+                self.snr_threshold,
+                psd_file,
+                self.tmp_dir,
+                self.seed,
+            )
 
 
 @inherits(TimeSlideWaveformsParams)
