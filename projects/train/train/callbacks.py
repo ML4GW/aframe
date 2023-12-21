@@ -40,6 +40,12 @@ class SaveAugmentedBatch(Callback):
             X = X.to(device)
             X, y = trainer.datamodule.augment(X[0])
             save_dir = trainer.logger.log_dir or trainer.logger.save_dir
-            with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
-                f["X"] = X.cpu().numpy()
-                f["y"] = y.cpu().numpy()
+            if save_dir.startswith("s3://"):
+                s3 = s3fs.S3FileSystem()
+                with h5py.File(s3.open(f"{save_dir}/batch.h5", "wb")) as f:
+                    f["X"] = X.cpu().numpy()
+                    f["y"] = y.cpu().numpy()
+            else:
+                with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
+                    f["X"] = X.cpu().numpy()
+                    f["y"] = y.cpu().numpy()
