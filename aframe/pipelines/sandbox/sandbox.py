@@ -48,19 +48,10 @@ class SandboxTrain(law.Task):
         return SandboxTrainDatagen.req(self)
 
     def run(self):
-        # if user specified s3, run remotely,
-        # otherwise run locally
-        if self.data_dir.startswith("s3://"):
-            yield TrainRemote.req(self)
-        else:
-            yield TrainLocal.req(self)
+        yield Train.req(self)
 
 
 class SandboxExport(ExportLocal):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.weights = self.input().path
-
     def requires(self):
         # expicitly pass parameters image and config parameters
         # b/c these are common parameters that should
@@ -75,6 +66,11 @@ class SandboxExport(ExportLocal):
 
 
 class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
+    @property
+    def train_data_dir(self):
+        if config.data_remote is None:
+            return os.path.join(config.data_local, "train")
+
     def workflow_requires(self):
         reqs = {}
         # requires background testing segments
@@ -82,10 +78,10 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
         reqs["test_segments"] = Fetch.req(
             self,
             image="data.sif",
-            condor_directory=os.path.join(config.data_dir, "condor", "test"),
-            data_dir=os.path.join(config.data_dir, "test", "background"),
+            condor_directory=os.path.join(config.data_local, "condor", "test"),
+            data_dir=os.path.join(config.data_local, "test", "background"),
             segments_file=os.path.join(
-                config.data_dir, "test", "segments.txt"
+                config.data_local, "test", "segments.txt"
             ),
             **config.test_background.to_dict(),
         )
@@ -99,10 +95,12 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             self,
             branch=-1,
             image="data.sif",
-            condor_directory=os.path.join(config.data_dir, "condor", "train"),
+            condor_directory=os.path.join(
+                config.data_local, "condor", "train"
+            ),
             data_dir=os.path.join(config.data_dir, "train", "background"),
             segments_file=os.path.join(
-                config.data_dir, "train", "segments.txt"
+                config.data_local, "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
         )
@@ -110,17 +108,18 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
 
 
 class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
+    # timeslide waveform data always should be kept local
     @property
     def data_dir(self):
-        return os.path.join(config.data_dir, "test")
+        return os.path.join(config.data_local, "test")
 
     @property
     def output_dir(self):
-        return os.path.join(config.data_dir, "timeslide_waveforms")
+        return os.path.join(config.data_local, "timeslide_waveforms")
 
     @property
     def condor_directory(self):
-        return os.path.join(config.data_dir, "condor", "timeslide_waveforms")
+        return os.path.join(config.data_local, "condor", "timeslide_waveforms")
 
     def requires(self):
         return SandboxGenerateTimeslideWaveforms.req(
@@ -139,9 +138,7 @@ class SandboxInfer(InferLocal):
         reqs["export"] = SandboxExport.req(
             self,
             image="export.sif",
-            repository_directory=os.path.join(
-                config.base.run_dir, "model_repo"
-            ),
+            repository_directory=os.path.join(config.run_local, "model_repo"),
             logfile=os.path.join(config.base.log_dir, "export.log"),
             **config.export.to_dict(),
         )

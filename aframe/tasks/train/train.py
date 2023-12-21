@@ -9,7 +9,7 @@ import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
-
+from aframe.targets import LawS3Target
 from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
@@ -79,7 +79,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return args
 
     def output(self):
-        return LawS3Target(os.path.join(self.data_dir, "model.pt"))
+        return LawS3Target(os.path.join(self.run_dir, "model.pt"))
 
     @property
     def gpu_constraints(self):
