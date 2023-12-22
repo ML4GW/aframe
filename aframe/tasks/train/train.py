@@ -46,7 +46,6 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         stream_command(cmd)
 
     def output(self):
-        # TODO: more robust method for finding model.pt
         dir = law.LocalDirectoryTarget(self.run_dir)
         return dir.child("model.pt", type="f")
 
@@ -54,9 +53,9 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
     min_gpu_memory = luigi.IntParameter(default=15000)
-    request_gpus = luigi.IntParameter(default=8)
-    request_cpus = luigi.IntParameter(default=8)
-    request_cpu_memory = luigi.Parameter(default="8Gi")
+    request_gpus = luigi.IntParameter(default=4)
+    request_cpus = luigi.IntParameter(default=16)
+    request_cpu_memory = luigi.Parameter(default="32Gi")
 
     @property
     def name(self):
@@ -160,7 +159,6 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     def run(self):
         self.secret.create()
-
         super().run()
 
 

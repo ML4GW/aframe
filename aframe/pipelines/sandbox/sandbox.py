@@ -19,6 +19,7 @@ from aframe.tasks import (
     TrainRemote,
 )
 from aframe.tasks.train.base import TrainParameters
+from aframe.tasks.train.config import train_remote
 
 config = SandboxConfig()
 
@@ -49,8 +50,6 @@ class SandboxTrainDatagen(law.WrapperTask):
 
 # dynamically create local or remote train task
 # depending on the specified format of the data and run directories
-
-
 @inherits(TrainParameters)
 class SandboxTrain(law.Task):
     dev = luigi.BoolParameter(default=False, significant=False)
@@ -86,13 +85,13 @@ class SandboxTrain(law.Task):
         else:
             yield TrainRemote.req(
                 self,
-                image="ghcr.io/ml4gw/aframev2/train:main",
+                image=train_remote().image,
                 config="/home/ethan.marx/projects/aframev2/projects/train/config.yaml",  # noqa
                 data_dir=config.train_data_dir,
                 run_dir=config.train_run_dir,
-                request_cpus=16,
-                request_gpus=4,
-                request_cpu_memory="32G",
+                request_cpus=train_remote().request_cpus,
+                request_gpus=train_remote().request_gpus,
+                request_cpu_memory=train_remote().request_cpu_memory,
             )
 
 

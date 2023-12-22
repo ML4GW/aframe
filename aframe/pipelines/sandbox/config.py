@@ -5,8 +5,6 @@ from luigi import Config as _Config
 
 from aframe.config import Defaults
 
-project_base = "/opt/aframe/projects"
-
 
 class Config(_Config):
     def to_dict(self):
