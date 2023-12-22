@@ -185,7 +185,7 @@ class BaseAframeDataset(pl.LightningDataModule):
     @property
     def val_batch_size(self):
         """Use larger batch sizes when we don't need gradients."""
-        return int(4 * self.hparams.batch_size)
+        return int(1 * self.hparams.batch_size)
 
     # ================================================ #
     # Utilities for initial data loading and preparation
@@ -194,9 +194,15 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         Download s3 data if it doesn't exist.
         """
+        logger = logging.getLogger("AframeDataset")
         bucket, _ = fs_utils.split_data_dir(self.hparams.data_dir)
         if bucket is None:
             return
+        logger.info(
+            "Downloading data from S3 bucket {} to {}".format(
+                bucket, self.data_dir
+            )
+        )
         fs_utils.download_training_data(bucket, self.data_dir)
 
     @torch.no_grad()
