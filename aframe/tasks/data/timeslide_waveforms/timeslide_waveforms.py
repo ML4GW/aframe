@@ -9,7 +9,6 @@ import luigi
 from luigi.util import inherits
 
 import aframe.utils as utils
-from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
@@ -154,7 +153,7 @@ class GenerateTimeslideWaveforms(
             )
 
 
-@inherits(TimeSlideWaveformsParams)
+@inherits(GenerateTimeslideWaveforms)
 class MergeTimeslideWaveforms(AframeDataTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

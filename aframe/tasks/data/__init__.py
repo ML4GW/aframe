@@ -7,6 +7,6 @@ DATAFIND_ENV_VARS = [
     "DEFAULT_SEGMENT_SERVER",
 ]
 from .fetch import Fetch
-from .query import Query
+from .segments import Query
 from .timeslide_waveforms import *
 from .waveforms import GenerateWaveforms
