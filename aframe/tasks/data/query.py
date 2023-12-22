@@ -6,13 +6,14 @@ from aframe.tasks.data.base import AframeDataTask
 
 
 class Query(AframeDataTask):
-    retry_count = 3
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     segments_file = luigi.Parameter()
     min_duration = luigi.FloatParameter(default=0)
     flag = luigi.Parameter()
     ifos = luigi.ListParameter()
+
+    retry_count = 3
 
     def output(self):
         return law.LocalFileTarget(self.segments_file)

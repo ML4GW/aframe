@@ -10,17 +10,12 @@ from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
 from aframe.tasks.data.query import Query
 
 
+@inherits(Query)
 class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
-    start = luigi.FloatParameter()
-    end = luigi.FloatParameter()
     data_dir = luigi.Parameter()
     sample_rate = luigi.FloatParameter()
-    flag = luigi.Parameter()
-    ifos = luigi.ListParameter()
-    min_duration = luigi.FloatParameter(default=0)
     max_duration = luigi.FloatParameter(default=-1)
     prefix = luigi.Parameter(default="background")
-    segments_file = luigi.Parameter(default="")
     channels = luigi.ListParameter()
 
     def __init__(self, *args, **kwargs):
