@@ -5,21 +5,22 @@ import luigi
 
 from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
+from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
 from aframe.tasks.data.query import Query
-from aframe.tasks.data.workflow import LDGCondorWorkflow
 
 
-class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
+class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     data_dir = luigi.Parameter()
     sample_rate = luigi.FloatParameter()
+    flag = luigi.Parameter()
+    ifos = luigi.ListParameter()
     min_duration = luigi.FloatParameter(default=0)
     max_duration = luigi.FloatParameter(default=-1)
     prefix = luigi.Parameter(default="background")
-    flags = luigi.ListParameter(default=["DCS-ANALYSIS_READY_C01:1"])
     segments_file = luigi.Parameter(default="")
-    channels = luigi.ListParameter(default=["H1:GDS-CALIB_STRAIN"])
+    channels = luigi.ListParameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,15 +35,15 @@ class Fetch(AframeDataTask, law.LocalWorkflow, LDGCondorWorkflow):
 
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
-        return self.input()["segments"].exists()
+        return self.workflow_input()["segments"].exists()
 
     @workflow_condition.create_branch_map
     def create_branch_map(self):
-        segments = self.input()["segments"].load().splitlines()[1:]
+        segments = self.workflow_input()["segments"].load().splitlines()[1:]
         branch_map, i = {}, 1
-        for row in segments:
-            row = row.split("\t")
-            start, duration = map(float, row[1::2])
+        for segment in segments:
+            segment = segment.split("\t")
+            start, duration = map(float, segment[1::2])
             step = duration if self.max_duration == -1 else self.max_duration
             num_steps = (duration - 1) // step + 1
 

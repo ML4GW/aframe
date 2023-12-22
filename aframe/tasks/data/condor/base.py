@@ -11,8 +11,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     condor_directory = luigi.Parameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
-    request_disk = luigi.Parameter(default="1 GB")
-    request_memory = luigi.Parameter(default="1 GB")
+    request_disk = luigi.Parameter(default="1024")
+    request_memory = luigi.Parameter(default="32678")
     request_cpus = luigi.IntParameter(default=1)
 
     def __init__(self, *args, **kwargs):
@@ -30,7 +30,6 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
                     "job_file_dir": self.job_file_dir,
                     "job_file_dir_cleanup": "True",
                     "job_file_dir_mkdtemp": "False",
-                    "htcondor_job_file_dir_cleanup": True,
                 }
             }
         )
@@ -79,22 +78,10 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     def htcondor_use_local_scheduler(self):
         return True
 
-    def htcondor_job_config(self, config, job_num, branches):
-        environment = self.build_environment()
-        config.custom_content.append(("environment", environment))
-        config.custom_content.append(("stream_error", "True"))
-        config.custom_content.append(("stream_output", "True"))
+    def append_memory(self):
+        raise NotImplementedError
 
-        config.custom_content.append(("request_memory", self.request_memory))
-        config.custom_content.append(("request_disk", self.request_disk))
-        config.custom_content.append(("request_cpus", self.request_cpus))
-        config.custom_content.append(
-            ("accounting_group", self.accounting_group)
-        )
-        config.custom_content.append(
-            ("accounting_group_user", self.accounting_group_user)
-        )
-
+    def append_logs(self, config):
         for output in ["log", "output", "error"]:
             ext = output[:3]
             config.custom_content.append(
@@ -106,4 +93,20 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
                     ),
                 )
             )
+
+    def htcondor_job_config(self, config, job_num, branches):
+        environment = self.build_environment()
+        config.custom_content.append(("environment", environment))
+        config.custom_content.append(("stream_error", "True"))
+        config.custom_content.append(("stream_output", "True"))
+        config.custom_content.append(
+            ("accounting_group", self.accounting_group)
+        )
+        config.custom_content.append(
+            ("accounting_group_user", self.accounting_group_user)
+        )
+        config.custom_content.append(("request_disk", self.request_disk))
+        config.custom_content.append(("request_cpus", self.request_cpus))
+        self.append_memory(config)
+        self.append_logs(config)
         return config

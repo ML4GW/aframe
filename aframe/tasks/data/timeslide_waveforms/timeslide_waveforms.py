@@ -2,15 +2,21 @@ import glob
 import os
 import shutil
 from pathlib import Path
+from typing import TypedDict
 
 import law
 import luigi
 from luigi.util import inherits
 
+import aframe.utils as utils
 from aframe.base import logger
 from aframe.tasks.data.base import AframeDataTask
-from aframe.tasks.data.timeslide_waveforms import utils
-from aframe.tasks.data.workflow import LDGCondorWorkflow
+from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
+
+
+class TsWorkflowRequires(TypedDict):
+    test_segments: law.Task
+    train_segments: law.Task
 
 
 class TimeSlideWaveformsParams(law.Task):
@@ -32,16 +38,14 @@ class TimeSlideWaveformsParams(law.Task):
     highpass = luigi.FloatParameter()
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
-    seed = luigi.OptionalParameter(default=None)
+    seed = luigi.IntParameter()
     segments_file = luigi.Parameter(default="")
     # verbose = luigi.BoolParameter(default=False)
 
 
 @inherits(TimeSlideWaveformsParams)
 class GenerateTimeslideWaveforms(
-    AframeDataTask,
-    law.LocalWorkflow,
-    LDGCondorWorkflow,
+    AframeDataTask, law.LocalWorkflow, StaticMemoryWorkflow
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,7 +58,7 @@ class GenerateTimeslideWaveforms(
             self.job_log = os.path.join(self.log_dir, self.job_log)
 
     # the workflow requires the testing segments
-    def workflow_requires(self):
+    def workflow_requires(self) -> TsWorkflowRequires:
         raise NotImplementedError
 
     # each workflow branch requires a training
@@ -70,7 +74,7 @@ class GenerateTimeslideWaveforms(
     # TODO: check if this is still the case.
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
-        return self.input()["test_segments"].collection.exists()
+        return self.workflow_input()["test_segments"].collection.exists()
 
     @property
     def shifts_required(self):
@@ -80,7 +84,9 @@ class GenerateTimeslideWaveforms(
 
     @property
     def test_segments(self):
-        paths = list(self.input()["test_segments"].collection.targets.values())
+        paths = list(
+            self.workflow_input()["test_segments"].collection.targets.values()
+        )
         return utils.segments_from_paths(paths)
 
     @property
@@ -101,9 +107,10 @@ class GenerateTimeslideWaveforms(
     def create_branch_map(self):
         branch_map, i = {}, 0
         for start, end in self.test_segments:
-            for shift in range(self.shifts_required):
+            for j in range(self.shifts_required):
+                shift = [(j + 1) * shift for shift in self.shifts]
                 # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (start + self.psd_length, end, shift + 1)
+                branch_map[i] = (start + self.psd_length, end, shift)
                 i += 1
         return branch_map
 
@@ -124,8 +131,7 @@ class GenerateTimeslideWaveforms(
             "--end",
             str(end),
             f"--ifos=[{','.join(self.ifos)}]",
-            "--shift",
-            str(shift),
+            f"--shifts=[{','.join(map(str, shift))}]",
             "--spacing",
             str(self.spacing),
             "--buffer",
@@ -199,11 +205,11 @@ class MergeTimeslideWaveforms(AframeDataTask):
 
     @property
     def waveform_files(self):
-        return map(Path, [targets[0].path for targets in self.targets])
+        return list(map(Path, [targets[0].path for targets in self.targets]))
 
     @property
     def rejected_parameter_files(self):
-        return map(Path, [targets[1].path for targets in self.targets])
+        return list(map(Path, [targets[1].path for targets in self.targets]))
 
     def run(self):
         from ledger.injections import InjectionParameterSet, LigoResponseSet

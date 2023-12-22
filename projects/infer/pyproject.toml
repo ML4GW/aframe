@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "infer"
+version = "0.0.1"
+description = ""
+authors = ["Alec Gunny", "Ethan Marx", "Will Benoit"]
+
+[tool.poetry.scripts]
+infer = "infer.cli:main"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+ratelimiter = "^1.2"
+ray = "^2.6"
+jsonargparse = "^4.24"
+tqdm = "^4.66"
+
+utils = {path = "../utils", develop = true}
+aframe = {path = "../../", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
+pycondor = {path = "../../pycondor", develop = true}
+
+# hermes utilities
+"hermes.aeriel" = {path = "../../hermes/hermes/hermes.aeriel", extras=["serve"], develop = true}
+"hermes.stillwater" = {path = "../../hermes/hermes/hermes.stillwater", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+pytest = "^7.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cpu"

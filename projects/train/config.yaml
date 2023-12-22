@@ -1,7 +1,7 @@
 # commented args represent values filled out
 # by train task at run time. To build a functional
 # standalone config, add these in.
-
+ 
 
 model:
   class_path: train.model.SupervisedAframe
@@ -24,6 +24,8 @@ model:
     # optimization params
     learning_rate: 0.000585
     pct_lr_ramp: 0.115
+    # early stop
+    patience: 20
 data:
   class_path: train.data.TimeDomainSupervisedAframeDataset
   init_args:

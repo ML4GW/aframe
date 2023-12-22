@@ -214,10 +214,9 @@ def get_timeslides(
     `livetime` they've produced `livetime` seconds of background.
     For distributed evaluation, timelides are broken up to ensure
     each device performs and equal amount of inference.
-    """
 
-    duration = timeseries.size(-1) / sample_rate
-    duration -= sample_length
+    `timeseries` is a (n_val_segments, n_channels, n_samples) tensor
+    """
 
     kernel_size = int(sample_length * sample_rate)
     stride_size = int(stride * sample_rate)
@@ -228,18 +227,25 @@ def get_timeslides(
     shifts = zip(itertools.count(1, 1), itertools.count(-1, -1))
     shifts = itertools.chain.from_iterable(shifts)
     shifts = itertools.takewhile(lambda _: livetime > 0, shifts)
+
     timeslides = []
     for shift in shifts:
-        timeslide = TimeSlide(
-            timeseries,
-            int(shift * sample_rate),
-            kernel_size,
-            stride_size,
-            batch_size,
-        )
-        dur = duration - timeslide.max_shift / sample_rate
-        livetime -= dur
-        timeslides.append(timeslide)
+        for ts in timeseries:
+            timeslide = TimeSlide(
+                ts,
+                int(shift * sample_rate),
+                kernel_size,
+                stride_size,
+                batch_size,
+            )
+            duration = ts.size(-1) / sample_rate
+            duration -= sample_length
+
+            dur = duration - timeslide.max_shift / sample_rate
+            livetime -= dur
+            timeslides.append(timeslide)
+            if livetime <= 0:
+                break
 
     # chop off any excess time from the last timeslide
     if livetime < 0:
@@ -252,9 +258,9 @@ def get_timeslides(
     try:
         world_size = torch.distributed.get_world_size()
     except RuntimeError:
-        return timeslides
+        return timeslides, None
     if world_size == 1:
-        return timeslides
+        return timeslides, None
 
     # if we're running with more than one device,
     # break up the timeslides such that we do
@@ -312,7 +318,7 @@ def get_timeslides(
     # we should probably just move to a simpler method
     # for distributing the timeslides
     lengths = []
-    for i, dev in enumerate(timeslides_per_dev):
+    for dev in timeslides_per_dev:
         length = 0
         for ts in dev:
             length += len(ts)

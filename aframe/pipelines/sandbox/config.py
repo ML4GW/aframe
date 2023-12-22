@@ -15,8 +15,9 @@ class Config(_Config):
 
 # base config that stores parameters
 # common to multiple tasks
-
-
+# TODO: when https://github.com/riga/law/issues/170
+# is resolved, remove the need for base class,
+# and simply revert to old pinto style config interpolation
 class base(luigi.Config):
     # general parameters
     seed = luigi.IntParameter(default=1122)
@@ -31,8 +32,10 @@ class base(luigi.Config):
     sample_rate = luigi.FloatParameter()
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter()
-    flags = luigi.ListParameter()
+    flag = luigi.Parameter()
     channels = luigi.ListParameter()
+    shifts = luigi.ListParameter()
+    Tb = luigi.FloatParameter()
     # data conditioning / preprocessing parameters
     fduration = luigi.FloatParameter()
     fftlength = luigi.FloatParameter()
@@ -65,12 +68,19 @@ class train_background(Config):
     sample_rate = luigi.FloatParameter()
     min_duration = luigi.FloatParameter()
     max_duration = luigi.FloatParameter()
-    flags = luigi.ListParameter()
+    flag = luigi.Parameter()
     channels = luigi.ListParameter()
+    ifos = luigi.ListParameter()
 
 
-class test_background(train_background):
-    pass
+class test_background(Config):
+    start = luigi.FloatParameter()
+    end = luigi.FloatParameter()
+    sample_rate = luigi.FloatParameter()
+    min_duration = luigi.FloatParameter()
+    max_duration = luigi.FloatParameter()
+    flag = luigi.Parameter()
+    channels = luigi.ListParameter()
 
 
 class train_waveforms(Config):
@@ -131,6 +141,27 @@ class timeslide_waveforms(Config):
     seed = luigi.IntParameter(base().seed)
 
 
+class infer(Config):
+    inference_sampling_rate = luigi.FloatParameter()
+    ifos = luigi.ListParameter()
+    batch_size = luigi.IntParameter()
+    psd_length = luigi.FloatParameter()
+    cluster_window_length = luigi.FloatParameter()
+    integration_window_length = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    Tb = luigi.FloatParameter()
+    shifts = luigi.ListParameter()
+    sequence_id = luigi.IntParameter()
+    triton_image = luigi.Parameter()
+    model_name = luigi.Parameter()
+    clients_per_gpu = luigi.IntParameter()
+    model_version = luigi.IntParameter()
+
+    @property
+    def output_dir(self):
+        return os.path.join(base().run_dir, "infer")
+
+
 class SandboxConfig(luigi.Config):
     base = base()
     train_background = train_background()
@@ -139,6 +170,7 @@ class SandboxConfig(luigi.Config):
     train = train()
     timeslide_waveforms = timeslide_waveforms()
     test_background = test_background()
+    infer = infer()
 
     @property
     def data_dir(self):

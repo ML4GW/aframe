@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Optional
 
 import h5py
@@ -29,9 +30,10 @@ Tensor = torch.Tensor
 # https://github.com/Lightning-AI/lightning/issues/16830,
 # we should switch to using a CombinedLoader for validation
 class ZippedDataset(torch.utils.data.IterableDataset):
-    def __init__(self, *datasets):
+    def __init__(self, *datasets, minimum: Optional[int] = None):
         super().__init__()
         self.datasets = datasets
+        self.minimum = minimum
 
     def __len__(self):
         lengths = []
@@ -40,7 +42,7 @@ class ZippedDataset(torch.utils.data.IterableDataset):
                 lengths.append(len(dset))
             except Exception as e:
                 raise e from None
-        return min(lengths)
+        return self.minimum or min(lengths)
 
     def __iter__(self):
         return zip(*self.datasets)
@@ -68,6 +70,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
+        min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
     ) -> None:
         super().__init__()
@@ -169,7 +172,15 @@ class BaseAframeDataset(pl.LightningDataModule):
     @property
     def valid_fnames(self) -> Sequence[str]:
         fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
-        return sorted(fnames)[-1:]
+        fnames = sorted([Path(fname) for fname in fnames])
+        durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
+        valid_fnames = []
+        valid_duration = 0
+        while valid_duration < self.hparams.min_valid_duration:
+            fname, duration = fnames.pop(-1), durations.pop(-1)
+            valid_duration += duration
+            valid_fnames.append(str(fname))
+        return valid_fnames
 
     @property
     def val_batch_size(self):
@@ -270,12 +281,15 @@ class BaseAframeDataset(pl.LightningDataModule):
         params["phi"] = params.pop("ra")
         return cross, plus, params
 
-    def load_val_background(self, f):
+    def load_val_background(self, fnames: list[str]):
         self._logger.info("Loading validation background data")
         val_background = []
-        for ifo in self.hparams.ifos:
-            val_background.append(torch.Tensor(f[ifo][:]))
-        val_background = torch.stack(val_background)
+        for fname in fnames:
+            segment = []
+            with h5py.File(fname, "r") as f:
+                for ifo in self.hparams.ifos:
+                    segment.append(torch.Tensor(f[ifo][:]))
+                val_background.append(torch.stack(segment))
         return val_background
 
     def build_transforms(self, sample_rate: float):
@@ -317,9 +331,13 @@ class BaseAframeDataset(pl.LightningDataModule):
         # compute which timeslides we'll do on this device
         # if we're doing distributed training so we'll know
         # which waveforms to subsample
-        with h5py.File(self.valid_fnames[0], "r") as f:
-            val_background = self.load_val_background(f)
-        self.timeslides = get_timeslides(
+
+        val_background = self.load_val_background(self.valid_fnames)
+        self._logger.info(
+            "Constructing validation timeslides from background segments"
+            f"{' '.join(self.valid_fnames)}"
+        )
+        self.timeslides, self.valid_loader_length = get_timeslides(
             val_background,
             self.hparams.valid_livetime,
             self.sample_rate,
@@ -330,7 +348,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         # calculate the validation background PSD up front
         # on the CPU then move the psd estimator to the device
-        psd = self.psd_estimator.spectral_density(val_background.double())
+        psd = self.psd_estimator.spectral_density(val_background[0].double())
 
         self._logger.info("Loading waveforms")
         with h5py.File(f"{self.data_dir}/signals.hdf5", "r") as f:
@@ -511,7 +529,9 @@ class BaseAframeDataset(pl.LightningDataModule):
             shuffle=False,
             pin_memory=False,
         )
-        return ZippedDataset(background_dataset, signal_loader)
+        return ZippedDataset(
+            background_dataset, signal_loader, minimum=self.valid_loader_length
+        )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         num_waveforms = self.waveform_sampler.num_waveforms

@@ -13,7 +13,7 @@ def timeslide_waveforms(
     start: float,
     end: float,
     ifos: List[str],
-    shift: float,
+    shifts: List[float],
     spacing: float,
     buffer: float,
     prior: Callable,
@@ -93,13 +93,13 @@ def timeslide_waveforms(
 
     # seed process based on start, end and shift
     if seed is not None:
-        utils.seed_worker(start, end, shift, seed)
+        utils.seed_worker(start, end, shifts, seed)
 
     # calculate the injecitn times, determining
     # the number of samples we'll need to generate
     injection_times = utils.calc_segment_injection_times(
         start,
-        end - shift,  # TODO: should account for uneven last batch too
+        end - max(shifts),  # TODO: should account for uneven last batch too
         spacing,
         buffer,
         waveform_duration,
@@ -129,7 +129,7 @@ def timeslide_waveforms(
     # now, set the injection times and shifts,
     # and create the LigoResponseSet object
     parameters["gps_time"] = injection_times
-    parameters["shift"] = np.array([shift for _ in range(n_samples)])
+    parameters["shift"] = np.array([shifts for _ in range(n_samples)])
 
     output_dir.mkdir(parents=True, exist_ok=True)
     response_set = LigoResponseSet(**parameters)

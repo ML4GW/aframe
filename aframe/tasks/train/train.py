@@ -11,9 +11,9 @@ from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
 from luigi.contrib.s3 import S3Target
 
-from aframe.base import AframeGPUTask, AframeRayTask, logger
+from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
-from aframe.tasks.train.base import LocalTrainBase, RemoteTrainBase
+from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from ray_kube import KubernetesRayCluster
 
 
-class TrainLocal(LocalTrainBase, AframeGPUTask):
+class TrainLocal(TrainBase, AframeSingularityTask):
     def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
         if wandb().api_key:

@@ -10,8 +10,8 @@ class Query(AframeDataTask):
     end = luigi.FloatParameter()
     output_file = luigi.Parameter()
     min_duration = luigi.FloatParameter(default=0)
-    flags = luigi.ListParameter(default=["DCS-ANALYSIS_READY_C01:1"])
-    ifo = luigi.Parameter(default="H1")
+    flag = luigi.Parameter()
+    ifos = luigi.ListParameter()
 
     def output(self):
         return law.LocalFileTarget(self.output_file)
@@ -26,8 +26,8 @@ class Query(AframeDataTask):
             "--output_file",
             self.output().path,
         ]
-        for flag in self.flags:
-            args.append("--flags+=" + self.ifo + ":" + flag)
+        for ifo in self.ifos:
+            args.append("--flags+=" + ifo + ":" + self.flag)
         if self.min_duration > 0:
             args.append(f"--min_duration={self.min_duration}")
 

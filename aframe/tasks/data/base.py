@@ -5,7 +5,7 @@ import law
 import luigi
 from law.contrib.singularity.config import config_defaults
 
-from aframe.base import AframeSandbox, AframeSandboxTask
+from aframe.base import AframeSandbox, AframeSingularityTask
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 root = Path(__file__).resolve().parent.parent.parent
@@ -45,7 +45,7 @@ class AframeDataSandbox(AframeSandbox):
 law.config.update(AframeDataSandbox.config())
 
 
-class AframeDataTask(AframeSandboxTask):
+class AframeDataTask(AframeSingularityTask):
     job_log = luigi.Parameter(default="")
 
     @property
