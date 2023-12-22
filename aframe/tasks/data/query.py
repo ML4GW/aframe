@@ -9,13 +9,13 @@ class Query(AframeDataTask):
     retry_count = 3
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
-    output_file = luigi.Parameter()
+    segments_file = luigi.Parameter()
     min_duration = luigi.FloatParameter(default=0)
     flag = luigi.Parameter()
     ifos = luigi.ListParameter()
 
     def output(self):
-        return law.LocalFileTarget(self.output_file)
+        return law.LocalFileTarget(self.segments_file)
 
     def get_args(self):
         args = [

@@ -49,6 +49,10 @@ class AframeBase(pl.LightningModule):
         self.save_hyperparameters(ignore=["arch", "metric"])
         self._logger = self.get_logger()
 
+    def get_logger(self):
+        logger_name = "AframeModel"
+        return logging.getLogger(logger_name)
+
     def forward(self, X: Tensor) -> Tensor:
         """
         Override this method to dictate how the outputs

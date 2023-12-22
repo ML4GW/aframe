@@ -2,6 +2,7 @@ import os
 
 import law
 import luigi
+from luigi.util import inherits
 
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
@@ -24,9 +25,8 @@ class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        os.makedirs(self.data_dir, exist_ok=True)
-        if not self.segments_file:
-            self.segments_file = os.path.join(self.data_dir, "segments.txt")
+        if not self.data_dir.startswith("s3://"):
+            os.makedirs(self.data_dir, exist_ok=True)
 
         if self.job_log and not os.path.isabs(self.job_log):
             log_dir = os.path.join(self.data_dir, "logs")
@@ -63,7 +63,7 @@ class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
             log_file = log_file.parent.child("query.log", type="f")
             kwargs["job_log"] = log_file.path
         reqs["segments"] = Query.req(
-            self, output_file=self.segments_file, **kwargs
+            self, segments_file=self.segments_file, **kwargs
         )
         return reqs
 
@@ -75,42 +75,6 @@ class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
         fname = "{}-{}-{}.hdf5".format(self.prefix, start, duration)
         fname = os.path.join(self.data_dir, fname)
         return s3_or_local(fname, self.client)
-
-    def get_args(self):
-        start, duration = self.branch_data
-        start = int(float(start))
-        duration = int(float(duration))
-
-        if self.job_log:
-            log_file = law.LocalFileTarget(self.job_log)
-            fname = log_file.basename[::-1].split(".", maxsplit=1)
-            if len(fname) > 1:
-                ext, fname = fname
-                ext = "." + ext[::-1]
-            else:
-                ext = ""
-
-            fname = fname[::-1]
-            fname = fname + f"-{start}-{duration}{ext}"
-            log_file = log_file.sibling(fname, type="f")
-            self.job_log = log_file.path
-
-        args = [
-            "fetch",
-            "--start",
-            str(start),
-            "--end",
-            str(start + duration),
-            "--sample_rate",
-            str(self.sample_rate),
-            "--prefix",
-            self.prefix,
-            "--output_directory",
-            self.data_dir,
-            "--channels",
-            "[" + ",".join(self.channels) + "]",
-        ]
-        return args
 
     def run(self):
         import h5py

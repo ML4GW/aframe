@@ -50,9 +50,9 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
     min_gpu_memory = luigi.IntParameter(default=15000)
-    request_gpus = luigi.IntParameter(default=1)
-    request_cpus = luigi.IntParameter(default=1)
-    request_cpu_memory = luigi.Parameter()
+    request_gpus = luigi.IntParameter(default=8)
+    request_cpus = luigi.IntParameter(default=8)
+    request_cpu_memory = luigi.Parameter(default="8Gi")
 
     @property
     def name(self):
@@ -144,7 +144,11 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
                     {
                         "name": "AWS_ENDPOINT_URL",
                         "value": self.get_internal_s3_url(),
-                    }
+                    },
+                    {
+                        "name": "WANDB_API_KEY",
+                        "value": wandb().api_key,
+                    },
                 ],
             }
         ]
@@ -152,6 +156,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     def run(self):
         self.secret.create()
+
         super().run()
 
 

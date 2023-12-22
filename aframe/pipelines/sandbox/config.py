@@ -22,8 +22,7 @@ def parse_dir(path: str) -> tuple[str, str]:
     component will be None.
     """
     if path.startswith("s3://"):
-        remote = path.replace("s3://", "")
-        remote, *local = remote.split(":")
+        remote, *local = path.split("::")
         local = local[0] if local else None
         return remote, local
     else:
@@ -189,22 +188,26 @@ class SandboxConfig(luigi.Config):
     test_background = test_background()
     infer = infer()
 
-    @property
-    def data_remote(self):
-        remote, _ = parse_dir(self.base.data_dir)
-        return remote
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        data_remote, data_local = parse_dir(self.base.data_dir)
+        run_remote, run_local = parse_dir(self.base.run_dir)
+
+        self.data_remote = data_remote
+        self.data_local = data_local
+        self.run_remote = run_remote
+        self.run_local = run_local
 
     @property
-    def data_local(self):
-        _, local = parse_dir(self.base.data_dir)
-        return local
+    def train_data_dir(self):
+        if self.data_remote is None:
+            return os.path.join(self.data_local, "train")
+        else:
+            return os.path.join(self.data_remote, "train")
 
     @property
-    def run_remote(self):
-        remote, _ = parse_dir(self.base.run_dir)
-        return remote
-
-    @property
-    def run_local(self):
-        _, local = parse_dir(self.base.run_dir)
-        return local
+    def train_run_dir(self):
+        if self.run_remote is None:
+            return os.path.join(self.run_local)
+        else:
+            return os.path.join(self.run_remote)
