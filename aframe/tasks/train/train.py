@@ -9,9 +9,10 @@ import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
-from aframe.targets import LawS3Target
+
 from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
+from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
@@ -23,8 +24,11 @@ if TYPE_CHECKING:
 class TrainLocal(TrainBase, AframeSingularityTask):
     def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
-        if wandb().api_key:
-            env["WANDB_API_KEY"] = wandb().api_key
+        for key in ["name", "entity", "project", "group", "tags"]:
+            value = getattr(wandb(), key)
+            if value:
+                env[f"WANDB_{key.upper()}"] = value
+
         return env
 
     def run(self):

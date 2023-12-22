@@ -2,7 +2,7 @@ import glob
 import os
 import shutil
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal
 
 import law
 import luigi
@@ -12,10 +12,7 @@ import aframe.utils as utils
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
-
-class TsWorkflowRequires(TypedDict):
-    test_segments: law.Task
-    train_segments: law.Task
+TsWorkflowRequires = dict[Literal["test_segments"], law.Task]
 
 
 class TimeSlideWaveformsParams(law.Task):
@@ -62,7 +59,7 @@ class GenerateTimeslideWaveforms(
 
     # each workflow branch requires a training
     # segment file for psd calculatoin
-    def requires(self):
+    def requires(self) -> law.Task:
         raise NotImplementedError
 
     # for now, require that testing segments exist.
