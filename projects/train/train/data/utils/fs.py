@@ -1,5 +1,7 @@
 import logging
 import os
+from concurrent.futures import ProcessPoolExecutor, wait
+from functools import partial
 from tempfile import mkdtemp
 
 import ray
@@ -35,14 +37,12 @@ def get_data_dir(data_dir: str):
         # a tmp directory using the worker id so that each
         # worker process downloads its own copy of the data
         # only on its first training run
-        try:
+        if ray.is_initialized():
             worker_id = ray.get_runtime_context().get_worker_id()
-        except Exception:  # TODO: what's the exact exception?
-            # we haven't initialized ray, so just create
-            # a random temporary directory to download to
-            data_dir = mkdtemp()
-        else:
             data_dir = f"/tmp/{worker_id}"
+        else:
+            data_dir = mkdtemp()
+
     os.makedirs(data_dir, exist_ok=True)
     return data_dir
 
@@ -54,6 +54,12 @@ def _download(
     Cheap wrapper around s3.get to try to avoid issues
     from interrupted reads.
     """
+
+    if os.path.exists(target):
+        logging.info(f"Object {source} already downloaded")
+        return
+
+    logging.info(f"Downloading {source} to {target}")
     for i in range(num_retries):
         try:
             s3.get(source, target)
@@ -95,21 +101,15 @@ def download_training_data(bucket: str, data_dir: str):
     if not background_fnames:
         raise ValueError(f"No background data at {bucket} to download")
 
-    # download background
-    for f in background_fnames:
-        target = data_dir + f.replace(f"{bucket}", "")
-        if not os.path.exists(target):
-            logging.info(f"Downloading {f} to {target}")
-            _download(s3, f, target)
-        else:
-            logging.info(f"Object {f} already downloaded")
-
-    # now download our signal data
+    # multiprocess download of training data
+    targets = [
+        data_dir + f.replace(f"{bucket}", "") for f in background_fnames
+    ]
+    download = partial(_download, s3)
     path = "signals.hdf5"
-    target = f"{data_dir}/{path}"
-    if not os.path.exists(target):
-        logging.info(f"Downloading {path} to {target}")
-        _download(s3, f"{bucket}/{path}", target)
-    else:
-        logging.info(f"Object {path} already downloaded")
-    logging.info("Data download complete")
+    with ProcessPoolExecutor() as executor:
+        future = executor.submit(
+            download, f"{bucket}/{path}", f"{data_dir}/{path}"
+        )
+        executor.map(download, background_fnames, targets)
+    wait(future)

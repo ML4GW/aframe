@@ -49,6 +49,10 @@ class AframeBase(pl.LightningModule):
         self.save_hyperparameters(ignore=["arch", "metric"])
         self._logger = self.get_logger()
 
+    def get_logger(self):
+        logger_name = "AframeModel"
+        return logging.getLogger(logger_name)
+
     def forward(self, X: Tensor) -> Tensor:
         """
         Override this method to dictate how the outputs
@@ -72,10 +76,6 @@ class AframeBase(pl.LightningModule):
         using `compute_loss_fn`, which should be overridden in that case.
         """
         raise NotImplementedError
-
-    def get_logger(self):
-        logger_name = "AframeModel"
-        return logging.getLogger(logger_name)
 
     # define some hacky callbacks that can be
     # used during the `self.score` method of
@@ -191,7 +191,7 @@ class AframeBase(pl.LightningModule):
         callbacks = [checkpoint, save]
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStopping(
-                monitor=self.metric_name,
+                monitor="valid_auroc",
                 patience=self.hparams.patience,
                 mode="max",
                 min_delta=0.00,
@@ -200,14 +200,13 @@ class AframeBase(pl.LightningModule):
         return callbacks
 
     def configure_optimizers(self):
+        if not torch.distributed.is_initialized():
+            world_size = 1
+        else:
+            world_size = torch.distributed.get_world_size()
+
         # scale lr by number of GPUs
         # https://arxiv.org/pdf/1706.02677.pdf
-        try:
-            world_size = torch.distributed.get_world_size()
-        except RuntimeError:
-            world_size = 1
-        world_size = torch.distributed.get_world_size()
-
         lr = self.hparams.learning_rate * world_size
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
         optimizer = torch.optim.AdamW(self.model.parameters(), lr)
