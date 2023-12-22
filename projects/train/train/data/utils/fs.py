@@ -1,6 +1,8 @@
 import logging
 import os
-from concurrent.futures import ProcessPoolExecutor, wait
+
+from concurrent.futures import ProcessPoolExecutor
+
 from functools import partial
 from tempfile import mkdtemp
 
@@ -112,4 +114,5 @@ def download_training_data(bucket: str, data_dir: str):
             download, f"{bucket}/{path}", f"{data_dir}/{path}"
         )
         executor.map(download, background_fnames, targets)
-    wait(future)
+
+    future.result()
