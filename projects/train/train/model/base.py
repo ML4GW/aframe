@@ -77,10 +77,6 @@ class AframeBase(pl.LightningModule):
         """
         raise NotImplementedError
 
-    def get_logger(self):
-        logger_name = "AframeModel"
-        return logging.getLogger(logger_name)
-
     # define some hacky callbacks that can be
     # used during the `self.score` method of
     # downstream child classes to record more
@@ -195,7 +191,7 @@ class AframeBase(pl.LightningModule):
         callbacks = [checkpoint, save]
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStopping(
-                monitor=self.metric_name,
+                monitor="valid_auroc",
                 patience=self.hparams.patience,
                 mode="max",
                 min_delta=0.00,

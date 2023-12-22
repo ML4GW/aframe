@@ -39,6 +39,7 @@ class SandboxTrainDatagen(law.WrapperTask):
                 config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
+            workflow="htcondor",
         )
         yield GenerateWaveforms.req(
             self,
@@ -187,10 +188,10 @@ class SandboxInfer(InferLocal):
         reqs["data"] = Fetch.req(
             self,
             image="data.sif",
-            condor_directory=os.path.join(config.data_dir, "condor", "test"),
-            data_dir=os.path.join(config.data_dir, "test", "background"),
+            condor_directory=os.path.join(config.data_local, "condor", "test"),
+            data_dir=os.path.join(config.data_local, "test", "background"),
             segments_file=os.path.join(
-                config.data_dir, "test", "segments.txt"
+                config.data_local, "test", "segments.txt"
             ),
             **config.test_background.to_dict(),
         )

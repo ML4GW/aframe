@@ -4,8 +4,8 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.config import Defaults
-from aframe.tasks.train.config import nautilus_urls, s3, wandb
+from aframe.config import Defaults, nautilus_urls, s3
+from aframe.tasks.train.config import wandb
 
 
 class TrainBaseParameters(law.Task):

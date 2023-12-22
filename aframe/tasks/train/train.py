@@ -65,6 +65,10 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     def kubernetes_namespace(self):
         return "bbhnet"
 
+    @property
+    def pod_creation_wait_interal(self):
+        return 60
+
     def get_config(self):
         with open(self.config, "r") as f:
             doc = yaml.safe_load(f)
@@ -128,6 +132,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             {
                 "name": "train",
                 "image": self.image,
+                "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
                 "resources": {

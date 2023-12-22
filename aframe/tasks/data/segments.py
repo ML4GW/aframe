@@ -34,4 +34,4 @@ class Query(AframeDataTask):
             self.min_duration,
         )
         with self.output().open("w") as f:
-            segments.write(f)
+            segments.write(f, format="segwizard")
