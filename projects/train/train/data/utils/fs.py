@@ -1,6 +1,6 @@
 import logging
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, wait
 from functools import partial
 from tempfile import mkdtemp
 
@@ -101,20 +101,15 @@ def download_training_data(bucket: str, data_dir: str):
     if not background_fnames:
         raise ValueError(f"No background data at {bucket} to download")
 
-    # multiprocess download of background files
+    # multiprocess download of training data
     targets = [
         data_dir + f.replace(f"{bucket}", "") for f in background_fnames
     ]
     download = partial(_download, s3)
-    with ProcessPoolExecutor() as executor:
-        executor.map(download, background_fnames, targets)
-
-    # now download our signal data
     path = "signals.hdf5"
-    target = f"{data_dir}/{path}"
-    if not os.path.exists(target):
-        logging.info(f"Downloading {path} to {target}")
-        _download(s3, f"{bucket}/{path}", target)
-    else:
-        logging.info(f"Object {path} already downloaded")
-    logging.info("Data download complete")
+    with ProcessPoolExecutor() as executor:
+        future = executor.submit(
+            download, f"{bucket}/{path}", f"{data_dir}/{path}"
+        )
+        executor.map(download, background_fnames, targets)
+    wait(future)
