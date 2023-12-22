@@ -7,7 +7,7 @@ from luigi.util import inherits
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
-from aframe.tasks.data.query import Query
+from aframe.tasks.data.segments import Query
 
 
 @inherits(Query)
