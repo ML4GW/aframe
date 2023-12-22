@@ -25,7 +25,7 @@ class RemoteParameters(law.Task):
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=1)
     request_cpus = luigi.IntParameter(default=1)
-    request_cpu_memory = luigi.Parameter()
+    request_cpu_memory = luigi.Parameter("4G")
 
 
 class TrainParameters(TrainBaseParameters, RemoteParameters):

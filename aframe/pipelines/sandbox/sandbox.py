@@ -2,9 +2,12 @@ import os
 
 import law
 import luigi
+from luigi.contrib.s3 import S3Client
 from luigi.util import inherits
 
+from aframe.config import s3
 from aframe.pipelines.sandbox.config import SandboxConfig
+from aframe.targets import s3_or_local
 from aframe.tasks import (
     ExportLocal,
     Fetch,
@@ -27,28 +30,70 @@ class SandboxTrainDatagen(law.WrapperTask):
         yield Fetch.req(
             self,
             image="data.sif",
-            condor_directory=os.path.join(config.data_dir, "condor", "train"),
-            data_dir=os.path.join(config.data_dir, "train", "background"),
+            condor_directory=os.path.join(
+                config.data_local, "condor", "train"
+            ),
+            data_dir=os.path.join(config.train_data_dir, "background"),
             segments_file=os.path.join(
-                config.data_dir, "train", "segments.txt"
+                config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
         )
         yield GenerateWaveforms.req(
             self,
             image="data.sif",
-            output_file=os.path.join(config.data_dir, "train", "signals.hdf5"),
+            output_file=os.path.join(config.train_data_dir, "signals.hdf5"),
             **config.train_waveforms.to_dict(),
         )
 
 
+# dynamically create local or remote train task
+# depending on the specified format of the data and run directories
+
+
 @inherits(TrainParameters)
 class SandboxTrain(law.Task):
+    dev = luigi.BoolParameter(default=False, significant=False)
+
+    @property
+    def client(self):
+        return S3Client(endpoint_url=s3().endpoint_url)
+
     def requires(self):
         return SandboxTrainDatagen.req(self)
 
+    def output(self):
+        return s3_or_local(
+            os.path.join(config.train_run_dir, "model.pt"), client=self.client
+        )
+
     def run(self):
-        yield Train.req(self)
+        # check that data_remote and run_remote
+        # are either both specified, or both None
+        if (config.data_remote is None) != (config.run_remote is None):
+            raise ValueError(
+                "Must specify both remote or local data and run directories"
+            )
+
+        # run locally if not specified
+        local = config.data_remote is None
+        if local:
+            yield TrainLocal.req(
+                self,
+                data_dir=config.train_data_dir,
+                run_dir=config.train_run_dir,
+            )
+        else:
+            yield TrainRemote.req(
+                self,
+                image="ghcr.io/ml4gw/aframev2/train:main",
+                config="/home/ethan.marx/projects/aframev2/projects/train/config.yaml",  # noqa
+                data_dir=config.train_data_dir,
+                run_dir=config.train_run_dir,
+                request_cpus=16,
+                request_gpus=4,
+                request_cpu_memory="32G",
+            )
 
 
 class SandboxExport(ExportLocal):
@@ -59,18 +104,13 @@ class SandboxExport(ExportLocal):
         return SandboxTrain.req(
             self,
             image="train.sif",
-            data_dir=os.path.join(config.data_dir, "train"),
-            run_dir=config.run_dir,
+            data_dir=config.train_data_dir,
+            run_dir=config.train_run_dir,
             **config.train.to_dict(),
         )
 
 
 class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
-    @property
-    def train_data_dir(self):
-        if config.data_remote is None:
-            return os.path.join(config.data_local, "train")
-
     def workflow_requires(self):
         reqs = {}
         # requires background testing segments
@@ -98,7 +138,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             condor_directory=os.path.join(
                 config.data_local, "condor", "train"
             ),
-            data_dir=os.path.join(config.data_dir, "train", "background"),
+            data_dir=os.path.join(config.train_data_dir, "background"),
             segments_file=os.path.join(
                 config.data_local, "train", "segments.txt"
             ),

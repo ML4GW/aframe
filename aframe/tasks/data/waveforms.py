@@ -52,6 +52,7 @@ class GenerateWaveforms(AframeDataTask):
             samples = convert_to_detector_frame(samples)
         signals = generator(samples)
         with self.output().open("w") as f:
+            print(f, f.path, f.tmp_path)
             write_waveforms(f, signals, samples, generator)
 
 
