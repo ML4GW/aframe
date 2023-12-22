@@ -60,7 +60,7 @@ def segments_from_paths(paths: List[Path]):
     fname_re = re.compile(r"(?P<t0>\d{10}\.*\d*)-(?P<length>\d+\.*\d*)")
     segments = []
     for fname in paths:
-        match = fname_re.search(str(fname))
+        match = fname_re.search(str(fname.path))
         if match is None:
             logging.warning(f"Couldn't parse file {fname.path}")
 

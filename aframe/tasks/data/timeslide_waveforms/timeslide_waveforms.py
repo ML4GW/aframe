@@ -41,7 +41,9 @@ class TimeSlideWaveformsParams(law.Task):
 
 @inherits(TimeSlideWaveformsParams)
 class GenerateTimeslideWaveforms(
-    AframeDataTask, law.LocalWorkflow, StaticMemoryWorkflow
+    AframeDataTask,
+    StaticMemoryWorkflow,
+    law.LocalWorkflow,
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -150,7 +152,7 @@ class GenerateTimeslideWaveforms(
             )
 
 
-@inherits(GenerateTimeslideWaveforms)
+@inherits(TimeSlideWaveformsParams)
 class MergeTimeslideWaveforms(AframeDataTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,9 +160,6 @@ class MergeTimeslideWaveforms(AframeDataTask):
         self.rejected_output = os.path.join(
             self.output_dir, "rejected-parameters.hdf5"
         )
-
-    def requires(self):
-        return GenerateTimeslideWaveforms.req(self)
 
     def output(self):
         return [

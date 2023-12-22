@@ -11,7 +11,7 @@ from aframe.tasks.data.segments import Query
 
 
 @inherits(Query)
-class Fetch(AframeDataTask, law.LocalWorkflow, DynamicMemoryWorklow):
+class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
     data_dir = luigi.Parameter()
     sample_rate = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)

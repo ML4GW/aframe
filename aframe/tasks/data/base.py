@@ -7,6 +7,7 @@ from law.contrib.singularity.config import config_defaults
 from luigi.contrib.s3 import S3Client
 
 from aframe.base import AframeSandbox, AframeSingularityTask
+from aframe.config import s3
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 root = Path(__file__).resolve().parent.parent.parent
