@@ -38,16 +38,11 @@ def get_data_dir(data_dir: str):
         # worker process downloads its own copy of the data
         # only on its first training run
         if ray.is_initialized():
-            logging.info(
-                "Downloading data to ray worker-specific tmp directory"
-            )
             worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"/tmp/{worker_id}"
         else:
-            logging.info("Downloading data to local tmp directory")
             data_dir = mkdtemp()
 
-    logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
     return data_dir
 
