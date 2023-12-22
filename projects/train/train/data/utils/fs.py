@@ -1,14 +1,8 @@
 import logging
 import os
 
-<<<<<<< HEAD
-
 from concurrent.futures import ProcessPoolExecutor
 
-=======
-from concurrent.futures import ProcessPoolExecutor
-
->>>>>>> 30bbae3 (multiprocess train data download)
 from functools import partial
 from tempfile import mkdtemp
 
@@ -46,11 +40,16 @@ def get_data_dir(data_dir: str):
         # worker process downloads its own copy of the data
         # only on its first training run
         if ray.is_initialized():
+            logging.info(
+                "Downloading data to ray worker-specific tmp directory"
+            )
             worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"/tmp/{worker_id}"
         else:
+            logging.info("Downloading data to local tmp directory")
             data_dir = mkdtemp()
 
+    logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
     return data_dir
 
@@ -109,22 +108,11 @@ def download_training_data(bucket: str, data_dir: str):
     if not background_fnames:
         raise ValueError(f"No background data at {bucket} to download")
 
-<<<<<<< HEAD
     # multiprocess download of training data
-=======
-    # multiprocess download of background files
->>>>>>> 30bbae3 (multiprocess train data download)
     targets = [
         data_dir + f.replace(f"{bucket}", "") for f in background_fnames
     ]
     download = partial(_download, s3)
-<<<<<<< HEAD
-=======
-    with ProcessPoolExecutor() as executor:
-        executor.map(download, background_fnames, targets)
-
-    # now download our signal data
->>>>>>> 30bbae3 (multiprocess train data download)
     path = "signals.hdf5"
     with ProcessPoolExecutor() as executor:
         future = executor.submit(
