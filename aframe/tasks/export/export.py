@@ -1,6 +1,6 @@
 import law
 
-from aframe.base import AframeSingularityTask, logger
+from aframe.base import AframeSingularityTask
 from aframe.tasks.export.base import ExportParams
 
 
