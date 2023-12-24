@@ -4,7 +4,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 
 from functools import partial
-from tempfile import gettempdir, mkdtemp
+from tempfile import gettempdir
 
 import ray
 import s3fs
@@ -46,9 +46,12 @@ def get_data_dir(data_dir: str):
             )
             worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"{tmpdir}/{worker_id}"
+        # if not using ray, and just doing
+        # distributed training, just download
+        # to a specified temporary directory
         else:
             logging.info("Downloading data to local tmp directory")
-            data_dir = mkdtemp()
+            data_dir = f"{tmpdir}/data-tmp"
 
     logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
