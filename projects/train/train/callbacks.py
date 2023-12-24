@@ -1,3 +1,4 @@
+import io
 import os
 
 import h5py
@@ -42,9 +43,12 @@ class SaveAugmentedBatch(Callback):
             save_dir = trainer.logger.log_dir or trainer.logger.save_dir
             if save_dir.startswith("s3://"):
                 s3 = s3fs.S3FileSystem()
-                with h5py.File(s3.open(f"{save_dir}/batch.h5", "wb")) as f:
-                    f["X"] = X.cpu().numpy()
-                    f["y"] = y.cpu().numpy()
+                with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
+                    with io.BytesIO() as f:
+                        with h5py.File(f, "w") as h5file:
+                            h5file["X"] = X.cpu().numpy()
+                            h5file["y"] = y.cpu().numpy()
+                        s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
