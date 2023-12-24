@@ -5,12 +5,26 @@ from luigi import Config as _Config
 
 from aframe.config import Defaults
 
-project_base = "/opt/aframe/projects"
-
 
 class Config(_Config):
     def to_dict(self):
         return {key: getattr(self, key) for key in self.get_param_names()}
+
+
+def parse_dir(path: str) -> tuple[str, str]:
+    """
+    Parse a path of the form s3://bucket/remote/dir:/path/to/dir
+    into a tuple of the form (remote, local).
+
+    If the path does not start with s3:// then the remote
+    component will be None.
+    """
+    if path.startswith("s3://"):
+        remote, *local = path.split("::")
+        local = local[0] if local else None
+        return remote, local
+    else:
+        return None, local
 
 
 # base config that stores parameters
@@ -172,10 +186,26 @@ class SandboxConfig(luigi.Config):
     test_background = test_background()
     infer = infer()
 
-    @property
-    def data_dir(self):
-        return self.base.data_dir
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        data_remote, data_local = parse_dir(self.base.data_dir)
+        run_remote, run_local = parse_dir(self.base.run_dir)
+
+        self.data_remote = data_remote
+        self.data_local = data_local
+        self.run_remote = run_remote
+        self.run_local = run_local
 
     @property
-    def run_dir(self):
-        return self.base.run_dir
+    def train_data_dir(self):
+        if self.data_remote is None:
+            return os.path.join(self.data_local, "train")
+        else:
+            return os.path.join(self.data_remote, "train")
+
+    @property
+    def train_run_dir(self):
+        if self.run_remote is None:
+            return os.path.join(self.run_local)
+        else:
+            return os.path.join(self.run_remote)

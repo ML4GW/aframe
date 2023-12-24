@@ -28,7 +28,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             {
                 "job": {
                     "job_file_dir": self.job_file_dir,
-                    "job_file_dir_cleanup": "True",
+                    "job_file_dir_cleanup": "False",
                     "job_file_dir_mkdtemp": "False",
                 }
             }
@@ -59,6 +59,9 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         environment = '"'
         for envvar in DATAFIND_ENV_VARS:
             environment += f"{envvar}={os.getenv(envvar)} "
+
+        # aws endpoint for s3 transfers
+        environment += f'AWS_ENDPOINT_URL={os.getenv("AWS_ENDPOINT_URL")} '
 
         # forward current path and law config
         environment += f'PATH={os.getenv("PATH")} '

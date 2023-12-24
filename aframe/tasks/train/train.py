@@ -9,19 +9,13 @@ import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
-from luigi.contrib.s3 import S3Target
 
 from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
+from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
-
-
-class LawS3Target(S3Target):
-    def complete(self):
-        return self.exists()
-
 
 if TYPE_CHECKING:
     from ray_kube import KubernetesRayCluster
@@ -30,8 +24,11 @@ if TYPE_CHECKING:
 class TrainLocal(TrainBase, AframeSingularityTask):
     def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
-        if wandb().api_key:
-            env["WANDB_API_KEY"] = wandb().api_key
+        for key in ["name", "entity", "project", "group", "tags"]:
+            value = getattr(wandb(), key)
+            if value:
+                env[f"WANDB_{key.upper()}"] = value
+
         return env
 
     def run(self):
@@ -49,7 +46,6 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         stream_command(cmd)
 
     def output(self):
-        # TODO: more robust method for finding model.pt
         dir = law.LocalDirectoryTarget(self.run_dir)
         return dir.child("model.pt", type="f")
 
@@ -57,9 +53,9 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
     min_gpu_memory = luigi.IntParameter(default=15000)
-    request_gpus = luigi.IntParameter(default=1)
-    request_cpus = luigi.IntParameter(default=1)
-    request_cpu_memory = luigi.Parameter()
+    request_gpus = luigi.IntParameter(default=4)
+    request_cpus = luigi.IntParameter(default=16)
+    request_cpu_memory = luigi.Parameter(default="32Gi")
 
     @property
     def name(self):
@@ -68,6 +64,10 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     @property
     def kubernetes_namespace(self):
         return "bbhnet"
+
+    @property
+    def pod_creation_wait_interal(self):
+        return 60
 
     def get_config(self):
         with open(self.config, "r") as f:
@@ -86,7 +86,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return args
 
     def output(self):
-        return LawS3Target(os.path.join(self.data_dir, "model.pt"))
+        return LawS3Target(os.path.join(self.run_dir, "model.pt"))
 
     @property
     def gpu_constraints(self):
@@ -132,6 +132,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             {
                 "name": "train",
                 "image": self.image,
+                "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
                 "resources": {
@@ -151,7 +152,11 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
                     {
                         "name": "AWS_ENDPOINT_URL",
                         "value": self.get_internal_s3_url(),
-                    }
+                    },
+                    {
+                        "name": "WANDB_API_KEY",
+                        "value": wandb().api_key,
+                    },
                 ],
             }
         ]

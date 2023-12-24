@@ -2,12 +2,13 @@ from configparser import ConfigParser
 
 import law
 import luigi
+from luigi.util import inherits
 
-from aframe.config import Defaults
-from aframe.tasks.train.config import nautilus_urls, s3, wandb
+from aframe.config import Defaults, nautilus_urls, s3
+from aframe.tasks.train.config import wandb
 
 
-class TrainBase(law.Task):
+class TrainBaseParameters(law.Task):
     config = luigi.Parameter(default=Defaults.TRAIN)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     data_dir = luigi.Parameter()
@@ -18,6 +19,21 @@ class TrainBase(law.Task):
     highpass = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
 
+
+class RemoteParameters(law.Task):
+    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+    min_gpu_memory = luigi.IntParameter(default=15000)
+    request_gpus = luigi.IntParameter(default=1)
+    request_cpus = luigi.IntParameter(default=1)
+    request_cpu_memory = luigi.Parameter("4G")
+
+
+class TrainParameters(TrainBaseParameters, RemoteParameters):
+    pass
+
+
+@inherits(TrainBaseParameters)
+class TrainBase(law.Task):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not self.data_dir:
@@ -81,6 +97,7 @@ class TrainBase(law.Task):
         raise NotImplementedError
 
 
+@inherits(RemoteParameters)
 class RemoteTrainBase(TrainBase):
     def get_s3_credentials(self):
         config = ConfigParser()
