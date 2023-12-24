@@ -2,9 +2,7 @@ import logging
 import os
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-
 from tempfile import gettempdir
-
 
 import ray
 import s3fs
