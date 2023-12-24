@@ -2,7 +2,9 @@ import logging
 import os
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+
 from tempfile import gettempdir
+
 
 import ray
 import s3fs
@@ -39,6 +41,7 @@ def get_data_dir(data_dir: str):
         # only on its first training run
         tmpdir = gettempdir()
         if ray.is_initialized():
+            tmpdir = gettempdir()
             worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"{tmpdir}/{worker_id}"
         # if not using ray, and just doing
