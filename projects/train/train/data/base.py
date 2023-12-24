@@ -166,7 +166,10 @@ class BaseAframeDataset(pl.LightningDataModule):
     # our training and validation background data
     @property
     def train_fnames(self) -> Sequence[str]:
+        self._logger.info("In train_fnames")
         fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
+        self._logger.info(fnames)
+        self._logger.info(self.data_dir)
         return sorted(fnames)[:-1]
 
     @property
@@ -340,7 +343,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         val_background = self.load_val_background(self.valid_fnames)
         self._logger.info(
-            "Constructing validation timeslides from background segments"
+            "Constructing validation timeslides from background segments "
             f"{' '.join(self.valid_fnames)}"
         )
         self.timeslides, self.valid_loader_length = get_timeslides(
