@@ -2,7 +2,7 @@ import logging
 import os
 from concurrent.futures import ProcessPoolExecutor, wait
 from functools import partial
-from tempfile import mkdtemp
+from tempfile import gettempdir, mkdtemp
 
 import ray
 import s3fs
@@ -38,8 +38,9 @@ def get_data_dir(data_dir: str):
         # worker process downloads its own copy of the data
         # only on its first training run
         if ray.is_initialized():
+            tmpdir = gettempdir()
             worker_id = ray.get_runtime_context().get_worker_id()
-            data_dir = f"/tmp/{worker_id}"
+            data_dir = f"{tmpdir}/{worker_id}"
         else:
             data_dir = mkdtemp()
 
