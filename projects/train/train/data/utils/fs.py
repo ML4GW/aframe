@@ -121,4 +121,8 @@ def download_training_data(bucket: str, data_dir: str):
         )
         executor.map(download, background_fnames, targets)
 
+<<<<<<< HEAD
     future.result()
+=======
+    wait(future)
+>>>>>>> bae259d (fix pre-commit)
