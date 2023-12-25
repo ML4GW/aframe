@@ -133,7 +133,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
                 "name": "train",
                 "image": self.image,
                 "volumeMounts": [{"mountPath": "/dev/shm", "name": "dshm"}],
-                # "imagePullPolicy": "Always",
+                "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
                 "resources": {
