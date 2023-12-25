@@ -13,7 +13,7 @@ class wandb(luigi.Config):
 
 
 class train_remote(luigi.Config):
-    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:dev")
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=4)
     request_cpus = luigi.IntParameter(default=16)
