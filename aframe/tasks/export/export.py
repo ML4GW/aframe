@@ -1,19 +1,25 @@
 import law
+from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
 from aframe.tasks.export.base import ExportParams
 
 
-class ExportLocal(AframeSingularityTask, ExportParams):
+@inherits(ExportParams)
+class ExportLocal(AframeSingularityTask):
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
         return law.LocalFileTarget(self.repository_directory)
 
+    @property
+    def num_ifos(self):
+        return len(self.ifos)
+
     def run(self):
         from export.main import export
 
-        with self.input().open("rb") as f:
+        with self.input().open("r") as f:
             export(
                 f,
                 self.repository_directory,
@@ -28,7 +34,7 @@ class ExportLocal(AframeSingularityTask, ExportParams):
                 self.highpass,
                 self.streams_per_gpu,
                 self.aframe_instances,
-                self.platform,
-                self.clean,
-                self.verbose,
+                # self.platform,
+                clean=self.clean,
+                # verbose=self.verbose,
             )

@@ -24,8 +24,15 @@ from aframe.tasks.train.config import train_remote
 config = SandboxConfig()
 
 
-class SandboxTrainDatagen(law.WrapperTask):
+# dynamically create local or remote train task
+# depending on the specified format of the data and run directories
+@inherits(TrainParameters)
+class SandboxTrain(law.Task):
     dev = luigi.BoolParameter(default=False, significant=False)
+
+    @property
+    def client(self):
+        return S3Client(endpoint_url=s3().endpoint_url)
 
     def requires(self):
         yield Fetch.req(
@@ -39,7 +46,6 @@ class SandboxTrainDatagen(law.WrapperTask):
                 config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
-            workflow="htcondor",
         )
         yield GenerateWaveforms.req(
             self,
@@ -47,20 +53,6 @@ class SandboxTrainDatagen(law.WrapperTask):
             output_file=os.path.join(config.train_data_dir, "signals.hdf5"),
             **config.train_waveforms.to_dict(),
         )
-
-
-# dynamically create local or remote train task
-# depending on the specified format of the data and run directories
-@inherits(TrainParameters)
-class SandboxTrain(law.Task):
-    dev = luigi.BoolParameter(default=False, significant=False)
-
-    @property
-    def client(self):
-        return S3Client(endpoint_url=s3().endpoint_url)
-
-    def requires(self):
-        return SandboxTrainDatagen.req(self)
 
     def output(self):
         return s3_or_local(
@@ -112,7 +104,7 @@ class SandboxExport(ExportLocal):
 
 class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
     def workflow_requires(self):
-        reqs = {}
+        reqs = super().workflow_requires()
         # requires background testing segments
         # to determine number of waveforms to generate
         reqs["test_segments"] = Fetch.req(
@@ -128,7 +120,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
         return reqs
 
     def requires(self):
-        reqs = {}
+        reqs = super().requires()
         # requires a background training segment for calculating snr
         # TODO: how to specify just the last segment?
         reqs["train_segments"] = Fetch.req(
@@ -182,9 +174,7 @@ class SandboxInfer(InferLocal):
             logfile=os.path.join(config.base.log_dir, "export.log"),
             **config.export.to_dict(),
         )
-        reqs["waveforms"] = SandboxTimeslideWaveforms.req(
-            self, image="data.sif", **config.timeslide_waveforms.to_dict()
-        )
+
         reqs["data"] = Fetch.req(
             self,
             image="data.sif",
@@ -195,6 +185,11 @@ class SandboxInfer(InferLocal):
             ),
             **config.test_background.to_dict(),
         )
+
+        reqs["waveforms"] = SandboxTimeslideWaveforms.req(
+            self, image="data.sif", **config.timeslide_waveforms.to_dict()
+        )
+
         return reqs
 
 

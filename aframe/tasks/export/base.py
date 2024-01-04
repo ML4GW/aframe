@@ -1,11 +1,8 @@
 import law
 import luigi
 
-from aframe.config import Defaults
-
 
 class ExportParams(law.Task):
-    config = luigi.Parameter(default=Defaults.EXPORT)
     weights = luigi.Parameter(default="")
     fftlength = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
@@ -19,7 +16,7 @@ class ExportParams(law.Task):
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
     clean = luigi.BoolParameter()
-    ifos = luigi.ListParameter()
+    ifos = luigi.ListParameter(default=["H1", "L1"])
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()

@@ -27,3 +27,14 @@ python -m pip install poetry 'virtualenv==20.4.7'
 poetry config virtualenvs.create false
 cd /opt/aframe/projects/export
 poetry install
+
+# hard code cuda version in container to 11.8.
+# tenssorrt 8.5.1.7 is not compatible with cuda > 12.0,
+# which is the default on dgx boxes. Sadly, tensorrt 8.6.1 
+# is currently incompatible with poetry for some reason
+# see this issue https://github.com/NVIDIA/TensorRT/issues/3362.
+# once (if) that gets resolved, the more robust fix should be to
+# just upgrade tensorrt
+%environment
+export PATH=/usr/local/cuda-11.8/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH

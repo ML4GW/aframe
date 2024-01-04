@@ -36,6 +36,9 @@ class AframeSandbox(singularity.SingularitySandbox):
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
+
+        volumes["/usr/local/cuda-11.8/bin"] = "/usr/local/cuda-11.8/bin"
+        volumes["/usr/local/cuda-11.8/lib64"] = "/usr/local/cuda-11.8/lib64"
         return volumes
 
 

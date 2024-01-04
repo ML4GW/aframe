@@ -53,20 +53,20 @@ class InferenceParams(law.Task):
 
 @inherits(InferenceParams)
 class InferLocal(AframeSandboxTask):
+    # dynamically grab poetry environment from
+    # local repository directory to use for
+    # the sandbox environment of this task
     env_path = get_poetry_env(INFER_DIR)
     sandbox = f"venv::{env_path}"
 
     @staticmethod
     def get_ip_address() -> str:
         """
-        Get the local, cluster-internal IP address.
+        Get the local, cluster-internal IP address
         Currently not a general function.
         """
         nets = psutil.net_if_addrs()
         return nets["enp1s0f0"][0].address
-
-    def requires(self) -> InferRequires:
-        raise NotImplementedError
 
     @property
     def num_parallel_jobs(self):
