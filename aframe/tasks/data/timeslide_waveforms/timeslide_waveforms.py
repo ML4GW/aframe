@@ -42,8 +42,8 @@ class TimeSlideWaveformsParams(law.Task):
 @inherits(TimeSlideWaveformsParams)
 class GenerateTimeslideWaveforms(
     AframeDataTask,
-    StaticMemoryWorkflow,
     law.LocalWorkflow,
+    StaticMemoryWorkflow,
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,15 +55,6 @@ class GenerateTimeslideWaveforms(
             os.makedirs(self.log_dir, exist_ok=True)
             self.job_log = os.path.join(self.log_dir, self.job_log)
 
-    # the workflow requires the testing segments
-    def workflow_requires(self) -> TsWorkflowRequires:
-        raise NotImplementedError
-
-    # each workflow branch requires a training
-    # segment file for psd calculatoin
-    def requires(self) -> law.Task:
-        raise NotImplementedError
-
     # for now, require that testing segments exist.
     # in principle, we could just require that the segments __file__
     # exist since we only need the start and stop times,
@@ -73,6 +64,26 @@ class GenerateTimeslideWaveforms(
     @law.dynamic_workflow_condition
     def workflow_condition(self) -> bool:
         return self.workflow_input()["test_segments"].collection.exists()
+
+    @workflow_condition.create_branch_map
+    def create_branch_map(self):
+        branch_map, i = {}, 0
+        for start, end in self.test_segments:
+            for j in range(self.shifts_required):
+                shift = [(j + 1) * shift for shift in self.shifts]
+                # add psd_length to account for the burn in of psd calculation
+                branch_map[i] = (start + self.psd_length, end, shift)
+                i += 1
+        return branch_map
+
+    @workflow_condition.output
+    def output(self):
+        return [
+            law.LocalFileTarget(os.path.join(self.tmp_dir, "waveforms.hdf5")),
+            law.LocalFileTarget(
+                os.path.join(self.tmp_dir, "rejected-parameters.hdf5")
+            ),
+        ]
 
     @property
     def shifts_required(self):
@@ -100,26 +111,6 @@ class GenerateTimeslideWaveforms(
     @property
     def tmp_dir(self):
         return os.path.join(self.output_dir, f"tmp-{self.branch}")
-
-    @workflow_condition.create_branch_map
-    def create_branch_map(self):
-        branch_map, i = {}, 0
-        for start, end in self.test_segments:
-            for j in range(self.shifts_required):
-                shift = [(j + 1) * shift for shift in self.shifts]
-                # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (start + self.psd_length, end, shift)
-                i += 1
-        return branch_map
-
-    @workflow_condition.output
-    def output(self):
-        return [
-            law.LocalFileTarget(os.path.join(self.tmp_dir, "waveforms.hdf5")),
-            law.LocalFileTarget(
-                os.path.join(self.tmp_dir, "rejected-parameters.hdf5")
-            ),
-        ]
 
     def run(self):
         import io
@@ -152,8 +143,7 @@ class GenerateTimeslideWaveforms(
             )
 
 
-@inherits(TimeSlideWaveformsParams)
-class MergeTimeslideWaveforms(AframeDataTask):
+class MergeTimeslideWaveforms(AframeDataTask, TimeSlideWaveformsParams):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = os.path.join(self.output_dir, "waveforms.hdf5")

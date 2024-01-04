@@ -7,7 +7,7 @@ license = "MIT"
 #readme = "README.md"
 
 [tool.poetry.scripts]
-export = "export.main:main"
+export = "export.main:export"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
@@ -15,7 +15,12 @@ python = ">=3.9,<3.11"
 torch = {version = "^1.10", source = "torch"}
 
 # nautilus/remote file access
-s3fs = "^2023.10.0"
+# dependencies for s3 support. Should probably put these
+# in their own group, but only including boto3 separately
+# to restrict its version because the whl downloads during
+# the solve were insanely slow
+boto3 = "^1.30"
+fsspec = {version = "^2023.10", extras=["s3"]}
 
 # local deps
 aframe = {path = "../../", develop = true}
@@ -23,9 +28,6 @@ utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
 jsonargparse = "^4.27.1"
 
-
-# hard-pin the tensorrt version for compatability with
-# Triton. This corresponds to Triton container 22.12-py3
 tensorrt = "8.5.1.7"
 
 [tool.poetry.dependencies."hermes.quiver"]

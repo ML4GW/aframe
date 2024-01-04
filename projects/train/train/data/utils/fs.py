@@ -39,15 +39,19 @@ def get_data_dir(data_dir: str):
         # only on its first training run
         tmpdir = gettempdir()
         if ray.is_initialized():
-            tmpdir = gettempdir()
+            logging.info(
+                "Downloading data to ray worker-specific tmp directory"
+            )
             worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"{tmpdir}/{worker_id}"
         # if not using ray, and just doing
         # distributed training, just download
         # to a specified temporary directory
         else:
+            logging.info("Downloading data to local tmp directory")
             data_dir = f"{tmpdir}/data-tmp"
 
+    logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
     return data_dir
 

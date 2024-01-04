@@ -24,7 +24,7 @@ def parse_dir(path: str) -> tuple[str, str]:
         local = local[0] if local else None
         return remote, local
     else:
-        return None, local
+        return None, path
 
 
 # base config that stores parameters

@@ -36,6 +36,9 @@ class AframeSandbox(singularity.SingularitySandbox):
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
+
+        volumes["/usr/local/cuda-11.8/bin"] = "/usr/local/cuda-11.8/bin"
+        volumes["/usr/local/cuda-11.8/lib64"] = "/usr/local/cuda-11.8/lib64"
         return volumes
 
 
@@ -58,7 +61,7 @@ class AframeSandboxTask(law.SandboxTask):
                 env[envvar] = value
         # set data and run dirs as env variable in sandbox
         # so they get mapped into the sandbox
-        for envvar in ["DATA_DIR", "RUN_DIR"]:
+        for envvar in ["DATA_DIR", "RUN_DIR", "TMPDIR"]:
             env[envvar] = os.getenv(envvar, "")
 
         if self.gpus:
