@@ -51,7 +51,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 
 
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
-    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:main")
+    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:dev")
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=4)
     request_cpus = luigi.IntParameter(default=24)

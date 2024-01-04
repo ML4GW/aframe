@@ -46,6 +46,7 @@ class SandboxTrain(law.Task):
                 config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
+            workflow="htcondor",
         )
         yield GenerateWaveforms.req(
             self,
