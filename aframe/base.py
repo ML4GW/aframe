@@ -61,7 +61,7 @@ class AframeSandboxTask(law.SandboxTask):
                 env[envvar] = value
         # set data and run dirs as env variable in sandbox
         # so they get mapped into the sandbox
-        for envvar in ["DATA_DIR", "RUN_DIR"]:
+        for envvar in ["DATA_DIR", "RUN_DIR", "TMPDIR"]:
             env[envvar] = os.getenv(envvar, "")
 
         if self.gpus:
