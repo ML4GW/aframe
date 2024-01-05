@@ -1,9 +1,11 @@
 import glob
+import importlib
 import os
 import shutil
 from pathlib import Path
 from typing import Literal
 
+import h5py
 import law
 import luigi
 from luigi.util import inherits
@@ -54,6 +56,12 @@ class GenerateTimeslideWaveforms(
         if self.job_log and not os.path.isabs(self.job_log):
             os.makedirs(self.log_dir, exist_ok=True)
             self.job_log = os.path.join(self.log_dir, self.job_log)
+
+    def load_prior(self):
+        module_path, prior = self.prior.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        prior = getattr(module, prior)
+        return prior
 
     # for now, require that testing segments exist.
     # in principle, we could just require that the segments __file__
@@ -119,9 +127,10 @@ class GenerateTimeslideWaveforms(
             timeslide_waveforms,
         )
 
+        prior = self.load_prior()
         start, end, shift = self.branch_data
-        with self.psd_segment().open("r") as psd_file:
-            psd_file = io.BytesIO(psd_file.read())
+        with self.psd_segment.open("r") as psd_file:
+            psd_file = h5py.File(io.BytesIO(psd_file.read()))
             timeslide_waveforms(
                 start,
                 end,
@@ -129,7 +138,7 @@ class GenerateTimeslideWaveforms(
                 shift,
                 self.spacing,
                 self.buffer,
-                self.prior,
+                prior,
                 self.minimum_frequency,
                 self.reference_frequency,
                 self.sample_rate,
@@ -138,12 +147,13 @@ class GenerateTimeslideWaveforms(
                 self.highpass,
                 self.snr_threshold,
                 psd_file,
-                self.tmp_dir,
+                Path(self.tmp_dir),
                 self.seed,
             )
 
 
-class MergeTimeslideWaveforms(AframeDataTask, TimeSlideWaveformsParams):
+@inherits(TimeSlideWaveformsParams)
+class MergeTimeslideWaveforms(AframeDataTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = os.path.join(self.output_dir, "waveforms.hdf5")
