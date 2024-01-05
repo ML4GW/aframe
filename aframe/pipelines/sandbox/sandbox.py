@@ -46,7 +46,6 @@ class SandboxTrain(law.Task):
                 config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
-            workflow="htcondor",
         )
         yield GenerateWaveforms.req(
             self,
@@ -121,7 +120,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
         return reqs
 
     def requires(self):
-        reqs = super().requires()
+        reqs = {}
         # requires a background training segment for calculating snr
         # TODO: how to specify just the last segment?
         reqs["train_segments"] = Fetch.req(
@@ -133,7 +132,7 @@ class SandboxGenerateTimeslideWaveforms(GenerateTimeslideWaveforms):
             ),
             data_dir=os.path.join(config.train_data_dir, "background"),
             segments_file=os.path.join(
-                config.data_local, "train", "segments.txt"
+                config.data_local, "condor", "train", "segments.txt"
             ),
             **config.train_background.to_dict(),
         )
@@ -168,6 +167,7 @@ class SandboxTimeslideWaveforms(MergeTimeslideWaveforms):
 class SandboxInfer(InferLocal):
     def requires(self):
         reqs = {}
+
         reqs["export"] = SandboxExport.req(
             self,
             image="export.sif",
