@@ -1,5 +1,3 @@
-from configparser import ConfigParser
-
 import law
 import luigi
 from luigi.util import inherits
@@ -100,19 +98,10 @@ class TrainBase(law.Task):
 @inherits(RemoteParameters)
 class RemoteTrainBase(TrainBase):
     def get_s3_credentials(self):
-        config = ConfigParser()
-        config.read("/home/ethan.marx/.aws/credentials")
         keys = ["aws_access_key_id", "aws_secret_access_key"]
         secret = {}
         for key in keys:
-            try:
-                value = config["default"][key]
-            except KeyError:
-                raise ValueError(
-                    "aws credentials file {} is missing "
-                    "key {} in default table".format(s3().credentials, key)
-                )
-            secret[key.upper()] = value
+            secret[key] = getattr(s3(), key)
         return secret
 
     def get_internal_s3_url(self):
