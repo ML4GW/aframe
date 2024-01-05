@@ -18,16 +18,16 @@ class ray_head(luigi.Config):
     memory = luigi.Parameter(default="1G")
 
 
-class Defaults:
-    TRAIN = os.path.join(project_base, "train", "config.yaml")
-    EXPORT = os.path.join(project_base, "export", "config.yaml")
-
-
 class s3(luigi.Config):
     endpoint_url = luigi.Parameter(default=os.getenv("AWS_ENDPOINT_URL"))
-    credentials = luigi.Parameter(
-        default=os.path.expanduser("~/.aws/credentials")
+    aws_access_key_id = luigi.Parameter(default=os.getenv("AWS_ACCESS_KEY_ID"))
+    aws_secret_access_key = luigi.Parameter(
+        default=os.getenv("AWS_SECRET_ACCESS_KEY")
     )
+
+
+class Defaults:
+    TRAIN = os.path.join(project_base, "train", "config.yaml")
 
 
 # mapping from external to internal nautilus urls

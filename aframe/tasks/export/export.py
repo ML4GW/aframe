@@ -1,12 +1,48 @@
 import law
+import luigi
 from luigi.util import inherits
 
-from aframe.base import AframeSingularityTask
-from aframe.tasks.export.base import ExportParams
+from aframe.base import AframeSandbox, AframeSingularityTask
+
+
+class ExportParams(law.Task):
+    weights = luigi.Parameter(default="")
+    fftlength = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    kernel_length = luigi.FloatParameter()
+    inference_sampling_rate = luigi.FloatParameter()
+    sample_rate = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    repository_directory = luigi.Parameter()
+    streams_per_gpu = luigi.IntParameter()
+    aframe_instances = luigi.IntParameter()
+    # TODO: resolve enum platform parsing error
+    # platform = luigi.Parameter(default="TENSORRT")
+    clean = luigi.BoolParameter()
+    ifos = luigi.ListParameter(default=["H1", "L1"])
+    batch_size = luigi.IntParameter()
+    psd_length = luigi.FloatParameter()
+    highpass = luigi.FloatParameter()
+    logfile = luigi.Parameter()
+
+
+class ExportSandbox(AframeSandbox):
+    sandbox_type = "aframe_export"
+
+    def _get_volumes(self):
+        volumes = super()._get_volumes()
+        # hard code cuda version
+        volumes["/usr/local/cuda-11.8/bin"] = "/usr/local/cuda-11.8/bin"
+        volumes["/usr/local/cuda-11.8/lib64"] = "/usr/local/cuda-11.8/lib64"
+        return volumes
 
 
 @inherits(ExportParams)
 class ExportLocal(AframeSingularityTask):
+    @property
+    def sandbox(self):
+        return f"aframe_export::{self.image}"
+
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
