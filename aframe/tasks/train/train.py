@@ -67,7 +67,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     @property
     def pod_creation_wait_interal(self):
-        return 60
+        return 120
 
     def get_config(self):
         with open(self.config, "r") as f:
