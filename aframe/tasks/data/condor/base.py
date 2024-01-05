@@ -8,6 +8,10 @@ from aframe.tasks.data import DATAFIND_ENV_VARS
 
 
 class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
+    """
+    Base class for law workflows that run via condor on LDG
+    """
+
     condor_directory = luigi.Parameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
