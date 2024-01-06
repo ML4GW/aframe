@@ -1,42 +1,17 @@
-import logging
 import shutil
-import time
 from pathlib import Path
 from textwrap import dedent
 from typing import List
 
 from ledger.events import EventSet, RecoveredInjectionSet
 
-from hermes.aeriel.serve import serve
-from hermes.stillwater import ServerMonitor
 from pycondor.cluster import JobStatus
 from pycondor.job import Job
 
 
-def aggregate_results(output_directory: Path):
-    """
-    Combine results from across segments into a single
-    background file and foreground file. Remove the directory
-    containing the individual segment results.
-    """
-    background, foreground = EventSet(), RecoveredInjectionSet()
-    for data_dir in (output_directory / "tmp").iterdir():
-        bckground = EventSet.read(data_dir / "background.hdf5")
-        frground = RecoveredInjectionSet.read(data_dir / "foreground.hdf5")
-
-        background.append(bckground)
-        foreground.append(frground)
-
-    background.write(output_directory / "background.hdf5")
-    foreground.write(output_directory / "foreground.hdf5")
-    shutil.rmtree(output_directory / "tmp")
-
-
-def deploy(
+def build_condor_submit(
     ip_address: str,
-    image: str,
     model_name: str,
-    model_repo_dir: Path,
     shifts: List[float],
     num_shifts: int,
     background_fnames: List[Path],
@@ -51,7 +26,7 @@ def deploy(
     output_dir: Path,
     num_parallel_jobs: int,
     model_version: int = -1,
-):
+) -> Job:
     param_names = "background_fname,shift"
     parameters = ""
     for fname in background_fnames:
@@ -104,28 +79,34 @@ def deploy(
         arguments=arguments,
         extra_lines=[f"max_materialize = {num_parallel_jobs}"],
     )
-    server_log = condor_dir / "server.log"
-    with serve(model_repo_dir, image, log_file=server_log, wait=True):
-        # launch inference jobs via condor
-        logging.info("Server online")
-        time.sleep(1)
-        monitor = ServerMonitor(
-            model_name=model_name,
-            ips="localhost",
-            filename=log_dir / f"server-stats-{batch_size}.csv",
-            model_version=model_version,
-            name="monitor",
-            rate=10,
-        )
-        with monitor:
-            cluster = job.build_submit(fancyname=False)
-            while not cluster.check_status(JobStatus.COMPLETED, how="all"):
-                if cluster.check_status(
-                    [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
-                ):
-                    for proc in cluster.procs:
-                        print(proc.err)
-                    cluster.rm()
-                    raise ValueError("Something went wrong!")
+    return job
 
-    aggregate_results(output_dir)
+
+def wait(cluster):
+    while not cluster.check_status(JobStatus.COMPLETED, how="all"):
+        if cluster.check_status(
+            [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
+        ):
+            for proc in cluster.procs:
+                print(proc.err)
+            cluster.rm()
+            raise ValueError("Something went wrong!")
+
+
+def aggregate_results(output_directory: Path):
+    """
+    Combine results from across segments into a single
+    background file and foreground file. Remove the directory
+    containing the individual segment results.
+    """
+    background, foreground = EventSet(), RecoveredInjectionSet()
+    for data_dir in (output_directory / "tmp").iterdir():
+        bckground = EventSet.read(data_dir / "background.hdf5")
+        frground = RecoveredInjectionSet.read(data_dir / "foreground.hdf5")
+
+        background.append(bckground)
+        foreground.append(frground)
+
+    background.write(output_directory / "background.hdf5")
+    foreground.write(output_directory / "foreground.hdf5")
+    shutil.rmtree(output_directory / "tmp")

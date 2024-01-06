@@ -19,6 +19,12 @@ aframe = {path = "../../", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 pycondor = {path = "../../pycondor", develop = true}
 
+# TODO:
+# optionally include export package, 
+# which is required for launching inference 
+# remotely on nautilus?
+export = {path = "../export", deveop = true}
+
 # hermes utilities
 "hermes.aeriel" = {path = "../../hermes/hermes/hermes.aeriel", extras=["serve"], develop = true}
 "hermes.stillwater" = {path = "../../hermes/hermes/hermes.stillwater", develop = true}

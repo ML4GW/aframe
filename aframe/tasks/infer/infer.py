@@ -7,7 +7,7 @@ from typing import TypedDict
 import law
 import luigi
 import psutil
-from luigi.util import inherits
+from kubeml import KubernetesTritonCluster
 
 from aframe.base import AframeSandboxTask
 
@@ -15,6 +15,10 @@ INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
 
 
 def get_poetry_env(path):
+    """
+    Get the poetry environment path
+    corresponding to a given directory
+    """
     output = None
     try:
         output = subprocess.check_output(
@@ -33,7 +37,11 @@ class InferRequires(TypedDict):
     export: law.Task
 
 
-class InferenceParams(law.Task):
+class InferBase(AframeSandboxTask):
+    """
+    Base class for inference tasks
+    """
+
     output_dir = luigi.Parameter()
     ifos = luigi.ListParameter()
     inference_sampling_rate = luigi.FloatParameter()
@@ -50,23 +58,14 @@ class InferenceParams(law.Task):
     triton_image = luigi.Parameter()
     clients_per_gpu = luigi.IntParameter()
 
-
-@inherits(InferenceParams)
-class InferLocal(AframeSandboxTask):
     # dynamically grab poetry environment from
     # local repository directory to use for
     # the sandbox environment of this task
     env_path = get_poetry_env(INFER_DIR)
     sandbox = f"venv::{env_path}"
 
-    @staticmethod
-    def get_ip_address() -> str:
-        """
-        Get the local, cluster-internal IP address
-        Currently not a general function.
-        """
-        nets = psutil.net_if_addrs()
-        return nets["enp1s0f0"][0].address
+    def get_ip_address(self) -> str:
+        raise NotImplementedError
 
     @property
     def num_parallel_jobs(self):
@@ -102,18 +101,101 @@ class InferLocal(AframeSandboxTask):
         ]
 
     def run(self):
-        from infer.deploy import deploy
+        from infer.deploy.local import deploy_local
 
         from aframe import utils
 
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
 
-        deploy(
+        deploy_local(
             ip_address=self.get_ip_address(),
             image=self.triton_image,
             model_name=self.model_name,
             model_repo_dir=self.model_repo_dir,
+            ifos=self.ifos,
+            shifts=self.shifts,
+            num_shifts=num_shifts,
+            background_fnames=self.background_fnames,
+            injection_set_fname=self.injection_set_fname,
+            batch_size=self.batch_size,
+            psd_length=self.psd_length,
+            fduration=self.fduration,
+            inference_sampling_rate=self.inference_sampling_rate,
+            integration_window_length=self.integration_window_length,
+            cluster_window_length=self.cluster_window_length,
+            output_dir=Path(self.output_dir),
+            model_version=self.model_version,
+            num_parallel_jobs=self.num_parallel_jobs,
+        )
+
+
+class InferLocal(InferBase):
+    """
+    Launch inference on local gpus
+    """
+
+    @staticmethod
+    def get_ip_address() -> str:
+        """
+        Get the local, cluster-internal IP address
+        Currently not a general function.
+        """
+        nets = psutil.net_if_addrs()
+        return nets["enp1s0f0"][0].address
+
+
+class InferRemote(InferBase):
+    """
+    Launch inference on a remote kubernetes cluster
+    """
+
+    image: luigi.Parameter()
+    replicas: luigi.IntParameter()
+    gpus_per_replica: luigi.IntParameter()
+    min_gpu_memory: luigi.IntParameter()
+
+    @property
+    def command(self):
+        return "export-and-launch-triton"
+
+    def configure_cluster(cluster):
+        return cluster
+
+    def sandbox_before_run(self):
+        cluster = KubernetesTritonCluster(
+            self.image,
+            self.command,
+            self.replicas,
+            self.gpus_per_replica,
+            self.min_gpu_memory,
+        )
+        cluster.create()
+        cluster.wait()
+
+    def sandbox_after_run(self):
+        """
+        Method called after the main `run` method to
+        tear down the ray cluster
+        """
+        if self.cluster is not None:
+            self.cluster.delete()
+            self.cluster = None
+
+    def get_ip_address(self):
+        return self.cluster.get_ip()
+
+    def run(self):
+        from infer.deploy.remote import deploy_remote
+
+        from aframe import utils
+
+        segments = utils.segments_from_paths(self.background_fnames)
+        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+
+        deploy_remote(
+            ip_address=self.get_ip_address(),
+            model_name=self.model_name,
             ifos=self.ifos,
             shifts=self.shifts,
             num_shifts=num_shifts,
