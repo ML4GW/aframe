@@ -2,7 +2,6 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-from typing import TypedDict
 
 import law
 import luigi
@@ -31,12 +30,6 @@ def get_poetry_env(path):
     return output
 
 
-class InferRequires(TypedDict):
-    data: law.Task
-    waveforms: law.Task
-    export: law.Task
-
-
 class InferBase(AframeSandboxTask):
     """
     Base class for inference tasks
@@ -55,7 +48,6 @@ class InferBase(AframeSandboxTask):
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
-    triton_image = luigi.Parameter()
     clients_per_gpu = luigi.IntParameter()
 
     # dynamically grab poetry environment from
@@ -80,10 +72,6 @@ class InferBase(AframeSandboxTask):
         return os.path.join(self.output_dir, "background.hdf5")
 
     @property
-    def model_repo_dir(self):
-        return self.input()["export"].path
-
-    @property
     def background_fnames(self):
         return [
             str(f.path)
@@ -99,6 +87,27 @@ class InferBase(AframeSandboxTask):
             law.LocalFileTarget(self.foreground_output),
             law.LocalFileTarget(self.background_output),
         ]
+
+
+class InferLocal(InferBase):
+    """
+    Launch inference on local gpus
+    """
+
+    triton_image = luigi.Parameter()
+
+    @staticmethod
+    def get_ip_address() -> str:
+        """
+        Get the local, cluster-internal IP address
+        Currently not a general function.
+        """
+        nets = psutil.net_if_addrs()
+        return nets["enp1s0f0"][0].address
+
+    @property
+    def model_repo_dir(self):
+        return self.input()["export"].path
 
     def run(self):
         from infer.deploy.local import deploy_local
@@ -128,21 +137,6 @@ class InferBase(AframeSandboxTask):
             model_version=self.model_version,
             num_parallel_jobs=self.num_parallel_jobs,
         )
-
-
-class InferLocal(InferBase):
-    """
-    Launch inference on local gpus
-    """
-
-    @staticmethod
-    def get_ip_address() -> str:
-        """
-        Get the local, cluster-internal IP address
-        Currently not a general function.
-        """
-        nets = psutil.net_if_addrs()
-        return nets["enp1s0f0"][0].address
 
 
 class InferRemote(InferBase):
