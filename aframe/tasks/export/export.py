@@ -3,7 +3,6 @@ import luigi
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
-from aframe.targets import s3_or_local
 
 
 class ExportParams(law.Task):
@@ -33,9 +32,6 @@ class ExportLocal(AframeSingularityTask):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
         return law.LocalFileTarget(self.repository_directory)
-
-    def input(self):
-        return s3_or_local(self.weights, client=None)
 
     @property
     def num_ifos(self):

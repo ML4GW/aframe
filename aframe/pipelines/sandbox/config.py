@@ -11,7 +11,7 @@ class Config(_Config):
         return {key: getattr(self, key) for key in self.get_param_names()}
 
 
-def parse_dir(path: str) -> tuple[str, str]:
+def parse_dir(path: str):
     """
     Parse a path of the form s3://bucket/remote/dir:/path/to/dir
     into a tuple of the form (remote, local).

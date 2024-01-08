@@ -49,6 +49,7 @@ def deploy_local(
     )
 
     log_dir = output_dir / "logs"
+    log_dir.mkdir(exist_ok=True, parents=True)
     server_log = log_dir / "server.log"
     with serve(model_repo_dir, image, log_file=server_log, wait=True):
         # launch inference jobs via condor

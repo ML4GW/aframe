@@ -8,7 +8,8 @@ Stage: build
 ../export /opt/aframe/projects/export
 ../../hermes /opt/aframe/hermes
 ../../ml4gw /opt/aframe/ml4gw
-../../libs/ledger /opt/aframe/libs/ledger/
+../../pycondor /opt/aframe/pycondor
+../../libs/ledger /opt/aframe/libs/ledger
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 

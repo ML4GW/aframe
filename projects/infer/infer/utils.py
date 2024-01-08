@@ -31,7 +31,9 @@ def build_condor_submit(
     parameters = ""
     for fname in background_fnames:
         for i in range(num_shifts):
-            _shifts = "[" + ",".join([str(s * i) for s in shifts]) + "]"
+            _shifts = (
+                "'[" + ", ".join([str(s * (i + 1)) for s in shifts]) + "]'"
+            )
             parameters += f"{fname},{_shifts}\n"
 
     condor_dir = output_dir / "condor"
@@ -84,6 +86,8 @@ def build_condor_submit(
 
 def wait(cluster):
     while not cluster.check_status(JobStatus.COMPLETED, how="all"):
+        n_jobs = len(cluster.procs)
+        print(f"Waiting for {n_jobs} jobs to complete...")
         if cluster.check_status(
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):

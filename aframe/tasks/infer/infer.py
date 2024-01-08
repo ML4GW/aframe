@@ -73,10 +73,7 @@ class InferBase(AframeSandboxTask):
 
     @property
     def background_fnames(self):
-        return [
-            str(f.path)
-            for f in self.input()["data"].collection.targets.values()
-        ]
+        return self.input()["data"].collection.targets.values()
 
     @property
     def injection_set_fname(self):
@@ -116,7 +113,7 @@ class InferLocal(InferBase):
 
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
-
+        background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
             ip_address=self.get_ip_address(),
             image=self.triton_image,
@@ -125,7 +122,7 @@ class InferLocal(InferBase):
             ifos=self.ifos,
             shifts=self.shifts,
             num_shifts=num_shifts,
-            background_fnames=self.background_fnames,
+            background_fnames=background_fnames,
             injection_set_fname=self.injection_set_fname,
             batch_size=self.batch_size,
             psd_length=self.psd_length,
@@ -187,13 +184,14 @@ class InferRemote(InferBase):
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
 
+        background_fnames = [f.path for f in self.background_fnames]
         deploy_remote(
             ip_address=self.get_ip_address(),
             model_name=self.model_name,
             ifos=self.ifos,
             shifts=self.shifts,
             num_shifts=num_shifts,
-            background_fnames=self.background_fnames,
+            background_fnames=background_fnames,
             injection_set_fname=self.injection_set_fname,
             batch_size=self.batch_size,
             psd_length=self.psd_length,
