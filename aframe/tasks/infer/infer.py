@@ -7,6 +7,7 @@ import law
 import luigi
 import psutil
 from kubeml import KubernetesTritonCluster
+from luigi.util import inherits
 
 from aframe.base import AframeSandboxTask
 
@@ -30,13 +31,9 @@ def get_poetry_env(path):
     return output
 
 
-class InferBase(AframeSandboxTask):
-    """
-    Base class for inference tasks
-    """
-
+class InferParameters(law.Task):
     output_dir = luigi.Parameter()
-    ifos = luigi.ListParameter()
+    ifos = luigi.ListParameter(default=["H1", "L1"])
     inference_sampling_rate = luigi.FloatParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
@@ -44,11 +41,18 @@ class InferBase(AframeSandboxTask):
     integration_window_length = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
     Tb = luigi.FloatParameter()
-    shifts = luigi.ListParameter()
+    shifts = luigi.ListParameter(default=[0, 1])
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
     clients_per_gpu = luigi.IntParameter()
+
+
+@inherits(InferParameters)
+class InferBase(AframeSandboxTask):
+    """
+    Base class for inference tasks
+    """
 
     # dynamically grab poetry environment from
     # local repository directory to use for
@@ -86,6 +90,7 @@ class InferBase(AframeSandboxTask):
         ]
 
 
+@inherits(InferParameters)
 class InferLocal(InferBase):
     """
     Launch inference on local gpus
@@ -136,19 +141,20 @@ class InferLocal(InferBase):
         )
 
 
+@inherits(InferParameters)
 class InferRemote(InferBase):
     """
     Launch inference on a remote kubernetes cluster
     """
 
-    image: luigi.Parameter()
-    replicas: luigi.IntParameter()
-    gpus_per_replica: luigi.IntParameter()
-    min_gpu_memory: luigi.IntParameter()
+    image = luigi.Parameter()
+    replicas = luigi.IntParameter()
+    gpus_per_replica = luigi.IntParameter()
+    min_gpu_memory = luigi.IntParameter()
 
     @property
     def command(self):
-        return "export-and-launch-triton"
+        return "/opt/aframe/project/export"
 
     def configure_cluster(cluster):
         return cluster

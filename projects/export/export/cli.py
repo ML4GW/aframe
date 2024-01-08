@@ -1,7 +1,7 @@
 import os
 
 import jsonargparse
-from export.main import export
+from export.remote import main as export
 
 from utils.logging import configure_logging
 
@@ -23,7 +23,6 @@ def main(args=None):
         os.makedirs(logdir, exist_ok=True)
     verbose = args.pop("verbose")
     configure_logging(logfile, verbose)
-
     args = args.as_dict()
     export(**args)
 
