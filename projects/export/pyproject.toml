@@ -7,10 +7,11 @@ license = "MIT"
 #readme = "README.md"
 
 [tool.poetry.scripts]
-export = "export.main:export"
+export-model = "export.main:export"
+#export-and-launch-triton = "export.remote:export"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 
 torch = {version = "^1.10", source = "torch"}
 
@@ -29,6 +30,9 @@ ml4gw = {path = "../../ml4gw", develop = true}
 jsonargparse = "^4.27.1"
 
 tensorrt = "8.5.1.7"
+
+# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
 
 [tool.poetry.dependencies."hermes.quiver"]
 path = "../../hermes/hermes/hermes.quiver"

@@ -38,7 +38,7 @@ def stream_process(process):
             sys.stdout.write(line)
 
 
-def stream_command(command: list[str]):
+def stream_command(command: List[str]):
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ
     )

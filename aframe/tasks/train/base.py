@@ -1,3 +1,5 @@
+from typing import List
+
 import law
 import luigi
 from luigi.util import inherits
@@ -39,7 +41,7 @@ class TrainBase(law.Task):
         if not self.run_dir:
             raise ValueError("Must specify run root directory")
 
-    def configure_wandb(self, args: list[str]) -> None:
+    def configure_wandb(self, args: List[str]) -> None:
         args.append("--trainer.logger=WandbLogger")
         args.append("--trainer.logger.job_type=train")
 
@@ -52,7 +54,7 @@ class TrainBase(law.Task):
                     args.append(f"--trainer.logger.{key}+={v}")
         return args
 
-    def configure_data_args(self, args: list[str]) -> None:
+    def configure_data_args(self, args: List[str]) -> None:
         # configure ONLY the data arguments that
         # are shared by multiple tasks so that we can specify them
         # in one place (the aframe config) and have them overwrite

@@ -2,7 +2,7 @@ import json
 import os
 import shlex
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 import law
 import luigi
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class TrainLocal(TrainBase, AframeSingularityTask):
-    def sandbox_env(self, _) -> dict[str, str]:
+    def sandbox_env(self, _) -> Dict[str, str]:
         env = super().sandbox_env(_)
         for key in ["name", "entity", "project", "group", "tags"]:
             value = getattr(wandb(), key)

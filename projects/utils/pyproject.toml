@@ -5,7 +5,7 @@ version = "0.0.1"
 authors = ["Alec Gunny"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.8,<3.12"
 h5py = "^3.6"
 
 # general plotting and interactive analysis deps
