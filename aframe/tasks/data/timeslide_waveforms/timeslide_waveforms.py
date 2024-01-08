@@ -3,7 +3,7 @@ import importlib
 import os
 import shutil
 from pathlib import Path
-from typing import Literal
+from typing import Dict, Literal
 
 import h5py
 import law
@@ -14,7 +14,7 @@ import aframe.utils as utils
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
-TsWorkflowRequires = dict[Literal["test_segments"], law.Task]
+TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
 
 
 class TimeSlideWaveformsParams(law.Task):

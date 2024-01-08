@@ -29,6 +29,7 @@ config = SandboxConfig()
 @inherits(TrainParameters)
 class SandboxTrain(law.Task):
     dev = luigi.BoolParameter(default=False, significant=False)
+    gpus = luigi.Parameter(default="", significant=False)
 
     @property
     def client(self):

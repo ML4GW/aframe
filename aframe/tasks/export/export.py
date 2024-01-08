@@ -2,7 +2,7 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.base import AframeSandbox, AframeSingularityTask
+from aframe.base import AframeSingularityTask
 
 
 class ExportParams(law.Task):
@@ -26,23 +26,8 @@ class ExportParams(law.Task):
     logfile = luigi.Parameter()
 
 
-class ExportSandbox(AframeSandbox):
-    sandbox_type = "aframe_export"
-
-    def _get_volumes(self):
-        volumes = super()._get_volumes()
-        # hard code cuda version
-        volumes["/usr/local/cuda-11.8/bin"] = "/usr/local/cuda-11.8/bin"
-        volumes["/usr/local/cuda-11.8/lib64"] = "/usr/local/cuda-11.8/lib64"
-        return volumes
-
-
 @inherits(ExportParams)
 class ExportLocal(AframeSingularityTask):
-    @property
-    def sandbox(self):
-        return f"aframe_export::{self.image}"
-
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files

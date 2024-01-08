@@ -1,1 +1,1 @@
-from .infer import InferLocal
+from .infer import InferLocal, InferRemote

@@ -6,9 +6,9 @@ from pathlib import Path
 import kr8s
 import law
 import luigi
+from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
-from ray_kube import KubernetesRayCluster
 
 from aframe.config import ray_head, ray_worker
 

@@ -5,16 +5,18 @@ name = "aframe"
 version = "0.0.1"
 description = "End-to-end aframe pipeline components"
 optional = false
-python-versions = ">=3.9,<3.11"
+python-versions = ">=3.8,<3.11"
 files = []
 develop = true
 
 [package.dependencies]
+boto3 = "^1.34.4"
 jupyter = "^1.0"
 kr8s = "^0.10.0"
+kubeml = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "triton-server"}
 law = "^0.1"
 luigi = "^3.0"
-ray-kube = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "main"}
+pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
 
 [package.source]
 type = "directory"
@@ -476,6 +478,47 @@ pillow = ">=7.1.0"
 PyYAML = ">=3.10"
 tornado = ">=5.1"
 xyzservices = ">=2021.09.1"
+
+[[package]]
+name = "boto3"
+version = "1.34.14"
+description = "The AWS SDK for Python"
+optional = false
+python-versions = ">= 3.8"
+files = [
+    {file = "boto3-1.34.14-py3-none-any.whl", hash = "sha256:1f94042f4efb5133b6b9b8b3243afc01143a81d21b3197a3afadf5780f97b05d"},
+    {file = "boto3-1.34.14.tar.gz", hash = "sha256:5c1bb487c68120aae236354d81b8a1a55d0aa3395d30748a01825ef90891921e"},
+]
+
+[package.dependencies]
+botocore = ">=1.34.14,<1.35.0"
+jmespath = ">=0.7.1,<2.0.0"
+s3transfer = ">=0.10.0,<0.11.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
+
+[[package]]
+name = "botocore"
+version = "1.34.14"
+description = "Low-level, data-driven core of boto 3."
+optional = false
+python-versions = ">= 3.8"
+files = [
+    {file = "botocore-1.34.14-py3-none-any.whl", hash = "sha256:3b592f50f0406e236782a3a0a9ad1c3976060fdb2e04a23d18c3df5b7dfad3e0"},
+    {file = "botocore-1.34.14.tar.gz", hash = "sha256:041bed0852649cab7e4dcd4d87f9d1cc084467fb846e5b60015e014761d96414"},
+]
+
+[package.dependencies]
+jmespath = ">=0.7.1,<2.0.0"
+python-dateutil = ">=2.1,<3.0.0"
+urllib3 = [
+    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
+    {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""},
+]
+
+[package.extras]
+crt = ["awscrt (==0.19.19)"]
 
 [[package]]
 name = "brotli"
@@ -1977,6 +2020,17 @@ files = [
 ansicon = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "jmespath"
+version = "1.0.1"
+description = "JSON Matching Expressions"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980"},
+    {file = "jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe"},
+]
+
+[[package]]
 name = "json5"
 version = "0.9.14"
 description = "A Python implementation of the JSON5 data format."
@@ -2470,6 +2524,25 @@ httpx = ">=0.24.1"
 python-box = ">=7.0.1"
 python-jsonpath = ">=0.7.1"
 pyyaml = ">=6.0"
+
+[[package]]
+name = "kubeml"
+version = "0.1.0"
+description = "Deploy ray and triton server clusters with kubernetes"
+optional = false
+python-versions = ">=3.8,<3.11"
+files = []
+develop = false
+
+[package.dependencies]
+kr8s = "^0.10.0"
+ray = {version = "^2.3", extras = ["default"]}
+
+[package.source]
+type = "git"
+url = "https://github.com/EthanMarx/ray-kube.git"
+reference = "triton-server"
+resolved_reference = "f1b9104972b570531e5f3f1ffa75568d7b6c3b98"
 
 [[package]]
 name = "law"
@@ -3021,6 +3094,22 @@ files = [
 ]
 
 [[package]]
+name = "oauthlib"
+version = "3.2.2"
+description = "A generic, spec-compliant, thorough implementation of the OAuth request-signing logic"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "oauthlib-3.2.2-py3-none-any.whl", hash = "sha256:8139f29aac13e25d502680e9e19963e83f16838d48a0d71c287fe40e7067fbca"},
+    {file = "oauthlib-3.2.2.tar.gz", hash = "sha256:9859c40929662bec5d64f34d01c99e093149682a3f38915dc0655d5a633dd918"},
+]
+
+[package.extras]
+rsa = ["cryptography (>=3.0.0)"]
+signals = ["blinker (>=1.4.0)"]
+signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
+
+[[package]]
 name = "opencensus"
 version = "0.11.3"
 description = "A stats collection and distributed tracing framework"
@@ -3518,6 +3607,27 @@ files = [
 [package.extras]
 plugins = ["importlib-metadata"]
 windows-terminal = ["colorama (>=0.4.6)"]
+
+[[package]]
+name = "pykube-ng"
+version = "23.6.0"
+description = "Python client library for Kubernetes"
+optional = false
+python-versions = ">=3.8,<4"
+files = [
+    {file = "pykube-ng-23.6.0.tar.gz", hash = "sha256:46de8e17ed87c1a1014667d60e7d94a1f3fa2b8037b41e67d32c28b5869af35d"},
+    {file = "pykube_ng-23.6.0-py3-none-any.whl", hash = "sha256:63f20f634bfcd83966edec32f892286f75dffb817a2c097434ecc039e558ec8f"},
+]
+
+[package.dependencies]
+pyyaml = "*"
+requests = ">=2.12"
+requests-oauthlib = {version = ">=1.3.0,<2.0.0", optional = true, markers = "extra == \"oidc\""}
+urllib3 = ">=1.26.9"
+
+[package.extras]
+gcp = ["google-auth", "jsonpath-ng"]
+oidc = ["requests-oauthlib (>=1.3.0,<2.0.0)"]
 
 [[package]]
 name = "pyparsing"
@@ -4048,25 +4158,6 @@ train = ["fsspec", "pandas", "pyarrow (>=6.0.1)", "requests", "tensorboardX (>=1
 tune = ["fsspec", "pandas", "pyarrow (>=6.0.1)", "requests", "tensorboardX (>=1.9)"]
 
 [[package]]
-name = "ray-kube"
-version = "0.1.0"
-description = "Deploy ray clusters with kubernetes"
-optional = false
-python-versions = ">=3.9,<3.11"
-files = []
-develop = false
-
-[package.dependencies]
-kr8s = "^0.10.0"
-ray = {version = "^2.3", extras = ["default"]}
-
-[package.source]
-type = "git"
-url = "https://github.com/EthanMarx/ray-kube.git"
-reference = "main"
-resolved_reference = "985d7cf4a1c8ffcb43b7eef45ef1b2983d057b2f"
-
-[[package]]
 name = "referencing"
 version = "0.32.0"
 description = "JSON Referencing + Python"
@@ -4101,6 +4192,24 @@ urllib3 = ">=1.21.1,<3"
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
+
+[[package]]
+name = "requests-oauthlib"
+version = "1.3.1"
+description = "OAuthlib authentication support for Requests."
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+files = [
+    {file = "requests-oauthlib-1.3.1.tar.gz", hash = "sha256:75beac4a47881eeb94d5ea5d6ad31ef88856affe2332b9aafb52c6452ccf0d7a"},
+    {file = "requests_oauthlib-1.3.1-py2.py3-none-any.whl", hash = "sha256:2577c501a2fb8d05a304c09d090d6e47c306fef15809d102b327cf8364bddab5"},
+]
+
+[package.dependencies]
+oauthlib = ">=3.0.0"
+requests = ">=2.0.0"
+
+[package.extras]
+rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
 name = "rfc3339-validator"
@@ -4248,6 +4357,23 @@ files = [
 
 [package.dependencies]
 pyasn1 = ">=0.1.3"
+
+[[package]]
+name = "s3transfer"
+version = "0.10.0"
+description = "An Amazon S3 Transfer Manager"
+optional = false
+python-versions = ">= 3.8"
+files = [
+    {file = "s3transfer-0.10.0-py3-none-any.whl", hash = "sha256:3cdb40f5cfa6966e812209d0994f2a4709b561c88e90cf00c2696d2df4e56b2e"},
+    {file = "s3transfer-0.10.0.tar.gz", hash = "sha256:d0c8bbf672d5eebbe4e57945e23b972d963f07d82f661cabf678a5c88831595b"},
+]
+
+[package.dependencies]
+botocore = ">=1.33.2,<2.0a.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
 name = "scipy"
@@ -4709,7 +4835,7 @@ name = "utils"
 version = "0.0.1"
 description = "aframe utilities library"
 optional = false
-python-versions = ">=3.9,<3.12"
+python-versions = ">=3.8,<3.12"
 files = []
 develop = true
 
