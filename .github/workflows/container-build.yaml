@@ -13,7 +13,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     # only run container build if commit message explicitly asks for it
     if: "contains(github.event.head_commit.message, ':build:')"
     permissions:
@@ -22,17 +21,15 @@ jobs:
     strategy:
       matrix:
         project: [train, export, data]
-
     steps:
     -
       name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
-    - 
+      run: rm -rf /opt/hostedtoolcache 
+    -
       name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
-
     - 
       name: Log in to the Container registry
       uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1

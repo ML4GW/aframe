@@ -1,65 +1,61 @@
 import law
+import luigi
+from luigi.util import inherits
 
-from aframe.base import AframeSingularityTask, logger
-from aframe.tasks.export.base import ExportParams
+from aframe.base import AframeSingularityTask
 
 
-class ExportLocal(AframeSingularityTask, ExportParams):
+class ExportParams(law.Task):
+    weights = luigi.Parameter(default="")
+    fftlength = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    kernel_length = luigi.FloatParameter()
+    inference_sampling_rate = luigi.FloatParameter()
+    sample_rate = luigi.FloatParameter()
+    fduration = luigi.FloatParameter()
+    repository_directory = luigi.Parameter()
+    streams_per_gpu = luigi.IntParameter()
+    aframe_instances = luigi.IntParameter()
+    # TODO: resolve enum platform parsing error
+    # platform = luigi.Parameter(default="TENSORRT")
+    clean = luigi.BoolParameter()
+    ifos = luigi.ListParameter(default=["H1", "L1"])
+    batch_size = luigi.IntParameter()
+    psd_length = luigi.FloatParameter()
+    highpass = luigi.FloatParameter()
+    logfile = luigi.Parameter()
+
+
+@inherits(ExportParams)
+class ExportLocal(AframeSingularityTask):
     def output(self):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
         return law.LocalFileTarget(self.repository_directory)
 
-    def configure_args(self):
-        positional = [
-            "kernel_length",
-            "inference_sampling_rate",
-            "sample_rate",
-            "fduration",
-            "streams_per_gpu",
-            "aframe_instances",
-            # "clean",
-        ]
-        args = [
-            "--config",
-            self.config,
-            "--logfile",
-            self.logfile,
-            "--weights",
-            self.weights,
-            "--repository_directory",
-            self.repository_directory,
-            "--num_ifos",
-            str(len(self.ifos)),
-            "--batch_size",
-            self.batch_size,
-            "--psd_length",
-            self.psd_length,
-        ]
-        for arg in positional:
-            args.extend([f"--{arg}", getattr(self, arg)])
-        return args
-
-    def configure_optional_args(self, args: list[str]) -> list[str]:
-        for arg in ["fftlength", "highpass", "platform"]:
-            try:
-                x = getattr(self, arg)
-            except AttributeError:
-                continue
-            else:
-                args.extend([f"--{arg}", x])
-
-        return args
-
-    def get_args(self):
-        args = self.configure_args()
-        args = self.configure_optional_args(args)
-        return map(str, args)
+    @property
+    def num_ifos(self):
+        return len(self.ifos)
 
     def run(self):
-        from export.cli import main
+        from export.main import export
 
-        args = self.get_args()
-        logger.debug(f"Running Export with arguments {' '.join(args)}")
-
-        main(args=self.get_args())
+        with self.input().open("r") as f:
+            export(
+                f,
+                self.repository_directory,
+                self.num_ifos,
+                self.kernel_length,
+                self.inference_sampling_rate,
+                self.sample_rate,
+                self.batch_size,
+                self.fduration,
+                self.psd_length,
+                self.fftlength,
+                self.highpass,
+                self.streams_per_gpu,
+                self.aframe_instances,
+                # self.platform,
+                clean=self.clean,
+                # verbose=self.verbose,
+            )

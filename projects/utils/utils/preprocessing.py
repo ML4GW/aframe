@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 
@@ -24,7 +24,7 @@ class BackgroundSnapshotter(torch.nn.Module):
         state_length -= 1 / inference_sampling_rate
         self.state_size = int(state_length * sample_rate)
 
-    def forward(self, update: Tensor, snapshot: Tensor) -> tuple[Tensor, ...]:
+    def forward(self, update: Tensor, snapshot: Tensor) -> Tuple[Tensor, ...]:
         x = torch.cat([snapshot, update], axis=-1)
         snapshot = x[:, :, -self.state_size :]
         return x, snapshot
@@ -77,7 +77,7 @@ class PsdEstimator(torch.nn.Module):
             sample_rate, fftlength, overlap, average, fast=fast
         )
 
-    def forward(self, X: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, X: Tensor) -> Tuple[Tensor, Tensor]:
         splits = [X.size(-1) - self.size, self.size]
         background, X = torch.split(X, splits, dim=-1)
 

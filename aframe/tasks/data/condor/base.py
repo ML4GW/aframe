@@ -8,6 +8,10 @@ from aframe.tasks.data import DATAFIND_ENV_VARS
 
 
 class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
+    """
+    Base class for law workflows that run via condor on LDG
+    """
+
     condor_directory = luigi.Parameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
@@ -28,7 +32,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             {
                 "job": {
                     "job_file_dir": self.job_file_dir,
-                    "job_file_dir_cleanup": "True",
+                    "job_file_dir_cleanup": "False",
                     "job_file_dir_mkdtemp": "False",
                 }
             }
@@ -59,6 +63,9 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         environment = '"'
         for envvar in DATAFIND_ENV_VARS:
             environment += f"{envvar}={os.getenv(envvar)} "
+
+        # aws endpoint for s3 transfers
+        environment += f'AWS_ENDPOINT_URL={os.getenv("AWS_ENDPOINT_URL")} '
 
         # forward current path and law config
         environment += f'PATH={os.getenv("PATH")} '

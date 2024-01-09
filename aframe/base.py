@@ -6,9 +6,9 @@ from pathlib import Path
 import kr8s
 import law
 import luigi
+from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
-from ray_kube import KubernetesRayCluster
 
 from aframe.config import ray_head, ray_worker
 
@@ -17,6 +17,10 @@ logger = logging.getLogger("luigi-interface")
 
 
 class AframeSandbox(singularity.SingularitySandbox):
+    """
+    Base sandbox for running aframe tasks in a singularity container.
+    """
+
     sandbox_type = "aframe"
 
     def get_custom_config_section_postfix(self):
@@ -33,17 +37,35 @@ class AframeSandbox(singularity.SingularitySandbox):
         return config
 
     def _get_volumes(self):
+        # if running in dev mode, mount the local
+        # aframe repo into the container so code changes
+        # are reflected
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
+
         return volumes
 
 
+# update the law config to let it know about
+# the aframe sandbox config changes
 law.config.update(AframeSandbox.config())
 
 
-# base class for any sandbox task (singularity, poetry env, etc.)
 class AframeSandboxTask(law.SandboxTask):
+    """
+    Base task for __any__ Sandbox task (e.g. singularity, poetry/venv etc.)
+
+    The `sandbox` property should return a string
+    of the form `{sandbox_type}::{path}`.`sandbox_type`
+    corresponds to the `sandbox_type` class variable
+    of the desired Sandbox class.
+
+    `path` is the path to the specific sandbox image
+    (for singularity sandboxes)or environment (when using poetry / venv)
+    one wishes to run the task in.
+    """
+
     dev = luigi.BoolParameter(default=False, significant=False)
     gpus = luigi.Parameter(default="", significant=False)
 
@@ -52,15 +74,27 @@ class AframeSandboxTask(law.SandboxTask):
         return None
 
     def sandbox_env(self, _):
+        """
+        Set local environment variables to be set inside the sandbox
+        """
+
+        # set any environment variables
+        # that start with AFRAME_
         env = {}
         for envvar, value in os.environ.items():
             if envvar.startswith("AFRAME_"):
                 env[envvar] = value
-        # set data and run dirs as env variable in sandbox
-        # so they get mapped into the sandbox
-        for envvar in ["DATA_DIR", "RUN_DIR"]:
+
+        # default tmpdir in containers was /tmp/,
+        # which does not contain that much memory.
+        # map in local tmpdir (should be /local/albert.einstein)
+        # which has is enough memory to write large temp
+        # files with luigi/law
+        for envvar in ["TMPDIR"]:
             env[envvar] = os.getenv(envvar, "")
 
+        # if gpus are specified, expose them inside container
+        # via CUDA_VISIBLE_DEVICES env variable
         if self.gpus:
             env["CUDA_VISIBLE_DEVICES"] = self.gpus
         return env
@@ -72,8 +106,14 @@ class AframeSandboxTask(law.SandboxTask):
         return 0
 
 
-# class for tasks that are run in a singularity image
 class AframeSingularityTask(AframeSandboxTask):
+    """
+    Sandbox task for running aframe tasks in
+    a singularity container. Tasks that wish
+    to run in a singularity container should
+    inherit from this class.
+    """
+
     image = luigi.Parameter(default="")
     container_root = luigi.Parameter(
         default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
@@ -100,14 +140,25 @@ class AframeSingularityTask(AframeSandboxTask):
 
     @property
     def sandbox(self):
+        # sandbox is singularity sandbox defined above;
+        # image is the path to
+        # the singularity container .sif file
         return f"aframe::{self.image}"
 
     def singularity_forward_law(self) -> bool:
         return True
 
 
-# containerized tasks that require a ray cluster
 class AframeRayTask(AframeSingularityTask):
+    """
+    Base task for tasks that require a ray cluster
+    deployed via kubernetes.
+
+    Tasks that wish to utillize a ray cluster
+    (for now, just hyperparameter tuning)
+    should inherit from this class.
+    """
+
     container = luigi.Parameter(default="", significant=False)
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)
@@ -117,6 +168,10 @@ class AframeRayTask(AframeSingularityTask):
         return cluster
 
     def sandbox_before_run(self):
+        """
+        Method called before the main `run` method to set up
+        and launch the ray cluster
+        """
         if not self.container:
             self.cluster = None
             return
@@ -145,6 +200,10 @@ class AframeRayTask(AframeSingularityTask):
         self.cluster = cluster
 
     def sandbox_after_run(self):
+        """
+        Method called after the main `run` method to
+        tear down the ray cluster
+        """
         if self.cluster is not None:
             logger.info("Deleting ray cluster")
             self.cluster.delete()

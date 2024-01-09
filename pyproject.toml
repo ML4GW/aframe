@@ -9,13 +9,14 @@ authors = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.8,<3.11"
 luigi = "^3.0"
 law = "^0.1"
 jupyter = "^1.0"
-ray-kube = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "main"}
+kubeml = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "triton-server"}
 kr8s = "^0.10.0"
-pykube-ng = "^23.6.0"
+pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
+boto3 = "^1.34.4"
 
 
 [tool.poetry.group.dev.dependencies]

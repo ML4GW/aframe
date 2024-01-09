@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: python:3.10.12-slim-bullseye
+From: nvcr.io/nvidia/tritonserver:22.12-py3
 Stage: build
 
 %files
@@ -13,17 +13,32 @@ Stage: build
 %post
 apt-get update
 apt-get install -y --no-install-recommends git
+apt-get clean
 
 # installing the local package editably via pip
 # works, but none of the dependencies (e.g. ml4gw)
-# are installed editably, so we'll opt for using
-# the full poetry machinery without using a
-# virtual environment. Note that this can potentially
-# cause issues if the poetry install makes changes to
-# the virtualenv package in the base environment, so
-# we'll hard pin it to the value we need.
-# TODO: there's got to be a better solution here
-python -m pip install poetry 'virtualenv==20.4.7'
-poetry config virtualenvs.create false
+# are installed editably. Instead, use poetry export
+# to export to a requirements.txt, and use sed 
+# to prepend the -e flag to all relevant 
+# local packages that require editable installs.
+# poetry has already done dependency resolution for us,
+# so turn that off with the --no-deps flag to increase performance.
+# Lastly, install the export project itself
+python3.8 -m pip install poetry
 cd /opt/aframe/projects/export
-poetry install
+poetry export -o requirements.txt --without-hashes \
+    && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
+
+pip install -r requirements.txt --no-deps --no-cache-dir
+pip install -e . --no-deps --no-cache-dir
+
+# hard code cuda version in container to 11.8.
+# tenssorrt 8.5.1.7 is not compatible with cuda > 12.0,
+# which is the default on dgx boxes. Sadly, tensorrt 8.6.1 
+# is currently incompatible with poetry for some reason
+# see this issue https://github.com/NVIDIA/TensorRT/issues/3362.
+# once (if) that gets resolved, the more robust fix should be to
+# just upgrade tensorrt
+%environment
+export PATH=/usr/local/cuda-11.8/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH
