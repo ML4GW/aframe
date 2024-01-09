@@ -89,7 +89,7 @@ class TrainBase(law.Task):
             args = self.configure_wandb(args)
 
         args.append(f"--trainer.logger.save_dir={self.run_dir}")
-        args.append("--trainer.logger.name=train_logs")
+        # args.append("--trainer.logger.name={}")
 
         return args
 
@@ -103,7 +103,7 @@ class RemoteTrainBase(TrainBase):
         keys = ["aws_access_key_id", "aws_secret_access_key"]
         secret = {}
         for key in keys:
-            secret[key] = getattr(s3(), key)
+            secret[key.upper()] = getattr(s3(), key)
         return secret
 
     def get_internal_s3_url(self):

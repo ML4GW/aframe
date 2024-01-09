@@ -24,11 +24,10 @@ if TYPE_CHECKING:
 class TrainLocal(TrainBase, AframeSingularityTask):
     def sandbox_env(self, _) -> Dict[str, str]:
         env = super().sandbox_env(_)
-        for key in ["name", "entity", "project", "group", "tags"]:
+        for key in ["name", "entity", "project", "group", "tags", "api_key"]:
             value = getattr(wandb(), key)
             if value:
                 env[f"WANDB_{key.upper()}"] = value
-
         return env
 
     def run(self):
@@ -50,7 +49,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         return dir.child("model.pt", type="f")
 
 
-class TrainRemote(KubernetesJobTask, RemoteTrainBase):
+class TrainRemote(RemoteTrainBase, KubernetesJobTask):
     image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:dev")
     min_gpu_memory = luigi.IntParameter(default=15000)
     request_gpus = luigi.IntParameter(default=4)
@@ -181,6 +180,13 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     min_epochs = luigi.IntParameter()
     max_epochs = luigi.IntParameter()
     reduction_factor = luigi.IntParameter()
+    num_workers = luigi.IntParameter(default=2)
+    gpus_per_worker = luigi.IntParameter(default=1)
+
+    @property
+    def use_wandb(self):
+        # always use wandb logging for tune jobs
+        return True
 
     def get_ip(self):
         ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
@@ -191,6 +197,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         secret = self.get_s3_credentials()
         cluster.add_secret("s3-credentials", env=secret)
         cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
+        cluster.set_env({"WANDB_API_KEY": wandb().api_key})
         cluster.dump("test.yaml")
         return cluster
 
@@ -203,10 +210,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         args = self.get_args()
         args.append(f"--tune.address={self.get_ip()}")
         args.append(f"--tune.space={self.search_space}")
-        args.append(f"--tune.num_workers={ray_worker().replicas}")
-        args.append(
-            "--tune.gpus_per_worker=" + str(ray_worker().gpus_per_worker)
-        )
+        args.append(f"--tune.num_workers={self.num_workers}")
+        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
         args.append("--tune.cpus_per_gpu=" + str(ray_worker().cpus_per_gpu))
         args.append(f"--tune.num_samples={self.num_samples}")
         args.append(f"--tune.min_epochs={self.min_epochs}")

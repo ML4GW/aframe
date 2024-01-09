@@ -7,9 +7,8 @@ project_base = "/opt/aframe/projects"
 
 class ray_worker(luigi.Config):
     replicas = luigi.IntParameter(default=2)
-    gpus = luigi.IntParameter(default=2)
+    gpus_per_replica = luigi.IntParameter(default=2)
     cpus_per_gpu = luigi.IntParameter(default=8)
-    gpus_per_worker = luigi.IntParameter(default=1)
     memory = luigi.Parameter(default="10G")
     min_gpu_memory = luigi.Parameter(default="15000")
 
