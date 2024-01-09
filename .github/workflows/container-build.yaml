@@ -21,11 +21,14 @@ jobs:
     strategy:
       matrix:
         project: [train, export, data]
-    
-    steps: 
-    -
-      name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
+    steps:
+    - 
+      name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 512
+        swap-size-mb: 1024
+        remove-dotnet: 'true'
     - 
       name: Checkout repository
       uses: actions/checkout@v4
