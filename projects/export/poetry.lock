@@ -2306,7 +2306,7 @@ ray = {version = "^2.3", extras = ["default"]}
 type = "git"
 url = "https://github.com/EthanMarx/ray-kube.git"
 reference = "triton-server"
-resolved_reference = "97ccfa5052de546332e8556283e585dececdcf67"
+resolved_reference = "ef4e20660e21532c716fc49f37a5e1c9faad1a6e"
 
 [[package]]
 name = "law"
