@@ -57,7 +57,6 @@ def export_and_launch_triton(
     export(
         weights,
         repository_directory,
-        Path(logdir),
         num_ifos,
         kernel_length,
         inference_sampling_rate,
@@ -83,7 +82,7 @@ def export_and_launch_triton(
     command = [
         "tritonserver",
         "--model-repository",
-        "/tmp/model_repo",
+        str(repository_directory),
         "--repository-poll-secs",
         "30",
         "--model-control-mode",

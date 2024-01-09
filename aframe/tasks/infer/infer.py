@@ -162,8 +162,6 @@ class InferRemote(InferBase):
         return [
             "--weights",
             self.weights,
-            "--repository_directory",
-            "/tmp/model_repo/",
             "--kernel_length",
             str(self.kernel_length),
             "--inference_sampling_rate",

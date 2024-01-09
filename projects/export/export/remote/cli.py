@@ -23,6 +23,7 @@ def main(args=None):
     verbose = args.pop("verbose")
     configure_logging(logfile, verbose)
     args = args.as_dict()
+    print(args)
     export_and_launch_triton(**args)
 
 

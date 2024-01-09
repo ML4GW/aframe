@@ -16,14 +16,14 @@ class ExportParams(law.Task):
     repository_directory = luigi.Parameter()
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
-    # TODO: resolve enum platform parsing error
-    # platform = luigi.Parameter(default="TENSORRT")
     clean = luigi.BoolParameter()
     ifos = luigi.ListParameter(default=["H1", "L1"])
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
     logfile = luigi.Parameter()
+    # TODO: resolve enum platform parsing error
+    # platform = luigi.Parameter(default="TENSORRT")
 
 
 @inherits(ExportParams)
