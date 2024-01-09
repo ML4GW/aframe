@@ -13,6 +13,7 @@ Stage: build
 %post
 apt-get update
 apt-get install -y --no-install-recommends git
+apt-get clean
 
 # installing the local package editably via pip
 # works, but none of the dependencies (e.g. ml4gw)
@@ -27,8 +28,9 @@ python3.8 -m pip install poetry
 cd /opt/aframe/projects/export
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
-pip install -r requirements.txt --no-deps
-pip install -e . --no-deps
+
+pip install -r requirements.txt --no-deps --no-cache-dir
+pip install -e . --no-deps --no-cache-dir
 
 # hard code cuda version in container to 11.8.
 # tenssorrt 8.5.1.7 is not compatible with cuda > 12.0,
