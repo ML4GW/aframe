@@ -10,6 +10,7 @@ from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
 from aframe.base import AframeSandboxTask
+from aframe.tasks.export.export import ExportParams
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
 
@@ -141,10 +142,10 @@ class InferLocal(InferBase):
         )
 
 
-@inherits(InferParameters)
+@inherits(InferParameters, ExportParams)
 class InferRemote(InferBase):
     """
-    Launch inference on a remote kubernetes cluster
+    Launch inference on a remote kubernetes cluster.
     """
 
     image = luigi.Parameter()
@@ -154,7 +155,34 @@ class InferRemote(InferBase):
 
     @property
     def command(self):
-        return "/opt/aframe/project/export"
+        return ["python", "-m", "export.remote"]
+
+    @property
+    def args(self):
+        return [
+            "--weights",
+            self.weights,
+            "--repository_directory",
+            "/tmp/model_repo/",
+            "--kernel_length",
+            str(self.kernel_length),
+            "--inference_sampling_rate",
+            str(self.inference_sampling_rate),
+            "--batch_size",
+            str(self.batch_size),
+            "--psd_length",
+            str(self.psd_length),
+            "--streams_per_gpu",
+            str(self.streams_per_gpu),
+            "--fduration",
+            str(self.fduration),
+            "--sample_rate",
+            str(self.sample_rate),
+            "--num_ifos",
+            str(len(self.ifos)),
+            "--highpass",
+            str(self.highpass),
+        ]
 
     def configure_cluster(cluster):
         return cluster
@@ -163,10 +191,12 @@ class InferRemote(InferBase):
         cluster = KubernetesTritonCluster(
             self.image,
             self.command,
+            self.args,
             self.replicas,
             self.gpus_per_replica,
             self.min_gpu_memory,
         )
+        cluster.dump("cluster.yaml")
         cluster.create()
         cluster.wait()
 

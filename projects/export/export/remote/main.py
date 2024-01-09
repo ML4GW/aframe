@@ -9,9 +9,8 @@ from export.main import export
 import hermes.quiver as qv
 
 
-def main(
+def export_and_launch_triton(
     weights: str,
-    repository_directory: str,
     num_ifos: int,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -21,6 +20,7 @@ def main(
     psd_length: float,
     endpoint_url: str,
     logdir: str,
+    repository_directory: Optional[str] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
@@ -41,16 +41,21 @@ def main(
     # pull weights via s3 storing them in
     # a temporary directory where we will also build
     # the model repository
-    s3 = s3fs.S3FileSystem(endpoint_url=endpoint_url)
-    model_dir = Path("/tmp/weights/")
-    model_dir.mkdir(parents=True, exist_ok=True)
-    local_weights = model_dir / "weights.pt"
-    s3.get_file(str(weights), str(local_weights))
+    repository_directory = repository_directory or "/tmp/aframe/model_repo"
+    repository_directory = Path(repository_directory)
+    repository_directory.mkdir(parents=True, exist_ok=True)
+
+    # handle the case where weights are stored on s3
+    if weights.startswith("s3://"):
+        weights_local = repository_directory.parent / "weights.pt"
+        s3 = s3fs.S3FileSystem(endpoint_url=endpoint_url)
+        s3.get_file(str(weights), str(weights_local))
+        weights = weights_local
 
     # first export model to tensorrt, along with
     # constructing snapshotter and whitener
     export(
-        local_weights,
+        weights,
         repository_directory,
         Path(logdir),
         num_ifos,
