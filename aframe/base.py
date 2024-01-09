@@ -159,13 +159,22 @@ class AframeRayTask(AframeSingularityTask):
     should inherit from this class.
     """
 
-    container = luigi.Parameter(default="", significant=False)
+    container = luigi.Parameter(
+        default="ghcr.io/ml4gw/aframev2/train:dev", significant=False
+    )
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)
     label = luigi.Parameter(default="", significant=False)
 
     def configure_cluster(self, cluster):
         return cluster
+
+    def sandbox_env(self, _):
+        # hacky way to pass cluster ip to sandbox task
+        # that gets run in the container.
+        env = super().sandbox_env(_)
+        env["AFRAME_RAY_CLUSTER_IP"] = self.ip
+        return env
 
     def sandbox_before_run(self):
         """
@@ -198,6 +207,7 @@ class AframeRayTask(AframeSingularityTask):
         cluster.wait()
         logger.info("ray cluster online")
         self.cluster = cluster
+        self.ip = cluster.get_ip()
 
     def sandbox_after_run(self):
         """
