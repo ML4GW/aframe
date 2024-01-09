@@ -18,14 +18,13 @@ def export_and_launch_triton(
     batch_size: int,
     fduration: float,
     psd_length: float,
-    endpoint_url: str,
-    logdir: str,
     repository_directory: Optional[str] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
+    endpoint_url: Optional[str] = None,
     clean: bool = False,
     verbose: bool = False,
 ):
@@ -48,7 +47,7 @@ def export_and_launch_triton(
     # handle the case where weights are stored on s3
     if weights.startswith("s3://"):
         weights_local = repository_directory.parent / "weights.pt"
-        s3 = s3fs.S3FileSystem(endpoint_url=endpoint_url)
+        s3 = s3fs.S3FileSystem()
         s3.get_file(str(weights), str(weights_local))
         weights = weights_local
 
