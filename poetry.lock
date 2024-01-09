@@ -1895,13 +1895,13 @@ jupyter-server = ">=1.1.2"
 
 [[package]]
 name = "jupyter-server"
-version = "2.12.2"
+version = "2.12.3"
 description = "The backend—i.e. core services, APIs, and REST endpoints—to Jupyter web applications."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jupyter_server-2.12.2-py3-none-any.whl", hash = "sha256:abcfa33f98a959f908c8733aa2d9fa0101d26941cbd49b148f4cef4d3046fc61"},
-    {file = "jupyter_server-2.12.2.tar.gz", hash = "sha256:5eae86be15224b5375cdec0c3542ce72ff20f7a25297a2a8166a250bb455a519"},
+    {file = "jupyter_server-2.12.3-py3-none-any.whl", hash = "sha256:6f85310ea5e6068568a521f079fba99d8d17e4884dd1d602ab0f43b3115204a8"},
+    {file = "jupyter_server-2.12.3.tar.gz", hash = "sha256:a1d2d51e497b1a6256c48b6940b0dd49b2553981baf1690077c37792f1fa23a1"},
 ]
 
 [package.dependencies]
@@ -2089,7 +2089,7 @@ ray = {version = "^2.3", extras = ["default"]}
 type = "git"
 url = "https://github.com/EthanMarx/ray-kube.git"
 reference = "triton-server"
-resolved_reference = "ef4e20660e21532c716fc49f37a5e1c9faad1a6e"
+resolved_reference = "9f9ba1f5324de945831d9206bc3e01191bb8f45b"
 
 [[package]]
 name = "law"

@@ -1,1 +1,1 @@
-from .train import TrainLocal, TrainRemote
+from .train import TrainLocal, TrainRemote, TuneRemote
