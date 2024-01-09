@@ -24,7 +24,6 @@ def export_and_launch_triton(
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
-    endpoint_url: Optional[str] = None,
     clean: bool = False,
     verbose: bool = False,
 ):
