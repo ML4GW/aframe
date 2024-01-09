@@ -1,16 +1,15 @@
 import os
 
 import jsonargparse
-from export import main as export
+from export.remote.main import export_and_launch_triton
 
 from utils.logging import configure_logging
 
 
 def build_parser():
     parser = jsonargparse.ArgumentParser()
-    parser.add_argument("--config", action=jsonargparse.ActionConfigFile)
     parser.add_argument("--logfile", type=str, default=None)
-    parser.add_function_arguments(export)
+    parser.add_function_arguments(export_and_launch_triton)
     return parser
 
 
@@ -24,7 +23,7 @@ def main(args=None):
     verbose = args.pop("verbose")
     configure_logging(logfile, verbose)
     args = args.as_dict()
-    export(**args)
+    export_and_launch_triton(**args)
 
 
 if __name__ == "__main__":
