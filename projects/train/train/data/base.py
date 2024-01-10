@@ -95,6 +95,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # generate our local node data directory
         # if our specified data source is remote
         self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
+        print(self.data_dir)
 
     # ================================================ #
     # Distribution utilities
