@@ -180,8 +180,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     min_epochs = luigi.IntParameter()
     max_epochs = luigi.IntParameter()
     reduction_factor = luigi.IntParameter()
-    num_workers = luigi.IntParameter(default=2)
-    gpus_per_worker = luigi.IntParameter(default=1)
+    num_workers = luigi.IntParameter(default=ray_worker().replicas)
+    gpus_per_worker = luigi.IntParameter(default=ray_worker().gpus_per_replica)
 
     @property
     def use_wandb(self):

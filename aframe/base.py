@@ -149,6 +149,17 @@ class AframeSingularityTask(AframeSandboxTask):
         return True
 
 
+class RayCluster(KubernetesRayCluster):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.head["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
+        self.worker["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
+
+
 class AframeRayTask(AframeSingularityTask):
     """
     Base task for tasks that require a ray cluster
@@ -188,7 +199,7 @@ class AframeRayTask(AframeSingularityTask):
         api = kr8s.api(kubeconfig=self.kubeconfig or None)
 
         worker_cpus = ray_worker().cpus_per_gpu * ray_worker().gpus_per_replica
-        cluster = KubernetesRayCluster(
+        cluster = RayCluster(
             self.container,
             num_workers=ray_worker().replicas,
             worker_cpus=worker_cpus,
