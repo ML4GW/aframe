@@ -149,6 +149,17 @@ class AframeSingularityTask(AframeSandboxTask):
         return True
 
 
+class RayCluster(KubernetesRayCluster):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.head["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
+        self.worker["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
+
+
 class AframeRayTask(AframeSingularityTask):
     """
     Base task for tasks that require a ray cluster
