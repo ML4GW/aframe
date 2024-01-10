@@ -198,7 +198,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         cluster.add_secret("s3-credentials", env=secret)
         cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
         cluster.set_env({"WANDB_API_KEY": wandb().api_key})
-        cluster.dump("test.yaml")
         return cluster
 
     def complete(self):
