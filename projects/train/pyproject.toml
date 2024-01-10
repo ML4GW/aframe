@@ -34,6 +34,9 @@ ray = {version = "^2.8.0", extras = ["default", "tune"]}
 boto3 = "^1.30"
 fsspec = {version = "^2023.10", extras=["s3"]}
 
+# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
+
 # local deps
 utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}

@@ -199,7 +199,7 @@ class AframeRayTask(AframeSingularityTask):
         api = kr8s.api(kubeconfig=self.kubeconfig or None)
 
         worker_cpus = ray_worker().cpus_per_gpu * ray_worker().gpus_per_replica
-        cluster = RayCluster(
+        cluster = KubernetesRayCluster(
             self.container,
             num_workers=ray_worker().replicas,
             worker_cpus=worker_cpus,
