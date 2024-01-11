@@ -4,7 +4,8 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.config import Defaults, nautilus_urls, s3
+from aframe.base import S3Task
+from aframe.config import Defaults
 from aframe.tasks.train.config import wandb
 
 
@@ -98,20 +99,5 @@ class TrainBase(law.Task):
 
 
 @inherits(RemoteParameters)
-class RemoteTrainBase(TrainBase):
-    def get_s3_credentials(self):
-        keys = ["aws_access_key_id", "aws_secret_access_key"]
-        secret = {}
-        for key in keys:
-            secret[key.upper()] = getattr(s3(), key)
-        return secret
-
-    def get_internal_s3_url(self):
-        # if user specified an external nautilus url,
-        # map to the corresponding internal url,
-        # since the internal url is what is used by the
-        # kubernetes cluster to access s3
-        url = s3().endpoint_url
-        if url in nautilus_urls:
-            return nautilus_urls[url]
-        return url
+class RemoteTrainBase(TrainBase, S3Task):
+    pass
