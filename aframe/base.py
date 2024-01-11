@@ -10,7 +10,7 @@ from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import ray_head, ray_worker
+from aframe.config import nautilus_urls, ray_head, ray_worker, s3
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
@@ -229,3 +229,22 @@ class AframeRayTask(AframeSingularityTask):
             logger.info("Deleting ray cluster")
             self.cluster.delete()
             self.cluster = None
+
+
+class S3Task:
+    def get_s3_credentials(self):
+        keys = ["aws_access_key_id", "aws_secret_access_key"]
+        secret = {}
+        for key in keys:
+            secret[key.upper()] = getattr(s3(), key)
+        return secret
+
+    def get_internal_s3_url(self):
+        # if user specified an external nautilus url,
+        # map to the corresponding internal url,
+        # since the internal url is what is used by the
+        # kubernetes cluster to access s3
+        url = s3().endpoint_url
+        if url in nautilus_urls:
+            return nautilus_urls[url]
+        return url
