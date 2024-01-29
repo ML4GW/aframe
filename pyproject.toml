@@ -12,7 +12,6 @@ authors = [
 python = ">=3.8,<3.11"
 luigi = "^3.0"
 law = "^0.1"
-jupyter = "^1.0"
 kubeml = {git = "https://github.com/EthanMarx/ray-kube.git", branch = "triton-server"}
 kr8s = "^0.10.0"
 pykube-ng = {version = "^23.6.0", extras = ["oidc"]}

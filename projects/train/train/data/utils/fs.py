@@ -42,7 +42,7 @@ def get_data_dir(data_dir: str):
             logging.info(
                 "Downloading data to ray worker-specific tmp directory"
             )
-            worker_id = ray.get_runtime_context().get_node_id()
+            worker_id = ray.get_runtime_context().get_worker_id()
             data_dir = f"{tmpdir}/{worker_id}"
         # if not using ray, and just doing
         # distributed training, just download

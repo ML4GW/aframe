@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: python:3.10.12-slim-bullseye
+From: nvcr.io/nvidia/tritonserver:22.12-py3
 Stage: build
 
 %files
