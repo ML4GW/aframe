@@ -9,7 +9,7 @@ import psutil
 from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
-from aframe.base import AframeSandboxTask
+from aframe.base import AframeSandboxTask, S3Task
 from aframe.tasks.export.export import ExportParams
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
@@ -143,7 +143,7 @@ class InferLocal(InferBase):
 
 
 @inherits(InferParameters, ExportParams)
-class InferRemote(InferBase):
+class InferRemote(InferBase, S3Task):
     """
     Launch inference on a remote kubernetes cluster.
     """
@@ -151,7 +151,9 @@ class InferRemote(InferBase):
     image = luigi.Parameter()
     replicas = luigi.IntParameter()
     gpus_per_replica = luigi.IntParameter()
-    min_gpu_memory = luigi.IntParameter()
+    cpus_per_replica = luigi.IntParameter()
+    memory = luigi.Parameter(default="8G")
+    min_gpu_memory = luigi.Parameter()
 
     @property
     def command(self):
@@ -162,8 +164,6 @@ class InferRemote(InferBase):
         return [
             "--weights",
             self.weights,
-            "--repository_directory",
-            "/tmp/model_repo/",
             "--kernel_length",
             str(self.kernel_length),
             "--inference_sampling_rate",
@@ -184,7 +184,10 @@ class InferRemote(InferBase):
             str(self.highpass),
         ]
 
-    def configure_cluster(cluster):
+    def configure_cluster(self, cluster):
+        secret = self.get_s3_credentials()
+        cluster.add_secret("s3-credentials", env=secret)
+        cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
         return cluster
 
     def sandbox_before_run(self):
@@ -194,6 +197,8 @@ class InferRemote(InferBase):
             self.args,
             self.replicas,
             self.gpus_per_replica,
+            self.cpus_per_replica,
+            self.memory,
             self.min_gpu_memory,
         )
         cluster.dump("cluster.yaml")

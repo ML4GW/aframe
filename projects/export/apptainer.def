@@ -11,10 +11,6 @@ Stage: build
 ../../hermes /opt/aframe/hermes
 
 %post
-apt-get update
-apt-get install -y --no-install-recommends git
-apt-get clean
-
 # installing the local package editably via pip
 # works, but none of the dependencies (e.g. ml4gw)
 # are installed editably. Instead, use poetry export
@@ -29,16 +25,19 @@ cd /opt/aframe/projects/export
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
 
+
+Bootstrap: docker
+From: nvcr.io/nvidia/tritonserver:22.12-py3
+Stage: final
+
+%files from build 
+/opt/aframe/ /opt/aframe
+
+%post
+apt-get update
+apt-get install -y --no-install-recommends git
+apt-get clean
+
+cd /opt/aframe/projects/export
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
-
-# hard code cuda version in container to 11.8.
-# tenssorrt 8.5.1.7 is not compatible with cuda > 12.0,
-# which is the default on dgx boxes. Sadly, tensorrt 8.6.1 
-# is currently incompatible with poetry for some reason
-# see this issue https://github.com/NVIDIA/TensorRT/issues/3362.
-# once (if) that gets resolved, the more robust fix should be to
-# just upgrade tensorrt
-%environment
-export PATH=/usr/local/cuda-11.8/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH

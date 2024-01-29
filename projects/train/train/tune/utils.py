@@ -30,7 +30,7 @@ from tempfile import NamedTemporaryFile
 from typing import Optional
 
 import yaml
-from lightning.pytorch import LightningCLI
+from lightning.pytorch.cli import LightningCLI
 from ray.train import CheckpointConfig, RunConfig, ScalingConfig
 from ray.train.lightning import (
     RayDDPStrategy,
