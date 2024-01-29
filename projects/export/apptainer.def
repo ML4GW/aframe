@@ -20,7 +20,7 @@ Stage: build
 # poetry has already done dependency resolution for us,
 # so turn that off with the --no-deps flag to increase performance.
 # Lastly, install the export project itself
-python -m pip install poetry
+python3.8 -m pip install poetry
 cd /opt/aframe/projects/export
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
