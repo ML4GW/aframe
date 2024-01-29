@@ -110,7 +110,7 @@ class InferLocal(InferBase):
 
     @property
     def model_repo_dir(self):
-        return self.input()["export"].path
+        return self.input()["model_repository"].path
 
     def run(self):
         from infer.deploy.local import deploy_local

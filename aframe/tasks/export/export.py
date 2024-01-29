@@ -21,7 +21,6 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    logfile = luigi.Parameter()
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
 
@@ -32,6 +31,10 @@ class ExportLocal(AframeSingularityTask):
         # TODO: custom file target that checks for existence
         # of all necessary model repo directories and files
         return law.LocalFileTarget(self.repository_directory)
+
+    @property
+    def default_image(self):
+        return "export.sif"
 
     @property
     def num_ifos(self):

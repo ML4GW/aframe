@@ -122,12 +122,16 @@ class AframeSingularityTask(AframeSandboxTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not os.path.isabs(self.image):
-            self.image = os.path.join(self.container_root, self.image)
+            self.image = os.path.join(self.container_root, self.default_image)
 
         if not os.path.exists(self.image):
             raise ValueError(
                 f"Could not find path to container image {self.image}"
             )
+
+    @property
+    def default_image(self):
+        raise NotImplementedError
 
     @property
     def singularity_args(self) -> Callable:

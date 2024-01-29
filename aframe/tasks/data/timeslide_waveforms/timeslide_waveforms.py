@@ -5,7 +5,6 @@ import shutil
 from pathlib import Path
 from typing import Dict, Literal
 
-import h5py
 import law
 import luigi
 from luigi.util import inherits
@@ -13,6 +12,7 @@ from luigi.util import inherits
 import aframe.utils as utils
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
+from aframe.tasks.data.fetch import FetchTest
 
 TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
 
@@ -22,7 +22,6 @@ class TimeSlideWaveformsParams(law.Task):
     end = luigi.FloatParameter()
     ifos = luigi.ListParameter()
     Tb = luigi.FloatParameter()
-    data_dir = luigi.Parameter()
     output_dir = luigi.Parameter()
     shifts = luigi.ListParameter()
     spacing = luigi.FloatParameter()
@@ -37,25 +36,35 @@ class TimeSlideWaveformsParams(law.Task):
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
     seed = luigi.IntParameter()
-    segments_file = luigi.Parameter(default="")
     # verbose = luigi.BoolParameter(default=False)
 
 
 @inherits(TimeSlideWaveformsParams)
-class GenerateTimeslideWaveforms(
+class DeployTimeslideWaveforms(
     AframeDataTask,
     law.LocalWorkflow,
     StaticMemoryWorkflow,
 ):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        os.makedirs(self.data_dir, exist_ok=True)
-        if not self.segments_file:
-            self.segments_file = os.path.join(self.data_dir, "segments.txt")
+    def workflow_requires(self):
+        reqs = super().workflow_requires()
+        reqs["test_segments"] = FetchTest.req(
+            self,
+            segments_file=os.path.join(self.output_dir, "segments.txt"),
+            data_dir=os.path.join(self.output_dir, "background"),
+            condor_directory=os.path.join(self.condor_directory, "test"),
+        )
+        return reqs
 
-        if self.job_log and not os.path.isabs(self.job_log):
-            os.makedirs(self.log_dir, exist_ok=True)
-            self.job_log = os.path.join(self.log_dir, self.job_log)
+    def requires(self):
+        reqs = {}
+        reqs["test_segments"] = FetchTest.req(
+            self,
+            branch=-1,
+            segments_file=os.path.join(self.output_dir, "segments.txt"),
+            data_dir=os.path.join(self.output_dir, "background"),
+            condor_directory=os.path.join(self.condor_directory, "test"),
+        )
+        return reqs
 
     def load_prior(self):
         module_path, prior = self.prior.rsplit(".", 1)
@@ -123,6 +132,7 @@ class GenerateTimeslideWaveforms(
     def run(self):
         import io
 
+        import h5py
         from data.timeslide_waveforms.timeslide_waveforms import (
             timeslide_waveforms,
         )
@@ -152,8 +162,8 @@ class GenerateTimeslideWaveforms(
             )
 
 
-@inherits(TimeSlideWaveformsParams)
-class MergeTimeslideWaveforms(AframeDataTask):
+@inherits(DeployTimeslideWaveforms)
+class TimeslideWaveforms(AframeDataTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = os.path.join(self.output_dir, "waveforms.hdf5")
@@ -166,6 +176,12 @@ class MergeTimeslideWaveforms(AframeDataTask):
             law.LocalFileTarget(self.waveform_output),
             law.LocalFileTarget(self.rejected_output),
         ]
+
+    def requires(self):
+        return DeployTimeslideWaveforms.req(
+            self,
+            condor_directory=os.path.join(self.condor_directory, "timeslides"),
+        )
 
     @property
     def targets(self):
