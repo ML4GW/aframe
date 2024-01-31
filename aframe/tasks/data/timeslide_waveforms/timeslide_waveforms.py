@@ -117,9 +117,9 @@ class DeployTimeslideWaveforms(
 
     @property
     def psd_segment(self):
-        return list(
-            self.input()["train_segments"].collection.targets.values()
-        )[-1]
+        return list(self.input()["test_segments"].collection.targets.values())[
+            -1
+        ]
 
     @property
     def max_shift(self):
@@ -180,7 +180,9 @@ class TimeslideWaveforms(AframeDataTask):
     def requires(self):
         return DeployTimeslideWaveforms.req(
             self,
-            condor_directory=os.path.join(self.condor_directory, "timeslides"),
+            condor_directory=os.path.join(
+                self.condor_directory, "timeslide_waveforms"
+            ),
         )
 
     @property

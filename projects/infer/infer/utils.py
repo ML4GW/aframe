@@ -103,14 +103,14 @@ def aggregate_results(output_directory: Path):
     background file and foreground file. Remove the directory
     containing the individual segment results.
     """
-    background, foreground = EventSet(), RecoveredInjectionSet()
-    for data_dir in (output_directory / "tmp").iterdir():
-        bckground = EventSet.read(data_dir / "background.hdf5")
-        frground = RecoveredInjectionSet.read(data_dir / "foreground.hdf5")
+    tmpdir = output_directory / "tmp"
 
-        background.append(bckground)
-        foreground.append(frground)
+    back_files = [d / "background.hdf5" for d in tmpdir.iterdir()]
+    fore_files = [d / "foreground.hdf5" for d in tmpdir.iterdir()]
 
-    background.write(output_directory / "background.hdf5")
-    foreground.write(output_directory / "foreground.hdf5")
-    shutil.rmtree(output_directory / "tmp")
+    EventSet.aggregate(
+        back_files, output_directory / "background.hdf5", clean=False
+    )
+    RecoveredInjectionSet.aggregate(
+        fore_files, output_directory / "foreground.hdf5", clean=False
+    )

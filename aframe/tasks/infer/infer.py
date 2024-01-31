@@ -27,6 +27,8 @@ def get_poetry_env(path):
         )
     except subprocess.CalledProcessError:
         logging.warning("Infer directory is not a valid poetry environment")
+    except FileNotFoundError:
+        logging.warning("Infer directory is not a valid poetry environment")
     else:
         output = output.decode("utf-8").strip()
     return output

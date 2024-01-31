@@ -7,6 +7,7 @@ from infer.utils import aggregate_results, build_condor_submit, wait
 
 from hermes.aeriel.serve import serve
 from hermes.stillwater import ServerMonitor
+from utils.logging import configure_logging
 
 
 def deploy_local(
@@ -29,6 +30,8 @@ def deploy_local(
     num_parallel_jobs: int,
     model_version: int = -1,
 ):
+    configure_logging(verbose=True)
+
     job = build_condor_submit(
         ip_address,
         model_name,
@@ -51,6 +54,8 @@ def deploy_local(
     log_dir = output_dir / "logs"
     log_dir.mkdir(exist_ok=True, parents=True)
     server_log = log_dir / "server.log"
+    logging.info("Starting server")
+
     with serve(model_repo_dir, image, log_file=server_log, wait=True):
         # launch inference jobs via condor
         logging.info("Server online")

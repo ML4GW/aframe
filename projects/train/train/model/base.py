@@ -51,7 +51,9 @@ class AframeBase(pl.LightningModule):
 
     def get_logger(self):
         logger_name = "AframeModel"
-        return logging.getLogger(logger_name)
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        return logger
 
     def forward(self, X: Tensor) -> Tensor:
         """

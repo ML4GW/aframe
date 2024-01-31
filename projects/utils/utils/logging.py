@@ -5,7 +5,9 @@ from typing import Optional, Union
 
 
 def configure_logging(
-    filename: Optional[Union[str, Path]] = None, verbose: bool = False
+    filename: Optional[Union[str, Path]] = None,
+    verbose: bool = False,
+    root: Optional[str] = None,
 ) -> None:
     """
     Set up logging format in a consistent way across projects
