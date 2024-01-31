@@ -127,11 +127,12 @@ class TestRecoveredInjectionSet:
         return injections.InterferometerResponseSet(num_injections=6, **params)
 
     def test_recover(self, event_set, response_set):
-        print(event_set, response_set)
         obj = events.RecoveredInjectionSet.recover(event_set, response_set)
         assert len(obj) == 6
         assert (
             obj.detection_statistic == np.array([6, 14, 8, 6, 14, 8])
         ).all()
         assert obj.Tb == 100
+        assert np.all(obj.shift == np.array([0, 0, 0, 1, 1, 1]))
+        assert np.all(obj.detection_time == np.array([1, 9, 3, 1, 9, 3]))
         assert obj.num_injections == 6
