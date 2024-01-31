@@ -89,3 +89,12 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
         with self.output().open("w") as f:
             with h5py.File(f, "w") as h5file:
                 X.write(h5file, format="hdf5")
+
+
+# renaming tasks to allow specifying diff params in config files
+class FetchTest(Fetch):
+    pass
+
+
+class FetchTrain(Fetch):
+    pass

@@ -81,7 +81,7 @@ class RecoveredInjectionSet(InterferometerResponseSet):
     @classmethod
     def recover(cls, events: EventSet, injections: InterferometerResponseSet):
         obj = cls()
-        for shift in np.unique(events.shift, axis=-1):
+        for shift in np.unique(events.shift, axis=0):
             # get the all events and injections at the current shift
             evs = events.get_shift(shift)
             injs = injections.get_shift(shift)

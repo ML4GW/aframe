@@ -26,6 +26,7 @@ def infer(
     for i, (x, x_inj) in enumerate(tqdm(sequence)):
         sequence_start = i == 0
         sequence_end = i == len(sequence) - 1
+
         client.infer(
             x,
             request_id=i,
@@ -33,6 +34,7 @@ def infer(
             sequence_start=sequence_start,
             sequence_end=sequence_end,
         )
+
         client.infer(
             x_inj,
             request_id=i,

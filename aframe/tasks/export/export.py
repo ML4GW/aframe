@@ -7,7 +7,6 @@ from aframe.base import AframeSingularityTask
 
 class ExportParams(law.Task):
     weights = luigi.Parameter(default="")
-    fftlength = luigi.FloatParameter()
     fduration = luigi.FloatParameter()
     kernel_length = luigi.FloatParameter()
     inference_sampling_rate = luigi.FloatParameter()
@@ -21,7 +20,7 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    logfile = luigi.Parameter()
+    fftlength = luigi.FloatParameter(default=None)
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
 
@@ -34,13 +33,17 @@ class ExportLocal(AframeSingularityTask):
         return law.LocalFileTarget(self.repository_directory)
 
     @property
+    def default_image(self):
+        return "export.sif"
+
+    @property
     def num_ifos(self):
         return len(self.ifos)
 
     def run(self):
         from export.main import export
 
-        with self.input().open("r") as f:
+        with self.input().open("rb") as f:
             export(
                 f,
                 self.repository_directory,

@@ -55,6 +55,10 @@ class AframeDataTask(AframeSingularityTask):
     job_log = luigi.Parameter(default="")
 
     @property
+    def default_image(self):
+        return "data.sif"
+
+    @property
     def client(self):
         return S3Client(endpoint_url=s3().endpoint_url)
 

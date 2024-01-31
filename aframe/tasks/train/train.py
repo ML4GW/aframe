@@ -14,7 +14,7 @@ from aframe.base import AframeRayTask, AframeSingularityTask, logger
 from aframe.config import ray_worker
 from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
-from aframe.tasks.train.config import wandb
+from aframe.tasks.train.config import train_remote, wandb
 from aframe.utils import stream_command
 
 if TYPE_CHECKING:
@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 
 
 class TrainLocal(TrainBase, AframeSingularityTask):
+    @property
+    def default_image(self):
+        return "train.sif"
+
     def sandbox_env(self, _) -> Dict[str, str]:
         env = super().sandbox_env(_)
         for key in ["name", "entity", "project", "group", "tags", "api_key"]:
@@ -50,11 +54,13 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 
 
 class TrainRemote(RemoteTrainBase, KubernetesJobTask):
-    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:dev")
-    min_gpu_memory = luigi.IntParameter(default=15000)
-    request_gpus = luigi.IntParameter(default=4)
-    request_cpus = luigi.IntParameter(default=24)
-    request_cpu_memory = luigi.Parameter(default="64Gi")
+    image = luigi.Parameter(default=train_remote().image)
+    min_gpu_memory = luigi.IntParameter(default=train_remote().min_gpu_memory)
+    request_gpus = luigi.IntParameter(default=train_remote().request_gpus)
+    request_cpus = luigi.IntParameter(default=train_remote().request_cpus)
+    request_cpu_memory = luigi.Parameter(
+        default=train_remote().request_cpu_memory
+    )
 
     @property
     def name(self):

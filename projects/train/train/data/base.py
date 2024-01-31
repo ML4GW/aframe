@@ -72,6 +72,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         num_valid_views: int = 4,
         min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
+        verbose: bool = False,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -95,7 +96,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # generate our local node data directory
         # if our specified data source is remote
         self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
-        print(self.data_dir)
+        self.verbose = verbose
 
     # ================================================ #
     # Distribution utilities
@@ -140,8 +141,10 @@ class BaseAframeDataset(pl.LightningDataModule):
     def get_logger(self, world_size, rank):
         logger_name = "AframeDataset"
         if world_size > 1:
-            logger_name += f":{rank}"
-        return logging.getLogger(logger_name)
+            logger_name += f"{rank}"
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        return logger
 
     # ================================================ #
     # Re-paramterizing some attributes
@@ -327,6 +330,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         with h5py.File(self.train_fnames[0], "r") as f:
             sample_rate = 1 / f[self.hparams.ifos[0]].attrs["dx"]
+
         self._logger.info(f"Inferred sample rate {sample_rate}")
 
         # now define some of the augmentation transforms

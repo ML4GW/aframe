@@ -21,6 +21,8 @@ class WaveformParams(law.Task):
 
 @inherits(WaveformParams)
 class GenerateWaveforms(AframeDataTask):
+    image = luigi.Parameter(default="data.sif")
+
     def output(self):
         return s3_or_local(self.output_file, client=self.client)
 

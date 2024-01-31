@@ -27,6 +27,8 @@ def get_poetry_env(path):
         )
     except subprocess.CalledProcessError:
         logging.warning("Infer directory is not a valid poetry environment")
+    except FileNotFoundError:
+        logging.warning("Infer directory is not a valid poetry environment")
     else:
         output = output.decode("utf-8").strip()
     return output
@@ -110,7 +112,7 @@ class InferLocal(InferBase):
 
     @property
     def model_repo_dir(self):
-        return self.input()["export"].path
+        return self.input()["model_repository"].path
 
     def run(self):
         from infer.deploy.local import deploy_local
