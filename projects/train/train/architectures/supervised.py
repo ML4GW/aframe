@@ -70,3 +70,17 @@ class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
 
 
 # TODO: implement simple torchvision ResNet wrapper for frequency domain
+class SupervisedFrequencyDomainResNet(SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        layers: list[int],
+        kernel_size: int = 3,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
+        norm_layer: Optional[NormLayer] = None,
+    ) -> None:
+        super().__init__()
+        raise NotImplementedError
