@@ -40,6 +40,7 @@ class AframeBase(pl.LightningModule):
         pct_lr_ramp: float,
         patience: Optional[int] = None,
         save_top_k_models: int = 10,
+        verbose: bool = False,
     ) -> None:
         super().__init__()
         # construct our model up front and record all
@@ -47,6 +48,7 @@ class AframeBase(pl.LightningModule):
         self.model = arch
         self.metric = metric
         self.save_hyperparameters(ignore=["arch", "metric"])
+        self.verbose = verbose
         self._logger = self.get_logger()
 
     def get_logger(self):

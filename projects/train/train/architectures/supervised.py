@@ -5,6 +5,7 @@ from torchtyping import TensorType
 
 from ml4gw.nn.resnet_1d import NormLayer, ResNet1D
 from train.architectures import Architecture
+from train.architectures.networks import Xylophone
 
 # need this for type checking
 batch = channels = None
@@ -51,6 +52,19 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
             groups=groups,
             width_per_group=width_per_group,
             stride_type=stride_type,
+            norm_layer=norm_layer,
+        )
+
+
+class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        norm_layer: Optional[NormLayer] = None,
+    ):
+        super().__init__(
+            num_ifos,
+            classes=1,
             norm_layer=norm_layer,
         )
 
