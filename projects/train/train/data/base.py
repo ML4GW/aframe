@@ -245,9 +245,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         is in the middle, but we should really stop
         this. TODO: stop this
         """
-        size = int(dataset.shape[-1] // 2)
-        pad = int(0.02 * self.sample_rate)
-        signals = torch.Tensor(dataset[start:stop, : size + pad])
+        signals = torch.Tensor(dataset[start:stop])
         self._logger.info("Waveforms loaded")
 
         cross, plus = signals[:, 0], signals[:, 1]
