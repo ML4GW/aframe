@@ -3,7 +3,8 @@ from typing import Literal, Optional
 from torch import Tensor
 from torchtyping import TensorType
 
-from ml4gw.nn.resnet_1d import NormLayer, ResNet1D
+from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
+from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from train.architectures import Architecture
 from train.architectures.networks import Xylophone
 
@@ -69,8 +70,7 @@ class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
         )
 
 
-# TODO: implement simple torchvision ResNet wrapper for frequency domain
-class SupervisedFrequencyDomainResNet(SupervisedArchitecture):
+class SupervisedFrequencyDomainResNet(ResNet2D, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
@@ -82,5 +82,14 @@ class SupervisedFrequencyDomainResNet(SupervisedArchitecture):
         stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
         norm_layer: Optional[NormLayer] = None,
     ) -> None:
-        super().__init__()
-        raise NotImplementedError
+        super().__init__(
+            num_ifos,
+            layers=layers,
+            classes=1,
+            kernel_size=kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=norm_layer,
+        )
