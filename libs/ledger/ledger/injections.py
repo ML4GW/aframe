@@ -177,7 +177,7 @@ class EventParameterSet(Ledger):
     Assume GPS times always correspond to un-shifted data
     """
 
-    gps_time: np.ndarray = parameter()
+    injection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()  # 2D with shift values along 1th axis
     snr: np.ndarray = parameter()
 
@@ -195,9 +195,9 @@ class EventParameterSet(Ledger):
 
         mask = True
         if start is not None:
-            mask &= self.gps_time >= start
+            mask &= self.injection_time >= start
         if end is not None:
-            mask &= self.gps_time < end
+            mask &= self.injection_time < end
         return self[mask]
 
 
@@ -222,7 +222,7 @@ class ExtrinsicParameterSet(EventParameterSet, SkyLocationParameterSet):
 
 # note, dataclass inheritance goes from last to first,
 # so the ordering of kwargs here would be:
-# mass1, mass2, ..., ra, dec, psi, gps_time, shift, sample_rate, h1, l1
+# mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate, h1, l1
 @dataclass
 class InterferometerResponseSet(
     InjectionMetadata, ExtrinsicParameterSet, IntrinsicParameterSet
@@ -268,7 +268,7 @@ class InterferometerResponseSet(
                 return cls._load_with_idx(f, None)
 
             duration = f.attrs["duration"]
-            times = f["parameters"]["gps_time"][:]
+            times = f["parameters"]["injection_time"][:]
 
             mask = True
             if start is not None:
@@ -319,13 +319,13 @@ class InterferometerResponseSet(
         initial timestamp `start`
         """
         stop = start + x.shape[-1] / self.sample_rate
-        mask = self.gps_time >= (start - self.duration / 2)
-        mask &= self.gps_time <= (stop + self.duration / 2)
+        mask = self.injection_time >= (start - self.duration / 2)
+        mask &= self.injection_time <= (stop + self.duration / 2)
 
         if not mask.any():
             return x
 
-        times = self.gps_time[mask]
+        times = self.injection_time[mask]
         waveforms = self.waveforms[mask]
 
         # potentially pad x to inject waveforms

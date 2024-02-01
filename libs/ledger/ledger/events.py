@@ -12,7 +12,7 @@ F = TypeVar("F", np.ndarray, float)
 @dataclass
 class EventSet(Ledger):
     detection_statistic: np.ndarray = parameter()
-    gps_time: np.ndarray = parameter()
+    detection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()
     Tb: float = metadata(default=0)
 
@@ -56,12 +56,13 @@ class EventSet(Ledger):
         nb = self.nb(threshold)
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
 
-    def apply_vetos(self, vetos: np.ndarray):
-        # TimeSlideEventSet does not have shift information,
-        # so apply vetoes as if the shift is zero
-        mask = np.logical_and(
-            vetos[:, :1] < self.time, vetos[:, 1:] > self.time
-        )
+    def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
+        # idx corresponds to the index of the shift
+        # (i.e. which ifo to apply vetoes for)
+        shifts = self.shift[:, idx]
+        times = self.detection_time + shifts
+
+        mask = np.logical_and(vetos[:, :1] < times, vetos[:, 1:] > times)
 
         # mark a background event as vetoed
         # if it falls into _any_ of the segments
@@ -71,24 +72,27 @@ class EventSet(Ledger):
         return self[~veto_mask]
 
 
-# inherit from TimeSlideEventSet since injection
-# will already have shift information recorded
 @dataclass
-class RecoveredInjectionSet(InterferometerResponseSet):
-    detection_statistic: np.ndarray = parameter()
-    detection_time: np.ndarray = parameter()
+class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
+    @classmethod
+    def compare_metadata(cls, key, ours, theirs):
+        if key == "num_injections":
+            return InterferometerResponseSet.compare_metadata(
+                key, ours, theirs
+            )
+        return EventSet.compare_metadata(key, ours, theirs)
 
     @classmethod
     def recover(cls, events: EventSet, injections: InterferometerResponseSet):
         obj = cls()
-        for shift in np.unique(events.shift, axis=-1):
+        for shift in np.unique(events.shift, axis=0):
             # get the all events and injections at the current shift
             evs = events.get_shift(shift)
             injs = injections.get_shift(shift)
 
             # for each injection, find the event closest to it in time
             # TODO: should this just look _after_ the event?
-            diffs = np.abs(injs.gps_time[:, None] - evs.gps_time)
+            diffs = np.abs(injs.injection_time[:, None] - evs.detection_time)
             idx = diffs.argmin(axis=-1)
             evs = evs[idx]
 
@@ -96,13 +100,18 @@ class RecoveredInjectionSet(InterferometerResponseSet):
             # shift and then append it onto our running ledger
             fields = set(cls.__dataclass_fields__)
             fields &= set(injs.__dataclass_fields__)
+
             kwargs = {k: getattr(injs, k) for k in fields}
+            kwargs["num_injections"] = len(injs)
+
             subobj = cls(
                 detection_statistic=evs.detection_statistic,
-                detection_time=evs.gps_time,
+                detection_time=evs.detection_time,
                 **kwargs
             )
             obj.append(subobj)
+
+        obj.Tb = events.Tb
         return obj
 
     def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
