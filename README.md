@@ -13,30 +13,28 @@ An attempt to overhaul and modernize the infrastructure to run [`aframe`](https:
 - Data-distributed model training
 - Distributed hyperparameter searching
 
-## How to get started
-All the instructions you'll see here are intended for running on LDG. Start by ensuring you have:
-- A local installation of `poetry` (TODO: link)
-- LIGO data credentials (TODO: standard link for this)
-- A Nautilus cluster account (TODO: link)
-- S3 storage credentials (TODO: link to Nautilus instructions) and that they're written to a local file `$HOME/.aws/credentials` as
-```
-[default]
-aws_access_key_id = <access key>
-aws_secret_access_key = <secret key>
-```
-- A Weight & Biases account for remote experiment tracking
+## Getting Started
+Please see the [ml4gw quickstart](https://github.com/EthanMarx/ml4gw-quickstart/) for help on setting up your environment 
+on the LIGO Data Grid (LDG) and for configuring access to Weights and Biases, and the Nautilus hyperclustr. 
+This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
+required to run `aframe`. 
 
 ### Quickstart: low-friction, local development
-Each sub-task in `aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy.
-You can build and execute code inside these containers locally. For example, to build the training application:
+Each sub-task in `aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy. These live under the `projects` sub-directory. The projects include
 
+- `data` : Querying strain data and generating waveforms for training and testing.
+- `train` : Pytorch lightning code for training neural-networks.
+- `export`: Exporting trained networks as accelerated executables for inference. 
+- `infer`: Launching triton inference servers and deploying inference clients to analyze timeslides and injections.
+- `utils`: General utilites used by all projects (TODO: move this under `libs`)
+
+You can build and execute code inside these containers locally. As an example, to build the training application:
 ```
 mkdir ~/aframe/images
 cd projects/train
 apptainer build ~/aframe/images/train.sif apptainer.def
 ```
-
-This will build an Apptainer container image at `~/aframe/images/train.sif`. You can then launch a local training run (assuming you're on a node with a GPU) by doing something like (assuming you've already generated some data TODO: add this step)
+This will build an Apptainer container image at `~/aframe/images/train.sif`. You can then launch a local training run by running a command like
 
 ```
 mkdir ~/aframe/results
@@ -50,26 +48,29 @@ APPTAINERENV_CUDA_VISIBLE_DEVICES=<ID of GPU you want to train on> apptainer run
         --trainer.logger.name=my-first-run \
         --trainer.logger.save_dir=~/aframe/results/my-first-run
 ```
-This will infer most of your training arguments from the YAML config that got put into the container at build time. If you want to change this config, or if you change any code and you want to see those changes reflected inside the container, you can simply update the start of the command to read `apptainer run --nv --bind .:/opt/aframe`.
+This will infer most of your training arguments from the YAML config that got put into the container at build time. If you want to change this config, or if you change any code and you want to see those changes reflected inside the container, you can simply update the start of the command to read `apptainer run --nv --bind .:/opt/aframe`. 
 
 Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove all the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
 
 You can even train using multiple GPUS, simply by specifying a list of comma-separated GPU indices to `APPTAINERENV_CUDA_VISIBLE_DEVICES`.
 
-### One layer up: `luigi`
+### One layer up: `luigi` and `law`
 That command above is simple enough, but it might be nice to 1) specify e.g. W&B arguments with configs, and 2) longer term, incorporate this train task as one step in a larger pipeline.
-To do this, this repo takes advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular tasks that can be strung into pipelines.
-To execute the train task via `luigi`, first install the current project via `poetry`
+To do this, this repo takes advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular tasks that can be strung into pipelines. 
+To understand the structure of `luigi` tasks, it is reccommended to read the [docs](https://luigi.readthedocs.io/en/stable/).
+
+The top level `aframev2` repository contains the [environment](pyproject.toml) that is used to launch tasks with `luigi` and `law`.
+to install this environment, simply run 
 
 ```
 poetry install
 ```
 
-Then run
+To run a local training job you can now run 
 
 ```
 poetry run law run aframe.TrainLocal \
-    --gpus <ID of GPU to train on> \
+    --gpus <ID of GPUs to train on> \
     --image ~/aframe/images/train.sif \
     --config /opt/aframe/projects/train/config.yaml \
     --data-dir ~/aframe/data/train \
@@ -124,16 +125,7 @@ This isn't implemented at the `luigi` level yet, but the skeleton of how it will
     - If you're tuning remotely, your `storage_dir` should be a remote S3 bucket that all your workers can access. You'll need to specify an `AWS_ENDPOINT_URL` environment variable for those workers so they know where your bucket lives
 
 ## Where things stand and where they can go
-### Model architecture classes
-- Time Domain
-    - Fully implemented and working for supervised case
-- Frequency Domain
-    - Not implemented yet, but all the classes will look almost exactly the way they look for the time domain supervised case, except for
-        - `augment` on the `Dataset` object should just call `super().augment(X)` then `return spectrogram(X)`. This will require adding `torchaudio` as a dependency
-        - The `Architecture` subclass will just need to implement a 2D ResNet from `torchvision`. See how the time domain supervised case wraps `ml4gw`'s 1D ResNet
 ### Optimization schemes
-- Supervised
-    - Implemented (for time domain, see frequency domain discussion above)
 - Semi-supervised
     - Simple autoencoder implementation working, using max correlation across shifts as loss function
         - See comments in model subclass for discussion on how to make this more exotic
