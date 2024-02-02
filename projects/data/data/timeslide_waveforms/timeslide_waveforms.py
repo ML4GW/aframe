@@ -128,7 +128,7 @@ def timeslide_waveforms(
 
     # now, set the injection times and shifts,
     # and create the LigoResponseSet object
-    parameters["gps_time"] = injection_times
+    parameters["injection_time"] = injection_times
     parameters["shift"] = np.array([shifts for _ in range(n_samples)])
 
     output_dir.mkdir(parents=True, exist_ok=True)
