@@ -12,7 +12,7 @@ model:
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNormGetter
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 16
     metric:
@@ -34,7 +34,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 512
+    batch_size: 384
     # kernel_length:
     psd_length: 8
     # fduration:

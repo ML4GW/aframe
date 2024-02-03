@@ -257,7 +257,7 @@ def get_timeslides(
     # run all the timeslides on the current device
     try:
         world_size = torch.distributed.get_world_size()
-    except RuntimeError:
+    except ValueError:
         return timeslides, None
     if world_size == 1:
         return timeslides, None

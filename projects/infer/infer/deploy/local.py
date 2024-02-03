@@ -72,4 +72,5 @@ def deploy_local(
             cluster = job.build_submit(fancyname=False)
             wait(cluster)
 
+    logging.info("Aggregating results")
     aggregate_results(output_dir)
