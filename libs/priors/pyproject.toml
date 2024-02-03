@@ -1,19 +1,18 @@
 [tool.poetry]
-name = "ledger"
+name = "priors"
 version = "0.1.0"
-description = "Objects for storing and manipulating aframe data"
-authors = ["Ethan Marx <emarx@mit.edu>"]
+description = "Priors used for aframe analysis"
+authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
-#readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
+astropy = "^5.0"
+numpy = ">=1.22.0,<1.22.4"
 bilby = "^2.2.2"
-h5py = "^3.10.0"
-
 
 [tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
+pytest = "^7.3"
 
 [build-system]
 requires = ["poetry-core"]
