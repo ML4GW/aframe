@@ -207,6 +207,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return cluster
 
     def complete(self):
+        # TODO: determine best way of definine
+        # completion for tune jobs
         return False
 
     def run(self):
