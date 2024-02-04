@@ -10,7 +10,7 @@ from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import nautilus_urls, ray_head, ray_worker, s3
+from aframe.config import ray_head, ray_worker
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
@@ -43,6 +43,12 @@ class AframeSandbox(singularity.SingularitySandbox):
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
+
+        # mount the users /local directory into the container
+        # for storing large temporary files
+        user = os.getenv("USER")
+        local_dir = f"/local/{user}"
+        volumes[local_dir] = local_dir
 
         return volumes
 
@@ -90,8 +96,7 @@ class AframeSandboxTask(law.SandboxTask):
         # map in local tmpdir (should be /local/albert.einstein)
         # which has is enough memory to write large temp
         # files with luigi/law
-        for envvar in ["TMPDIR"]:
-            env[envvar] = os.getenv(envvar, "")
+        env["TMPDIR"] = f"/local/{os.getenv('USER')}"
 
         # if gpus are specified, expose them inside container
         # via CUDA_VISIBLE_DEVICES env variable
@@ -164,7 +169,7 @@ class AframeRayTask(AframeSingularityTask):
     """
 
     container = luigi.Parameter(
-        default="ghcr.io/ml4gw/aframev2/train:dev", significant=False
+        default="ghcr.io/ml4gw/aframev2/train:main", significant=False
     )
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)
@@ -205,12 +210,13 @@ class AframeRayTask(AframeSingularityTask):
             label=self.label or None,
         )
         cluster = self.configure_cluster(cluster)
-
+        self.cluster = cluster
         logger.info("Creating ray cluster")
+        cluster.dump("ray.yaml")
         cluster.create()
         cluster.wait()
         logger.info("ray cluster online")
-        self.cluster = cluster
+
         self.ip = cluster.get_ip()
 
     def sandbox_after_run(self):
@@ -223,21 +229,7 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster.delete()
             self.cluster = None
 
-
-class S3Task:
-    def get_s3_credentials(self):
-        keys = ["aws_access_key_id", "aws_secret_access_key"]
-        secret = {}
-        for key in keys:
-            secret[key.upper()] = getattr(s3(), key)
-        return secret
-
-    def get_internal_s3_url(self):
-        # if user specified an external nautilus url,
-        # map to the corresponding internal url,
-        # since the internal url is what is used by the
-        # kubernetes cluster to access s3
-        url = s3().endpoint_url
-        if url in nautilus_urls:
-            return nautilus_urls[url]
-        return url
+    def on_failure(self, exc):
+        if self.cluster is not None:
+            self.cluster.delete()
+        return super().on_failure(exc)

@@ -26,6 +26,23 @@ class s3(luigi.Config):
         default=os.getenv("AWS_SECRET_ACCESS_KEY")
     )
 
+    def get_s3_credentials(self):
+        keys = ["aws_access_key_id", "aws_secret_access_key"]
+        secret = {}
+        for key in keys:
+            secret[key.upper()] = getattr(self, key)
+        return secret
+
+    def get_internal_s3_url(self):
+        # if user specified an external nautilus url,
+        # map to the corresponding internal url,
+        # since the internal url is what is used by the
+        # kubernetes cluster to access s3
+        url = self.endpoint_url
+        if url in nautilus_urls:
+            return nautilus_urls[url]
+        return url
+
 
 class Defaults:
     TRAIN = os.path.join(project_base, "train", "config.yaml")

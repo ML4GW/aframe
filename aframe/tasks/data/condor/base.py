@@ -70,6 +70,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         # forward current path and law config
         environment += f'PATH={os.getenv("PATH")} '
         environment += f"LAW_CONFIG_FILE={self.law_config} "
+        environment += f"USER={os.getenv('USER')} "
 
         # forward any env variables that start with AFRAME_
         # that the law config may need to parse
