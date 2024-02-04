@@ -33,7 +33,6 @@ class TrainDatagen(law.WrapperTask):
             segments_file=os.path.join(
                 paths().condordir, "train", "segments.txt"
             ),
-            segments_file=os.path.join(paths().train_datadir, "segments.txt"),
             data_dir=os.path.join(paths().train_datadir, "background"),
             condor_directory=os.path.join(paths().condordir, "train"),
         )
