@@ -9,7 +9,8 @@ import psutil
 from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
-from aframe.base import AframeSandboxTask, S3Task
+from aframe.base import AframeSandboxTask
+from aframe.config import s3
 from aframe.tasks.export.export import ExportParams
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
@@ -26,8 +27,6 @@ def get_poetry_env(path):
             ["poetry", "env", "info", "-p"], cwd=path
         )
     except subprocess.CalledProcessError:
-        logging.warning("Infer directory is not a valid poetry environment")
-    except FileNotFoundError:
         logging.warning("Infer directory is not a valid poetry environment")
     else:
         output = output.decode("utf-8").strip()
@@ -145,7 +144,7 @@ class InferLocal(InferBase):
 
 
 @inherits(InferParameters, ExportParams)
-class InferRemote(InferBase, S3Task):
+class InferRemote(InferBase):
     """
     Launch inference on a remote kubernetes cluster.
     """
@@ -187,9 +186,9 @@ class InferRemote(InferBase, S3Task):
         ]
 
     def configure_cluster(self, cluster):
-        secret = self.get_s3_credentials()
+        secret = s3().get_s3_credentials()
         cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
+        cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
         return cluster
 
     def sandbox_before_run(self):

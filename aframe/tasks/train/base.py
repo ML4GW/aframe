@@ -4,7 +4,6 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.base import S3Task
 from aframe.config import Defaults
 from aframe.tasks.train.config import wandb
 
@@ -90,7 +89,6 @@ class TrainBase(law.Task):
             args = self.configure_wandb(args)
 
         args.append(f"--trainer.logger.save_dir={self.run_dir}")
-        # args.append("--trainer.logger.name={}")
 
         return args
 
@@ -99,5 +97,5 @@ class TrainBase(law.Task):
 
 
 @inherits(RemoteParameters)
-class RemoteTrainBase(TrainBase, S3Task):
+class RemoteTrainBase(TrainBase):
     pass

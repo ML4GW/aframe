@@ -11,7 +11,7 @@ from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
 
 from aframe.base import AframeRayTask, AframeSingularityTask, logger
-from aframe.config import ray_worker
+from aframe.config import ray_worker, s3
 from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.config import train_remote, wandb
@@ -126,7 +126,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
             "kind": "Secret",
             "metadata": {"name": "s3-credentials", "type": "Opaque"},
         }
-        spec["stringData"] = self.get_s3_credentials()
+        spec["stringData"] = s3().get_s3_credentials()
 
         return Secret(resource=spec)
 
@@ -157,7 +157,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
                 "env": [
                     {
                         "name": "AWS_ENDPOINT_URL",
-                        "value": self.get_internal_s3_url(),
+                        "value": s3().get_internal_s3_url(),
                     },
                     {
                         "name": "WANDB_API_KEY",
@@ -189,6 +189,11 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     num_workers = luigi.IntParameter(default=ray_worker().replicas)
     gpus_per_worker = luigi.IntParameter(default=ray_worker().gpus_per_replica)
 
+    # image used locally to connect to the ray cluster
+    @property
+    def default_image(self):
+        return "train.sif"
+
     @property
     def use_wandb(self):
         # always use wandb logging for tune jobs
@@ -200,13 +205,15 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return ip
 
     def configure_cluster(self, cluster: "KubernetesRayCluster"):
-        secret = self.get_s3_credentials()
+        secret = s3().get_s3_credentials()
         cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
+        cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
         cluster.set_env({"WANDB_API_KEY": wandb().api_key})
         return cluster
 
     def complete(self):
+        # TODO: determine best way of definine
+        # completion for tune jobs
         return False
 
     def run(self):
