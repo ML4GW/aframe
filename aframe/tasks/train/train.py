@@ -53,7 +53,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         return dir.child("model.pt", type="f")
 
 
-class TrainRemote(RemoteTrainBase, KubernetesJobTask):
+class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     image = luigi.Parameter(default=train_remote().image)
     min_gpu_memory = luigi.IntParameter(default=train_remote().min_gpu_memory)
     request_gpus = luigi.IntParameter(default=train_remote().request_gpus)
@@ -61,6 +61,10 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
     request_cpu_memory = luigi.Parameter(
         default=train_remote().request_cpu_memory
     )
+
+    @property
+    def default_image(self):
+        return None
 
     @property
     def name(self):
@@ -179,6 +183,10 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
         self.secret.create()
         super().run()
 
+    def on_failure(self, exc):
+        self.secret.delete()
+        super().on_failure(exc)
+
 
 class TuneRemote(RemoteTrainBase, AframeRayTask):
     search_space = luigi.Parameter()
@@ -209,6 +217,13 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         cluster.add_secret("s3-credentials", env=secret)
         cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
         cluster.set_env({"WANDB_API_KEY": wandb().api_key})
+
+        cluster.head["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
+        cluster.worker["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ] = "Always"
         return cluster
 
     def complete(self):

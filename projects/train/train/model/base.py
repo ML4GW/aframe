@@ -38,6 +38,7 @@ class AframeBase(pl.LightningModule):
         metric: TimeSlideAUROC,
         learning_rate: float,
         pct_lr_ramp: float,
+        weight_decay: float = 0.0,
         patience: Optional[int] = None,
         save_top_k_models: int = 10,
         verbose: bool = False,
@@ -213,7 +214,9 @@ class AframeBase(pl.LightningModule):
         # https://arxiv.org/pdf/1706.02677.pdf
         lr = self.hparams.learning_rate * world_size
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr)
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(), lr, weight_decay=self.hparams.weight_decay
+        )
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             pct_start=self.hparams.pct_lr_ramp,

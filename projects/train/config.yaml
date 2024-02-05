@@ -22,6 +22,7 @@ model:
         pool_length: 8
 
     # optimization params
+    weight_decay: 0.0
     learning_rate: 0.000585
     pct_lr_ramp: 0.115
     # early stop
@@ -53,8 +54,8 @@ data:
     # validation args
     valid_frac: 0.25
     valid_stride: 0.5
-    num_valid_views: 4
-    valid_livetime: 86400
+    num_valid_views: 5
+    valid_livetime: 57600 
 trainer:
   # by default, use a local CSV logger.
   # Options in train task for using a
