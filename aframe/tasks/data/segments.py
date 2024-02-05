@@ -17,18 +17,19 @@ class Query(AframeDataTask):
     def output(self):
         return law.LocalFileTarget(self.segments_file)
 
-    @property
-    def flags(self):
-        flags = []
-        for ifo in self.ifos:
-            flags.append(f"{ifo}:{self.flag}")
+    def get_flags(self):
+        if self.flag == "DATA":
+            flags = [f"{ifo}_DATA" for ifo in self.ifos]  # open data flags
+        else:
+            flags = [f"{ifo}:{self.flag}" for ifo in self.ifos]
         return flags
 
     def run(self):
         from data.segments.segments import DataQualityDict
 
+        flags = self.get_flags()
         segments = DataQualityDict.query_segments(
-            self.flags,
+            flags,
             self.start,
             self.end,
             self.min_duration,
