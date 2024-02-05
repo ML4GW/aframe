@@ -53,7 +53,9 @@ class DataQualityDict(DataQualityDict):
         if flags:
             segments.update(cls.query_non_open(flags, start, end, **kwargs))
         if open_data_flags:
-            segments.update(cls.query_open(flags, start, end, **kwargs))
+            segments.update(
+                cls.query_open(open_data_flags, start, end, **kwargs)
+            )
 
         segments = segments.intersection().active
         if min_duration is not None:

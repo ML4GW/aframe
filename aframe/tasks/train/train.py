@@ -174,7 +174,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         spec["volumes"] = [
             {
                 "name": "dshm",
-                "emptyDir": {"sizeLimit": "16Gi", "medium": "Memory"},
+                "emptyDir": {"sizeLimit": "32Gi", "medium": "Memory"},
             }
         ]
         return spec
@@ -214,7 +214,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
     def configure_cluster(self, cluster: "KubernetesRayCluster"):
         secret = s3().get_s3_credentials()
-        cluster.add_secret("s3-credentials", env=secret)
+        cluster.add_secret("s3-credentials-tune", env=secret)
         cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
         cluster.set_env({"WANDB_API_KEY": wandb().api_key})
 
