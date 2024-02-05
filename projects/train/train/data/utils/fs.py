@@ -1,6 +1,6 @@
 import logging
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from tempfile import gettempdir
 
@@ -116,7 +116,7 @@ def download_training_data(bucket: str, data_dir: str):
     ]
     download = partial(_download, s3)
     path = "signals.hdf5"
-    with ProcessPoolExecutor() as executor:
+    with ThreadPoolExecutor() as executor:
         future = executor.submit(
             download, f"{bucket}/{path}", f"{data_dir}/{path}"
         )
