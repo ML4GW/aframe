@@ -232,4 +232,4 @@ class AframeRayTask(AframeSingularityTask):
     def on_failure(self, exc):
         if self.cluster is not None:
             self.cluster.delete()
-        return super().on_failure(exc)
+            self.cluster = None
