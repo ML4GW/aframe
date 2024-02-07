@@ -47,13 +47,13 @@ apptainer run ~/aframe/images/data.sif \
     python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
 ```
 
-Inspecting the output, it looks like theres quality data segments  `(1240579783, 1240579783)` and `(1240594562, 1240606748)`. Let's fetch strain data during those segments. One will be used for training, the 
+Inspecting the output, (`vi ~/aframe/data/segments.txt`) it looks like there are quality data segments `(1240579783, 1240587612)` and `(1240594562, 1240606748)`. Let's fetch strain data during those segments. One will be used for training, the other for validating
 
 ```
 apptainer run ~/aframe/images/data.sif \
     python -m data fetch \
     --start 1240579783 \
-    --end 1240579783 \
+    --end 1240587612 \
     --channels='["H1", "L1"]' \ 
     --sample_rate 2048 \
     --output_directory ~/aframe/data/background/
