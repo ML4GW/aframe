@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+import s3fs
 import torch
 from export.snapshotter import add_streaming_input_preprocessor
 
@@ -17,6 +18,15 @@ def scale_model(model, instances):
         model.config.scale_instance_group(instances)
     except ValueError:
         model.config.add_instance_group(count=instances)
+
+
+def open_file(path, mode="rb"):
+    if path.startswith("s3://"):
+        fs = s3fs.S3FileSystem()
+        return fs.open(path, mode)
+    else:
+        # For local paths
+        return open(path, mode)
 
 
 def export(
@@ -47,7 +57,8 @@ def export(
         weights:
             File Like object or Path representing
             a set of trained weights that will be
-            exported to a model_repository.
+            exported to a model_repository. Supports
+            local and S3 paths.
         repository_directory:
             Directory to which to save the models and their
             configs
@@ -99,7 +110,9 @@ def export(
 
     # load in the model graph
     logging.info("Initializing model graph")
-    graph = nn = torch.jit.load(weights)
+    with open_file(weights, "rb") as f:
+        graph = nn = torch.jit.load(f)
+
     graph.eval()
     logging.info(f"Initialize:\n{nn}")
 
