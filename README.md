@@ -19,7 +19,7 @@ on the LIGO Data Grid (LDG) and for configuring access to [Weights and Biases](h
 This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
 required to run `aframe`. 
 
-**NOTE: this repository is a WIP. You will encounter bugs / undesired behavior. If you have any suggestions on making the development process easier, please open up an issue!**
+**NOTE: this repository is a WIP. You will encounter bugs, quirks, and undesired behavior. If you have any suggestions on making the development process easier, please open up an issue!**
 
 ### Quickstart: low-friction, local development
 Each sub-task in `aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy. These live under the `projects` sub-directory. The projects include
