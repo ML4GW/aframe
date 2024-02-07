@@ -51,11 +51,13 @@ Inspecting the output, it looks like theres quality data between `1240579783` an
 
 ```
 apptainer run ~/aframe/images/data.sif \
-    python -m data fetch --start 1240579783 --end 1240579783 --channels='["H1", "L1"]' --sample_rate 2048 --output_directory ~/aframe/data/background
+    python -m data fetch \
+    --start 1240579783 \
+    --end 1240579783 \
+    --channels='["H1", "L1"]' \ 
+    --sample_rate 2048 \
+    --output_directory ~/aframe/data/background/
 ```
-
-
-
 
 
 As an example, to build the training application:
