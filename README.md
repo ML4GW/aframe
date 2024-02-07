@@ -47,7 +47,7 @@ apptainer run ~/aframe/images/data.sif \
     python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
 ```
 
-Inspecting the output, it looks like theres quality data between `1240579783` and `1240579783`. Let's query that data
+Inspecting the output, it looks like theres quality data segments  `(1240579783, 1240579783)` and `(1240594562, 1240606748)`. Let's fetch strain data during those segments. One will be used for training, the 
 
 ```
 apptainer run ~/aframe/images/data.sif \
@@ -57,17 +57,37 @@ apptainer run ~/aframe/images/data.sif \
     --channels='["H1", "L1"]' \ 
     --sample_rate 2048 \
     --output_directory ~/aframe/data/background/
+
+apptainer run ~/aframe/images/data.sif \
+    python -m data fetch \
+    --start 1240594562 \
+    --end 1240606748 \
+    --channels='["H1", "L1"]' \ 
+    --sample_rate 2048 \
+    --output_directory ~/aframe/data/background/
 ```
 
+Finally, lets generate some waveforms:
 
-As an example, to build the training application:
+```
+apptainer run ~/aframe/images/data.sif \
+    python -m data waveforms \
+    --prior data.priors.priors.end_o3_ratesandpops \
+    --num_signals 10000 \
+    --waveform_duration 8 \
+    --sample_rate 2048 \
+    --output_file ~/aframe/data/signals.hdf5
+```
+
+Great! We are now ready to train a model! In the same fashion, let's build the training container:
+
 ```
 mkdir ~/aframe/images
 cd projects/train
 apptainer build ~/aframe/images/train.sif apptainer.def
 ```
-This will build an Apptainer container image at `~/aframe/images/train.sif`. You can then launch a local training run by running a command like
 
+and launch a training job!
 ```
 mkdir ~/aframe/results
 APPTAINERENV_CUDA_VISIBLE_DEVICES=<ID of GPU you want to train on> apptainer run --nv ~/aframe/images/train.sif \
@@ -80,6 +100,7 @@ APPTAINERENV_CUDA_VISIBLE_DEVICES=<ID of GPU you want to train on> apptainer run
         --trainer.logger.name=my-first-run \
         --trainer.logger.save_dir=~/aframe/results/my-first-run
 ```
+
 This will infer most of your training arguments from the YAML config that got put into the container at build time. If you want to change this config, or if you change any code and you want to see those changes reflected inside the container, you can simply update the start of the command to read `apptainer run --nv --bind .:/opt/aframe`. 
 
 Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove all the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
