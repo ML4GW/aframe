@@ -14,7 +14,7 @@ An attempt to overhaul and modernize the infrastructure to run [`aframe`](https:
 - Distributed hyperparameter searching
 
 ## Getting Started
-Please see the [ml4gw quickstart](https://github.com/EthanMarx/ml4gw-quickstart/) for help on setting up your environment 
+Please see the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) for help on setting up your environment 
 on the LIGO Data Grid (LDG) and for configuring access to Weights and Biases, and the Nautilus hyperclustr. 
 This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
 required to run `aframe`. 
