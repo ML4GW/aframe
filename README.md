@@ -55,7 +55,7 @@ Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track y
 You can even train using multiple GPUS, simply by specifying a list of comma-separated GPU indices to `APPTAINERENV_CUDA_VISIBLE_DEVICES`.
 
 ### One layer up: `luigi` and `law`
-That command above is simple enough, but it might be nice to 1) specify e.g. W&B arguments with configs, and 2) longer term, incorporate this train task as one step in a larger pipeline.
+That command above is simple enough, but it might be nice to 1) specify arguments with configs, and 2) Incorporate tasks as steps in a larger pipeline.
 To do this, this repo takes advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular tasks that can be strung into pipelines. 
 To understand the structure of `luigi` tasks, it is reccommended to read the [docs](https://luigi.readthedocs.io/en/stable/).
 
@@ -65,6 +65,8 @@ to install this environment, simply run
 ```
 poetry install
 ```
+
+in the root of this repository.
 
 To run a local training job you can now run 
 
@@ -80,6 +82,19 @@ poetry run law run aframe.TrainLocal \
 ```
 This has taken care of setting some sensible defaults for you, and allows for simpler syntax like the `--gpus` arg and `--use-wandb` which will configure most of your W&B settings for you.
 All tasks also come with a built-in `--dev` arg which will automatically map your current code into the container for super low-friction development.
+
+To see all the parameters a task has to offer, you can run 
+```
+poetry run law run aframe.path.to.task --help
+```
+
+### Final Layer: Pipelines
+As mentioned, `luigi` and `law` allow for the construction of large scale pipelines. The `aframe/pipelines/` directory contains common analysis pipelines. 
+Currently, only the `sandbox` pipeline is available. This pipeline will launch a single end-to-end `aframe` workflow consisting of training / testing data generation, model training, model export, and inference using a triton server. The easiest way to run the pipeline is to use the config file, which is specified in `law` via the `LAW_CONFIG_FILE` environment variable:
+
+```
+LAW_CONFIG_FILE=aframe/pipelines/sandbox/sandbox.cfg poetry run law run aframe.pipelines.sandbox.Sandbox --gpus <GPU IDs> 
+```
 
 ### One more layer: local hyperparameter tuning
 To search over hyperparameters, you can launch a local hyperparameter tuning job by running
