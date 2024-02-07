@@ -1,6 +1,7 @@
 import os
 
 import luigi
+from luigi.contrib.s3 import S3Client
 
 project_base = "/opt/aframe/projects"
 
@@ -42,6 +43,10 @@ class s3(luigi.Config):
         if url in nautilus_urls:
             return nautilus_urls[url]
         return url
+
+    @property
+    def client(self):
+        S3Client(endpoint_url=self.endpoint_url)
 
 
 class Defaults:

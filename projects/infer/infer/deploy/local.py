@@ -5,8 +5,8 @@ from typing import List
 
 from infer.utils import aggregate_results, build_condor_submit, wait
 
+from hermes.aeriel.monitor import ServerMonitor
 from hermes.aeriel.serve import serve
-from hermes.stillwater import ServerMonitor
 from utils.logging import configure_logging
 
 

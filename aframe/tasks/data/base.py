@@ -4,10 +4,8 @@ from pathlib import Path
 import law
 import luigi
 from law.contrib.singularity.config import config_defaults
-from luigi.contrib.s3 import S3Client
 
 from aframe.base import AframeSandbox, AframeSingularityTask
-from aframe.config import s3
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 root = Path(__file__).resolve().parent.parent.parent
@@ -57,10 +55,6 @@ class AframeDataTask(AframeSingularityTask):
     @property
     def default_image(self):
         return "data.sif"
-
-    @property
-    def client(self):
-        return S3Client(endpoint_url=s3().endpoint_url)
 
     @property
     def sandbox(self):

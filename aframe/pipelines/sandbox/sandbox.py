@@ -1,29 +1,17 @@
 import os
 
-import law
-import luigi
-
-from aframe.pipelines.base import TrainDatagen, paths
-from aframe.tasks import (
-    ExportLocal,
-    InferLocal,
-    TimeslideWaveforms,
-    TrainLocal,
-)
-
-
-class Train(TrainLocal):
-    def requires(self):
-        return TrainDatagen.req(self)
+from aframe.base import AframeWrapperTask
+from aframe.pipelines.config import paths
+from aframe.tasks import ExportLocal, TimeslideWaveforms, Train
+from aframe.tasks.infer import InferLocal
 
 
 class SandboxExport(ExportLocal):
     def requires(self):
         return Train.req(
             self,
-            image="train.sif",
             data_dir=paths().train_datadir,
-            run_dir=os.path.join(paths().rundir, "train"),
+            run_dir=os.path.join(paths().train_rundir),
         )
 
 
@@ -32,7 +20,9 @@ class SandboxInfer(InferLocal):
         reqs = {}
         reqs["model_repository"] = SandboxExport.req(
             self,
-            repository_directory=os.path.join(paths().rundir, "model_repo"),
+            repository_directory=os.path.join(
+                paths().results_dir, "model_repo"
+            ),
         )
         ts_waveforms = TimeslideWaveforms.req(
             self,
@@ -46,14 +36,11 @@ class SandboxInfer(InferLocal):
         return reqs
 
 
-class Sandbox(law.WrapperTask):
-    dev = luigi.BoolParameter(default=False)
-    gpus = luigi.Parameter(default="")
-
+class Sandbox(AframeWrapperTask):
     def requires(self):
         # simply call infer, which will
         # call all necessary downstream tasks!
         yield SandboxInfer.req(
             self,
-            output_dir=os.path.join(paths().rundir, "infer"),
+            output_dir=os.path.join(paths().results_dir, "infer"),
         )
