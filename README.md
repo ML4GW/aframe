@@ -85,9 +85,9 @@ poetry run law run aframe.TrainLocal \
 This has taken care of setting some sensible defaults for you, and allows for simpler syntax like the `--gpus` arg and `--use-wandb` which will configure most of your W&B settings for you.
 All tasks also come with a built-in `--dev` arg which will automatically map your current code into the container for super low-friction development.
 
-To see all the parameters a task has to offer, you can run 
+To see all the parameters a task has to offer, you can run e.g.
 ```
-poetry run law run aframe.path.to.task --help
+poetry run law run aframe.tasks.TrainLocal --help
 ```
 
 ### Final Layer: Pipelines
