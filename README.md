@@ -101,6 +101,12 @@ APPTAINERENV_CUDA_VISIBLE_DEVICES=<ID of GPU you want to train on> apptainer run
         --trainer.logger.save_dir=~/aframe/results/my-first-run
 ```
 
+If you inspect the possible arguments for the train project by running
+
+```
+apptainer run python -m train --help
+```
+
 This will infer most of your training arguments from the YAML config that got put into the container at build time. If you want to change this config, or if you change any code and you want to see those changes reflected inside the container, you can simply update the start of the command to read `apptainer run --nv --bind .:/opt/aframe`. 
 
 Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove all the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
