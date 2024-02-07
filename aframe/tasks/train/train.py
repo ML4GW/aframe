@@ -2,23 +2,26 @@ import json
 import os
 import shlex
 import sys
-from typing import TYPE_CHECKING, Dict
+from typing import Dict
 
 import law
 import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
+from luigi.util import inherits
 
-from aframe.base import AframeRayTask, AframeSingularityTask, logger
-from aframe.config import ray_worker, s3
-from aframe.targets import LawS3Target
-from aframe.tasks.train.base import RemoteTrainBase, TrainBase
-from aframe.tasks.train.config import train_remote, wandb
+from aframe.base import AframeSingularityTask, AframeWrapperTask, logger
+from aframe.config import s3
+from aframe.targets import Bytes, LawS3Target
+from aframe.tasks.train.base import (
+    RemoteParameters,
+    RemoteTrainBase,
+    TrainBase,
+    TrainBaseParameters,
+)
+from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
-
-if TYPE_CHECKING:
-    from ray_kube import KubernetesRayCluster
 
 
 class TrainLocal(TrainBase, AframeSingularityTask):
@@ -54,13 +57,18 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 
 
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
-    image = luigi.Parameter(default=train_remote().image)
-    min_gpu_memory = luigi.IntParameter(default=train_remote().min_gpu_memory)
-    request_gpus = luigi.IntParameter(default=train_remote().request_gpus)
-    request_cpus = luigi.IntParameter(default=train_remote().request_cpus)
-    request_cpu_memory = luigi.Parameter(
-        default=train_remote().request_cpu_memory
-    )
+    dev = luigi.BoolParameter(default=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.run_dir.startswith("s3://"):
+            raise ValueError(
+                "run_dir must be an s3 path for remote training tasks"
+            )
+        if not self.data_dir.startswith("s3://"):
+            raise ValueError(
+                "data_dir must be an s3 path for remote training tasks"
+            )
 
     @property
     def default_image(self):
@@ -76,7 +84,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     @property
     def pod_creation_wait_interal(self):
-        return 120
+        return 7200
 
     def get_config(self):
         with open(self.config, "r") as f:
@@ -85,8 +93,8 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return json_string
 
     def get_args(self):
-        # get args from base class, remove the first two
-        # which reference the config file, since we'll
+        # get args from base class removing the first two
+        # which reference the config file. We'll
         # need to set this as an environment variable of
         # raw yaml content to run remotely.
         args = super().get_args()
@@ -95,7 +103,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return args
 
     def output(self):
-        return LawS3Target(os.path.join(self.run_dir, "model.pt"))
+        return LawS3Target(
+            os.path.join(self.run_dir, "model.pt"), format=Bytes
+        )
 
     @property
     def gpu_constraints(self):
@@ -140,20 +150,20 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         spec["containers"] = [
             {
                 "name": "train",
-                "image": self.image,
+                "image": self.remote_image,
                 "volumeMounts": [{"mountPath": "/dev/shm", "name": "dshm"}],
                 "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
                 "resources": {
                     "limits": {
-                        "memory": f"{self.request_cpu_memory}",
-                        "cpu": f"{self.request_cpus}",
+                        "memory": f"{self.cpu_memory}",
+                        "cpu": f"{self.num_cpus}",
                         "nvidia.com/gpu": f"{self.request_gpus}",
                     },
                     "requests": {
-                        "memory": f"{self.request_cpu_memory}",
-                        "cpu": f"{self.request_cpus}",
+                        "memory": f"{self.cpu_memory}",
+                        "cpu": f"{self.num_cpus}",
                         "nvidia.com/gpu": f"{self.request_gpus}",
                     },
                 },
@@ -187,62 +197,26 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         self.secret.delete()
         super().on_failure(exc)
 
+    def on_success(self):
+        self.secret.delete()
+        super().on_success()
 
-class TuneRemote(RemoteTrainBase, AframeRayTask):
-    search_space = luigi.Parameter()
-    num_samples = luigi.IntParameter()
-    min_epochs = luigi.IntParameter()
-    max_epochs = luigi.IntParameter()
-    reduction_factor = luigi.IntParameter()
-    num_workers = luigi.IntParameter(default=ray_worker().replicas)
-    gpus_per_worker = luigi.IntParameter(default=ray_worker().gpus_per_replica)
 
-    # image used locally to connect to the ray cluster
-    @property
-    def default_image(self):
-        return "train.sif"
+@inherits(TrainBaseParameters, RemoteParameters)
+class Train(AframeWrapperTask):
+    """
+    Class that dynamically chooses between
+    remote training on nautilus or local training on LDG
+    """
 
-    @property
-    def use_wandb(self):
-        # always use wandb logging for tune jobs
-        return True
+    train_remote = luigi.BoolParameter(
+        default=False,
+        description="If `True`, run training remotely on nautilus"
+        " otherwise run locally",
+    )
 
-    def get_ip(self):
-        ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
-        ip += ":10001"
-        return ip
-
-    def configure_cluster(self, cluster: "KubernetesRayCluster"):
-        secret = s3().get_s3_credentials()
-        cluster.add_secret("s3-credentials-tune", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
-        cluster.set_env({"WANDB_API_KEY": wandb().api_key})
-
-        cluster.head["spec"]["template"]["spec"]["containers"][0][
-            "imagePullPolicy"
-        ] = "Always"
-        cluster.worker["spec"]["template"]["spec"]["containers"][0][
-            "imagePullPolicy"
-        ] = "Always"
-        return cluster
-
-    def complete(self):
-        # TODO: determine best way of definine
-        # completion for tune jobs
-        return False
-
-    def run(self):
-        from train.tune.cli import main
-
-        args = self.get_args()
-        args.append(f"--tune.address={self.get_ip()}")
-        args.append(f"--tune.space={self.search_space}")
-        args.append(f"--tune.num_workers={self.num_workers}")
-        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
-        args.append("--tune.cpus_per_gpu=" + str(ray_worker().cpus_per_gpu))
-        args.append(f"--tune.num_samples={self.num_samples}")
-        args.append(f"--tune.min_epochs={self.min_epochs}")
-        args.append(f"--tune.max_epochs={self.max_epochs}")
-        args.append(f"--tune.reduction_factor={self.reduction_factor}")
-        args.append(f"--tune.storage_dir={self.run_dir}")
-        main(args)
+    def requires(self):
+        if self.train_remote:
+            return TrainRemote.req(self)
+        else:
+            return TrainLocal.req(self)

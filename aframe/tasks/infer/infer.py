@@ -48,6 +48,7 @@ class InferParameters(law.Task):
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
     clients_per_gpu = luigi.IntParameter()
+    repository_directory = luigi.Parameter(default="")
 
 
 @inherits(InferParameters)

@@ -16,6 +16,31 @@ root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
 
 
+class AframeParameters(law.Task):
+    dev = luigi.BoolParameter(
+        default=False,
+        significant=False,
+        description="If `True`, mount the local aframe repo "
+        "into the container. This will allow python code "
+        "changes to be reflected in the container. "
+        "However, if there are any environment changes, "
+        " the container will need to be rebuilt.",
+    )
+    gpus = luigi.Parameter(
+        default="",
+        significant=False,
+        description="Comma separated list of gpu ids to be exposed "
+        "via the `CUDA_VISIBLE_DEVICES` environment variable.",
+    )
+
+
+# aframe wrapper task to ensure that all wrapper tasks
+# take dev and gpu parameters that can be passed to
+# dependencies via .req() calls
+class AframeWrapperTask(law.WrapperTask, AframeParameters):
+    pass
+
+
 class AframeSandbox(singularity.SingularitySandbox):
     """
     Base sandbox for running aframe tasks in a singularity container.
@@ -58,7 +83,7 @@ class AframeSandbox(singularity.SingularitySandbox):
 law.config.update(AframeSandbox.config())
 
 
-class AframeSandboxTask(law.SandboxTask):
+class AframeSandboxTask(law.SandboxTask, AframeParameters):
     """
     Base task for __any__ Sandbox task (e.g. singularity, poetry/venv etc.)
 
@@ -71,9 +96,6 @@ class AframeSandboxTask(law.SandboxTask):
     (for singularity sandboxes)or environment (when using poetry / venv)
     one wishes to run the task in.
     """
-
-    dev = luigi.BoolParameter(default=False, significant=False)
-    gpus = luigi.Parameter(default="", significant=False)
 
     @property
     def sandbox(self):
@@ -119,10 +141,21 @@ class AframeSingularityTask(AframeSandboxTask):
     inherit from this class.
     """
 
-    image = luigi.Parameter(default="")
-    container_root = luigi.Parameter(
-        default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
+    image = luigi.Parameter(
+        default="",
+        description="The path to the singularity container "
+        "image to run the task in. If the path is not absolute, "
+        "it is assumed to be relative to the `container_root`",
     )
+    container_root = luigi.Parameter(
+        default=os.getenv("AFRAME_CONTAINER_ROOT", ""),
+        significant=False,
+        description="The root directory where aframe "
+        "container images are stored.",
+    )
+
+    # don't pass image parameter between task.req()
+    exclude_params_req = {"image"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -169,7 +202,9 @@ class AframeRayTask(AframeSingularityTask):
     """
 
     container = luigi.Parameter(
-        default="ghcr.io/ml4gw/aframev2/train:main", significant=False
+        default="ghcr.io/ml4gw/aframev2/train:main",
+        significant=False,
+        description="The container image used for launching ray workers",
     )
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)

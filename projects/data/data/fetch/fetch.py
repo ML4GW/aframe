@@ -59,4 +59,5 @@ def fetch(
         )
         ts_dict.update(open_data_ts_dict)
 
+    ts_dict.resample(sample_rate)
     return ts_dict

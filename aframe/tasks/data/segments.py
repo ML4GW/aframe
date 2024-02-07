@@ -1,6 +1,6 @@
-import law
 import luigi
 
+from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 
 
@@ -15,7 +15,7 @@ class Query(AframeDataTask):
     retry_count = 3
 
     def output(self):
-        return law.LocalFileTarget(self.segments_file)
+        return s3_or_local(self.segments_file, format="txt")
 
     def get_flags(self):
         if self.flag == "DATA":

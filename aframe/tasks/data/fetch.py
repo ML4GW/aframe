@@ -32,9 +32,14 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
     def workflow_condition(self) -> bool:
         return self.workflow_input()["segments"].exists()
 
+    def load_segments(self):
+        with self.workflow_input()["segments"].open("r") as f:
+            segments = f.read().splitlines()[1:]
+        return segments
+
     @workflow_condition.create_branch_map
     def create_branch_map(self):
-        segments = self.workflow_input()["segments"].load().splitlines()[1:]
+        segments = self.load_segments()
         branch_map, i = {}, 1
         for segment in segments:
             segment = segment.split("\t")
@@ -69,7 +74,7 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
         duration = int(float(duration))
         fname = "{}-{}-{}.hdf5".format(self.prefix, start, duration)
         fname = os.path.join(self.data_dir, fname)
-        return s3_or_local(fname, self.client)
+        return s3_or_local(fname)
 
     def run(self):
         import h5py
@@ -93,8 +98,16 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
 
 # renaming tasks to allow specifying diff params in config files
 class FetchTest(Fetch):
-    pass
+    condor_directory = luigi.Parameter(
+        default=os.path.join(
+            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "test"
+        )
+    )
 
 
 class FetchTrain(Fetch):
-    pass
+    condor_directory = luigi.Parameter(
+        default=os.path.join(
+            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "train"
+        )
+    )

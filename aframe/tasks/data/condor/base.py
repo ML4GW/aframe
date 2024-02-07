@@ -55,6 +55,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     @property
     def law_config(self):
         path = os.getenv("LAW_CONFIG_FILE", "")
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
         return path
 
     def build_environment(self):
