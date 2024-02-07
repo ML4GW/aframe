@@ -190,7 +190,8 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return spec
 
     def run(self):
-        self.secret.create()
+        if not self.secret.exists():
+            self.secret.create()
         super().run()
 
     def on_failure(self, exc):

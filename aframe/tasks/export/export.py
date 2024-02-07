@@ -1,3 +1,5 @@
+import os
+
 import law
 import luigi
 from luigi.util import inherits
@@ -27,6 +29,10 @@ class ExportParams(law.Task):
 
 @inherits(ExportParams)
 class ExportLocal(AframeSingularityTask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        os.makedirs(self.repository_directory, exist_ok=True)
+
     def output(self):
         return ModelRepositoryTarget(self.repository_directory)
 
