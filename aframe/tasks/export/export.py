@@ -3,6 +3,7 @@ import luigi
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
+from aframe.tasks.export.target import ModelRepositoryTarget
 
 
 class ExportParams(law.Task):
@@ -27,9 +28,7 @@ class ExportParams(law.Task):
 @inherits(ExportParams)
 class ExportLocal(AframeSingularityTask):
     def output(self):
-        # TODO: custom file target that checks for existence
-        # of all necessary model repo directories and files
-        return law.LocalFileTarget(self.repository_directory)
+        return ModelRepositoryTarget(self.repository_directory)
 
     @property
     def default_image(self):

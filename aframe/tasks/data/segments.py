@@ -5,11 +5,22 @@ from aframe.tasks.data.base import AframeDataTask
 
 
 class Query(AframeDataTask):
-    start = luigi.FloatParameter()
-    end = luigi.FloatParameter()
-    segments_file = luigi.Parameter()
-    flag = luigi.Parameter()
-    ifos = luigi.ListParameter()
+    """
+    This is a test
+    """
+
+    start = luigi.FloatParameter(description="Start time of segments to query")
+    end = luigi.FloatParameter(description="End time of segments to query")
+    segments_file = luigi.Parameter(
+        description="Output path where segments are written"
+    )
+    ifos = luigi.ListParameter(
+        description="List of ifos to query segments for. "
+    )
+    flag = luigi.Parameter(
+        description="Data quality flag to query. If 'DATA', "
+        "will query for open data segments."
+    )
     min_duration = luigi.FloatParameter(default=0)
 
     retry_count = 3

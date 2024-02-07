@@ -206,7 +206,10 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 class Train(AframeWrapperTask):
     """
     Class that dynamically chooses between
-    remote training on nautilus or local training on LDG
+    remote training on nautilus or local training on LDG.
+
+    Useful for incorporating into pipelines where
+    you don't care where the training is run.
     """
 
     train_remote = luigi.BoolParameter(
