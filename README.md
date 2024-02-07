@@ -15,7 +15,7 @@ An attempt to overhaul and modernize the infrastructure to run [`aframe`](https:
 
 ## Getting Started
 Please see the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) for help on setting up your environment 
-on the LIGO Data Grid (LDG) and for configuring access to [Weights and Biases](https://wandb.ai), and the [Nautilus hypercluster](https://ucsd-prp.gitlab.io/). 
+on the [LIGO Data Grid](https://computing.docs.ligo.org/guide/computing-centres/ldg/) (LDG) and for configuring access to [Weights and Biases](https://wandb.ai), and the [Nautilus hypercluster](https://ucsd-prp.gitlab.io/). 
 This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
 required to run `aframe`. 
 
