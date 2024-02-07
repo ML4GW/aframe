@@ -30,7 +30,35 @@ Each sub-task in `aframe` is implemented as a containerized application, whose e
 - `infer`: Launching triton inference servers and deploying inference clients to analyze timeslides and injections.
 - `utils`: General utilites used by all projects (TODO: move this under `libs`)
 
-You can build and execute code inside these containers locally. As an example, to build the training application:
+You can build and execute code inside these containers locally. As an example, let's go through the process of generating data for training `aframe`. 
+First, you will need to build the `data` project container:
+
+```
+mkdir ~/aframe/images
+cd projects/data
+apptainer build ~/aframe/images/data.sif apptainer.def
+```
+
+Once that is complete, let's query for open science segments containing high-quality data:
+
+```
+mkdir ~/aframe/data/
+apptainer run ~/aframe/images/data.sif \
+    python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
+```
+
+Inspecting the output, it looks like theres quality data between `1240579783` and `1240579783`. Let's query that data
+
+```
+apptainer run ~/aframe/images/data.sif \
+    python -m data fetch --start 1240579783 --end 1240579783 --channels='["H1", "L1"]' --sample_rate 2048 --output_directory ~/aframe/data/background
+```
+
+
+
+
+
+As an example, to build the training application:
 ```
 mkdir ~/aframe/images
 cd projects/train
