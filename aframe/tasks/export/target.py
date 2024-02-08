@@ -10,7 +10,7 @@ class ModelRepositoryTarget(luigi.Target):
 
     def __init__(self, path, version: int = -1):
         super().__init__()
-        self.base_path = path
+        self.path = path
         self.version = version
 
     def get_versions(self):
@@ -18,7 +18,7 @@ class ModelRepositoryTarget(luigi.Target):
 
         # currently only check `aframe` model for versions
         # since this is the most important
-        version_dir = os.path.join(self.base_path, "aframe")
+        version_dir = os.path.join(self.path, "aframe")
         if not os.path.isdir(version_dir):
             return versions
 
@@ -53,7 +53,7 @@ class ModelRepositoryTarget(luigi.Target):
 
         # check each part of the repo structure exists
         for directory, contents in structure.items():
-            dir_path = os.path.join(self.base_path, directory)
+            dir_path = os.path.join(self.path, directory)
             if not os.path.isdir(dir_path):
                 return False
 

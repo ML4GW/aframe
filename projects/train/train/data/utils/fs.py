@@ -39,9 +39,7 @@ def get_data_dir(data_dir: str):
         # only on its first training run
         tmpdir = gettempdir()
         if ray.is_initialized():
-            logging.info(
-                "Downloading data to ray worker-specific tmp directory"
-            )
+            logging.info("Downloading data to ray node-specific tmp directory")
             worker_id = ray.get_runtime_context().get_node_id()
             data_dir = f"{tmpdir}/{worker_id}"
         # if not using ray, and just doing

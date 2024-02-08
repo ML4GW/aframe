@@ -1,0 +1,21 @@
+name: ray-cluster
+image: rayproject/ray:2.3.0
+imagePullPolicy: Always
+
+dev: false 
+
+gitRepo:
+  name: aframe
+  url: https://github.com/ml4gw/aframev2
+  mountPath: /opt/aframe
+
+head:
+  cpu: "1"
+  memory: "32G"
+
+worker:
+  replicas: 1
+  cpu: "32"
+  memory: "32G"
+  gpu: "1"
+  min_gpu_memory: "15000"

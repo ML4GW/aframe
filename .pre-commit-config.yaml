@@ -17,7 +17,12 @@ repos:
   hooks:
   - id: end-of-file-fixer
   - id: check-yaml
+    exclude: ^charts/raycluster/templates/
 - repo: https://github.com/pycqa/flake8
   rev: 3.9.2
   hooks:
   - id: flake8
+- repo: https://github.com/gruntwork-io/pre-commit
+  rev: v0.1.15
+  hooks:
+    - id: helmlint

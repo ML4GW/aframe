@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+  labels:
+    app: {{ .Chart.Name }}-worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      component: {{ .Chart.Name }}-worker
+      type: ray
+      app: {{ .Chart.Name }}-worker
+  template:
+    metadata:
+      labels:
+        component: {{ .Chart.Name }}-worker
+        type: ray
+        app: {{ .Chart.Name }}-worker
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.memory
+                operator: Gt
+                values:
+                - {{ .Values.worker.min_gpu_memory | quote }}
+      restartPolicy: Always
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+      - name: {{ .Values.gitRepo.name }}-volume
+        emptyDir: {}
+    {{- if .Values.dev }}
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - git clone {{ .Values.gitRepo.url }} {{ .Values.gitRepo.mountPath }}
+          volumeMounts:
+            - name: {{ .Values.gitRepo.name }}-volume
+              mountPath: {{ .Values.gitRepo.mountPath }}
+    {{- end }}
+
+      containers:
+      - name: ray-worker
+        image: rayproject/ray:2.3.0
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c", "--"]
+        args:
+          - "ray start --num-cpus=$MY_CPU_REQUEST --address={{ .Release.Name }}-service:6380 --object-manager-port=8076 --node-manager-port=8077 --dashboard-agent-grpc-port=8078 --dashboard-agent-listen-port=52365 --block"
+        volumeMounts:
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: {{ .Values.gitRepo.mountPath }}
+            name: {{ .Values.gitRepo.name }}-volume
+        env:
+          - name: MY_CPU_REQUEST
+            valueFrom:
+              resourceFieldRef:
+                resource: requests.cpu
+        resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.worker.gpus | quote }}
+              cpu: {{ .Values.worker.cpu | quote }}
+              memory: {{ .Values.worker.memory | quote }}
+            requests:
+              nvidia.com/gpu: {{ .Values.worker.gpus | quote }}
+              cpu: {{ .Values.worker.cpu | quote }}
+              memory: {{ .Values.worker.memory | quote }}

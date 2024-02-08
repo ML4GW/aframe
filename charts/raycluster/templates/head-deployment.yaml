@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-head
+  labels:
+    app: {{ .Chart.Name }}-head
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: {{ .Chart.Name }}-head
+      type: ray
+      app: {{ .Chart.Name }}-head
+  template:
+    metadata:
+      labels:
+        component: {{ .Chart.Name }}-head
+        type: ray
+        app: {{ .Chart.Name }}-head
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+      - name: {{ .Values.gitRepo.name }}-volume
+        emptyDir: {}
+
+    {{- if .Values.dev }}
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - git clone {{ .Values.gitRepo.url }} {{ .Values.gitRepo.mountPath }}
+          volumeMounts:
+            - name: {{ .Values.gitRepo.name }}-volume
+              mountPath: {{ .Values.gitRepo.mountPath }}
+    {{- end }}
+
+      containers:
+        - name: ray-head
+          image: {{ .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: [ "/bin/bash", "-c", "--" ]
+          args:
+            - "ray start --head --port=6380 --num-cpus=$MY_CPU_REQUEST --dashboard-host=0.0.0.0 --object-manager-port=8076 --node-manager-port=8077 --dashboard-agent-grpc-port=8078 --dashboard-agent-listen-port=52365 --block"
+          ports:
+            - containerPort: 6380
+            - containerPort: 10001 
+            - containerPort: 8265 
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: {{ .Values.gitRepo.mountPath }}
+              name: {{ .Values.gitRepo.name }}-volume
+          env:
+            - name: MY_CPU_REQUEST
+              valueFrom:
+                resourceFieldRef:
+                  resource: requests.cpu
+          resources:
+            limits:
+              cpu: {{ .Values.head.cpu | quote }}
+              memory: {{ .Values.head.memory | quote }}
+            requests:
+              cpu: {{ .Values.head.cpu | quote }}
+              memory: {{ .Values.head.memory | quote }}
