@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  ray-cluster:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-02-08T16:49:54.342639889Z"
+    description: Deploy static ray clusters with Kubernetes.
+    digest: f2fe1c2c0abe71ed3da2158ce3a054121fb74acb26d247a521ed58b12ba3ace2
+    name: ray-cluster
+    type: application
+    urls:
+    - https://github.com/ML4GW/aframev2/releases/download/ray-cluster-0.1.0/ray-cluster-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-02-08T16:49:54.34265074Z"
