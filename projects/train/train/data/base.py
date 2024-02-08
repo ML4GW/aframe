@@ -3,7 +3,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import h5py
 import lightning.pytorch as pl
@@ -11,7 +11,6 @@ import ray
 import torch
 
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
-from ml4gw.distributions import PowerLaw
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
@@ -67,6 +66,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         trigger_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
+        snr_sampler: Optional[Callable[int, torch.Tensor]] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
@@ -81,7 +81,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         # Set up some of our data augmentation modules
         self.inverter = aug.SignalInverter(0.5)
         self.reverser = aug.SignalReverser(0.5)
-        self.snr_sampler = PowerLaw(snr_thresh, max_snr, snr_alpha)
 
         # these are modules that require our data to be
         # downloaded first, either for loading signals
@@ -92,6 +91,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = None
         self.psd_estimator = None
         self._on_device = False
+        self.snr_sampler = snr_sampler
 
         # generate our local node data directory
         # if our specified data source is remote
@@ -322,6 +322,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
         )
+
         self.sample_rate = sample_rate
 
     def setup(self, stage: str) -> None:

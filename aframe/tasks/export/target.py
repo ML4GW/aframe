@@ -10,20 +10,18 @@ class ModelRepositoryTarget(luigi.Target):
 
     def __init__(self, path, version: int = -1):
         super().__init__()
-        self.base_path = path
-        self.versions = self.get_versions()
-
-        if version == -1:
-            version = max(self.versions)
-
-        self.version = str(version)
+        self.path = path
+        self.version = version
 
     def get_versions(self):
         versions = []
 
         # currently only check `aframe` model for versions
         # since this is the most important
-        version_dir = os.path.join(self.base_path, "aframe")
+        version_dir = os.path.join(self.path, "aframe")
+        if not os.path.isdir(version_dir):
+            return versions
+
         # filter directories that can be converted to integers and find the max
         for path in os.listdir(version_dir):
             subdir = os.path.join(version_dir, path)
@@ -32,25 +30,30 @@ class ModelRepositoryTarget(luigi.Target):
         return versions
 
     def exists(self):
-        # if the base directory doesnt exist return False
-        if not os.path.isdir(self.base_path):
+        # now that we know the "aframe" directory
+        # exists, parse the versions. If none exist,
+        # return False
+        versions = self.get_versions()
+        if not versions:
             return False
 
-        # if requested version doesn't exist return False
-        if self.version not in self.versions:
-            return False
+        version = self.version
+        if version == -1:
+            version = max(versions)
+
+        version = str(version)
 
         # define the structure of the model repo
         structure = {
-            "aframe": ["config.pbtxt", (self.version, ["model.plan"])],
-            "aframe-stream": ["config.pbtxt", (self.version, ["model.empty"])],
-            "preprocessor": ["config.pbtxt", (self.version, ["model.pt"])],
-            "snapshotter": ["config.pbtxt", (self.version, ["model.onnx"])],
+            "aframe": ["config.pbtxt", (version, ["model.plan"])],
+            "aframe-stream": ["config.pbtxt", (version, ["model.empty"])],
+            "preprocessor": ["config.pbtxt", (version, ["model.pt"])],
+            "snapshotter": ["config.pbtxt", (version, ["model.onnx"])],
         }
 
         # check each part of the repo structure exists
         for directory, contents in structure.items():
-            dir_path = os.path.join(self.base_path, directory)
+            dir_path = os.path.join(self.path, directory)
             if not os.path.isdir(dir_path):
                 return False
 
@@ -73,3 +76,6 @@ class ModelRepositoryTarget(luigi.Target):
 
         # If all checks passed
         return True
+
+    def complete(self):
+        return self.exists()

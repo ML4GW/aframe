@@ -50,7 +50,22 @@ data:
     swap_frac: 0.014
     mute_frac: 0.055
     trigger_pad: -0.75
-
+    snr_sampler:
+      class_path: ml4gw.distributions.PowerLaw
+      init_args: 
+        x_min: 4
+        x_max: 100
+        alpha: 3
+      # uncomment below and comment above for 
+      # snr scheduling
+       
+      # class_path: train.augmentations.SnrSampler
+      # init_args:
+         # max_min_snr: 12
+         # min_min_snr: 4
+         # max_snr: 100
+         # alpha: 3
+         # decay_steps: 989
     # validation args
     valid_frac: 0.25
     valid_stride: 0.5

@@ -1,3 +1,5 @@
+import os
+
 import law
 import luigi
 from luigi.util import inherits
@@ -27,8 +29,15 @@ class ExportParams(law.Task):
 
 @inherits(ExportParams)
 class ExportLocal(AframeSingularityTask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        os.makedirs(self.repository_directory, exist_ok=True)
+
     def output(self):
         return ModelRepositoryTarget(self.repository_directory)
+
+    def requires(self):
+        raise NotImplementedError
 
     @property
     def default_image(self):
@@ -44,28 +53,23 @@ class ExportLocal(AframeSingularityTask):
         if not self.fftlength:
             self.fftlength = None
 
-        input = self.input()
-        if isinstance(input, law.LocalFileTarget):
-            mode = "rb"
-        else:
-            mode = "r"
+        weights = self.input().path
 
-        with self.input().open(mode) as f:
-            export(
-                f,
-                self.repository_directory,
-                self.num_ifos,
-                self.kernel_length,
-                self.inference_sampling_rate,
-                self.sample_rate,
-                self.batch_size,
-                self.fduration,
-                self.psd_length,
-                self.fftlength,
-                self.highpass,
-                self.streams_per_gpu,
-                self.aframe_instances,
-                # self.platform,
-                clean=self.clean,
-                # verbose=self.verbose,
-            )
+        export(
+            weights,
+            self.repository_directory,
+            self.num_ifos,
+            self.kernel_length,
+            self.inference_sampling_rate,
+            self.sample_rate,
+            self.batch_size,
+            self.fduration,
+            self.psd_length,
+            self.fftlength,
+            self.highpass,
+            self.streams_per_gpu,
+            self.aframe_instances,
+            # self.platform,
+            clean=self.clean,
+            # verbose=self.verbose,
+        )

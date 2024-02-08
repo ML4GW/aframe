@@ -1,5 +1,3 @@
-import logging
-
 from data.authenticate import authenticate
 from data.fetch.main import main as fetch
 from data.fetch.main import parser as fetch_parser
@@ -40,7 +38,6 @@ def main(args=None):
         generate_waveforms(args)
 
     elif args.subcommand == "timeslide_waveforms":
-        logging.info(args)
         generate_timeslide_waveforms(args)
 
 
