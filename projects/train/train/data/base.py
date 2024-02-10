@@ -369,9 +369,8 @@ class BaseAframeDataset(pl.LightningDataModule):
                 waveform_prob = self.hparams.waveform_prob
             except AttributeError:
                 waveform_prob = 1
-            self.waveform_sampler = aug.WaveformSampler(
-                waveform_prob, cross=cross, plus=plus
-            )
+            self.waveform_prob = waveform_prob
+            self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
 
             # subsample which waveforms we're using
             # based on the fraction of shifts that

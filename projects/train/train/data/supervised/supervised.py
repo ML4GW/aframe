@@ -12,51 +12,38 @@ class SupervisedAframeDataset(BaseAframeDataset):
         self,
         *args,
         waveform_prob: float,
-        swap_frac: Optional[float] = None,
-        mute_frac: Optional[float] = None,
+        swap_prob: Optional[float] = None,
+        mute_prob: Optional[float] = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        upweight, cross_term = 1, 1
-        if swap_frac is not None and 0 < swap_frac < 1:
-            self.swapper = aug.ChannelSwapper(swap_frac)
-            upweight -= swap_frac
-            cross_term *= swap_frac
-        elif swap_frac is not None:
+        if swap_prob is not None and 0 < swap_prob < 1:
+            self.swapper = aug.ChannelSwapper(swap_prob)
+        elif swap_prob is not None:
             raise ValueError(
-                f"swap_frac must be between 0 and 1, got {swap_frac}"
+                f"swap_prob must be between 0 and 1, got {swap_prob}"
             )
         else:
-            cross_term *= 0
             self.swapper = None
 
-        if mute_frac is not None and 0 < mute_frac < 1:
-            self.muter = aug.ChannelMuter(mute_frac)
-            upweight -= mute_frac
-            cross_term *= mute_frac
-        elif mute_frac is not None:
+        if mute_prob is not None and 0 < mute_prob < 1:
+            self.muter = aug.ChannelMuter(mute_prob)
+        elif mute_prob is not None:
             raise ValueError(
-                f"mute_frac must be between 0 and 1, got {mute_frac}"
+                f"mute_frac must be between 0 and 1, got {mute_prob}"
             )
         else:
-            cross_term *= 0
             self.muter = None
-
-        upweight += cross_term
-        self.hparams.waveform_prob /= upweight
-        if self.hparams.waveform_prob > 1:
-            raise ValueError(
-                "Waveform prob is {} after upweighting, must "
-                "remain <1".format(self.hparams.waveform_prob)
-            )
 
     @torch.no_grad()
     def augment(self, X):
         X, psds = self.psd_estimator(X)
-
         X = self.inverter(X)
         X = self.reverser(X)
-        *params, polarizations, mask = self.waveform_sampler(X)
+        # sample enough waveforms to do true injections,
+        # swapping, and muting
+        sample_prob = self.waveform_prob + self.swap_prob + self.mute_prob
+        *params, polarizations, mask = self.waveform_sampler(X, sample_prob)
 
         N = len(params[0])
         snrs = self.snr_sampler(N).to(X.device)
