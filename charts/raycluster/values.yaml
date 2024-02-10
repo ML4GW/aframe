@@ -6,8 +6,8 @@ dev: false
 
 gitRepo:
   name: aframe
-  url: https://github.com/ml4gw/aframev2
-  mountPath: /opt/aframe
+  url: git@github.com:ML4GW/aframev2.git
+  mountPath: /opt
 
 head:
   cpu: "1"
@@ -19,3 +19,12 @@ worker:
   memory: "32G"
   gpu: "1"
   min_gpu_memory: "15000"
+
+awsUrl: http://rook-ceph-rgw-nautiluss3.rook
+
+# these should be filled out 
+# with corresponding env variables
+secret:
+  wandbKey: WANDB_API_KEY
+  awsId: AWS_ACCESS_KEY_ID
+  awsKey: AWS_SECRET_ACCESS_KEY

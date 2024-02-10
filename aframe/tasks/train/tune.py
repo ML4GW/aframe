@@ -4,15 +4,20 @@ from typing import TYPE_CHECKING
 import luigi
 
 from aframe.base import AframeRayTask
-from aframe.config import ray_worker, s3
+from aframe.config import ray_head, ray_worker, s3
 from aframe.tasks.train.base import RemoteTrainBase
 from aframe.tasks.train.config import wandb
 
 if TYPE_CHECKING:
-    from ray_kube import KubernetesRayCluster
+    from aframe.helm import RayCluster
 
 
 class TuneRemote(RemoteTrainBase, AframeRayTask):
+    name = luigi.Parameter(
+        default="ray-tune",
+        description="Name of the tune job. "
+        "Will be used to group runs in WandB",
+    )
     search_space = luigi.Parameter(
         default="train.tune.search_space",
         description="Import path to the search space file "
@@ -30,12 +35,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     reduction_factor = luigi.IntParameter(
         description="Fraction of poor performing trials to stop early"
     )
-    cpus_per_gpu = luigi.IntParameter(
-        default=8, description="Number of CPUs to allocate to each gpu"
-    )
-
-    num_workers = luigi.IntParameter(default=ray_worker().replicas)
-    gpus_per_worker = luigi.IntParameter(default=ray_worker().gpus_per_replica)
 
     # image used locally to connect to the ray cluster
     @property
@@ -56,18 +55,29 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         ip += ":10001"
         return ip
 
-    def configure_cluster(self, cluster: "KubernetesRayCluster"):
+    def configure_cluster(self, cluster: "RayCluster"):
         secret = s3().get_s3_credentials()
-        cluster.add_secret("s3-credentials-tune", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
-        cluster.set_env({"WANDB_API_KEY": wandb().api_key})
-
-        cluster.head["spec"]["template"]["spec"]["containers"][0][
-            "imagePullPolicy"
-        ] = "Always"
-        cluster.worker["spec"]["template"]["spec"]["containers"][0][
-            "imagePullPolicy"
-        ] = "Always"
+        values = {
+            # image parameters
+            "image": self.container,
+            "imagePullPolicy": self.image_pull_policy,
+            # secrets / env variables
+            "awsUrl": s3().get_internal_s3_url(),
+            "secret.awsId": secret["AWS_ACCESS_KEY_ID"],
+            "secret.awsKey": secret["AWS_SECRET_ACCESS_KEY"],
+            "secret.wandbKey": wandb().api_key,
+            # compute resources
+            "worker.replicas": ray_worker().replicas,
+            "worker.cpu": ray_worker().cpus_per_gpu
+            * ray_worker().gpus_per_replica,
+            "worker.gpu": ray_worker().gpus_per_replica,
+            "worker.memory": ray_worker().memory,
+            "worker.min_gpu_memory": ray_worker().min_gpu_memory,
+            "head.cpu": ray_head().cpus,
+            "head.memory": ray_head().memory,
+            "dev": str(self.dev).lower(),
+        }
+        cluster.build_command(values)
         return cluster
 
     def complete(self):
@@ -79,11 +89,12 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         from train.tune.cli import main
 
         args = self.get_args()
+        args.append(f"--tune.name={self.name}")
         args.append(f"--tune.address={self.get_ip()}")
         args.append(f"--tune.space={self.search_space}")
-        args.append(f"--tune.num_workers={self.num_workers}")
-        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
-        args.append(f"--tune.cpus_per_gpu={self.cpus_per_gpu}")
+        args.append("--tune.num_workers=1")
+        args.append("--tune.gpus_per_worker=1")
+        args.append(f"--tune.cpus_per_gpu={ray_worker().cpus_per_gpu}")
         args.append(f"--tune.num_samples={self.num_samples}")
         args.append(f"--tune.min_epochs={self.min_epochs}")
         args.append(f"--tune.max_epochs={self.max_epochs}")
