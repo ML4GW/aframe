@@ -18,6 +18,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         super().__init__(*args, **kwargs)
         if swap_prob is not None and 0 < swap_prob < 1:
             self.swapper = aug.ChannelSwapper(swap_prob)
+            self.swap_prob = swap_prob
         elif swap_prob is not None:
             raise ValueError(
                 f"swap_prob must be between 0 and 1, got {swap_prob}"
@@ -27,6 +28,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
 
         if mute_prob is not None and 0 < mute_prob < 1:
             self.muter = aug.ChannelMuter(mute_prob)
+            self.mute_prob = mute_prob
         elif mute_prob is not None:
             raise ValueError(
                 f"mute_frac must be between 0 and 1, got {mute_prob}"
@@ -41,7 +43,9 @@ class SupervisedAframeDataset(BaseAframeDataset):
         X = self.reverser(X)
         # sample enough waveforms to do true injections,
         # swapping, and muting
-        sample_prob = self.waveform_prob + self.swap_prob + self.mute_prob
+        sample_prob = (
+            self.hparams.waveform_prob + self.swap_prob + self.mute_prob
+        )
         *params, polarizations, mask = self.waveform_sampler(X, sample_prob)
 
         N = len(params[0])
