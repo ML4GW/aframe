@@ -47,8 +47,8 @@ data:
     snr_thresh: 4
     max_snr: 100
     snr_alpha: 3
-    swap_frac: 0.014
-    mute_frac: 0.055
+    swap_prob: 0.014
+    mute_prob: 0.055
     trigger_pad: -0.75
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
