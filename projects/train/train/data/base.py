@@ -60,6 +60,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         fduration: float,
         psd_length: float,
         # augmentation args
+        waveform_prob: float = 1,
         snr_thresh: float = 4,
         max_snr: float = 100,
         snr_alpha: float = 3,
@@ -365,11 +366,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         self._logger.info("Loading waveforms")
         with h5py.File(f"{self.data_dir}/signals.hdf5", "r") as f:
             cross, plus = self.load_train_signals(f, world_size, rank)
-            try:
-                waveform_prob = self.hparams.waveform_prob
-            except AttributeError:
-                waveform_prob = 1
-            self.waveform_prob = waveform_prob
             self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
 
             # subsample which waveforms we're using
@@ -546,11 +542,10 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         num_waveforms = self.waveform_sampler.num_waveforms
-        try:
-            waveform_prob = self.hparams.waveform_prob
-        except AttributeError:
-            waveform_prob = 1
-        waveforms_per_batch = self.hparams.batch_size * waveform_prob
+
+        waveforms_per_batch = (
+            self.hparams.batch_size * self.hparams.waveform_prob
+        )
         steps_per_epoch = int(4 * num_waveforms / waveforms_per_batch)
 
         # TODO: potentially introduce chunking here via
