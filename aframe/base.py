@@ -3,14 +3,12 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
-import kr8s
 import law
 import luigi
-from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import ray_head, ray_worker
+from aframe.helm import RayCluster
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
@@ -206,9 +204,10 @@ class AframeRayTask(AframeSingularityTask):
         significant=False,
         description="The container image used for launching ray workers",
     )
+    image_pull_policy = luigi.Parameter(default="Always", significant=False)
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)
-    label = luigi.Parameter(default="", significant=False)
+    name = luigi.Parameter(default="tune", significant=False)
 
     def configure_cluster(self, cluster):
         return cluster
@@ -229,29 +228,14 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster = None
             return
 
-        api = kr8s.api(kubeconfig=self.kubeconfig or None)
-
-        worker_cpus = ray_worker().cpus_per_gpu * ray_worker().gpus_per_replica
-        cluster = KubernetesRayCluster(
-            self.container,
-            num_workers=ray_worker().replicas,
-            worker_cpus=worker_cpus,
-            worker_memory=ray_worker().memory,
-            gpus_per_worker=ray_worker().gpus_per_replica,
-            head_cpus=ray_head().cpus,
-            head_memory=ray_head().memory,
-            min_gpu_memory=ray_worker().min_gpu_memory,
-            api=api,
-            label=self.label or None,
+        cluster = RayCluster(
+            self.name,
+            chart_path="/home/ethan.marx/projects/aframev2/charts/raycluster/",
         )
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
-        logger.info("Creating ray cluster")
-        cluster.dump("ray.yaml")
-        cluster.create()
+        cluster.install()
         cluster.wait()
-        logger.info("ray cluster online")
-
         self.ip = cluster.get_ip()
 
     def sandbox_after_run(self):
@@ -261,10 +245,10 @@ class AframeRayTask(AframeSingularityTask):
         """
         if self.cluster is not None:
             logger.info("Deleting ray cluster")
-            self.cluster.delete()
+            self.cluster.uninstall()
             self.cluster = None
 
     def on_failure(self, exc):
         if self.cluster is not None:
-            self.cluster.delete()
+            self.cluster.uninstall()
             self.cluster = None

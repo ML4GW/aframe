@@ -34,22 +34,46 @@ spec:
           medium: Memory
       - name: {{ .Values.gitRepo.name }}-volume
         emptyDir: {}
+      - name: git-secret
+        secret:
+          defaultMode: 0400
+          secretName: git-creds
+      securityContext:
+        fsGroup: 65533
     {{- if .Values.dev }}
       initContainers:
-        - name: git-clone
-          image: alpine/git:latest
-          command: ["/bin/sh", "-c"]
-          args:
-            - git clone {{ .Values.gitRepo.url }} {{ .Values.gitRepo.mountPath }}
+        - name: git-sync
+          image: registry.k8s.io/git-sync/git-sync:v4.2.1
+          env:
+          - name: GITSYNC_REPO
+            value: {{ .Values.gitRepo.url }}
+          - name: GITSYNC_REF
+            value: main
+          - name: GITSYNC_ROOT
+            value: /opt
+          - name: GITSYNC_LINK
+            value: aframe
+          - name: GITSYNC_ONE_TIME
+            value: "true"
+          - name: GITSYNC_SSH_KNOWN_HOSTS
+            value: "false"
+          - name: GITSYNC_SUBMODULES
+            value: "recursive"
+          - name: GITSYNC_ADD_USER
+            value: "true"
           volumeMounts:
             - name: {{ .Values.gitRepo.name }}-volume
               mountPath: {{ .Values.gitRepo.mountPath }}
+            - name: git-secret
+              mountPath: /etc/git-secret
+              readOnly: true
+          securityContext:
+            runAsUser: 65533
     {{- end }}
-
       containers:
       - name: ray-worker
-        image: rayproject/ray:2.3.0
-        imagePullPolicy: Always
+        image: {{ .Values.image  }}
+        imagePullPolicy: {{ .Values.imagePullPolicy  }} 
         command: ["/bin/bash", "-c", "--"]
         args:
           - "ray start --num-cpus=$MY_CPU_REQUEST --address={{ .Release.Name }}-service:6380 --object-manager-port=8076 --node-manager-port=8077 --dashboard-agent-grpc-port=8078 --dashboard-agent-listen-port=52365 --block"
@@ -59,16 +83,21 @@ spec:
           - mountPath: {{ .Values.gitRepo.mountPath }}
             name: {{ .Values.gitRepo.name }}-volume
         env:
-          - name: MY_CPU_REQUEST
-            valueFrom:
-              resourceFieldRef:
-                resource: requests.cpu
+        - name: MY_CPU_REQUEST
+          valueFrom:
+            resourceFieldRef:
+              resource: requests.cpu
+        - name: AWS_ENDPOINT_URL
+          value: {{ .Values.awsUrl }}
+        envFrom:
+        - secretRef:
+            name: credentials
         resources:
             limits:
-              nvidia.com/gpu: {{ .Values.worker.gpus | quote }}
+              nvidia.com/gpu: {{ .Values.worker.gpu | quote }}
               cpu: {{ .Values.worker.cpu | quote }}
               memory: {{ .Values.worker.memory | quote }}
             requests:
-              nvidia.com/gpu: {{ .Values.worker.gpus | quote }}
+              nvidia.com/gpu: {{ .Values.worker.gpu | quote }}
               cpu: {{ .Values.worker.cpu | quote }}
               memory: {{ .Values.worker.memory | quote }}

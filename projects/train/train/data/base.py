@@ -66,7 +66,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         trigger_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
-        snr_sampler: Optional[Callable[int, torch.Tensor]] = None,
+        snr_sampler: Optional[Callable[[int], torch.Tensor]] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
@@ -369,9 +369,8 @@ class BaseAframeDataset(pl.LightningDataModule):
                 waveform_prob = self.hparams.waveform_prob
             except AttributeError:
                 waveform_prob = 1
-            self.waveform_sampler = aug.WaveformSampler(
-                waveform_prob, cross=cross, plus=plus
-            )
+            self.waveform_prob = waveform_prob
+            self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
 
             # subsample which waveforms we're using
             # based on the fraction of shifts that

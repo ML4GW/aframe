@@ -7,17 +7,37 @@ project_base = "/opt/aframe/projects"
 
 
 class ray_worker(luigi.Config):
-    replicas = luigi.IntParameter(default=2)
-    gpus_per_replica = luigi.IntParameter(default=2)
-    cpus_per_gpu = luigi.IntParameter(default=8)
-    gpus_per_worker = luigi.IntParameter(default=1)
-    memory = luigi.Parameter(default="10G")
-    min_gpu_memory = luigi.Parameter(default="15000")
+    replicas = luigi.IntParameter(
+        default=1, description="Number of ray worker replicas to deploy"
+    )
+    gpus_per_replica = luigi.IntParameter(
+        default=8,
+        description="Number of gpus to allocate to each ray worker replica",
+    )
+    cpus_per_gpu = luigi.IntParameter(
+        default=8,
+        description="Number of cpus to allocate to the ray worker per gpu",
+    )
+    memory = luigi.Parameter(
+        default="128G",
+        description="Amount of memory to allocate "
+        "to each ray worker deployment",
+    )
+    min_gpu_memory = luigi.Parameter(
+        default="15000",
+        description="Minimum amount of memory each gpu should have",
+    )
 
 
 class ray_head(luigi.Config):
-    cpus = luigi.IntParameter(default=2)
-    memory = luigi.Parameter(default="1G")
+    cpus = luigi.IntParameter(
+        default=32,
+        description="Number of cpus to allocate to the ray head deployment",
+    )
+    memory = luigi.Parameter(
+        default="32G",
+        description="Amount of memory to allocate to the ray head deployment",
+    )
 
 
 class s3(luigi.Config):

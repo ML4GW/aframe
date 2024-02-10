@@ -22,7 +22,9 @@ class AutoencoderAframeDataset(BaseAframeDataset):
 
         X = self.inverter(X)
         X = self.reverser(X)
-        *params, polarizations, mask = self.waveform_sampler(X)
+        *params, polarizations, mask = self.waveform_sampler(
+            X, self.hparams.waveform_prob
+        )
 
         N = len(params[0])
         snrs = self.snr_sampler(N).to(X.device)

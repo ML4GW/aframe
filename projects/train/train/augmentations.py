@@ -273,15 +273,12 @@ class WaveformSampler(torch.nn.Module):
     different waveforms for each device.
     """
 
-    def __init__(
-        self, inject_prob: float, **polarizations: torch.Tensor
-    ) -> None:
+    def __init__(self, **polarizations: torch.Tensor) -> None:
         super().__init__()
         self.dec = Cosine()
         self.psi = Uniform(0, torch.pi)
         self.phi = Uniform(-torch.pi, torch.pi)
 
-        self.inject_prob = inject_prob
         self.num_waveforms = None
         for polar, x in polarizations.items():
             if self.num_waveforms is None:
@@ -295,10 +292,10 @@ class WaveformSampler(torch.nn.Module):
                 )
         self.polarizations = polarizations
 
-    def forward(self, X):
+    def forward(self, X, prob: float):
         # sample which batch elements of X we're going to inject on
         rvs = torch.rand(size=X.shape[:1], device=X.device)
-        mask = rvs < self.inject_prob
+        mask = rvs < prob
         N = mask.sum().item()
 
         # sample sky parameters for each injections
