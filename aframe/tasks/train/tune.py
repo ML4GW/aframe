@@ -35,6 +35,12 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     reduction_factor = luigi.IntParameter(
         description="Fraction of poor performing trials to stop early"
     )
+    workers_per_trial = luigi.IntParameter(
+        default=1, description="Number of ray workers to use per trial"
+    )
+    gpus_per_worker = luigi.IntParameter(
+        default=1, description="Number of gpus to allocate to each ray worker"
+    )
 
     # image used locally to connect to the ray cluster
     @property
@@ -68,10 +74,9 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             "secret.wandbKey": wandb().api_key,
             # compute resources
             "worker.replicas": ray_worker().replicas,
-            "worker.cpu": ray_worker().cpus_per_gpu
-            * ray_worker().gpus_per_replica,
+            "worker.cpu": ray_worker().cpus_per_replica,
             "worker.gpu": ray_worker().gpus_per_replica,
-            "worker.memory": ray_worker().memory,
+            "worker.memory": ray_worker().memory_per_replica,
             "worker.min_gpu_memory": ray_worker().min_gpu_memory,
             "head.cpu": ray_head().cpus,
             "head.memory": ray_head().memory,
@@ -79,6 +84,10 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         }
         cluster.build_command(values)
         return cluster
+
+    @property
+    def random_search_steps(self):
+        return self.num_gpus
 
     def complete(self):
         # TODO: determine best way of definine
@@ -92,8 +101,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         args.append(f"--tune.name={self.name}")
         args.append(f"--tune.address={self.get_ip()}")
         args.append(f"--tune.space={self.search_space}")
-        args.append("--tune.num_workers=1")
-        args.append("--tune.gpus_per_worker=1")
+        args.append(f"--tune.workers_per_trial={self.workers_per_trial}")
+        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
         args.append(f"--tune.cpus_per_gpu={ray_worker().cpus_per_gpu}")
         args.append(f"--tune.num_samples={self.num_samples}")
         args.append(f"--tune.min_epochs={self.min_epochs}")

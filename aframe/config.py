@@ -11,22 +11,31 @@ class ray_worker(luigi.Config):
         default=1, description="Number of ray worker replicas to deploy"
     )
     gpus_per_replica = luigi.IntParameter(
-        default=8,
+        default=2,
         description="Number of gpus to allocate to each ray worker replica",
     )
     cpus_per_gpu = luigi.IntParameter(
-        default=8,
+        default=12,
         description="Number of cpus to allocate to the ray worker per gpu",
     )
-    memory = luigi.Parameter(
-        default="128G",
-        description="Amount of memory to allocate "
-        "to each ray worker deployment",
+    memory_per_gpu = luigi.FloatParameter(
+        default=70,
+        description="Amount of (CPU) memory to allocate per GPU in GB"
+        "to each ray worker deployment. For tuning jobs currently the "
+        "data is downloaded for each trial.",
     )
     min_gpu_memory = luigi.Parameter(
         default="15000",
         description="Minimum amount of memory each gpu should have",
     )
+
+    @property
+    def memory_per_replica(self):
+        return f"{self.memory_per_gpu * self.gpus_per_replica}G"
+
+    @property
+    def cpus_per_replica(self):
+        return self.cpus_per_gpu * self.gpus_per_replica
 
 
 class ray_head(luigi.Config):
@@ -36,7 +45,8 @@ class ray_head(luigi.Config):
     )
     memory = luigi.Parameter(
         default="32G",
-        description="Amount of memory to allocate to the ray head deployment",
+        description="Amount of memory in GB "
+        "to allocate to the ray head deployment",
     )
 
 
