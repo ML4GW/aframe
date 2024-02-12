@@ -4,7 +4,6 @@ import ray
 import yaml
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
-from ray.tune.search.bayesopt import BayesOptSearch
 
 from train.cli import AframeCLI
 from train.tune import utils as tune_utils
@@ -38,7 +37,7 @@ def main(args: Optional[list[str]] = None):
     train_func = tune_utils.configure_deployment(
         tune_utils.TrainFunc(AframeCLI, tune_config["name"], config),
         metric_name="valid_auroc",
-        num_workers=tune_config["num_workers"],
+        workers_per_trial=tune_config["workers_per_trial"],
         gpus_per_worker=tune_config["gpus_per_worker"],
         cpus_per_gpu=tune_config["cpus_per_gpu"],
         objective="max",
@@ -48,9 +47,6 @@ def main(args: Optional[list[str]] = None):
         max_t=tune_config["max_epochs"],
         grace_period=tune_config["min_epochs"],
         reduction_factor=tune_config["reduction_factor"],
-    )
-    algorithm = BayesOptSearch(
-        utility_kwargs={"kind": "ucb", "kappa": 2.5, "xi": 0.0}
     )
 
     search_space = tune_utils.get_search_space(tune_config["space"])
@@ -62,7 +58,6 @@ def main(args: Optional[list[str]] = None):
             mode="max",
             num_samples=tune_config["num_samples"],
             scheduler=scheduler,
-            search_alg=algorithm,
         ),
     )
     return tuner.fit()

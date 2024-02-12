@@ -66,7 +66,9 @@ def get_host_cli(cli: type):
                 "--tune.space", type=str, default="train.tune.search_space"
             )
             parser.add_argument("--tune.address", type=str, default=None)
-            parser.add_argument("--tune.num_workers", type=int, default=2)
+            parser.add_argument(
+                "--tune.workers_per_trial", type=int, default=1
+            )
             parser.add_argument("--tune.gpus_per_worker", type=int, default=1)
             parser.add_argument("--tune.cpus_per_gpu", type=int, default=8)
             parser.add_argument("--tune.num_samples", type=int, default=10)
@@ -74,6 +76,9 @@ def get_host_cli(cli: type):
             parser.add_argument("--tune.reduction_factor", type=int, default=4)
             parser.add_argument("--tune.storage_dir", type=str, default=None)
             parser.add_argument("--tune.min_epochs", type=int, default=1)
+            parser.add_argument(
+                "--tune.random_search_steps", type=int, default=10
+            )
 
             # this argument isn't valuable for that much, but when
             # we try to deploy on local containers on LDG, the default
@@ -178,7 +183,7 @@ class TrainFunc:
 def configure_deployment(
     train_func: TrainFunc,
     metric_name: str,
-    num_workers: int,
+    workers_per_trial: int,
     gpus_per_worker: int,
     cpus_per_gpu: int,
     objective: str = "max",
@@ -196,7 +201,7 @@ def configure_deployment(
         metric_name:
             Name of the metric that will be optimized
             during the hyperparameter search
-        num_workers:
+        workers_per_trial:
             Number of training workers to deploy
         gpus_per_worker:
             Number of GPUs to train over within each worker
@@ -214,7 +219,7 @@ def configure_deployment(
     scaling_config = ScalingConfig(
         trainer_resources={"CPU": 0},
         resources_per_worker={"CPU": cpus_per_worker, "GPU": gpus_per_worker},
-        num_workers=num_workers,
+        num_workers=workers_per_trial,
         use_gpu=True,
     )
     run_config = RunConfig(

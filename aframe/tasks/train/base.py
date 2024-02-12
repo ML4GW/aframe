@@ -152,11 +152,19 @@ class RemoteParameters(law.Task):
         return self.request_gpus * self.cpus_per_gpu
 
     @property
+    def base_memory(self):
+        """
+        Base CPU memory to request for training
+        """
+        return 32
+
+    @property
     def cpu_memory(self):
         """
         Total CPU memory to request for training
         """
         memory = self.memory_per_cpu * self.num_cpus
+        memory += self.base_memory
         return f"{memory}G"
 
 

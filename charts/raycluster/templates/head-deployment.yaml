@@ -78,6 +78,8 @@ spec:
             - mountPath: {{ .Values.gitRepo.mountPath }}
               name: {{ .Values.gitRepo.name }}-volume
           env:
+          - name: TUNE_MAX_PENDING_TRIALS_PG
+            value: "64"
           - name: MY_CPU_REQUEST
             valueFrom:
               resourceFieldRef:
@@ -91,6 +93,8 @@ spec:
             limits:
               cpu: {{ .Values.head.cpu | quote }}
               memory: {{ .Values.head.memory | quote }}
+              ephemeral-storage: "100Gi"
             requests:
               cpu: {{ .Values.head.cpu | quote }}
               memory: {{ .Values.head.memory | quote }}
+              ephemeral-storage: "100Gi"
