@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from tempfile import gettempdir
@@ -7,6 +8,7 @@ from tempfile import gettempdir
 import ray
 import s3fs
 from botocore.exceptions import ResponseStreamingError
+from fsspec.exceptions import FSTimeoutError
 
 
 def split_data_dir(data_dir: str):
@@ -55,7 +57,7 @@ def get_data_dir(data_dir: str):
 
 
 def _download(
-    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 3
+    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 5
 ):
     """
     Cheap wrapper around s3.get to try to avoid issues
@@ -71,11 +73,12 @@ def _download(
         try:
             s3.get(source, target)
             break
-        except ResponseStreamingError:
+        except (ResponseStreamingError, FSTimeoutError):
             logging.info(
                 "Download attempt {} for object {} "
                 "was interrupted, retrying".format(i + 1, source)
             )
+            time.sleep(5)
             try:
                 os.remove(target)
             except FileNotFoundError:
