@@ -7,7 +7,7 @@ from tempfile import gettempdir
 
 import ray
 import s3fs
-from botocore.exceptions import ResponseStreamingError
+from botocore.exceptions import ClientError, ResponseStreamingError
 from fsspec.exceptions import FSTimeoutError
 
 
@@ -73,7 +73,7 @@ def _download(
         try:
             s3.get(source, target)
             break
-        except (ResponseStreamingError, FSTimeoutError):
+        except (ResponseStreamingError, FSTimeoutError, ClientError):
             logging.info(
                 "Download attempt {} for object {} "
                 "was interrupted, retrying".format(i + 1, source)

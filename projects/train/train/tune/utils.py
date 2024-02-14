@@ -29,6 +29,8 @@ import os
 from tempfile import NamedTemporaryFile
 from typing import Optional
 
+import pyarrow.fs
+import s3fs
 import yaml
 from lightning.pytorch.cli import LightningCLI
 from ray.train import CheckpointConfig, RunConfig, ScalingConfig
@@ -62,6 +64,7 @@ def get_host_cli(cli: type):
             """
             super().add_arguments_to_parser(parser)
             parser.add_argument("--tune.name", type=str, default="ray-tune")
+            parser.add_argument("--tune.restore", type=bool, default=False)
             parser.add_argument(
                 "--tune.space", type=str, default="train.tune.search_space"
             )
@@ -222,12 +225,26 @@ def configure_deployment(
         num_workers=workers_per_trial,
         use_gpu=True,
     )
+
+    # directly use s3 instead of rays pyarrow  s3[] default due to
+    # this issue https://github.com/ray-project/ray/issues/41137
+    fs = None
+    if storage_dir.startswith("s3://"):
+        storage_dir = storage_dir.removeprefix("s3://")
+        fs = s3fs.S3FileSystem(
+            key=os.getenv("AWS_ACCESS_KEY_ID"),
+            secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+        )
+        fs = pyarrow.fs.PyFileSystem(pyarrow.fs.FSSpecHandler(fs))
+
     run_config = RunConfig(
         checkpoint_config=CheckpointConfig(
             num_to_keep=2,
             checkpoint_score_attribute=metric_name,
             checkpoint_score_order=objective,
         ),
+        storage_filesystem=fs,
         storage_path=storage_dir,
         stop=stop_on_nan,
     )

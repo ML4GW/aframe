@@ -18,6 +18,11 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         description="Name of the tune job. "
         "Will be used to group runs in WandB",
     )
+    restore = luigi.BoolParameter(
+        default=False,
+        description="Restore a previous tune job "
+        "from the storage directory",
+    )
     search_space = luigi.Parameter(
         default="train.tune.search_space",
         description="Import path to the search space file "
@@ -99,6 +104,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
         args = self.get_args()
         args.append(f"--tune.name={self.name}")
+        args.append(f"--tune.restore={str(self.restore).lower()}")
         args.append(f"--tune.address={self.get_ip()}")
         args.append(f"--tune.space={self.search_space}")
         args.append(f"--tune.workers_per_trial={self.workers_per_trial}")
