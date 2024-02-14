@@ -50,16 +50,25 @@ def main(args: Optional[list[str]] = None):
     )
 
     search_space = tune_utils.get_search_space(tune_config["space"])
-    tuner = tune.Tuner(
-        train_func,
-        param_space={"train_loop_config": search_space},
-        tune_config=tune.TuneConfig(
-            metric="valid_auroc",
-            mode="max",
-            num_samples=tune_config["num_samples"],
-            scheduler=scheduler,
-        ),
-    )
+
+    # restore from a previous tuning run
+    if tune_config["restore"]:
+        tuner = tune.Tuner.restore(
+            tune_config["storage_dir"], train_func, resume_errored=True
+        )
+
+    else:
+        tuner = tune.Tuner(
+            train_func,
+            param_space={"train_loop_config": search_space},
+            tune_config=tune.TuneConfig(
+                metric="valid_auroc",
+                mode="max",
+                num_samples=tune_config["num_samples"],
+                scheduler=scheduler,
+                reuse_actors=True,
+            ),
+        )
     return tuner.fit()
 
 

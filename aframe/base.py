@@ -8,6 +8,7 @@ import luigi
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
+from aframe.config import s3
 from aframe.helm import RayCluster
 
 root = Path(__file__).resolve().parent.parent
@@ -217,6 +218,10 @@ class AframeRayTask(AframeSingularityTask):
         # that gets run in the container.
         env = super().sandbox_env(_)
         env["AFRAME_RAY_CLUSTER_IP"] = self.ip
+        env["AWS_ACCESS_KEY_ID"] = s3().aws_access_key_id
+        env["AWS_SECRET_ACCESS_KEY"] = s3().aws_secret_access_key
+        env["AWS_ENDPOINT_URL"] = s3().get_internal_s3_url()
+
         return env
 
     def sandbox_before_run(self):
