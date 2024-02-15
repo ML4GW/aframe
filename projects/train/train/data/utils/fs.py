@@ -52,7 +52,7 @@ def _download(
     """
 
     lockfile = f"{target}.lock"
-    if os.path.exists(target):
+    if os.path.exists(target) and not os.path.exists(lockfile):
         logging.info(f"Object {source} already downloaded")
         return
 
