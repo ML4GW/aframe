@@ -11,6 +11,16 @@ from botocore.exceptions import ClientError, ResponseStreamingError
 from fsspec.exceptions import FSTimeoutError
 
 
+def maybe_remove(path: str):
+    """
+    Remove a file if it exists.
+    """
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
+
 def split_data_dir(data_dir: str):
     """
     Check if a data directory specifies a remote s3
