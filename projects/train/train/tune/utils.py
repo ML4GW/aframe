@@ -26,6 +26,7 @@ this issue.
 import importlib
 import math
 import os
+import shutil
 from tempfile import NamedTemporaryFile
 from typing import Optional
 
@@ -181,6 +182,14 @@ class TrainFunc:
         # ray method does but they say to do it so :shrug:
         trainer = prepare_trainer(cli.trainer)
         trainer.fit(cli.model, cli.datamodule)
+
+        # if we downloaded data from s3,
+        # remove the local copy to free
+        # up space on the remote node
+        # for future trials
+        data_dir = config["data"]["data_dir"]
+        if data_dir.startswith("s3://"):
+            shutil.rmtree(data_dir)
 
 
 def configure_deployment(
