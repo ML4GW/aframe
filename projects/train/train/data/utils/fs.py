@@ -5,9 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from tempfile import gettempdir
 
-import ray
 import s3fs
 from botocore.exceptions import ClientError, ResponseStreamingError
+from filelock import FileLock
 from fsspec.exceptions import FSTimeoutError
 
 
@@ -40,18 +40,8 @@ def get_data_dir(data_dir: str):
         # worker process downloads its own copy of the data
         # only on its first training run
         tmpdir = gettempdir()
-        if ray.is_initialized():
-            logging.info(
-                "Downloading data to ray worker-specific tmp directory"
-            )
-            worker_id = ray.get_runtime_context().get_worker_id()
-            data_dir = f"{tmpdir}/{worker_id}"
-        # if not using ray, and just doing
-        # distributed training, just download
-        # to a specified temporary directory
-        else:
-            logging.info("Downloading data to local tmp directory")
-            data_dir = f"{tmpdir}/data-tmp"
+        logging.info("Downloading data to local tmp directory")
+        data_dir = f"{tmpdir}/data-tmp"
 
     logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
@@ -66,25 +56,29 @@ def _download(
     from interrupted reads.
     """
 
-    if os.path.exists(target):
-        logging.info(f"Object {source} already downloaded")
-        return
-
+    lockfile = target + ".lock"
     logging.info(f"Downloading {source} to {target}")
     for i in range(num_retries):
-        try:
-            s3.get(source, target)
-            break
-        except (ResponseStreamingError, FSTimeoutError, ClientError):
-            logging.info(
-                "Download attempt {} for object {} "
-                "was interrupted, retrying".format(i + 1, source)
-            )
-            time.sleep(5)
+        with FileLock(lockfile):
+            if os.path.exists(target):
+                logging.info(
+                    f"Object {source} already downloaded by another process"
+                )
+                return
             try:
-                os.remove(target)
-            except FileNotFoundError:
-                continue
+                s3.get(source, target)
+                break
+            except (ResponseStreamingError, FSTimeoutError, ClientError):
+                logging.info(
+                    "Download attempt {} for object {} "
+                    "was interrupted, retrying".format(i + 1, source)
+                )
+                time.sleep(5)
+                try:
+                    os.remove(target)
+                except FileNotFoundError:
+                    continue
+
     else:
         raise RuntimeError(
             "Failed to download object {} due to repeated "
