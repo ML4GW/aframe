@@ -187,7 +187,7 @@ class TrainFunc:
         # remove the local copy to free
         # up space on the remote node
         # for future trials
-        data_dir = config["data"]["data_dir"]
+        data_dir = config["data.data_dir"]
         if data_dir.startswith("s3://"):
             shutil.rmtree(data_dir)
 
