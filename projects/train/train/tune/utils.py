@@ -189,6 +189,7 @@ class TrainFunc:
         # for future trials
         data_dir = config["data.data_dir"]
         if data_dir.startswith("s3://"):
+            data_dir = cli.datamodule.data_dir
             shutil.rmtree(data_dir)
 
 
