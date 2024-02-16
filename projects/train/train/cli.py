@@ -1,5 +1,6 @@
 import os
 
+import torch
 from lightning.pytorch.cli import LightningCLI
 
 from train.data import BaseAframeDataset
@@ -17,6 +18,11 @@ class AframeCLI(LightningCLI):
         parser.link_arguments(
             "data.init_args.valid_stride",
             "model.init_args.metric.init_args.stride",
+        )
+        parser.add_argument(
+            "--matmul_precision",
+            type=str,
+            default="highest",
         )
 
 
@@ -41,6 +47,7 @@ def main(args=None):
     else:
         configure_logging()
 
+    torch.set_float32_matmul_precision(cli.config["matmul_precision"])
     cli.trainer.fit(cli.model, cli.datamodule)
 
 
