@@ -69,7 +69,7 @@ def main(args: Optional[list[str]] = None):
                 reuse_actors=True,
             ),
         )
-    return tuner.fit()
+    tuner.fit()
 
 
 if __name__ == "__main__":

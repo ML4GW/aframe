@@ -246,6 +246,7 @@ def configure_deployment(
         ),
         storage_filesystem=fs,
         storage_path=storage_dir,
+        name=train_func.name,
         stop=stop_on_nan,
     )
     return TorchTrainer(
