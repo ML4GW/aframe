@@ -30,10 +30,10 @@ from tempfile import NamedTemporaryFile
 from typing import Optional
 
 import pyarrow.fs
-import s3fs
 import yaml
 from lightning.pytorch.cli import LightningCLI
-from ray.train import CheckpointConfig, RunConfig, ScalingConfig
+from ray import train
+from ray.train import CheckpointConfig, FailureConfig, RunConfig, ScalingConfig
 from ray.train.lightning import (
     RayDDPStrategy,
     RayLightningEnvironment,
@@ -64,7 +64,6 @@ def get_host_cli(cli: type):
             """
             super().add_arguments_to_parser(parser)
             parser.add_argument("--tune.name", type=str, default="ray-tune")
-            parser.add_argument("--tune.restore", type=bool, default=False)
             parser.add_argument(
                 "--tune.space", type=str, default="train.tune.search_space"
             )
@@ -177,10 +176,16 @@ class TrainFunc:
         else:
             configure_logging()
 
+        # restore from checkpoint if available
+        checkpoint = train.get_checkpoint()
+        ckpt_path = None
+        if checkpoint:
+            ckpt_path = checkpoint.path
+
         # I have no idea what this `prepare_trainer`
         # ray method does but they say to do it so :shrug:
         trainer = prepare_trainer(cli.trainer)
-        trainer.fit(cli.model, cli.datamodule)
+        trainer.fit(cli.model, cli.datamodule, ckpt_path=ckpt_path)
 
 
 def configure_deployment(
@@ -191,6 +196,7 @@ def configure_deployment(
     cpus_per_gpu: int,
     objective: str = "max",
     storage_dir: Optional[str] = None,
+    fs: Optional[pyarrow.fs.FileSystem] = None,
 ) -> TorchTrainer:
     """
     Set up a training function that can be distributed
@@ -216,6 +222,7 @@ def configure_deployment(
         storage_dir:
             Directory to save ray checkpoints and logs
             during training.
+        fs: Filesystem to use for storage
     """
 
     cpus_per_worker = cpus_per_gpu * gpus_per_worker
@@ -226,23 +233,14 @@ def configure_deployment(
         use_gpu=True,
     )
 
-    # directly use s3 instead of rays pyarrow  s3[] default due to
-    # this issue https://github.com/ray-project/ray/issues/41137
-    fs = None
-    if storage_dir.startswith("s3://"):
-        storage_dir = storage_dir.removeprefix("s3://")
-        fs = s3fs.S3FileSystem(
-            key=os.getenv("AWS_ACCESS_KEY_ID"),
-            secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
-        )
-        fs = pyarrow.fs.PyFileSystem(pyarrow.fs.FSSpecHandler(fs))
-
     run_config = RunConfig(
         checkpoint_config=CheckpointConfig(
             num_to_keep=2,
             checkpoint_score_attribute=metric_name,
             checkpoint_score_order=objective,
+        ),
+        failure_config=FailureConfig(
+            max_failures=1,
         ),
         storage_filesystem=fs,
         storage_path=storage_dir,

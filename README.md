@@ -72,7 +72,7 @@ Finally, lets generate some waveforms:
 ```
 apptainer run ~/aframe/images/data.sif \
     python -m data waveforms \
-    --prior data.priors.priors.end_o3_ratesandpops \
+    --prior priors.priors.end_o3_ratesandpops \
     --num_signals 10000 \
     --waveform_duration 8 \
     --sample_rate 2048 \
