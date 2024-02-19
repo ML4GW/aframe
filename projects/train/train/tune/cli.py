@@ -1,6 +1,9 @@
+import os
 from typing import Optional
 
+import pyarrow.fs
 import ray
+import s3fs
 import yaml
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
@@ -29,6 +32,20 @@ def main(args: Optional[list[str]] = None):
         address = None
     ray.init(address, _temp_dir=tune_config.get("temp_dir", None))
 
+    # directly use s3 instead of rays pyarrow  s3 default due to
+    # this issue https://github.com/ray-project/ray/issues/41137
+    fs = None
+    storage_dir = tune_config.get("storage_dir", "")
+    if storage_dir.startswith("s3://"):
+        storage_dir = storage_dir.removeprefix("s3://")
+
+        fs = s3fs.S3FileSystem(
+            key=os.getenv("AWS_ACCESS_KEY_ID"),
+            secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+        )
+        fs = pyarrow.fs.PyFileSystem(pyarrow.fs.FSSpecHandler(fs))
+
     # construct the function that will actually
     # execute the training loop, and then set it
     # up for Ray to distribute it over our cluster,
@@ -41,7 +58,8 @@ def main(args: Optional[list[str]] = None):
         gpus_per_worker=tune_config["gpus_per_worker"],
         cpus_per_gpu=tune_config["cpus_per_gpu"],
         objective="max",
-        storage_dir=tune_config.get("storage_dir", None),
+        storage_dir=storage_dir or None,
+        fs=fs,
     )
     scheduler = ASHAScheduler(
         max_t=tune_config["max_epochs"],
@@ -52,9 +70,10 @@ def main(args: Optional[list[str]] = None):
     search_space = tune_utils.get_search_space(tune_config["space"])
 
     # restore from a previous tuning run
-    if tune_config["restore"]:
+    path = os.path.join(storage_dir, tune_config["name"])
+    if tune.Tuner.can_restore(path):
         tuner = tune.Tuner.restore(
-            tune_config["storage_dir"], train_func, resume_errored=True
+            path, train_func, resume_errored=True, storage_filesystem=fs
         )
 
     else:

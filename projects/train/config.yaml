@@ -2,7 +2,7 @@
 # by train task at run time. To build a functional
 # standalone config, add these in.
  
-matmul_precision: "highest"
+matmul_precision: "high"
 model:
   class_path: train.model.SupervisedAframe
   init_args:
@@ -35,7 +35,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 384
+    batch_size: 800
     # kernel_length:
     psd_length: 8
     # fduration:
