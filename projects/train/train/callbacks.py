@@ -93,11 +93,11 @@ class AframeTrainReportCallback(Callback):
         kernel_size = int(
             datamodule.hparams.kernel_length * datamodule.sample_rate
         )
-        model = pl_module.model
+
         sample_input = torch.randn(
-            1, datamodule.num_ifos, kernel_size, device=model.device
+            1, datamodule.num_ifos, kernel_size, device=pl_module.device
         )
-        trace = torch.jit.trace(model, sample_input)
+        trace = torch.jit.trace(pl_module.model, sample_input)
 
         # Save trace checkpoint to local
         ckpt_path = os.path.join(tmpdir, "model.pt")
