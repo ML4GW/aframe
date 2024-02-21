@@ -97,10 +97,15 @@ class AframeTrainReportCallback(Callback):
         sample_input = torch.randn(1, datamodule.num_ifos, kernel_size)
         trace = torch.jit.trace(model, sample_input)
 
-        # Save checkpoint to local
+        # Save trace checkpoint to local
         ckpt_path = os.path.join(tmpdir, "model.pt")
         with open(ckpt_path, "wb") as f:
             torch.jit.save(trace, f)
+
+        # save lightning checkpoint to local
+        # Save checkpoint to local
+        ckpt_path = os.path.join(tmpdir, "checkpoint.ckpt")
+        trainer.save_checkpoint(ckpt_path, weights_only=False)
 
         # Report to train session
         checkpoint = train.Checkpoint.from_directory(tmpdir)
