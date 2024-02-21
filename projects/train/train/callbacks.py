@@ -93,8 +93,10 @@ class AframeTrainReportCallback(Callback):
         kernel_size = int(
             datamodule.hparams.kernel_length * datamodule.sample_rate
         )
-        model = pl_module.model.to("cpu")
-        sample_input = torch.randn(1, datamodule.num_ifos, kernel_size)
+        model = pl_module.model
+        sample_input = torch.randn(
+            1, datamodule.num_ifos, kernel_size, device=model.device
+        )
         trace = torch.jit.trace(model, sample_input)
 
         # Save trace checkpoint to local
