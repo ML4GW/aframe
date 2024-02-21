@@ -34,17 +34,31 @@ def main(args: Optional[list[str]] = None):
 
     # directly use s3 instead of rays pyarrow  s3 default due to
     # this issue https://github.com/ray-project/ray/issues/41137
-    fs = None
+    internal_fs = external_fs = None
     storage_dir = tune_config.get("storage_dir", "")
     if storage_dir.startswith("s3://"):
         storage_dir = storage_dir.removeprefix("s3://")
 
-        fs = s3fs.S3FileSystem(
+        # for accessing s3 filesystem from inside the cluster,
+        internal_fs = s3fs.S3FileSystem(
             key=os.getenv("AWS_ACCESS_KEY_ID"),
             secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
             endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
         )
-        fs = pyarrow.fs.PyFileSystem(pyarrow.fs.FSSpecHandler(fs))
+        internal_fs = pyarrow.fs.PyFileSystem(
+            pyarrow.fs.FSSpecHandler(internal_fs)
+        )
+
+        # for accessing s3 filesystem from outside the cluster,
+        # i.e. for checking if we can restore tune job
+        external_fs = s3fs.S3FileSystem(
+            key=os.getenv("AWS_ACCESS_KEY_ID"),
+            secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=os.getenv("AWS_EXTERNAL_ENDPOINT_URL"),
+        )
+        external_fs = pyarrow.fs.PyFileSystem(
+            pyarrow.fs.FSSpecHandler(external_fs)
+        )
 
     # construct the function that will actually
     # execute the training loop, and then set it
@@ -59,7 +73,7 @@ def main(args: Optional[list[str]] = None):
         cpus_per_gpu=tune_config["cpus_per_gpu"],
         objective="max",
         storage_dir=storage_dir or None,
-        fs=fs,
+        fs=internal_fs,
     )
     scheduler = ASHAScheduler(
         max_t=tune_config["max_epochs"],
@@ -71,9 +85,12 @@ def main(args: Optional[list[str]] = None):
 
     # restore from a previous tuning run
     path = os.path.join(storage_dir, tune_config["name"])
-    if tune.Tuner.can_restore(path):
+    if tune.Tuner.can_restore(path, storage_filesystem=external_fs):
         tuner = tune.Tuner.restore(
-            path, train_func, resume_errored=True, storage_filesystem=fs
+            path,
+            train_func,
+            resume_errored=True,
+            storage_filesystem=external_fs,
         )
 
     else:

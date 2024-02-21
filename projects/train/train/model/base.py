@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Sequence, Union
 
 import lightning.pytorch as pl
+import ray
 import torch
 
 from train.architectures import Architecture
@@ -185,6 +186,11 @@ class AframeBase(pl.LightningModule):
         # that will be used for downstream export
         # and inference tasks
         # checkpoint for saving multiple best models
+        callbacks = []
+        callbacks.append(SaveAugmentedBatch())
+
+        # if using ray tune don't append lightning
+        # model checkpoint since we'll be using ray's
         checkpoint = ModelCheckpoint(
             monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
@@ -192,8 +198,9 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
-        save = SaveAugmentedBatch()
-        callbacks = [checkpoint, save]
+        if not ray.is_initialized():
+            callbacks.append(checkpoint)
+
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStopping(
                 monitor="valid_auroc",
