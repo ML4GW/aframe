@@ -1,11 +1,14 @@
 import io
 import os
+import shutil
+import tempfile
 
 import h5py
 import s3fs
 import torch
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
+from ray import train
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
@@ -53,3 +56,57 @@ class SaveAugmentedBatch(Callback):
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
+
+
+class AframeTrainReportCallback(Callback):
+    """
+    Equivalent of the RayTrainReportCallback
+    (https://docs.ray.io/en/latest/train/api/doc/ray.train.lightning.RayTrainReportCallback.html)
+    except saves trace instead of model weights
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.trial_name = train.get_context().get_trial_name()
+        self.local_rank = train.get_context().get_local_rank()
+        self.tmpdir_prefix = os.path.join(
+            tempfile.gettempdir(), self.trial_name
+        )
+        if os.path.isdir(self.tmpdir_prefix) and self.local_rank == 0:
+            shutil.rmtree(self.tmpdir_prefix)
+
+    def on_train_epoch_end(self, trainer, pl_module) -> None:
+        # Creates a checkpoint dir with fixed name
+        tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
+        os.makedirs(tmpdir, exist_ok=True)
+
+        # Fetch metrics
+        metrics = trainer.callback_metrics
+        metrics = {k: v.item() for k, v in metrics.items()}
+
+        # (Optional) Add customized metrics
+        metrics["epoch"] = trainer.current_epoch
+        metrics["step"] = trainer.global_step
+
+        # Trace the model
+        datamodule = trainer.datamodule
+        kernel_size = int(
+            datamodule.hparams.kernel_length * datamodule.sample_rate
+        )
+        sample_input = torch.randn(1, datamodule.num_ifos, kernel_size)
+        trace = torch.jit.trace(pl_module.model, sample_input)
+
+        # Save checkpoint to local
+        ckpt_path = os.path.join(tmpdir, "model.pt")
+        with open(ckpt_path, "wb") as f:
+            torch.jit.save(trace, f)
+
+        # Report to train session
+        checkpoint = train.Checkpoint.from_directory(tmpdir)
+        train.report(metrics=metrics, checkpoint=checkpoint)
+
+        # Add a barrier to ensure all workers finished reporting here
+        torch.distributed.barrier()
+
+        if self.local_rank == 0:
+            shutil.rmtree(tmpdir)

@@ -37,11 +37,11 @@ from ray.train import CheckpointConfig, FailureConfig, RunConfig, ScalingConfig
 from ray.train.lightning import (
     RayDDPStrategy,
     RayLightningEnvironment,
-    RayTrainReportCallback,
     prepare_trainer,
 )
 from ray.train.torch import TorchTrainer
 
+from train.callbacks import AframeTrainReportCallback
 from utils.logging import configure_logging
 
 
@@ -118,7 +118,7 @@ def get_worker_cli(cli: LightningCLI):
                 devices="auto",
                 accelerator="auto",
                 strategy=RayDDPStrategy(),
-                callbacks=[RayTrainReportCallback()],
+                callbacks=[AframeTrainReportCallback()],
                 plugins=[RayLightningEnvironment()],
             )
             return super().instantiate_trainer(**kwargs)

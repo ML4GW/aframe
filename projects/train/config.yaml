@@ -8,9 +8,9 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
+      class_path: train.architectures.supervised.SupervisedTimeDomainXylophone
       init_args:
-        layers: [3, 4, 6, 3]
+        #layers: [3, 4, 6, 3]
         norm_layer:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
@@ -23,7 +23,7 @@ model:
 
     # optimization params
     weight_decay: 0.0
-    learning_rate: 0.000585
+    learning_rate: 0.0585
     pct_lr_ramp: 0.115
     # early stop
     patience: 25

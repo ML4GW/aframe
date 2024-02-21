@@ -221,6 +221,7 @@ class AframeRayTask(AframeSingularityTask):
         env["AWS_ACCESS_KEY_ID"] = s3().aws_access_key_id
         env["AWS_SECRET_ACCESS_KEY"] = s3().aws_secret_access_key
         env["AWS_ENDPOINT_URL"] = s3().get_internal_s3_url()
+        env["AWS_EXTERNAL_ENDPOINT_URL"] = s3().endpoint_url
 
         return env
 
