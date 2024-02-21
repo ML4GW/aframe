@@ -180,7 +180,7 @@ class TrainFunc:
         checkpoint = train.get_checkpoint()
         ckpt_path = None
         if checkpoint:
-            ckpt_path = checkpoint.path
+            ckpt_path = os.path.join(checkpoint.path, "checkpoint.ckpt")
 
         # I have no idea what this `prepare_trainer`
         # ray method does but they say to do it so :shrug:

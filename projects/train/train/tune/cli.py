@@ -103,6 +103,8 @@ def main(args: Optional[list[str]] = None):
                 num_samples=tune_config["num_samples"],
                 scheduler=scheduler,
                 reuse_actors=True,
+                trial_name_creator=lambda trial: f"{trial.trial_id}",
+                trial_dirname_creator=lambda trial: f"{trial.trial_id}",
             ),
         )
     tuner.fit()
