@@ -170,17 +170,21 @@ class TrainFunc:
 
         log_dir = cli.trainer.logger.log_dir or cli.trainer.logger.save_dir
         if not log_dir.startswith("s3://"):
+            ckpt_prefix = ""
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, "train.log")
             configure_logging(log_file)
         else:
+            ckpt_prefix = "s3://"
             configure_logging()
 
         # restore from checkpoint if available
         checkpoint = train.get_checkpoint()
         ckpt_path = None
         if checkpoint:
-            ckpt_path = os.path.join(checkpoint.path, "checkpoint.ckpt")
+            ckpt_path = os.path.join(
+                ckpt_prefix, checkpoint.path, "checkpoint.ckpt"
+            )
 
         # I have no idea what this `prepare_trainer`
         # ray method does but they say to do it so :shrug:
