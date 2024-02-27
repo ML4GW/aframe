@@ -8,13 +8,11 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
+      class_path: train.architectures.supervised.SupervisedTimeDomainWaveNet
       init_args:
-        layers: [3, 4, 6, 3]
-        norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
-          init_args:
-            groups: 16
+        res_channels: 32
+        layers_per_block: 9
+        num_blocks: 6
     metric:
       class_path: train.metrics.TimeSlideAUROC
       init_args:
@@ -35,7 +33,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 800
+    batch_size: 128
     # kernel_length:
     psd_length: 8
     # fduration:
@@ -86,7 +84,7 @@ trainer:
     # dict_kwargs:
       # profile_memory: true
   # devices:
-  # strategy: set to ddp if len(devices) > 1
+  strategy: ddp_find_unused_parameters_true #set to ddp if len(devices) > 1
   #precision: 16-mixed
   accelerator: auto
   max_epochs: 200
