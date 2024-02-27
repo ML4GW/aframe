@@ -163,6 +163,7 @@ class TrainFunc:
             # but if we're distributed tuning I don't
             # really know what other logger we would use
             args.append(f"--trainer.logger.group={self.name}")
+            args.append("--trainer.strategy=ddp_find_unused_parameters_true")
             cli_cls = get_worker_cli(self.cli)
             cli = cli_cls(
                 run=False, args=args, save_config_kwargs={"overwrite": True}
@@ -189,6 +190,7 @@ class TrainFunc:
         # I have no idea what this `prepare_trainer`
         # ray method does but they say to do it so :shrug:
         trainer = prepare_trainer(cli.trainer)
+        print(trainer.strategy)
         trainer.fit(cli.model, cli.datamodule, ckpt_path=ckpt_path)
 
 
@@ -233,7 +235,7 @@ def configure_deployment(
     scaling_config = ScalingConfig(
         trainer_resources={"CPU": 0},
         resources_per_worker={"CPU": cpus_per_worker, "GPU": gpus_per_worker},
-        num_workers=workers_per_trial,
+        num_workers=2,  # workers_per_trial,
         use_gpu=True,
     )
 
