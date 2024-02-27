@@ -117,7 +117,7 @@ def get_worker_cli(cli: LightningCLI):
                 enable_progress_bar=False,
                 devices="auto",
                 accelerator="auto",
-                strategy=RayDDPStrategy(),
+                strategy=RayDDPStrategy(find_unused_parameters=True),
                 callbacks=[AframeTrainReportCallback()],
                 plugins=[RayLightningEnvironment()],
             )
