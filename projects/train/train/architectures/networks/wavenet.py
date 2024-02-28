@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -21,6 +22,7 @@ class WavenetBlock(torch.nn.Module):
         skip_channels: int,
         dilation: int,
         kernel_size: int = 2,
+        last: bool = False,
     ):
         super().__init__()
         self.gated = GatedActivation()
@@ -29,26 +31,27 @@ class WavenetBlock(torch.nn.Module):
             in_channels,
             kernel_size=kernel_size,
             dilation=dilation,
-            padding="same",
         )
-        self.conv_res = nn.Conv1d(in_channels, in_channels, 1)
+        self.conv_res = (
+            nn.Conv1d(in_channels, in_channels, 1) if not last else None
+        )
         self.skip_res = nn.Conv1d(in_channels, skip_channels, 1)
 
-    def forward(self, x):
-        identity = x
-
+    def forward(self, x, skip_size):
         # dilate, gate, and send through residual conv
         dilated = self.dilated(x)
         gated = self.gated(dilated)
-        output = self.conv_res(gated)
 
-        # add input to residual
-        output += identity
+        res = None
+        if self.conv_res is not None:
+            res = self.conv_res(gated)
+            # add input to residual
+            res += x[..., -res.size(-1) :]
 
         # perform skip convolution
         skip = self.skip_res(gated)
-
-        return output, skip
+        skip = skip[..., -skip_size:]
+        return res, skip
 
 
 class DenseNet(torch.nn.Module):
@@ -74,24 +77,30 @@ class DenseNet(torch.nn.Module):
 
 class WaveNet(torch.nn.Module):
     def __init__(
-        self, in_channels, res_channels, layers_per_block: int, num_blocks: int
+        self,
+        in_channels,
+        res_channels,
+        layers_per_block: int,
+        num_blocks: int,
+        kernel_size: int = 2,
     ):
         super().__init__()
-        self.init_conv = torch.nn.Conv1d(in_channels, res_channels, 1)
+        self.init_conv = nn.Conv1d(
+            in_channels, res_channels, kernel_size=2, dilation=1
+        )
         self.layers_per_block = layers_per_block
         self.num_blocks = num_blocks
         self.res_channels = res_channels
         self.in_channels = in_channels
+        self.kernel_size = kernel_size
         self.dense = DenseNet(res_channels)
         self.blocks = self.build_blocks()
+        self.receptive_field = self.calc_receptive_field()
 
-    @property
-    def receptive_field(self):
-        layers = [
-            2**i for i in range(0, self.layers_per_block)
-        ] * self.num_blocks
-        layers = torch.tensor(layers)
-        return int(torch.sum(layers))
+    def calc_receptive_field(self):
+        return np.sum(
+            [(2**i) for i in range(self.layers_per_block)] * self.num_blocks
+        )
 
     def output_size(self, x):
         size = int(x.size(-1)) - self.receptive_field
@@ -105,23 +114,28 @@ class WaveNet(torch.nn.Module):
 
     def build_blocks(self):
         blocks = []
-        for d in self.dilations:
+        for i, d in enumerate(self.dilations):
+            last = i == len(self.dilations) - 1
             blocks.append(
                 WavenetBlock(
                     self.res_channels,
                     self.res_channels,
-                    kernel_size=2,
+                    kernel_size=self.kernel_size,
                     dilation=d,
+                    last=last,
                 )
             )
         return nn.ModuleList(blocks)
 
     def forward(self, x):
         x = self.init_conv(x)
-        output = torch.zeros(x.size(), device=x.device)
-        for i, block in enumerate(self.blocks):
+        output_size = self.output_size(x)
+        size = (x.size(0), self.res_channels, output_size)
+        output = torch.zeros(size, device=x.device)
+        for block in self.blocks:
             # output is the next input
-            x, skip = block(x)
+            x, skip = block(x, output_size)
             output += skip
+
         output = self.dense(output)
         return output
