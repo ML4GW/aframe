@@ -94,10 +94,14 @@ class AframeTrainReportCallback(Callback):
             datamodule.hparams.kernel_length * datamodule.sample_rate
         )
 
+        # trace the model on cpu and then move model back to original device
         sample_input = torch.randn(
-            1, datamodule.num_ifos, kernel_size, device=pl_module.device
+            1, datamodule.num_ifos, kernel_size, device="cpu"
         )
-        trace = torch.jit.trace(pl_module.model, sample_input)
+
+        device = pl_module.device
+        trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
+        pl_module.model.to(device)
 
         # Save trace checkpoint to local
         ckpt_path = os.path.join(tmpdir, "model.pt")
