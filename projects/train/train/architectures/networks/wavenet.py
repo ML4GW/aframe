@@ -15,29 +15,6 @@ class GatedActivation(torch.nn.Module):
         return one * two
 
 
-class CausalDilatedConv1D(torch.nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        dilation: int,
-    ):
-        super().__init__()
-        self.conv = nn.Conv1d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            dilation=dilation,
-            bias=False,
-            padding="same",
-        )
-        self.ignore = (kernel_size - 1) * dilation
-
-    def forward(self, x):
-        return self.conv(x)[..., : -self.ignore]
-
-
 class WavenetBlock(torch.nn.Module):
     def __init__(
         self,
@@ -49,7 +26,7 @@ class WavenetBlock(torch.nn.Module):
     ):
         super().__init__()
         self.gated = GatedActivation()
-        self.dilated = CausalDilatedConv1D(
+        self.dilated = nn.Conv1d(
             in_channels,
             in_channels,
             kernel_size=kernel_size,
@@ -100,16 +77,22 @@ class DenseNet(torch.nn.Module):
 
 class WaveNet(torch.nn.Module):
     def __init__(
-        self, in_channels, res_channels, layers_per_block: int, num_blocks: int
+        self,
+        in_channels,
+        res_channels,
+        layers_per_block: int,
+        num_blocks: int,
+        kernel_size: int = 2,
     ):
         super().__init__()
-        self.init_conv = CausalDilatedConv1D(
+        self.init_conv = nn.Conv1d(
             in_channels, res_channels, kernel_size=2, dilation=1
         )
         self.layers_per_block = layers_per_block
         self.num_blocks = num_blocks
         self.res_channels = res_channels
         self.in_channels = in_channels
+        self.kernel_size = kernel_size
         self.dense = DenseNet(res_channels)
         self.blocks = self.build_blocks()
         self.receptive_field = self.calc_receptive_field()
@@ -137,7 +120,7 @@ class WaveNet(torch.nn.Module):
                 WavenetBlock(
                     self.res_channels,
                     self.res_channels,
-                    kernel_size=2,
+                    kernel_size=self.kernel_size,
                     dilation=d,
                     last=last,
                 )
