@@ -10,7 +10,7 @@ model:
     arch:
       class_path: train.architectures.supervised.SupervisedTimeDomainWaveNet
       init_args:
-        res_channels: 32
+        res_channels: 48
         layers_per_block: 9
         num_blocks: 6
     metric:
@@ -33,7 +33,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 128
+    batch_size: 256
     # kernel_length:
     psd_length: 8
     # fduration:
@@ -84,7 +84,7 @@ trainer:
     # dict_kwargs:
       # profile_memory: true
   # devices:
-  strategy: ddp_find_unused_parameters_true #set to ddp if len(devices) > 1
+  # strategy: set to ddp if len(devices) > 1
   #precision: 16-mixed
   accelerator: auto
   max_epochs: 200
