@@ -110,8 +110,9 @@ def export(
 
     # load in the model graph
     logging.info("Initializing model graph")
+
     with open_file(weights, "rb") as f:
-        graph = nn = torch.jit.load(f)
+        graph = nn = torch.jit.load(f, map_location="cpu")
 
     graph.eval()
     logging.info(f"Initialize:\n{nn}")
