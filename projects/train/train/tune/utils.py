@@ -244,7 +244,7 @@ def configure_deployment(
             checkpoint_score_order=objective,
         ),
         failure_config=FailureConfig(
-            max_failures=1,
+            max_failures=5,
         ),
         storage_filesystem=fs,
         storage_path=storage_dir,
