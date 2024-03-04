@@ -26,7 +26,7 @@ class AframeParameters(law.Task):
         " the container will need to be rebuilt.",
     )
     gpus = luigi.Parameter(
-        default="",
+        default=os.getenv("CUDA_VISIBLE_DEVICES", ""),
         significant=False,
         description="Comma separated list of gpu ids to be exposed "
         "via the `CUDA_VISIBLE_DEVICES` environment variable.",

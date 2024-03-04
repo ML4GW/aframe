@@ -76,7 +76,7 @@ class s3(luigi.Config):
 
     @property
     def client(self):
-        S3Client(endpoint_url=self.endpoint_url)
+        return S3Client(endpoint_url=self.endpoint_url)
 
 
 class Defaults:

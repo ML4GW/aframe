@@ -12,7 +12,7 @@ from train.cli import AframeCLI
 from train.tune import utils as tune_utils
 
 
-def main(args: Optional[list[str]] = None):
+def main(args: Optional[list[str]] = None) -> str:
     host_cli = tune_utils.get_host_cli(AframeCLI)
 
     # create a yaml dict version of whatever arguments
@@ -36,8 +36,10 @@ def main(args: Optional[list[str]] = None):
     # this issue https://github.com/ray-project/ray/issues/41137
     internal_fs = external_fs = None
     storage_dir = tune_config.get("storage_dir", "")
+    prefix = ""
     if storage_dir.startswith("s3://"):
-        storage_dir = storage_dir.removeprefix("s3://")
+        prefix = "s3://"
+        storage_dir = storage_dir.removeprefix(prefix)
 
         # for accessing s3 filesystem from inside the cluster,
         internal_fs = s3fs.S3FileSystem(
@@ -107,7 +109,15 @@ def main(args: Optional[list[str]] = None):
                 trial_dirname_creator=lambda trial: f"{trial.trial_id}",
             ),
         )
-    tuner.fit()
+    results = tuner.fit()
+
+    # return path to best model weights from best trial
+    best = results.get_best_result(
+        metric="valid_auroc", mode="max", scope="all"
+    )
+    best = best.get_best_checkpoint(metric="valid_auroc", mode="max")
+    weights = os.path.join(prefix, best.path, "model.pt")
+    return weights
 
 
 if __name__ == "__main__":
