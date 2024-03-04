@@ -5,6 +5,7 @@ import luigi
 
 from aframe.base import AframeRayTask
 from aframe.config import ray_head, ray_worker, s3
+from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase
 from aframe.tasks.train.config import wandb
 
@@ -85,14 +86,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         cluster.build_command(values)
         return cluster
 
-    @property
-    def random_search_steps(self):
-        return self.num_gpus
-
-    def complete(self):
-        # TODO: determine best way of definine
-        # completion for tune jobs
-        return False
+    def output(self):
+        return LawS3Target(f"{self.run_dir}/best.pt")
 
     def run(self):
         from train.tune.cli import main
@@ -109,4 +104,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         args.append(f"--tune.max_epochs={self.max_epochs}")
         args.append(f"--tune.reduction_factor={self.reduction_factor}")
         args.append(f"--tune.storage_dir={self.run_dir}")
-        main(args)
+
+        weights = main(args)
+        # copy the best weights to the output location
+        s3().client.copy(weights, self.output().path)
