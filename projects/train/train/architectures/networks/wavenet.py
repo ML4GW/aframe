@@ -1,6 +1,10 @@
+from typing import Callable, Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
+
+from ml4gw.nn.norm import GroupNorm1DGetter, NormLayer
 
 
 class GatedActivation(torch.nn.Module):
@@ -22,9 +26,11 @@ class WavenetBlock(torch.nn.Module):
         skip_channels: int,
         dilation: int,
         kernel_size: int = 2,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
         last: bool = False,
     ):
         super().__init__()
+        self.last = last
         self.gated = GatedActivation()
         self.dilated = nn.Conv1d(
             in_channels,
@@ -32,19 +38,24 @@ class WavenetBlock(torch.nn.Module):
             kernel_size=kernel_size,
             dilation=dilation,
         )
-        self.conv_res = (
-            nn.Conv1d(in_channels, in_channels, 1) if not last else None
-        )
+        self.norm1 = norm_layer(in_channels)
+        if not last:
+            self.conv_res = (
+                nn.Conv1d(in_channels, in_channels, 1) if not last else None
+            )
+            self.norm2 = norm_layer(in_channels)
         self.skip_res = nn.Conv1d(in_channels, skip_channels, 1)
 
     def forward(self, x, skip_size):
         # dilate, gate, and send through residual conv
         dilated = self.dilated(x)
-        gated = self.gated(dilated)
+        norm = self.norm1(dilated)
+        gated = self.gated(norm)
 
         res = None
-        if self.conv_res is not None:
+        if not self.last:
             res = self.conv_res(gated)
+            res = self.norm2(res)
             # add input to residual
             res += x[..., -res.size(-1) :]
 
@@ -83,11 +94,14 @@ class WaveNet(torch.nn.Module):
         layers_per_block: int,
         num_blocks: int,
         kernel_size: int = 2,
+        norm_layer: Optional[NormLayer] = None,
     ):
+        self.norm_layer = norm_layer or GroupNorm1DGetter()
         super().__init__()
         self.init_conv = nn.Conv1d(
             in_channels, res_channels, kernel_size=2, dilation=1
         )
+        self.norm1 = norm_layer(res_channels)
         self.layers_per_block = layers_per_block
         self.num_blocks = num_blocks
         self.res_channels = res_channels
@@ -122,6 +136,7 @@ class WaveNet(torch.nn.Module):
                     self.res_channels,
                     kernel_size=self.kernel_size,
                     dilation=d,
+                    norm_layer=self.norm_layer,
                     last=last,
                 )
             )
@@ -129,6 +144,7 @@ class WaveNet(torch.nn.Module):
 
     def forward(self, x):
         x = self.init_conv(x)
+        x = self.norm1(x)
         output_size = self.output_size(x)
         size = (x.size(0), self.res_channels, output_size)
         output = torch.zeros(size, device=x.device)
