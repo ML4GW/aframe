@@ -77,12 +77,14 @@ class SupervisedTimeDomainWaveNet(WaveNet, SupervisedArchitecture):
         res_channels: int,
         layers_per_block: int,
         num_blocks: int,
+        norm_layer: Optional[NormLayer] = None,
     ):
         super().__init__(
             num_ifos,
             res_channels,
             layers_per_block,
             num_blocks,
+            norm_layer=norm_layer,
         )
 
 
