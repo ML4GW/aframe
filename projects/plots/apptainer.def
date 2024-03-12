@@ -1,0 +1,41 @@
+Bootstrap: docker
+From: python:3.10.12-slim-bullseye
+Stage: build
+
+%files
+. /opt/aframe/projects/plots
+../utils /opt/aframe/projects/utils
+../../libs/ledger /opt/aframe/libs/ledger
+../../libs/priors /opt/aframe/libs/priors
+../../ml4gw /opt/aframe/ml4gw
+../../pyproject.toml /opt/aframe/pyproject.toml
+
+%post
+# installing the local package editably via pip
+# works, but none of the dependencies (e.g. ml4gw)
+# are installed editably. Instead, use poetry export
+# to export to a requirements.txt, and use sed 
+# to prepend the -e flag to all relevant 
+# local packages that require editable installs.
+# poetry has already done dependency resolution for us,
+# so turn that off with the --no-deps flag to increase performance.
+# Lastly, install the export project itself
+python -m pip install poetry
+cd /opt/aframe/projects/plots
+poetry export -o requirements.txt --without-hashes \
+    && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
+
+
+Bootstrap: docker
+From: python:3.10.12-slim-bullseye
+Stage: final
+
+%files from build
+/opt/aframe /opt/aframe
+
+%post
+apt-get update
+apt-get -y install gcc
+cd /opt/aframe/projects/plots
+pip install -r requirements.txt --no-deps --no-cache-dir
+pip install -e . --no-deps --no-cache-dir
