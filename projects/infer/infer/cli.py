@@ -1,3 +1,4 @@
+import logging
 import os
 
 import jsonargparse
@@ -15,6 +16,7 @@ def build_parser():
     parser.add_argument("--verbose", type=bool, default=False)
     parser.add_argument("--logfile", type=str, default=None)
     parser.add_argument("--outdir", type=str, default=None)
+    parser.add_argument("--force", type=bool, default=False)
 
     parser.add_class_arguments(InferenceClient, "client")
     parser.add_class_arguments(Sequence, "data")
@@ -32,6 +34,7 @@ def build_parser():
     parser.link_arguments(
         "data.shifts", "postprocessor.shifts", apply_on="parse"
     )
+
     return parser
 
 
@@ -47,13 +50,28 @@ def main(args=None):
         os.makedirs(logdir, exist_ok=True)
     configure_logging(cfg.logfile, verbose=cfg.verbose)
 
+    background_path = os.path.join(cfg.outdir, "background.hdf5")
+    foreground_path = os.path.join(cfg.outdir, "foreground.hdf5")
+
+    # TODO: relegate this check to luigi task
+    if (
+        os.path.exists(background_path)
+        and os.path.exists(foreground_path)
+        and not cfg.force
+    ):
+        logging.info(
+            "Background and foreground files already exist at "
+            "specified output directory, skipping inference."
+        )
+        return
+
     cfg = parser.instantiate_classes(cfg)
     with cfg.client:
         background, foreground = infer(cfg.client, cfg.data, cfg.postprocessor)
 
     if cfg.outdir is not None:
-        background.write(os.path.join(cfg.outdir, "background.hdf5"))
-        foreground.write(os.path.join(cfg.outdir, "foreground.hdf5"))
+        background.write(background_path)
+        foreground.write(foreground_path)
     else:
         return background, foreground
 

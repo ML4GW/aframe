@@ -150,6 +150,7 @@ def main(
 
     with h5py.File(output_dir / "sensitive-volume.h5", "w") as f:
         f.create_dataset("thresholds", data=thresholds)
+        f.create_dataset("fars", data=x)
         for i, combo in enumerate(mass_combos):
             g = f.create_group("-".join(map(str, combo)))
             g.create_dataset("sv", data=y[i])
