@@ -3,12 +3,12 @@ From: python:3.10.12-slim-bullseye
 Stage: build
 
 %files
-. /opt/aframe/projects/export/
+. /opt/aframe/projects/plots
 ../utils /opt/aframe/projects/utils
-../../aframe /opt/aframe/aframe
-../../pyproject.toml /opt/aframe/pyproject.toml
+../../libs/ledger /opt/aframe/libs/ledger
+../../libs/priors /opt/aframe/libs/priors
 ../../ml4gw /opt/aframe/ml4gw
-../../hermes /opt/aframe/hermes
+../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
 # installing the local package editably via pip
@@ -21,9 +21,10 @@ Stage: build
 # so turn that off with the --no-deps flag to increase performance.
 # Lastly, install the export project itself
 python -m pip install poetry
-cd /opt/aframe/projects/export
+cd /opt/aframe/projects/plots
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
+
 
 Bootstrap: docker
 From: python:3.10.12-slim-bullseye
@@ -33,6 +34,8 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
-cd /opt/aframe/projects/export
+apt-get update
+apt-get -y install gcc
+cd /opt/aframe/projects/plots
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir

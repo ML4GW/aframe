@@ -5,9 +5,7 @@ description = "Aframe performance summary plots"
 authors = ["Alec Gunny"]
 
 [tool.poetry.scripts]
-sensitive-volume = "plots.sensitive_volume:main"
-1D-param-hist = "plots.1D_param_hist:main"
-2D-param-hist = "plots.2D_param_hist:main"
+sensitive-volume = "plots.cli:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
@@ -25,5 +23,5 @@ jsonargparse = "^4.27.4"
 utils = {path = "../utils", develop = true}
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
