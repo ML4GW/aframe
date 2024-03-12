@@ -40,19 +40,49 @@ GATE_PATHS = {
 
 
 def main(
-    background_file: Path,
-    foreground_file: Path,
+    background: Path,
+    foreground: Path,
     rejected_params: Path,
     output_dir: Path,
     log_file: Optional[Path] = None,
+    dt: Optional[float] = None,
     max_far: float = 1000,
     sigma: float = 0.1,
     verbose: bool = False,
 ):
+    """
+    Compute and plot the sensitive volume of an aframe analysis
+
+    Args:
+        background:
+            Path to the background event set. Should be an HDF5 file
+            readable by `ledger.events.EventSet.read`
+        foreground:
+            Path to the foreground event set. Should be an HDF5 file
+            readable by `ledger.injections.RecoveredInjectionSet.read`
+        rejected_params:
+            Path to the rejected parameter set. Should be an HDF5 file
+            readable by `ledger.injections.InjectionParameterSet.read`
+        output_dir:
+            Path to the directory to save the output plots and data
+        log_file:
+            Path to the log file. If not provided, will log to stdout
+        dt:
+            If provided, enforce a recovery time delta of `dt` seconds
+            between injected and recovered events. Note that your `dt`
+            should be greater than 1 / `inference_sampling_rate`.
+        max_far:
+            The maximum FAR to compute the sensitive volume out to
+        sigma:
+            The width of the log normal mass distribution to use
+        verbose:
+            If true, log at the debug level
+    """
+
     configure_logging(log_file, verbose)
     logging.info("Reading in inference outputs")
-    background = EventSet.read(background_file)
-    foreground = RecoveredInjectionSet.read(foreground_file)
+    background = EventSet.read(background)
+    foreground = RecoveredInjectionSet.read(foreground)
     rejected_params = InjectionParameterSet.read(rejected_params)
 
     for i in range(2):
@@ -136,9 +166,21 @@ def main(
         rejected_prob = get_prob(prior, rejected_params)
 
         weight = prob / source_probs
+
         rejected_weights = rejected_prob / source_rejected_probs
         norm = weight.sum() + rejected_weights.sum()
         weight /= norm
+
+        # finally, enforce recovery time delta by setting weights to 0
+        # for events outside of the delta t
+        if dt is not None:
+            logging.info(f"Enforcing recovery time delta of {dt} seconds")
+            mask = (
+                np.abs(foreground.detection_time - foreground.injection_time)
+                <= dt
+            )
+            weight[~mask] = 0
+
         weights[i] = weight
 
     logging.info("Computing sensitive volume at thresholds")
@@ -148,6 +190,7 @@ def main(
     y *= v0
     err *= v0
 
+    output_dir.mkdir(exist_ok=True, parents=True)
     with h5py.File(output_dir / "sensitive-volume.h5", "w") as f:
         f.create_dataset("thresholds", data=thresholds)
         f.create_dataset("fars", data=x)
