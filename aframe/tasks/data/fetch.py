@@ -93,7 +93,10 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
 
         with self.output().open("w") as f:
             with h5py.File(f, "w") as h5file:
-                X.write(h5file, format="hdf5")
+                # write with chunking for dataloading perf increase
+                X.write(
+                    h5file, format="hdf5", chunks=(131072,), compression=None
+                )
 
 
 # renaming tasks to allow specifying diff params in config files
