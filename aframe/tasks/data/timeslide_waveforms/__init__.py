@@ -1,1 +1,1 @@
-from .timeslide_waveforms import TimeslideWaveforms
+from .timeslide_waveforms import DeployTimeslideWaveforms, TimeslideWaveforms

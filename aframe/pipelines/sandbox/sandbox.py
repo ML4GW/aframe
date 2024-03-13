@@ -4,6 +4,7 @@ from aframe.base import AframeWrapperTask
 from aframe.pipelines.config import paths
 from aframe.tasks import ExportLocal, TimeslideWaveforms, Train
 from aframe.tasks.infer import InferLocal
+from aframe.tasks.plots.sv import SensitiveVolume
 
 
 class SandboxExport(ExportLocal):
@@ -36,11 +37,28 @@ class SandboxInfer(InferLocal):
         return reqs
 
 
-class Sandbox(AframeWrapperTask):
+class SandboxSV(SensitiveVolume):
     def requires(self):
-        # simply call infer, which will
-        # call all necessary downstream tasks!
-        yield SandboxInfer.req(
+        reqs = {}
+        reqs["ts"] = TimeslideWaveforms.req(
+            self,
+            output_dir=os.path.join(
+                paths().results_dir, "timeslide_waveforms"
+            ),
+            condor_directory=os.path.join(paths().condordir),
+        )
+        reqs["infer"] = SandboxInfer.req(
             self,
             output_dir=os.path.join(paths().results_dir, "infer"),
+        )
+        return reqs
+
+
+class Sandbox(AframeWrapperTask):
+    def requires(self):
+        # simply call SV plot task, which will
+        # call all necessary downstream tasks!
+        yield SandboxSV.req(
+            self,
+            output_dir=os.path.join(paths().results_dir, "plots"),
         )

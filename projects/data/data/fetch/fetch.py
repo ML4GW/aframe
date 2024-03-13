@@ -35,11 +35,11 @@ def fetch(
     channels = list(filter(lambda x: x not in OPEN_DATA_CHANNELS, channels))
 
     # fetch data from nds2
-    ts_dict = TimeSeriesDict()
+    data = TimeSeriesDict()
     if channels:
         for channel in channels:
             ifo = channel.split(":")[0]
-            ts_dict[ifo] = TimeSeries.get(
+            data[ifo] = TimeSeries.get(
                 channels,
                 start=start,
                 end=end,
@@ -57,7 +57,7 @@ def fetch(
             verbose=verbose,
             nproc=nproc,
         )
-        ts_dict.update(open_data_ts_dict)
+        data.update(open_data_ts_dict)
 
-    ts_dict.resample(sample_rate)
-    return ts_dict
+    data = data.resample(sample_rate)
+    return data
