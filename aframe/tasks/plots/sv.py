@@ -31,20 +31,24 @@ class SensitiveVolume(AframeSingularityTask):
         reqs = {}
         reqs["ts"] = DeployTimeslideWaveforms.req(self)
         reqs["infer"] = InferLocal.req(self)
+        return reqs
 
     def output(self):
         path = os.path.join(self.output_dir, "sensitive_volume.h5")
+        print(path)
         return law.LocalFileTarget(path)
 
     def run(self):
-        from plots.cli import main
+        from pathlib import Path
+
+        from plots.main import main
 
         foreground, background = self.input()["infer"]
         rejected = self.input()["ts"][1].path
         main(
-            background.path,
-            foreground.path,
-            rejected,
+            Path(background.path),
+            Path(foreground.path),
+            Path(rejected),
             dt=self.dt,
-            output_dir=self.output_dir,
+            output_dir=Path(self.output_dir),
         )

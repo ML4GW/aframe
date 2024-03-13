@@ -58,7 +58,7 @@ class Sandbox(AframeWrapperTask):
     def requires(self):
         # simply call SV plot task, which will
         # call all necessary downstream tasks!
-        yield SandboxSV.req(
+        return SandboxSV.req(
             self,
             output_dir=os.path.join(paths().results_dir, "plots"),
         )
