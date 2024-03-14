@@ -48,6 +48,7 @@ class InferParameters(law.Task):
     model_version = luigi.IntParameter()
     clients_per_gpu = luigi.IntParameter()
     repository_directory = luigi.Parameter(default="")
+    zero_lag = luigi.BoolParameter(default=False)
 
 
 @inherits(InferParameters)
@@ -78,6 +79,10 @@ class InferBase(AframeSandboxTask):
         return os.path.join(self.output_dir, "background.hdf5")
 
     @property
+    def zero_lag_output(self):
+        return os.path.join(self.output_dir, "0lag.hdf5")
+
+    @property
     def background_fnames(self):
         return self.input()["data"].collection.targets.values()
 
@@ -86,10 +91,13 @@ class InferBase(AframeSandboxTask):
         return self.input()["waveforms"][0].path
 
     def output(self):
-        return [
+        outputs = [
             law.LocalFileTarget(self.foreground_output),
             law.LocalFileTarget(self.background_output),
         ]
+        if self.zero_lag:
+            outputs.append(law.LocalFileTarget(self.zero_lag_output))
+        return outputs
 
 
 @inherits(InferParameters)
@@ -120,6 +128,7 @@ class InferLocal(InferBase):
 
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+
         background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
             ip_address=self.get_ip_address(),
@@ -140,6 +149,7 @@ class InferLocal(InferBase):
             output_dir=Path(self.output_dir),
             model_version=self.model_version,
             num_parallel_jobs=self.num_parallel_jobs,
+            zero_lag=self.zero_lag,
         )
 
 
@@ -215,6 +225,7 @@ class InferRemote(InferBase):
 
         from aframe import utils
 
+        # infer segment start and stop times directly from file names
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
 

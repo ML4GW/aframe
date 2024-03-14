@@ -28,15 +28,20 @@ def build_condor_submit(
     output_dir: Path,
     num_parallel_jobs: int,
     model_version: int = -1,
+    zero_lag: bool = False,
 ) -> Job:
     param_names = "background_fname,shift"
     parameters = ""
+
     for fname in background_fnames:
         for i in range(num_shifts):
             _shifts = (
                 "'[" + ", ".join([str(s * (i + 1)) for s in shifts]) + "]'"
             )
             parameters += f"{fname},{_shifts}\n"
+
+        if zero_lag:
+            parameters += f"{fname},'[0, 0]'\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
