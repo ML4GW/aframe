@@ -1,8 +1,10 @@
+import logging
 import shutil
 from pathlib import Path
 from textwrap import dedent
 from typing import List
 
+import h5py
 from ledger.events import EventSet, RecoveredInjectionSet
 
 from pycondor.cluster import JobStatus
@@ -87,17 +89,26 @@ def build_condor_submit(
 def wait(cluster):
     while not cluster.check_status(JobStatus.COMPLETED, how="all"):
         n_jobs = len(cluster.procs)
-        print(f"Waiting for {n_jobs} jobs to complete...")
+        logging.info(f"Waiting for {n_jobs} jobs to complete...")
         if cluster.check_status(
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):
             for proc in cluster.procs:
-                print(proc.err)
+                logging.error(f"Job {proc.name} failed")
             cluster.rm()
             raise ValueError("Something went wrong!")
 
 
-def aggregate_results(output_directory: Path):
+def get_shifts(files: List[Path]):
+    shifts = []
+    for f in files:
+        with h5py.File(f) as f:
+            shift = f["parameters"]["shifts"][0]
+            shifts.append(shift)
+    return shifts
+
+
+def aggregate_results(output_directory: Path, clean: bool = False):
     """
     Combine results from across segments into a single
     background file and foreground file. Remove the directory
@@ -108,9 +119,18 @@ def aggregate_results(output_directory: Path):
     back_files = [d / "background.hdf5" for d in tmpdir.iterdir()]
     fore_files = [d / "foreground.hdf5" for d in tmpdir.iterdir()]
 
+    # separate 0lag and background events into different files
+    shifts = get_shifts(back_files)
+    zero_lag = [shift == [0, 0] for shift in shifts]
+    zero_lag_files = back_files[zero_lag]
+    back_files = back_files[~zero_lag]
+
     EventSet.aggregate(
-        back_files, output_directory / "background.hdf5", clean=False
+        back_files, output_directory / "background.hdf5", clean=clean
+    )
+    EventSet.aggregate(
+        zero_lag_files, output_directory / "0lag.hdf5", clean=clean
     )
     RecoveredInjectionSet.aggregate(
-        fore_files, output_directory / "foreground.hdf5", clean=False
+        fore_files, output_directory / "foreground.hdf5", clean=clean
     )

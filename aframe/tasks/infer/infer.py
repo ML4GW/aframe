@@ -6,7 +6,6 @@ from pathlib import Path
 import law
 import luigi
 import psutil
-from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
 from aframe.base import AframeSandboxTask
@@ -193,16 +192,8 @@ class InferRemote(InferBase):
         return cluster
 
     def sandbox_before_run(self):
-        cluster = KubernetesTritonCluster(
-            self.image,
-            self.command,
-            self.args,
-            self.replicas,
-            self.gpus_per_replica,
-            self.cpus_per_replica,
-            self.memory,
-            self.min_gpu_memory,
-        )
+        # TODO: build triton helm chart
+        cluster = None
         cluster.dump("cluster.yaml")
         cluster.create()
         cluster.wait()
