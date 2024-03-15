@@ -1,3 +1,4 @@
+import math
 from contextlib import nullcontext
 from typing import Optional
 from zlib import adler32
@@ -71,8 +72,31 @@ class Sequence:
     def done(self):
         return all(self._done.values())
 
+    @property
+    def remainder(self):
+        # the number of remaining data points not filling a full batch
+        return (self.size - max(self.shifts)) % self.step_size
+
+    @property
+    def num_pad(self):
+        # the number of zeros we need to pad the last batch
+        # to make it a full batch
+        return self.step_size - self.remainder
+
+    @property
+    def num_slice(self):
+        # the number of inference requests we need to slice
+        # off the end of the sequences to remove the dummy data
+        # from the last batch
+        return self.num_pad // self.stride
+
     def __len__(self):
-        return (self.size - max(self.shifts)) // self.step_size
+        # this include excess data at end of sequence that can't
+        # be used for a full batch. We'll end up padding it
+        # with zeros to make it a full batch and
+        # slicing off the actual useful inference requests
+        # corresponding to the excess
+        return math.ceil((self.size - max(self.shifts)) / self.step_size)
 
     def __iter__(self):
         if self.rate is not None:
@@ -89,12 +113,24 @@ class Sequence:
 
         with h5py.File(self.background_fname, "r") as f:
             for i in range(len(self)):
+                # if this is the last batch, we may need to pad it
+                # to make it a full batch
+                last = i == len(self) - 1
                 # grab the current batch of updates from the file
                 # and stack it into a 2D array
                 x = []
                 for ifo, shift in zip(self.ifos, self.shifts):
                     start = shift + i * self.step_size
-                    x.append(f[ifo][start : start + self.step_size])
+                    end = start + self.step_size
+
+                    if last:
+                        end = start + self.remainder
+                    data = f[ifo][start:end]
+                    # if this is the last batch
+                    # possibly pad it to make it a full batch
+                    if last:
+                        data = np.pad(data, (0, self.num_pad), "constant")
+                    x.append(data)
                 x = np.stack(x).astype(np.float32)
 
                 # injection any waveforms into a copy of the background
@@ -121,9 +157,14 @@ class Sequence:
             self._done[sequence_id] = True
 
         # if both the background and foreground
-        # sequences have completed, return them both
+        # sequences have completed, return them both,
+        # slicing off the dummy data from the last batch
         if self.done:
-            return tuple(self._sequences[self.id + i] for i in range(2))
+            print(self.num_slice, self.num_pad)
+            return tuple(
+                self._sequences[self.id + i][: -self.num_slice]
+                for i in range(2)
+            )
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)

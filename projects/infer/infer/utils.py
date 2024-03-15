@@ -2,9 +2,10 @@ import logging
 import shutil
 from pathlib import Path
 from textwrap import dedent
-from typing import List
+from typing import List, Optional
 
 import h5py
+import numpy as np
 from ledger.events import EventSet, RecoveredInjectionSet
 
 from pycondor.cluster import JobStatus
@@ -27,6 +28,7 @@ def build_condor_submit(
     fduration: float,
     output_dir: Path,
     num_parallel_jobs: int,
+    rate: Optional[float] = None,
     model_version: int = -1,
     zero_lag: bool = False,
 ) -> Job:
@@ -51,6 +53,7 @@ def build_condor_submit(
 
     log_pattern = "infer-$(ProcID).log"
     output_pattern = "tmp/output-$(ProcID)"
+    rate = rate or "null"
 
     arguments = f"""
     --client.address={ip_address}:8001
@@ -68,7 +71,9 @@ def build_condor_submit(
     --data.shifts=$(shift)
     --outdir {output_dir / output_pattern}
     --logfile {output_dir / "log" / log_pattern}
+    --rate {rate}
     """
+
     arguments = dedent(arguments).replace("\n", " ")
     log_dir = condor_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -93,22 +98,20 @@ def build_condor_submit(
 
 def wait(cluster):
     while not cluster.check_status(JobStatus.COMPLETED, how="all"):
-        n_jobs = len(cluster.procs)
-        logging.info(f"Waiting for {n_jobs} jobs to complete...")
         if cluster.check_status(
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):
             for proc in cluster.procs:
-                logging.error(f"Job {proc.name} failed")
+                logging.error(proc.err)
             cluster.rm()
-            raise ValueError("Something went wrong!")
+            raise RuntimeError("Something went wrong!")
 
 
 def get_shifts(files: List[Path]):
     shifts = []
     for f in files:
         with h5py.File(f) as f:
-            shift = f["parameters"]["shifts"][0]
+            shift = f["parameters"]["shift"][0]
             shifts.append(shift)
     return shifts
 
@@ -121,21 +124,23 @@ def aggregate_results(output_directory: Path, clean: bool = False):
     """
     tmpdir = output_directory / "tmp"
 
-    back_files = [d / "background.hdf5" for d in tmpdir.iterdir()]
+    back_files = np.array([d / "background.hdf5" for d in tmpdir.iterdir()])
     fore_files = [d / "foreground.hdf5" for d in tmpdir.iterdir()]
 
     # separate 0lag and background events into different files
     shifts = get_shifts(back_files)
-    zero_lag = [shift == [0, 0] for shift in shifts]
+    zero_lag = np.array([all(shift == [0, 0]) for shift in shifts])
+
     zero_lag_files = back_files[zero_lag]
     back_files = back_files[~zero_lag]
 
     EventSet.aggregate(
         back_files, output_directory / "background.hdf5", clean=clean
     )
-    EventSet.aggregate(
-        zero_lag_files, output_directory / "0lag.hdf5", clean=clean
-    )
     RecoveredInjectionSet.aggregate(
         fore_files, output_directory / "foreground.hdf5", clean=clean
     )
+    if len(zero_lag_files) > 0:
+        EventSet.aggregate(
+            zero_lag_files, output_directory / "0lag.hdf5", clean=clean
+        )

@@ -35,7 +35,6 @@ class SensitiveVolume(AframeSingularityTask):
 
     def output(self):
         path = os.path.join(self.output_dir, "sensitive_volume.h5")
-        print(path)
         return law.LocalFileTarget(path)
 
     def run(self):

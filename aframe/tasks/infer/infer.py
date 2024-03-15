@@ -46,7 +46,7 @@ class InferParameters(law.Task):
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
-    clients_per_gpu = luigi.IntParameter()
+    streams_per_gpu = luigi.IntParameter()
     repository_directory = luigi.Parameter(default="")
     zero_lag = luigi.BoolParameter(default=False)
 
@@ -68,7 +68,8 @@ class InferBase(AframeSandboxTask):
 
     @property
     def num_parallel_jobs(self):
-        return self.clients_per_gpu * self.num_gpus
+        # account for two streams, background and injection
+        return self.streams_per_gpu * self.num_gpus // 2
 
     @property
     def foreground_output(self):
