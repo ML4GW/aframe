@@ -48,6 +48,9 @@ class InferParameters(law.Task):
     model_version = luigi.IntParameter()
     streams_per_gpu = luigi.IntParameter()
     repository_directory = luigi.Parameter(default="")
+    rate_per_gpu = luigi.FloatParameter(
+        default="", description="Inferences per second per gpu"
+    )
     zero_lag = luigi.BoolParameter(default=False)
 
 
@@ -67,9 +70,16 @@ class InferBase(AframeSandboxTask):
         raise NotImplementedError
 
     @property
-    def num_parallel_jobs(self):
-        # account for two streams, background and injection
+    def num_clients(self):
+        # account for two streams per condor job: background and injection
         return self.streams_per_gpu * self.num_gpus // 2
+
+    @property
+    def rate_per_client(self):
+        if not self.rate_per_gpu:
+            return None
+        total_rate = self.num_gpus * self.rate_per_gpu
+        return total_rate / self.num_clients
 
     @property
     def foreground_output(self):
@@ -149,7 +159,8 @@ class InferLocal(InferBase):
             cluster_window_length=self.cluster_window_length,
             output_dir=Path(self.output_dir),
             model_version=self.model_version,
-            num_parallel_jobs=self.num_parallel_jobs,
+            num_parallel_jobs=self.num_clients,
+            rate=self.rate_per_client,
             zero_lag=self.zero_lag,
         )
 
