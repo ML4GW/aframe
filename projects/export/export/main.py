@@ -43,6 +43,7 @@ def export(
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
+    preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
     clean: bool = False,
     verbose: bool = False,
@@ -178,6 +179,7 @@ def export(
             fduration=fduration,
             fftlength=fftlength,
             highpass=highpass,
+            preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,
         )
         ensemble.pipe(whitened, aframe.inputs["whitened"])
