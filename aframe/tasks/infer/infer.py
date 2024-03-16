@@ -6,7 +6,6 @@ from pathlib import Path
 import law
 import luigi
 import psutil
-from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
 from aframe.base import AframeSandboxTask
@@ -47,8 +46,12 @@ class InferParameters(law.Task):
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
-    clients_per_gpu = luigi.IntParameter()
+    streams_per_gpu = luigi.IntParameter()
     repository_directory = luigi.Parameter(default="")
+    rate_per_gpu = luigi.FloatParameter(
+        default="", description="Inferences per second per gpu"
+    )
+    zero_lag = luigi.BoolParameter(default=False)
 
 
 @inherits(InferParameters)
@@ -67,8 +70,16 @@ class InferBase(AframeSandboxTask):
         raise NotImplementedError
 
     @property
-    def num_parallel_jobs(self):
-        return self.clients_per_gpu * self.num_gpus
+    def num_clients(self):
+        # account for two streams per condor job: background and injection
+        return self.streams_per_gpu * self.num_gpus // 2
+
+    @property
+    def rate_per_client(self):
+        if not self.rate_per_gpu:
+            return None
+        total_rate = self.num_gpus * self.rate_per_gpu
+        return total_rate / self.num_clients
 
     @property
     def foreground_output(self):
@@ -79,6 +90,10 @@ class InferBase(AframeSandboxTask):
         return os.path.join(self.output_dir, "background.hdf5")
 
     @property
+    def zero_lag_output(self):
+        return os.path.join(self.output_dir, "0lag.hdf5")
+
+    @property
     def background_fnames(self):
         return self.input()["data"].collection.targets.values()
 
@@ -87,10 +102,13 @@ class InferBase(AframeSandboxTask):
         return self.input()["waveforms"][0].path
 
     def output(self):
-        return [
+        outputs = [
             law.LocalFileTarget(self.foreground_output),
             law.LocalFileTarget(self.background_output),
         ]
+        if self.zero_lag:
+            outputs.append(law.LocalFileTarget(self.zero_lag_output))
+        return outputs
 
 
 @inherits(InferParameters)
@@ -121,6 +139,7 @@ class InferLocal(InferBase):
 
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+
         background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
             ip_address=self.get_ip_address(),
@@ -140,7 +159,9 @@ class InferLocal(InferBase):
             cluster_window_length=self.cluster_window_length,
             output_dir=Path(self.output_dir),
             model_version=self.model_version,
-            num_parallel_jobs=self.num_parallel_jobs,
+            num_parallel_jobs=self.num_clients,
+            rate=self.rate_per_client,
+            zero_lag=self.zero_lag,
         )
 
 
@@ -193,16 +214,8 @@ class InferRemote(InferBase):
         return cluster
 
     def sandbox_before_run(self):
-        cluster = KubernetesTritonCluster(
-            self.image,
-            self.command,
-            self.args,
-            self.replicas,
-            self.gpus_per_replica,
-            self.cpus_per_replica,
-            self.memory,
-            self.min_gpu_memory,
-        )
+        # TODO: build triton helm chart
+        cluster = None
         cluster.dump("cluster.yaml")
         cluster.create()
         cluster.wait()
@@ -224,6 +237,7 @@ class InferRemote(InferBase):
 
         from aframe import utils
 
+        # infer segment start and stop times directly from file names
         segments = utils.segments_from_paths(self.background_fnames)
         num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
 

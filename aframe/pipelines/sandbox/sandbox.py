@@ -42,9 +42,7 @@ class SandboxSV(SensitiveVolume):
         reqs = {}
         reqs["ts"] = TimeslideWaveforms.req(
             self,
-            output_dir=os.path.join(
-                paths().results_dir, "timeslide_waveforms"
-            ),
+            output_dir=paths().test_datadir,
             condor_directory=os.path.join(paths().condordir),
         )
         reqs["infer"] = SandboxInfer.req(

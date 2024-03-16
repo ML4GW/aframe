@@ -8,6 +8,18 @@ if TYPE_CHECKING:
     from hermes.quiver.model import EnsembleModel, ExposedTensor
 
 
+def scale_model(model, instances):
+    """
+    Scale the model to the number of instances per GPU desired
+    at inference time
+    """
+    # TODO: should quiver handle this under the hood?
+    try:
+        model.config.scale_instance_group(instances)
+    except ValueError:
+        model.config.add_instance_group(count=instances)
+
+
 def add_streaming_input_preprocessor(
     ensemble: "EnsembleModel",
     input: "ExposedTensor",
@@ -17,6 +29,7 @@ def add_streaming_input_preprocessor(
     fduration: float,
     fftlength: float,
     highpass: Optional[float] = None,
+    preproc_instances: Optional[int] = None,
     streams_per_gpu: int = 1,
 ) -> "ExposedTensor":
     """Create a snapshotter model and add it to the repository"""
@@ -58,6 +71,10 @@ def add_streaming_input_preprocessor(
     preproc_model = ensemble.repository.add(
         "preprocessor", platform=Platform.TORCHSCRIPT
     )
+    # if we specified a number of instances we want per-gpu
+    # for each model at inference time, scale them now
+    if preproc_instances is not None:
+        scale_model(preproc_model, preproc_instances)
 
     input_shape = streaming_model.outputs["strain"].shape
     preproc_model.export_version(

@@ -1,13 +1,15 @@
 import logging
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from infer.utils import aggregate_results, build_condor_submit, wait
 
 from hermes.aeriel.monitor import ServerMonitor
 from hermes.aeriel.serve import serve
 from utils.logging import configure_logging
+
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 def deploy_local(
@@ -29,9 +31,10 @@ def deploy_local(
     output_dir: Path,
     num_parallel_jobs: int,
     model_version: int = -1,
+    zero_lag: bool = False,
+    rate: Optional[float] = None,
 ):
     configure_logging(verbose=True)
-
     job = build_condor_submit(
         ip_address,
         model_name,
@@ -48,7 +51,9 @@ def deploy_local(
         fduration,
         output_dir,
         num_parallel_jobs,
+        rate,
         model_version,
+        zero_lag,
     )
 
     log_dir = output_dir / "logs"
@@ -58,7 +63,6 @@ def deploy_local(
 
     with serve(model_repo_dir, image, log_file=server_log, wait=True):
         # launch inference jobs via condor
-        logging.info("Server online")
         time.sleep(1)
         monitor = ServerMonitor(
             model_name=model_name,

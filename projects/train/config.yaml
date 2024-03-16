@@ -2,17 +2,19 @@
 # by train task at run time. To build a functional
 # standalone config, add these in.
  
-matmul_precision: "high"
+matmul_precision: "highest"
 model:
   class_path: train.model.SupervisedAframe
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainWaveNet
+      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
       init_args:
-        res_channels: 48
-        layers_per_block: 9
-        num_blocks: 6
+        layers: [3, 4, 6, 3]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 16
     metric:
       class_path: train.metrics.TimeSlideAUROC
       init_args:
@@ -21,10 +23,10 @@ model:
 
     # optimization params
     weight_decay: 0.0
-    learning_rate: 0.0585
+    learning_rate: 0.000585
     pct_lr_ramp: 0.115
     # early stop
-    patience: 25
+    patience: 50
 data:
   class_path: train.data.TimeDomainSupervisedAframeDataset
   init_args:
@@ -33,7 +35,7 @@ data:
     # ifos:
 
     # preprocessing args
-    batch_size: 256
+    batch_size: 384
     # kernel_length:
     psd_length: 8
     # fduration:

@@ -17,6 +17,7 @@ class ExportParams(law.Task):
     repository_directory = luigi.Parameter()
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
+    preproc_instances = luigi.IntParameter()
     clean = luigi.BoolParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
@@ -69,6 +70,7 @@ class ExportLocal(AframeSingularityTask):
             self.highpass,
             self.streams_per_gpu,
             self.aframe_instances,
+            self.preproc_instances,
             # self.platform,
             clean=self.clean,
             # verbose=self.verbose,
