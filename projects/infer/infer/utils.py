@@ -63,6 +63,7 @@ def build_condor_submit(
     --data.batch_size {batch_size}
     --data.inference_sampling_rate {inference_sampling_rate}
     --data.injection_set_fname {injection_set_fname}
+    --data.rate {rate}
     --postprocessor.integration_window_length {integration_window_length}
     --postprocessor.cluster_window_length {cluster_window_length}
     --postprocessor.psd_length {psd_length}
@@ -71,7 +72,6 @@ def build_condor_submit(
     --data.shifts=$(shift)
     --outdir {output_dir / output_pattern}
     --logfile {output_dir / "log" / log_pattern}
-    --rate {rate}
     """
 
     arguments = dedent(arguments).replace("\n", " ")
