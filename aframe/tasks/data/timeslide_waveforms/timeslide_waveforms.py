@@ -45,32 +45,28 @@ class DeployTimeslideWaveforms(
     law.LocalWorkflow,
     StaticMemoryWorkflow,
 ):
-    @property
-    def test_condor_directory(self):
-        condor_directory = os.path.dirname(self.condor_directory)
-        condor_directory = os.path.join(condor_directory, "test")
-        return condor_directory
-
     def workflow_requires(self):
         reqs = super().workflow_requires()
         reqs["test_segments"] = FetchTest.req(
             self,
             segments_file=os.path.join(self.output_dir, "segments.txt"),
             data_dir=os.path.join(self.output_dir, "background"),
-            condor_directory=self.test_condor_directory,
+            condor_directory=os.path.join(
+                os.getenv("AFRAME_CONDOR_DIR"), "test"
+            ),
         )
         return reqs
 
     def requires(self):
-        condor_directory = os.path.dirname(self.condor_directory)
-        condor_directory = os.path.join(condor_directory, "test")
         reqs = {}
         reqs["test_segments"] = FetchTest.req(
             self,
             branch=-1,
             segments_file=os.path.join(self.output_dir, "segments.txt"),
             data_dir=os.path.join(self.output_dir, "background"),
-            condor_directory=self.test_condor_directory,
+            condor_directory=os.path.join(
+                os.getenv("AFRAME_CONDOR_DIR"), "test"
+            ),
         )
         return reqs
 
@@ -172,6 +168,13 @@ class DeployTimeslideWaveforms(
 
 @inherits(DeployTimeslideWaveforms)
 class TimeslideWaveforms(AframeDataTask):
+    condor_directory = luigi.Parameter(
+        default=os.path.join(
+            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
+            "timeslide_waveforms",
+        )
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = os.path.join(self.output_dir, "waveforms.hdf5")
@@ -186,12 +189,7 @@ class TimeslideWaveforms(AframeDataTask):
         ]
 
     def requires(self):
-        return DeployTimeslideWaveforms.req(
-            self,
-            condor_directory=os.path.join(
-                self.condor_directory, "timeslide_waveforms"
-            ),
-        )
+        return DeployTimeslideWaveforms.req(self)
 
     @property
     def targets(self):

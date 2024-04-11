@@ -216,17 +216,11 @@ class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
 
 
 @dataclass
-class ExtrinsicParameterSet(EventParameterSet, SkyLocationParameterSet):
-    pass
+class WaveformSet(InjectionMetadata, InjectionParameterSet):
+    """
+    A set of waveforms projected onto a set of interferometers
+    """
 
-
-# note, dataclass inheritance goes from last to first,
-# so the ordering of kwargs here would be:
-# mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate, h1, l1
-@dataclass
-class InterferometerResponseSet(
-    InjectionMetadata, ExtrinsicParameterSet, IntrinsicParameterSet
-):
     def __post_init__(self):
         InjectionMetadata.__post_init__(self)
         self._waveforms = None
@@ -240,6 +234,28 @@ class InterferometerResponseSet(
             self._waveforms = waveforms
         return self._waveforms
 
+
+@dataclass
+class LigoWaveformSet(WaveformSet):
+    h1: np.ndarray = waveform()
+    l1: np.ndarray = waveform()
+
+
+# TODO: rename this to InjectionCampaign
+
+
+# note, dataclass inheritance goes from last to first,
+# so the ordering of kwargs here would be:
+# mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate, h1, l1
+@dataclass
+class InterferometerResponseSet(WaveformSet):
+    """
+    Represents a set of projected waveforms to be used in an injection campaign
+    """
+
+    injection_time: np.ndarray = parameter()
+    shift: np.ndarray = parameter()
+
     @classmethod
     def _raise_bad_shift_dim(cls, fname, dim1, dim2):
         raise ValueError(
@@ -248,6 +264,25 @@ class InterferometerResponseSet(
                 dim1, cls.__name__, fname, dim2
             )
         )
+
+    def get_shift(self, shift):
+        mask = self.shift == shift
+        if self.shift.ndim == 2:
+            mask = mask.all(axis=-1)
+        return self[mask]
+
+    def get_times(
+        self, start: Optional[float] = None, end: Optional[float] = None
+    ):
+        if start is None and end is None:
+            raise ValueError("Must specify one of start or end")
+
+        mask = True
+        if start is not None:
+            mask &= self.injection_time >= start
+        if end is not None:
+            mask &= self.injection_time < end
+        return self[mask]
 
     @classmethod
     def read(

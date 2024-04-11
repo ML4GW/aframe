@@ -12,4 +12,4 @@ DATAFIND_ENV_VARS = [
 from .fetch import Fetch
 from .segments import Query
 from .timeslide_waveforms import *
-from .waveforms import GenerateWaveforms
+from .waveforms import TrainWaveforms, ValidationWaveforms
