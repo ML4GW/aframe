@@ -68,7 +68,7 @@ class PsdEstimator(torch.nn.Module):
         sample_rate: float,
         fftlength: float,
         overlap: Optional[float] = None,
-        average: str = "mean",
+        average: str = "median",
         fast: bool = True,
     ) -> None:
         super().__init__()
