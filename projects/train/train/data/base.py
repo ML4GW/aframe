@@ -9,6 +9,7 @@ import h5py
 import lightning.pytorch as pl
 import ray
 import torch
+from ledger.injections import LigoWaveformSet
 
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
@@ -210,36 +211,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
         fs_utils.download_training_data(bucket, self.data_dir)
 
-    @torch.no_grad()
-    def project_val_waveforms(
-        self,
-        cross: torch.Tensor,
-        plus: torch.Tensor,
-        dec: torch.Tensor,
-        psi: torch.Tensor,
-        phi: torch.Tensor,
-        psd: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Pre-project validation waveforms to interferometer
-        responses and threshold their SNRs at our minimum value.
-        """
-
-        num_batches = x_per_y(len(plus), self.val_batch_size)
-        responses = []
-        for i in range(num_batches):
-            slc = slice(i * self.val_batch_size, (i + 1) * self.val_batch_size)
-            params = [i[slc] for i in [dec, phi, psi]]
-            response = self.projector(
-                *params,
-                snrs=self.hparams.snr_thresh,
-                psds=psd,
-                cross=cross[slc],
-                plus=plus[slc],
-            )
-            responses.append(response.cpu())
-        return torch.cat(responses, dim=0)
-
     def load_signals(self, dataset, start, stop):
         """
         Loads waveforms assuming that the coalescence
@@ -264,33 +235,27 @@ class BaseAframeDataset(pl.LightningDataModule):
         stop = (rank + 1) * per_dev
         return start, stop
 
-    def load_train_signals(self, f, world_size, rank):
+    def load_train_waveforms(self, f, world_size, rank):
         dataset = f["signals"]
-        num_valid = int(len(dataset) * self.hparams.valid_frac)
-        num_train = len(dataset) - num_valid
+        num_train = len(dataset)
         if not rank:
-            self._logger.info(
-                f"Training on {num_train} waveforms, with {num_valid} "
-                "reserved for validation"
-            )
+            self._logger.info(f"Training on {num_train} waveforms")
 
         start, stop = self.get_slice_bounds(num_train, world_size, rank)
         return self.load_signals(dataset, start, stop)
 
-    def load_val_signals(self, f, world_size, rank):
-        dataset = f["signals"]
-        total = int(len(dataset) * self.hparams.valid_frac)
-        stop, start = self.get_slice_bounds(total, world_size, rank)
+    def load_val_waveforms(self, f, world_size, rank):
+        waveform_set = LigoWaveformSet.read(f)
+        length = len(waveform_set.waveforms)
+
+        if not rank:
+            self._logger.info(f"Validating on {length} waveforms")
+        stop, start = self.get_slice_bounds(length, world_size, rank)
 
         self._logger.info(f"Loading {start - stop} validation signals")
         start, stop = -start, -stop or None
-        cross, plus = self.load_signals(dataset, start, stop)
-
-        params = {}
-        for param in ["dec", "psi", "ra"]:
-            params[param] = torch.Tensor(f[param][start:stop])
-        params["phi"] = params.pop("ra")
-        return cross, plus, params
+        waveforms = torch.as_tensor(waveform_set.waveforms[start:stop])
+        return waveforms
 
     def load_val_background(self, fnames: list[str]):
         self._logger.info("Loading validation background data")
@@ -359,26 +324,15 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.val_batch_size,
         )
 
-        # calculate the validation background PSD up front
-        # on the CPU then move the psd estimator to the device
-        psd = self.psd_estimator.spectral_density(val_background[0].double())
-
         self._logger.info("Loading waveforms")
-        with h5py.File(f"{self.data_dir}/signals.hdf5", "r") as f:
-            cross, plus = self.load_train_signals(f, world_size, rank)
+        with h5py.File(f"{self.data_dir}/train_waveforms.hdf5", "r") as f:
+            cross, plus = self.load_train_waveforms(f, world_size, rank)
             self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
 
-            # subsample which waveforms we're using
-            # based on the fraction of shifts that
-            # are getting done on this device
-            cross, plus, params = self.load_val_signals(f, world_size, rank)
-        params["psd"] = psd
-
-        self._logger.info("Projecting validation waveforms to IFO responses")
-        # now finally project our raw polarizations into
-        # inteferometer responses on this device using
-        # the PSD from the entire background segment
-        self.val_waveforms = self.project_val_waveforms(cross, plus, **params)
+        val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
+        self.val_waveforms = self.load_val_waveforms(
+            val_waveform_file, world_size, rank
+        )
         self._logger.info("Initial dataloading complete")
 
     # ================================================ #
