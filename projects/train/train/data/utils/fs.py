@@ -112,11 +112,12 @@ def download_training_data(bucket: str, data_dir: str):
         data_dir + f.replace(f"{bucket}", "") for f in background_fnames
     ]
     download = partial(_download, s3)
-    path = "signals.hdf5"
+    paths = ["train_waveforms.hdf5", "val_waveforms.hdf5"]
     with ThreadPoolExecutor() as executor:
-        future = executor.submit(
-            download, f"{bucket}/{path}", f"{data_dir}/{path}"
-        )
+        for path in paths:
+            future = executor.submit(
+                download, f"{bucket}/{path}", f"{data_dir}/{path}"
+            )
         executor.map(download, background_fnames, targets)
 
     future.result()
