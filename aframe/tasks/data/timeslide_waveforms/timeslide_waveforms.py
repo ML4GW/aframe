@@ -179,7 +179,9 @@ class TimeslideWaveforms(AframeDataTask):
         ]
 
     def requires(self):
-        return DeployTimeslideWaveforms.req(self)
+        return DeployTimeslideWaveforms.req(
+            self, condor_directory=self.condor_directory
+        )
 
     @property
     def targets(self):
