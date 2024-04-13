@@ -147,11 +147,12 @@ class DeployValidationWaveforms(
 
     def create_branch_map(self):
         # split the number of signals into num_jobs branches
-        # TODO: account for remainder
         waveforms_per_branch, remainder = divmod(
             self.num_signals, self.num_jobs
         )
-        return {i: waveforms_per_branch for i in range(self.num_jobs)}
+        branches = {i: waveforms_per_branch for i in range(self.num_jobs)}
+        branches[0] += remainder
+        return branches
 
     @property
     def psd_segment(self):
