@@ -41,6 +41,7 @@ urllib3 = ">=1.25.4,<1.27"
 utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
 aframe = {path = "../..", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
 bayesian-optimization = "^1.4.3"
 filelock = "^3.13.1"
 
