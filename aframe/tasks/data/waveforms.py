@@ -116,21 +116,10 @@ class DeployValidationWaveforms(
         "to split waveform generation amongst",
     )
 
-    def requires(self):
-        reqs = {}
-        reqs["psd_segment"] = FetchTrain.req(
-            self,
-            branch=-1,
-            data_dir=os.path.join(self.output_dir, "background"),
-            segments_file=os.path.join(self.output_dir, "segments.txt"),
-        )
-        return reqs
-
     def workflow_requires(self):
         reqs = super().workflow_requires()
         reqs["psd_segment"] = FetchTrain.req(
             self,
-            branch=-1,
             data_dir=os.path.join(self.output_dir, "background"),
             segments_file=os.path.join(self.output_dir, "segments.txt"),
         )
@@ -150,8 +139,11 @@ class DeployValidationWaveforms(
         waveforms_per_branch, remainder = divmod(
             self.num_signals, self.num_jobs
         )
-        branches = {i: waveforms_per_branch for i in range(self.num_jobs)}
-        branches[0] += remainder
+        branches = {
+            i: [waveforms_per_branch, self.psd_segment]
+            for i in range(self.num_jobs)
+        }
+        branches[0][0] += remainder
         return branches
 
     @property
@@ -159,9 +151,9 @@ class DeployValidationWaveforms(
         """
         Segment to use to calculate psd for rejection sampling
         """
-        return list(self.input()["psd_segment"].collection.targets.values())[
-            -1
-        ]
+        return list(
+            self.workflow_input()["psd_segment"].collection.targets.values()
+        )[-1]
 
     def run(self):
         import io
@@ -172,15 +164,14 @@ class DeployValidationWaveforms(
         from ledger.injections import LigoWaveformSet
 
         os.makedirs(self.tmp_dir, exist_ok=True)
+        num_signals, psd_segment = self.branch_data
 
         # read in psd
-        with self.psd_segment.open("r") as psd_file:
+        with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
             psds = load_psds(
                 psd_file, self.ifos, df=1 / self.waveform_duration
             )
-
-        num_signals = self.branch_data
 
         # load in prior
         prior = load_prior(self.prior)

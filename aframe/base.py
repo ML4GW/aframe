@@ -68,12 +68,6 @@ class AframeSandbox(singularity.SingularitySandbox):
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
 
-        # mount the users /local directory into the container
-        # for storing large temporary files
-        user = os.getenv("USER")
-        local_dir = f"/local/{user}"
-        volumes[local_dir] = local_dir
-
         return volumes
 
 

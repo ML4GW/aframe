@@ -75,9 +75,10 @@ def rejection_sample(
         # extra keys
         # TODO: If https://git.ligo.org/lscsoft/bilby/-/merge_requests/1286
         # is merged, remove this
+        print(params)
         if num_signals == 1:
-            params = {k: params[k] for k in parameters if k in params}
-
+            params = {k: params[k] for k in prior.keys() if k in params}
+        print(params, prior.keys())
         waveforms = generator(params)
         polarizations = {
             "cross": torch.Tensor(waveforms[:, 0, :]),

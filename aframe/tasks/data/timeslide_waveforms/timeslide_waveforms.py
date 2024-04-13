@@ -17,6 +17,7 @@ from aframe.tasks.data.fetch import FetchTest
 TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
 
 
+# TODO: add descriptions to all parameters
 class TimeSlideWaveformsParams(law.Task):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
@@ -51,22 +52,6 @@ class DeployTimeslideWaveforms(
             self,
             segments_file=os.path.join(self.output_dir, "segments.txt"),
             data_dir=os.path.join(self.output_dir, "background"),
-            condor_directory=os.path.join(
-                os.getenv("AFRAME_CONDOR_DIR"), "test"
-            ),
-        )
-        return reqs
-
-    def requires(self):
-        reqs = {}
-        reqs["test_segments"] = FetchTest.req(
-            self,
-            branch=-1,
-            segments_file=os.path.join(self.output_dir, "segments.txt"),
-            data_dir=os.path.join(self.output_dir, "background"),
-            condor_directory=os.path.join(
-                os.getenv("AFRAME_CONDOR_DIR"), "test"
-            ),
         )
         return reqs
 
@@ -93,7 +78,12 @@ class DeployTimeslideWaveforms(
             for j in range(self.shifts_required):
                 shift = [(j + 1) * shift for shift in self.shifts]
                 # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (start + self.psd_length, end, shift)
+                branch_map[i] = (
+                    start + self.psd_length,
+                    end,
+                    shift,
+                    self.psd_segment,
+                )
                 i += 1
         return branch_map
 
@@ -121,9 +111,9 @@ class DeployTimeslideWaveforms(
 
     @property
     def psd_segment(self):
-        return list(self.input()["test_segments"].collection.targets.values())[
-            -1
-        ]
+        return list(
+            self.workflow_input()["test_segments"].collection.targets.values()
+        )[-1]
 
     @property
     def max_shift(self):
@@ -142,8 +132,8 @@ class DeployTimeslideWaveforms(
         )
 
         prior = self.load_prior()
-        start, end, shift = self.branch_data
-        with self.psd_segment.open("r") as psd_file:
+        start, end, shift, psd_segment = self.branch_data
+        with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
             timeslide_waveforms(
                 start,

@@ -18,6 +18,8 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
     prefix = luigi.Parameter(default="background")
     channels = luigi.ListParameter()
 
+    exclude_params_req = {"condor_directory"}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.data_dir.startswith("s3://"):
