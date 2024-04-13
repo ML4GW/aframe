@@ -6,7 +6,7 @@ import luigi
 from luigi.util import inherits
 
 from aframe.config import Defaults
-from aframe.tasks.data import TrainWaveforms, ValidationWaveforms
+from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
 from aframe.tasks.train.config import wandb
 
@@ -58,7 +58,7 @@ class TrainBase(law.Task):
             segments_file=os.path.join(self.data_dir, "segments.txt"),
             data_dir=os.path.join(self.data_dir, "background"),
         )
-        reqs["train_waveforms"] = TrainWaveforms.req(
+        reqs["train_waveforms"] = TrainingWaveforms.req(
             self,
             output_file=os.path.join(self.data_dir, "train_waveforms.hdf5"),
         )

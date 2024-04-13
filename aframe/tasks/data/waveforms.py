@@ -54,7 +54,7 @@ class WaveformParams(law.Task):
 
 
 @inherits(WaveformParams)
-class TrainWaveforms(AframeDataTask):
+class TrainingWaveforms(AframeDataTask):
     """
     Generate waveforms for training
     """
