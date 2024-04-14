@@ -29,11 +29,11 @@ config = /path/to/training/config.yaml
 
 Lastly, environment variables are used to control locations of data and analysis artifcats throughout the run:
 
-`AFRAME_TRAIN_DATA_DIR`: Training data storage 
-`AFRAME_TEST_DATA_DIR`: Testing data storage
-`AFRAME_TRAIN_RUN_DIR`: Training artifact storage
-`AFRAME_CONDOR_DIR`: Condor submit files and logs
-`AFRAME_RESULTS_DIR`: Inference and sensitive volume results
+- `AFRAME_TRAIN_DATA_DIR`: Training data storage
+- `AFRAME_TEST_DATA_DIR`: Testing data storage
+- `AFRAME_TRAIN_RUN_DIR`: Training artifact storage
+- `AFRAME_CONDOR_DIR`: Condor submit files and logs
+- `AFRAME_RESULTS_DIR`: Inference and sensitive volume results
 
 It is recommended to store these in a `.env` file. The following pattern could prove useful:
 
