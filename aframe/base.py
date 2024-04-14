@@ -111,7 +111,7 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
         # map in local tmpdir (should be /local/albert.einstein)
         # which has is enough memory to write large temp
         # files with luigi/law
-        env["TMPDIR"] = f"/local/{os.getenv('USER')}"
+        env["TMPDIR"] = os.getenv("AFRAME_TMPDIR")
 
         # if gpus are specified, expose them inside container
         # via CUDA_VISIBLE_DEVICES env variable

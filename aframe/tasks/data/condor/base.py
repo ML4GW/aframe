@@ -15,9 +15,13 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     condor_directory = luigi.Parameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
-    request_disk = luigi.Parameter(default="1024")
-    request_memory = luigi.Parameter(default="32678")
+    request_disk = luigi.Parameter(default="1024K")
+    request_memory = luigi.Parameter(default="4096M")
     request_cpus = luigi.IntParameter(default=1)
+
+    # don't pass computing requirements between tasks
+    # since different tasks will often have different requirements
+    exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,7 +54,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
 
     @property
     def job_file_dir(self):
-        return self.htcondor_output_directory().child("jobs", type="d").path
+        return os.path.join(self.condor_directory, "jobs")
 
     @property
     def law_config(self):
@@ -73,6 +77,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         environment += f'PATH={os.getenv("PATH")} '
         environment += f"LAW_CONFIG_FILE={self.law_config} "
         environment += f"USER={os.getenv('USER')} "
+        environment += f"TMPDIR={os.getenv('TMPDIR')} "
 
         # forward any env variables that start with AFRAME_
         # that the law config may need to parse
