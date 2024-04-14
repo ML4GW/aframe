@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "online_deployment"
+version = "0.0.1"
+description = "Deploy aframe models over live data"
+authors = ["Will Benoit <benoi090@umn.edu", "Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+license = "MIT"
+#readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11" 
+
+# local deps
+utils = {path = "../utils", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
+ml4gw = {path = "../../ml4gw", develop = true}
+aframe = {path = "../..", develop = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
