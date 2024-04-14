@@ -10,7 +10,7 @@ In short, running the sandbox pipeline will
 3. Train a model
 4. Export trained weights to TensorRT
 5. Perform inference using Triton
-6. Calculating sensitive volume
+6. Calculate sensitive volume
 
 ## Pipeline Configuration
 The pipeline is configured by two files. A `.cfg` file contains the parameters
@@ -61,6 +61,12 @@ LAW_CONFIG_FILE=/path/to/sandbox.cfg \
     --gpus 0,1 --workers 5
 ```
 
+The `workers` argument specifies how many `luigi` workers to use. This controls how many concurrent tasks 
+can be launched. It is useful to specify more than 1 worker when you have tasks that are not dependent on one another. 
+
+The `gpus` argument controls which gpus to use for training and inference. Under the hood, the pipeline is simply setting
+the `CUDA_VISIBLE_DEVICES` environmentt variable. 
+
 The end to end pipeline can take a few days to run. If you wish to launch an analysis with the freedom of ending
 your ssh session, it is recommended that you use a tool like [`tmux`](https://github.com/tmux/tmux/wiki). Note that `tmux`
 is already installed on the LDG clusters.
@@ -68,7 +74,6 @@ is already installed on the LDG clusters.
 First, create a new session and change directories into the aframe repository
 ```
 tmux new -s aframe-sandbox
-cd /path/to/aframe
 ```
 
 Next, ensure that you've re-sourced your .env!
