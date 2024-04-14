@@ -64,7 +64,7 @@ LAW_CONFIG_FILE=/path/to/sandbox.cfg \
 ```
 
 The `workers` argument specifies how many `luigi` workers to use. This controls how many concurrent tasks 
-can be launched. It is useful to specify more than 1 worker when you have tasks that are not dependent on one another. 
+can be launched. It is useful to specify more than 1 worker when you have several tasks that are not dependent on one another. 
 
 The `gpus` argument controls which gpus to use for training and inference. Under the hood, the pipeline is simply setting
 the `CUDA_VISIBLE_DEVICES` environmentt variable. 
