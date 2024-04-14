@@ -29,7 +29,7 @@ apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 > **_Note It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default behavior in the `luigi`/`law` tasks_**
 
 ## Executing a Container
-Most projects come with a command line interface (CLI) built with the extremely flexible (jsonargparse)[https://jsonargparse.readthedocs.io/en/stable/]. As an example of how you might run a command inside the container, let's use the CLI in the data container to query for science-mode segments from (gwosc)[https://gwosc.org/]
+Most projects come with a command line interface (CLI) built with the extremely flexible [jsonargparse](https://jsonargparse.readthedocs.io/en/stable/). As an example of how you might run a command inside the container, let's use the CLI in the data container to query for science-mode segments from (gwosc)[https://gwosc.org/]
 
 ```bash
 mkdir ~/aframe/data/
@@ -51,7 +51,7 @@ Make sure to bind the root of the `aframe` repository to `/opt/aframe`, the loca
 
 
 ## Other Tips and Tricks
-For development, it can often be useful to open a shell inside a container to poke around and debug. Doing so is as simple as running
+For development, it can often be useful to open a shell inside a container to poke around and debug: 
 
 ```bash
 apptainer shell ~/aframe/images/image.sif

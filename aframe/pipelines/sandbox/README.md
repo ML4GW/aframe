@@ -2,7 +2,7 @@
 
 > **_Note: It is highly recommended that you have completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions before running the sandbox pipeline_**
 
-> **_Note: It is assumed that you have already built each [project container](../../../projects/README.md)**
+> **_Note: It is assumed that you have already built each [project's container](../../../projects/README.md)_**
 
 The sandbox pipeline strings together `luigi` / `law` tasks to run an end-to-end generic aframe workflow.
 In short, running the sandbox pipeline will
