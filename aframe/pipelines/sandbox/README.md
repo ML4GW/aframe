@@ -1,6 +1,6 @@
 # Sandbox Pipeline
 
-**Note: It is highly recommended that you have completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions before running the sandbox pipeline**
+> **_Note: It is highly recommended that you have completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions before running the sandbox pipeline_**
 
 The sandbox pipeline strings together `luigi` / `law` tasks to run an end-to-end generic aframe workflow.
 In short, running the sandbox pipeline will
@@ -13,11 +13,19 @@ In short, running the sandbox pipeline will
 6. Calculating sensitive volume
 
 ## Pipeline Configuration
-Most of the pipeline task parameters are configured with a `.cfg` file.
-See the [`sandbox.cfg`](./sandbox.cfg) for a complete example.
+The pipeline is configured by two files. A `.cfg` file contains the parameters
+for the data generation, export, and inference tasks. See the [`sandbox.cfg`](./sandbox.cfg) for a complete example.
+Training configuration is handled by [`lightning`](https://lightning.ai/docs/pytorch/stable/), which 
+uses a `yaml` file. By default, the Sandbox pipeline will use the [`config.yaml`](../../../projects/train/config.yaml) that lives at the root of the train project. If you wish to point to a different location, you can set the `config` parameter of the `luigi_Train` task in the `.cfg`:
 
-The only configuration not controlled by the `.cfg` file are locations for file storage. 
-Instead, these paths are controlled by the following environment variables:
+```cfg
+[luigi_Train]
+config = /path/to/training/config.yaml
+```
+
+> **_Note: Parameters that are common between training and other tasks (e.g. ifos, highpass, fduration) are specified once in the `.cfg` and passed to the downstream training `config.yaml` by `luigi`/`law`_**
+
+Lastly, environment variables are used to control locations of data and analysis artifcats throughout the run:
 
 `AFRAME_TRAIN_DATA_DIR`: Training data storage 
 `AFRAME_TEST_DATA_DIR`: Testing data storage
@@ -49,7 +57,7 @@ Then, the pipeline can be launched using `poetry` and the `law` command line too
 
 ```
 LAW_CONFIG_FILE=/path/to/sandbox.cfg \
-    poetry run law run aframe.pipelines.sandbox.Sandbox'
+    poetry run law run aframe.pipelines.sandbox.Sandbox
     --gpus 0,1 --workers 5
 ```
 
