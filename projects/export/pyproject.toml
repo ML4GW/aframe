@@ -11,7 +11,7 @@ export-model = "export.main:export"
 export-and-launch-triton = "export.remote:main"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.11"
 
 
 # nautilus/remote file access
