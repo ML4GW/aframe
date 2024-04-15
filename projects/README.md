@@ -3,8 +3,8 @@ Each aframe project represents an individually containerized sub-task of the afr
 to be lightweight, flexible and portable. Projects are meant to produce _artifacts_ of some specific experiment. By artifact, we typically mean some file (e.g training data, optimized models, analysis plots, etc.) saved to disk somewhere. Projects should be kept modular and specific to the artifact they are designed to generate.
 
 The current projects include
-- `data` - Scripts for generating training and testing data
-- `train` - Pytorch lightning code for training neural-networks
+- [`data`](./data/README.md) - Scripts for generating training and testing data
+- [`train`](./train/README.md) - Pytorch lightning code for training neural-networks
 - `export` - Exporting trained networks as accelerated executables
 - `infer` - Launching triton inference servers and deploying inference clients to analyze timeslides and injections
 - `utils` - General utilites used by all projects (TODO: move this under `libs`)
