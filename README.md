@@ -27,7 +27,7 @@ git clone git@github.com:albert-einstein/aframe.git
 
 `Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
 
-``bash
+```bash
 git submodule update --init
 ```
 
