@@ -179,7 +179,12 @@ class TimeslideWaveforms(AframeDataTask):
         ]
 
     def requires(self):
-        return DeployTimeslideWaveforms.req(self)
+        return DeployTimeslideWaveforms.req(
+            self,
+            request_memory=self.request_memory,
+            request_disk=self.request_disk,
+            request_cpus=self.request_cpus,
+        )
 
     @property
     def targets(self):
