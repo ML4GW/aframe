@@ -27,7 +27,7 @@ As an example, let's build a training dataset using the CLI in the `data` contai
 
 First, let's make a data storage directory, and query science mode segments from [gwosc](gwosc.org)
 ```
-mkdir ~/aframe/data/
+mkdir -p ~/aframe/data/train
 apptainer run ~/aframe/images/data.sif \
     python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
 ```
@@ -36,14 +36,14 @@ Inspecting the output, (`vi ~/aframe/data/segments.txt`) it looks like there are
 
 Next, let's fetch strain data during those segments. One will be used for training, the other for validating
 
-```
+```bash
 apptainer run ~/aframe/images/data.sif \
     python -m data fetch \
     --start 1240579783 \
     --end 1240587612 \
     --channels='["H1", "L1"]' \ 
     --sample_rate 2048 \
-    --output_directory ~/aframe/data/background/
+    --output_directory ~/aframe/data/train/background/
 
 apptainer run ~/aframe/images/data.sif \
     python -m data fetch \
@@ -51,17 +51,31 @@ apptainer run ~/aframe/images/data.sif \
     --end 1240606748 \
     --channels='["H1", "L1"]' \ 
     --sample_rate 2048 \
-    --output_directory ~/aframe/data/background/
+    --output_directory ~/aframe/data/train/background/
 ```
 
 Finally, lets generate some waveforms for training
 
-```
+```bash
 apptainer run ~/aframe/images/data.sif \
     python -m data waveforms \
     --prior priors.priors.end_o3_ratesandpops \
     --num_signals 10000 \
     --waveform_duration 8 \
     --sample_rate 2048 \
-    --output_file ~/aframe/data/signals.hdf5
+    --output_file ~/aframe/data/train/train_waveforms.hdf5
 ```
+
+and validation
+
+```bash
+apptainer run ~/aframe/images/data.sif \
+    python -m data waveforms \
+    --prior priors.priors.end_o3_ratesandpops \
+    --num_signals 2000 \
+    --waveform_duration 8 \
+    --sample_rate 2048 \
+    --output_file ~/aframe/data/train/val_waveforms.hdf5
+```
+
+Note that the train project assumes these waveform files are named as above! To continue this example, see the [training `Aframe` example](../train/README.md#example-training-aframe)
