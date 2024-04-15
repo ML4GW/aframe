@@ -33,7 +33,7 @@ Most projects come with a command line interface (CLI) built with the extremely 
 
 ```bash
 mkdir ~/aframe/data/
-apptainer run ~/aframe/images/data.sif \
+apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
 ```
 
@@ -54,7 +54,7 @@ Make sure to bind the root of the `aframe` repository to `/opt/aframe`, the loca
 For development, it can often be useful to open a shell inside a container to poke around and debug: 
 
 ```bash
-apptainer shell ~/aframe/images/image.sif
+apptainer shell $AFRAME_CONTAINER_ROOT/image.sif
 ```
 
 To allow GPU access, simply add the `--nv` flag to your `apptainer` command. Also, environment variables with the `APPTAINERENV_` prefix
