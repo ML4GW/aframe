@@ -1,28 +1,54 @@
-# aframev2
-An attempt to overhaul and modernize the infrastructure to run [`aframe`](https://github.com/ML4GW/aframe). Unifying multiple threads of research
-### Model architecture classes
-- Time domain
-- Frequency Domain
-### Optimization schemes
-- Supervised
-- Semi-supervised
-### Deployment scenarios
-- LIGO Data Grid (LDG) local
-- Remote via Kubernetes
-### Scales
-- Data-distributed model training
-- Distributed hyperparameter searching
+# Aframe
+Detecting compact binary mergers from gravitational wave strain data using neural networks, with an emphasis on
+- **Efficiency** - making effective use of accelerated hardware like GPUs in order to minimize time-to-solution
+- **Scale** - validating hypotheses on large volumes of data to obtain high-confidence estimates of model performance
+- **Flexibility** - modularizing functionality to expose various levels of abstraction and make implementing new ideas simple
+- **Physics first** - taking advantage of the rich priors available in GW physics to build robust models and evaluate them accoring to 
+meaningful metrics
+- **Multi-messenger astronomy** - making algorithmic decisions and optimizations that allow for extremely low-latency alerts 
+
+For algorithm details and performance estimates on the LVK O3 observing run, please see ["A machine-learning pipeline for real-time detection of gravitational waves from compact binary coalescences"](https://arxiv.org/abs/2403.18661). Please also cite this paper if you use `Aframe` software in your work.
 
 ## Getting Started
+> **_NOTE: this repository is a WIP. Please open up an issue if you encounter bugs, quirks, or any undesired behavior_**
+
+> **_NOTE: Running Aframe out-of-the-box requires access to an enterprise-grade GPU (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements_**.
+
 Please see the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) for help on setting up your environment 
 on the [LIGO Data Grid](https://computing.docs.ligo.org/guide/computing-centres/ldg/) (LDG) and for configuring access to [Weights and Biases](https://wandb.ai), and the [Nautilus hypercluster](https://ucsd-prp.gitlab.io/). 
 This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
-required to run `aframe`. 
+required to run `Aframe`. 
 
-**NOTE: this repository is a WIP. You will encounter bugs, quirks, and undesired behavior. If you have any suggestions on making the development process easier, please open up an issue!**
+Once setup, create a [fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) of this repository, and clone it
+
+```bash
+git clone git@github.com:albert-einstein/aframe.git
+```
+
+`Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
+
+``bash
+git submodule update --init
+```
+
+Now, you should be all setup! The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. It is recommended that you follow the instructions in the sandbox [README](./aframe/pipelines/sandbox/) and execute the pipeline as an introduction to interacting with the respository. 
+
+
+## Repository structure
+The code here is structured like a [monorepo](https://medium.com/opendoor-labs/our-python-monorepo-d34028f2b6fa), with applications siloed off into isolated environments to keep dependencies lightweight, but built on top of a shared set of libraries to keep the code modular and consistent. Briefly, the repository consists of three main sub-directories:
+
+1. [projects](./projects/README.md) - containerized sub-tasks of aframe analysis that each produce _artifacts_
+2. [libs](./libs/README.md) - general-purpose functions (libraries) mean to support more than one project
+3. [aframe](./aframe/README.md) - `law` wrappers for building complex pipelines of project tasks.
+
+For more details on each of these, please see their respective README's. 
+
+## Contributing
+If you are looking to contribute to `Aframe`, please see our [contribution guidelines](./CONTRIBUTING.md)
+
 
 ### Quickstart: low-friction, local development
-Each sub-task in `aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy. These live under the `projects` sub-directory. The projects include
+Each sub-task in `Aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy. These live under the `projects` sub-directory. The projects include
 
 - `data` : Querying strain data and generating waveforms for training and testing.
 - `train` : Pytorch lightning code for training neural-networks.

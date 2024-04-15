@@ -1,11 +1,11 @@
 # Aframe Projects
-Each aframe project represents a containerized sub-task of the aframe analysis. This allows project environments
-to be lightweight, flexible and portable.
+Each aframe project represents an individually containerized sub-task of the aframe analysis. This allows project environments
+to be lightweight, flexible and portable. Projects are meant to produce _artifacts_ of some specific experiment. By artifact, we typically mean some file (e.g training data, optimized models, analysis plots, etc.) saved to disk somewhere. Projects should be kept modular and specific to the artifact they are designed to generate.
 
 
 ## Building Project Containers
 Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
-Some projects also require the use of `Conda` / `Mamba`.
+Some projects also require the use of [`Mamba`](https://mamba.readthedocs.io/en/latest/).
 
 In the root directory of (most) projects is an `apptainer.def` file that containerizes 
 the project application using [Apptainer](https://apptainer.org/docs/user/latest/) (formerly known as Singularity).
