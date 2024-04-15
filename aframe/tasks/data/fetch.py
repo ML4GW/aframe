@@ -6,12 +6,12 @@ from luigi.util import inherits
 
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
-from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
+from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.segments import Query
 
 
 @inherits(Query)
-class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
+class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
     data_dir = luigi.Parameter()
     sample_rate = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)
