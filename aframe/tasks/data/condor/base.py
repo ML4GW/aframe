@@ -19,6 +19,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     request_memory = luigi.Parameter(default="32678")
     request_cpus = luigi.IntParameter(default=1)
 
+    exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.htcondor_log_dir.touch()
