@@ -7,7 +7,7 @@
 The sandbox pipeline strings together `luigi` / `law` tasks to run an end-to-end generic aframe workflow.
 In short, running the sandbox pipeline will
 
-1. Generate training data
+1. Generate training data 
 2. Generate testing data
 3. Train a model
 4. Export trained weights to TensorRT
@@ -73,6 +73,25 @@ the `CUDA_VISIBLE_DEVICES` environment variable.
 
 The end to end pipeline can take a few days to run. The most time consuming steps are training and performing inference. If you wish to reduce these timescales for testing the end-to-end analysis, consider altering the
 [`max_epochs`](../../../projects/train/config.yaml#92) argument in the training configuration file, and/or the amount of analyzed livetime ([`Tb`](./sandbox.cfg#17)) in the sandbox config.
+
+
+## Remote Training
+Model training can be run on the nautilus hypercluster by setting the `train_remote` flag of the `Train` `Task`
+
+```
+[luigi_Train]
+train_remote = true
+```
+
+You will also need to ensure that the `AFRAME_TRAIN_DATA_DIR` and `AFRAME_TRAIN_RUN_DIR` point to s3 bucket paths, e.g.
+
+```bash
+export AFRAME_TRAIN_DATA_DIR=s3://{your-bucket}/$RUN_LABEL/data
+export AFRAME_TRAIN_RUN_DIR=s3://{your-bucket}/$RUN_LABEL/training
+```
+
+The `law` `Tasks` responsible for training data generation will automatically transfer your data to the s3 storage! 
+The rest of the pipeline will work out of the box!
 
 ## Tips and Tricks
 If you wish to launch an analysis with the freedom of ending
