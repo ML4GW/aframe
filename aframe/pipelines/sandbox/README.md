@@ -29,11 +29,11 @@ config = /path/to/training/config.yaml
 
 Lastly, environment variables are used to control locations of data and analysis artifcats throughout the run:
 
-- `AFRAME_TRAIN_DATA_DIR`: Training data storage
-- `AFRAME_TEST_DATA_DIR`: Testing data storage
-- `AFRAME_TRAIN_RUN_DIR`: Training artifact storage
-- `AFRAME_CONDOR_DIR`: Condor submit files and logs
-- `AFRAME_RESULTS_DIR`: Inference and sensitive volume results
+- `AFRAME_TRAIN_DATA_DIR` Training data storage
+- `AFRAME_TEST_DATA_DIR` Testing data storage
+- `AFRAME_TRAIN_RUN_DIR` Training artifact storage
+- `AFRAME_CONDOR_DIR` Condor submit files and logs
+- `AFRAME_RESULTS_DIR` Inference and sensitive volume results
 
 It is recommended to store these in a `.env` file. The following pattern could prove useful:
 
@@ -44,7 +44,7 @@ export AFRAME_TRAIN_DATA_DIR=$AFRAME_BASE/$RUN_LABEL/data/train
 export AFRAME_TEST_DATA_DIR=$AFRAME_BASE/$RUN_LABEL/data/test
 export AFRAME_TRAIN_RUN_DIR=$AFRAME_BASE/$RUN_LABEL/training
 export AFRAME_CONDOR_DIR=$AFRAME_BASE/$RUN_LABEL/condor
-export AFRAME_RESULTS_DIR=$AFRAME_BASE/$RUN_LABE/results
+export AFRAME_RESULTS_DIR=$AFRAME_BASE/$RUN_LABEL/results
 ```
 
 To export these environment variables, simply run
@@ -57,6 +57,8 @@ source .env
 To launch the pipeline, ensure that you are in the root level of the repository.
 Then, the pipeline can be launched using `poetry` and the `law` command line tool.
 
+> **_NOTE: Running the sandbox pipeline out-of-the-box requires access to an enterprise-grade GPU(s) (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements_**.
+
 ```
 LAW_CONFIG_FILE=/path/to/sandbox.cfg \
     poetry run law run aframe.pipelines.sandbox.Sandbox
@@ -67,13 +69,17 @@ The `workers` argument specifies how many `luigi` workers to use. This controls 
 can be launched. It is useful to specify more than 1 worker when you have several tasks that are not dependent on one another. 
 
 The `gpus` argument controls which gpus to use for training and inference. Under the hood, the pipeline is simply setting
-the `CUDA_VISIBLE_DEVICES` environmentt variable. 
+the `CUDA_VISIBLE_DEVICES` environment variable. 
 
-The end to end pipeline can take a few days to run. If you wish to launch an analysis with the freedom of ending
-your ssh session, it is recommended that you use a tool like [`tmux`](https://github.com/tmux/tmux/wiki). Note that `tmux`
+The end to end pipeline can take a few days to run. The most time consuming steps are training and performing inference. If you wish to reduce these timescales for testing the end-to-end analysis, consider altering the
+[`max_epochs`](../../../projects/train/config.yaml#92) argument in the training configuration file, and/or the amount of analyzed livetime ([`Tb`](./sandbox.cfg#17)) in the sandbox config.
+
+## Tips and Tricks
+If you wish to launch an analysis with the freedom of ending
+your ssh session, you can use a tool like [`tmux`](https://github.com/tmux/tmux/wiki). Note that `tmux`
 is already installed on the LDG clusters.
 
-First, create a new session and change directories into the aframe repository
+First, create a new session and ensure you are in the root of the aframe repository
 ```
 tmux new -s aframe-sandbox
 ```

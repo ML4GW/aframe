@@ -5,12 +5,21 @@ Scripts for producing training and testing data for `Aframe`
 The `data` project environment utilizes `Mamba` and `poetry`. `Mamba` is needed for installing
 the LIGO frame reading libraries [`python-ldas-tools-framecpp`](https://anaconda.org/conda-forge/python-ldas-tools-framecpp/) and [https://anaconda.org/conda-forge/python-nds2-client](`python-nds2-client`), which are unavailable on PyPi.
 
-
 In the root of the `data` project, run 
 ```bash
 apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 ```
-to build the `data` container.
+to build the `data` container. 
+
+The container will first build an environment using the [`conda-lock.yml`](./conda-lock.yml), and then install local dependencies defined in the [`pyproject.toml`](./pyproject.toml).
+
+If the dependencies in the [`environment.yaml`](./environment.yaml) require modifications, the `conda-lock.yml` will need to be updated
+
+```bash
+conda-lock -f environment.yaml -p linux-64
+```
+
+and the container image will need to be rebuilt.
 
 ## Scripts
 The data project consists of four main sub-modules:

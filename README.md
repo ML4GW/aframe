@@ -12,7 +12,7 @@ For algorithm details and performance estimates on the LVK O3 observing run, ple
 ## Getting Started
 > **_NOTE: this repository is a WIP. Please open up an issue if you encounter bugs, quirks, or any undesired behavior_**
 
-> **_NOTE: Running Aframe out-of-the-box requires access to an enterprise-grade GPU (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements_**.
+> **_NOTE: Running Aframe out-of-the-box requires access to an enterprise-grade GPU(s) (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements_**.
 
 Please see the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) for help on setting up your environment 
 on the [LIGO Data Grid](https://computing.docs.ligo.org/guide/computing-centres/ldg/) (LDG) and for configuring access to [Weights and Biases](https://wandb.ai), and the [Nautilus hypercluster](https://ucsd-prp.gitlab.io/). 
@@ -50,15 +50,6 @@ If you are looking to contribute to `Aframe`, please see our [contribution guide
 
 
 ### TODO: Move the below to corresponding documentation location / open up issues
-
-### Useful concepts and things to be aware of
-- Weights & Biases
-    - You can assign various attributes to your W&B logger
-        - `name`: name the run will be assigned
-        - `group`: group to which the run will be assigned. This is useful for runs that are part of the same experiment but execute in different scripts, e.g. a hyperparameter sweep or maybe separate train, inferenence, and evaluation scripts
-        - `tags`: comma separate list of tags to give your run. Makes it easy to filter in the dashboard e.g. for `autoencoder` runs
-        - `project`: the workspace consisting of multiple related experiments that your run is a part of, e.g. `aframe`
-        - `entity`: the group managing the experiments your run is associated, e.g. `ml4gw`. If left blank, the project and run will be associated with your personal account
 - Tuning
     - You don't need to specify the `temp_dir` when tuning remotely, this is just a consequence of `ray` trying to write to a root directory for temp files that breaks on LDG
     - If you're tuning remotely, your `storage_dir` should be a remote S3 bucket that all your workers can access. You'll need to specify an `AWS_ENDPOINT_URL` environment variable for those workers so they know where your bucket lives
@@ -77,24 +68,8 @@ If you are looking to contribute to `Aframe`, please see our [contribution guide
             - While you don't want one channel's _prediction_ to depend on the other channel at all, there's nothing wrong with imposing a _loss_ that combines their information
         - You could even do 2 sky samplings for the same event and enforce that these are similar
         - This would involve using the model-specific loss terms discussed in the comments under the model
-### Deployment scenarios
-- LDG local
-    - This is working, though see my note about local tunings above
-- Remote via Kubernetes
-    - The tuning script should work if a cluster is already up, and training is trivial to run with a kubernetes deploy yaml
-    - There's a class in `aframe/base.py` that uses ray-kube to spin up a cluster in a law Task
-        - Not tested yet, but should be basically what you're looking for
-        - Use the `configure_cluster` method to do task-specific cluster configuration before launching, e.g. setting secrets, environment variables, etc.
-        - Needs ray-kube to implement [this functionality](https://github.com/EthanMarx/ray-kube/issues/5) so that we can e.g. set `AWS_ENDPOINT_URL` to the desired target
-            - Somewhat silly, but will probably be helpful to automatically map to the internal S3 endpoint based on the external endpoint, that way users only need to specify one that will work in both local and remote scenarios
-### Scales
-- Data-distributed model training
-    - Implemented, just expose multiple GPUs to your training job
--  Distributed hyperparameter searching
-    - See issues with local deployment discussed above
-    - Remote works, but not luigi-fied yet. See discussion in [Deployment Scenarios](#Deployment-scenarios)
 
-## What else?
+## TODO's
 There's tons of `TODOS` littering the code that cover stuff I'll have missed here.
 One major one is the ability to log plots of model predictions to W&B during validation. See my comments on it [here](https://github.com/ML4GW/aframev2/blob/b2a5164d2e49f9c2701e2100091f6b9b8467678a/projects/train/train/model/base.py#L74-L87).
 Basically you should be able to define callbacks for various tasks that have an `on_validation_score` method to pass model inputs and outputs that you can log to W&B.
