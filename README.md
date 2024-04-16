@@ -31,7 +31,9 @@ git clone git@github.com:albert-einstein/aframe.git
 git submodule update --init
 ```
 
-Now, you should be all setup! The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. It is recommended that you follow the instructions in the sandbox [README](./aframe/pipelines/sandbox/) and execute the pipeline as an introduction to interacting with the respository. 
+Next, follow the [instructions](./projects/README.md) for building each project's Apptainer images, and familiarize yourself with the various projects. These images are used as environments for running `Aframe` workflows, and thus are necessary to build. Once complete, you are all setup! 
+
+The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. Follow the instructions in the sandbox [README](./aframe/pipelines/sandbox/) and execute the pipeline as an introduction to interacting with the respository. 
 
 
 ## Repository structure
@@ -41,7 +43,7 @@ The code here is structured like a [monorepo](https://medium.com/opendoor-labs/o
 2. [libs](./libs/README.md) - general-purpose functions (libraries) mean to support more than one project
 3. [aframe](./aframe/README.md) - `law` wrappers for building complex pipelines of project tasks.
 
-For more details on each of these, please see their respective README's. 
+For more details, please see the respective README's. 
 
 ## Contributing
 If you are looking to contribute to `Aframe`, please see our [contribution guidelines](./CONTRIBUTING.md)
