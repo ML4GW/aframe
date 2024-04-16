@@ -1,190 +1,53 @@
-# aframev2
-An attempt to overhaul and modernize the infrastructure to run [`aframe`](https://github.com/ML4GW/aframe). Unifying multiple threads of research
-### Model architecture classes
-- Time domain
-- Frequency Domain
-### Optimization schemes
-- Supervised
-- Semi-supervised
-### Deployment scenarios
-- LIGO Data Grid (LDG) local
-- Remote via Kubernetes
-### Scales
-- Data-distributed model training
-- Distributed hyperparameter searching
+# Aframe
+Detecting compact binary mergers from gravitational wave strain data using neural networks, with an emphasis on
+- **Efficiency** - making effective use of accelerated hardware like GPUs in order to minimize time-to-solution
+- **Scale** - validating hypotheses on large volumes of data to obtain high-confidence estimates of model performance
+- **Flexibility** - modularizing functionality to expose various levels of abstraction and make implementing new ideas simple
+- **Physics first** - taking advantage of the rich priors available in GW physics to build robust models and evaluate them accoring to 
+meaningful metrics
+- **Multi-messenger astronomy** - making algorithmic decisions and optimizations that allow for extremely low-latency alerts 
+
+For algorithm details and performance estimates on the LVK O3 observing run, please see ["A machine-learning pipeline for real-time detection of gravitational waves from compact binary coalescences"](https://arxiv.org/abs/2403.18661). Please also cite this paper if you use `Aframe` software in your work.
 
 ## Getting Started
+> **_NOTE: this repository is a WIP. Please open up an issue if you encounter bugs, quirks, or any undesired behavior_**
+
+> **_NOTE: Running Aframe out-of-the-box requires access to an enterprise-grade GPU (e.g. P100, V100, T4, A[30,40,100], etc.). There are several nodes on the LIGO Data Grid which meet these requirements_**.
+
 Please see the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) for help on setting up your environment 
 on the [LIGO Data Grid](https://computing.docs.ligo.org/guide/computing-centres/ldg/) (LDG) and for configuring access to [Weights and Biases](https://wandb.ai), and the [Nautilus hypercluster](https://ucsd-prp.gitlab.io/). 
 This quickstart includes a Makefile and instructions for setting up all of the necessary software, environment variables, and credentials 
-required to run `aframe`. 
+required to run `Aframe`. 
 
-**NOTE: this repository is a WIP. You will encounter bugs, quirks, and undesired behavior. If you have any suggestions on making the development process easier, please open up an issue!**
+Once setup, create a [fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) of this repository, and clone it
 
-### Quickstart: low-friction, local development
-Each sub-task in `aframe` is implemented as a containerized application, whose environment and Apptainer [definition file](https://apptainer.org/docs/user/1.0/definition_files.html) live with the code they're meant to deploy. These live under the `projects` sub-directory. The projects include
-
-- `data` : Querying strain data and generating waveforms for training and testing.
-- `train` : Pytorch lightning code for training neural-networks.
-- `export`: Exporting trained networks as accelerated executables for inference. 
-- `infer`: Launching triton inference servers and deploying inference clients to analyze timeslides and injections.
-- `utils`: General utilites used by all projects (TODO: move this under `libs`)
-
-You can build and execute code inside these containers locally. As an example, let's go through the process of generating data for training `aframe`. 
-First, you will need to build the `data` project container:
-
-```
-mkdir ~/aframe/images
-cd projects/data
-apptainer build ~/aframe/images/data.sif apptainer.def
+```bash
+git clone git@github.com:albert-einstein/aframe.git
 ```
 
-Once that is complete, let's query for open science segments containing high-quality data:
+`Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
 
-```
-mkdir ~/aframe/data/
-apptainer run ~/aframe/images/data.sif \
-    python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
+```bash
+git submodule update --init
 ```
 
-Inspecting the output, (`vi ~/aframe/data/segments.txt`) it looks like there are quality data segments `(1240579783, 1240587612)` and `(1240594562, 1240606748)`. Let's fetch strain data during those segments. One will be used for training, the other for validating
+Now, you should be all setup! The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. It is recommended that you follow the instructions in the sandbox [README](./aframe/pipelines/sandbox/) and execute the pipeline as an introduction to interacting with the respository. 
 
-```
-apptainer run ~/aframe/images/data.sif \
-    python -m data fetch \
-    --start 1240579783 \
-    --end 1240587612 \
-    --channels='["H1", "L1"]' \ 
-    --sample_rate 2048 \
-    --output_directory ~/aframe/data/background/
 
-apptainer run ~/aframe/images/data.sif \
-    python -m data fetch \
-    --start 1240594562 \
-    --end 1240606748 \
-    --channels='["H1", "L1"]' \ 
-    --sample_rate 2048 \
-    --output_directory ~/aframe/data/background/
-```
+## Repository structure
+The code here is structured like a [monorepo](https://medium.com/opendoor-labs/our-python-monorepo-d34028f2b6fa), with applications siloed off into isolated environments to keep dependencies lightweight, but built on top of a shared set of libraries to keep the code modular and consistent. Briefly, the repository consists of three main sub-directories:
 
-Finally, lets generate some waveforms:
+1. [projects](./projects/README.md) - containerized sub-tasks of aframe analysis that each produce _artifacts_
+2. [libs](./libs/README.md) - general-purpose functions (libraries) mean to support more than one project
+3. [aframe](./aframe/README.md) - `law` wrappers for building complex pipelines of project tasks.
 
-```
-apptainer run ~/aframe/images/data.sif \
-    python -m data waveforms \
-    --prior priors.priors.end_o3_ratesandpops \
-    --num_signals 10000 \
-    --waveform_duration 8 \
-    --sample_rate 2048 \
-    --output_file ~/aframe/data/signals.hdf5
-```
+For more details on each of these, please see their respective README's. 
 
-Great! We are now ready to train a model! In the same fashion, let's build the training container:
+## Contributing
+If you are looking to contribute to `Aframe`, please see our [contribution guidelines](./CONTRIBUTING.md)
 
-```
-mkdir ~/aframe/images
-cd projects/train
-apptainer build ~/aframe/images/train.sif apptainer.def
-```
 
-and launch a training job!
-```
-mkdir ~/aframe/results
-APPTAINERENV_CUDA_VISIBLE_DEVICES=<ID of GPU you want to train on> apptainer run --nv ~/aframe/images/train.sif \
-    python -m train \
-        --config /opt/aframe/projects/train/config.yaml \
-        --data.ifos=[H1,L1] \
-        --data.data_dir ~/aframe/data/train \
-        --trainer.logger=WandbLogger \
-        --trainer.logger.project=aframe \
-        --trainer.logger.name=my-first-run \
-        --trainer.logger.save_dir=~/aframe/results/my-first-run
-```
-
-If you inspect the possible arguments for the train project by running
-
-```
-apptainer run python -m train --help
-```
-
-This will infer most of your training arguments from the YAML config that got put into the container at build time. If you want to change this config, or if you change any code and you want to see those changes reflected inside the container, you can simply update the start of the command to read `apptainer run --nv --bind .:/opt/aframe`. 
-
-Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove all the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
-
-You can even train using multiple GPUS, simply by specifying a list of comma-separated GPU indices to `APPTAINERENV_CUDA_VISIBLE_DEVICES`.
-
-### One layer up: `luigi` and `law`
-That command above is simple enough, but it might be nice to 1) specify arguments with configs, and 2) Incorporate tasks as steps in a larger pipeline.
-To do this, this repo takes advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular tasks that can be strung into pipelines. 
-To understand the structure of `luigi` tasks, it is reccommended to read the [docs](https://luigi.readthedocs.io/en/stable/).
-
-The top level `aframev2` repository contains the [environment](pyproject.toml) that is used to launch tasks with `luigi` and `law`.
-to install this environment, simply run 
-
-```
-poetry install
-```
-
-in the root of this repository.
-
-To run a local training job you can now run 
-
-```
-poetry run law run aframe.TrainLocal \
-    --gpus <ID of GPUs to train on> \
-    --image ~/aframe/images/train.sif \
-    --config /opt/aframe/projects/train/config.yaml \
-    --data-dir ~/aframe/data/train \
-    --run-dir ~/aframe/results/my-first-luigi-run \
-    --use-wandb \
-    --wandb-name my-first-luigi-run
-```
-This has taken care of setting some sensible defaults for you, and allows for simpler syntax like the `--gpus` arg and `--use-wandb` which will configure most of your W&B settings for you.
-All tasks also come with a built-in `--dev` arg which will automatically map your current code into the container for super low-friction development.
-
-To see all the parameters a task has to offer, you can run e.g.
-```
-poetry run law run aframe.tasks.TrainLocal --help
-```
-
-### Final Layer: Pipelines
-As mentioned, `luigi` and `law` allow for the construction of large scale pipelines. The `aframe/pipelines/` directory contains common analysis pipelines. 
-Currently, only the `sandbox` pipeline is available. This pipeline will launch a single end-to-end `aframe` workflow consisting of training / testing data generation, model training, model export, and inference using a triton server. The easiest way to run the pipeline is to use the config file, which is specified in `law` via the `LAW_CONFIG_FILE` environment variable:
-
-```
-LAW_CONFIG_FILE=aframe/pipelines/sandbox/sandbox.cfg poetry run law run aframe.pipelines.sandbox.Sandbox --gpus <GPU IDs> 
-```
-
-### One more layer: local hyperparameter tuning
-To search over hyperparameters, you can launch a local hyperparameter tuning job by running
-
-```
-APPTAINERENV_CUDA_VISIBLE_DEVICES=<IDs of GPUs to tune on> apptainer run --nv --bind .:/opt/aframe ~/aframe/images/rain.sif \
-    python -m train.tune \
-        --config /opt/aframe/projects/train/config.yaml
-        --data.ifos=[H1,L1]
-        --data.data_dir ~/aframe/data/train
-        --trainer.logger=WandbLogger
-        --trainer.logger.project=aframe
-        --trainer.logger.save_dir=~/aframe/results/my-first-tune \
-        --tune.name my-first-tune \
-        --tune.storage_dir ~/aframe/results/my-first-tune \
-        --tune.temp_dir ~/aframe/results/my-first-tune/ray \
-        --tune.num_samples 8 \
-        --tune.cpus_per_gpu 6 \
-        --tune.gpus_per_worker 1 \
-        --tune.num_workers 4
-```
-This will launch 8 hyperparameter search jobs that will execute on 4 workers using the Asynchronous Successive Halving Algorithm (ASHA).
-All the runs will be given the same **group** ID in W&B, and will be assigned random names in that group.
-
-**NOTE: for some reason, right now this will launch one job at a time that takes all available GPUs. This needs sorting out**
-
-The cool thing is that if you already have a ray cluster running somewhere, you can distribute your jobs over that cluster by simply adding the `--tune.endpoint <ip address of ray cluster>:10001` command line argument.
-
-This isn't implemented at the `luigi` level yet, but the skeleton of how it will work is in `aframe/tasks/train.py`.
-
-### TODO: discussion about moving to remote and higher-friction production workloads
+### TODO: Move the below to corresponding documentation location / open up issues
 
 ### Useful concepts and things to be aware of
 - Weights & Biases

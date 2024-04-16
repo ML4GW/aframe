@@ -22,6 +22,7 @@ numpy = "^1.26.4"
 jupyter = "^1.0.0"
 jsonargparse = "^4.27.1"
 conda-lock = "^2.5.1"
+pre-commit = "^3.7.0"
 
 [build-system]
 requires = ["poetry-core"]
