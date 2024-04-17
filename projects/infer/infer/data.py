@@ -21,6 +21,27 @@ class Sequence:
         batch_size: int,
         rate: Optional[float] = None,
     ):
+        """
+        Object used for iterating over a segment of data,
+        performing timeshifts, injecting waveforms, and
+        aggregating the returned inference outputs.
+
+        Args:
+            background_fname:
+                Path to the background segment
+            injection_set_fname:
+                Path to the injection set file
+            ifos:
+                Interferometer names
+            shifts:
+                Time shifts to apply to each interferometer
+            inference_sampling_rate:
+                Rate at which inference is performed
+            batch_size:
+                Number of inference requests to send to the model at once
+            rate:
+                Rate at which to send requests in Hz
+        """
         self.background_fname = background_fname
         self.ifos = ifos
         self.inference_sampling_rate = inference_sampling_rate

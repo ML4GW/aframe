@@ -13,6 +13,27 @@ class Postprocessor:
         integration_window_length: float,
         cluster_window_length: float,
     ) -> None:
+        """
+        Postprocessor object for converting timeseries
+        of inference outputs into a set of events.
+
+        Args:
+            t0:
+                GPS time of the start of the data segment
+            shifts:
+                Time shifts to applied to each interferometer
+            psd_length:
+                Length of the PSD data used in inference in seconds
+            fduration:
+                Duration of the whitening filter used in seconds
+            inference_sampling_rate:
+                Rate at which inference was performed
+            integration_window_length:
+                Length of the integration window in seconds
+            cluster_window_length:
+                Length of the clustering window in seconds
+        """
+
         self.inference_sampling_rate = inference_sampling_rate
         self.shifts = shifts
 

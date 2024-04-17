@@ -11,6 +11,21 @@ from hermes.aeriel.client import InferenceClient
 def infer(
     client: InferenceClient, sequence: Sequence, postprocessor: Postprocessor
 ):
+    """
+    Perform inference on a sequence of data.
+
+    Args:
+        client:
+            Inference client. Must already be connected to a Triton server.
+        sequence:
+            Sequence object
+        postprocessor:
+            Postprocessor object
+
+    Returns:
+        background: Background events
+        foreground: Foreground events
+    """
     logging.info(
         "Beginning inference on sequence {} corresponding "
         "to {}s of data from {} with shifts {}, beginning "

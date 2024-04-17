@@ -1,45 +1,43 @@
-# aframe
+# Aframe Tasks
 [`luigi`](https://github.com/spotify/luigi) and [`law`](https://github.com/riga/law) `Tasks` for building scalable, complex, and dynamic `Aframe` analyses
 
 > **Note** It is expected that you are familiar with `Aframe` [projects](../projects/README.md) and have built their container images
 
-## Introduction
-Beyond running individual projects in containerized environments, it might be nice to 1) specify arguments with configs, and 2) incorporate tasks as steps in a larger pipeline.
-To do this, we take advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular tasks that can be strung into pipelines. To understand the structure of `luigi` tasks, it is recommended to read the [docs](https://luigi.readthedocs.io/en/stable/).
+> **Note** It is highly recommended that you read the luig [docs](https://luigi.readthedocs.io/en/stable/) to understand the structure of `luigi` tasks! Also, looking at `law` [examples](https://github.com/riga/law/tree/master/examples/), specifically the htcondor workflows, will be useful
 
- 
+
 ## Environment setup
-The top level `aframe` repository contains the [environment](pyproject.toml) that is used to launch `Tasks` with `luigi` and `law`.
-To install this environment, simply run 
+The top level `aframe` repository contains the [environment](pyproject.toml) that is used to launch `Tasks` with `law`
+
+In the root of this repository, simply run 
 
 ```
 poetry install
 ```
 
-in the root of this repository.  
+to install this environment
+  
 
-## Tasks
-In short, `Tasks` are isolated scripts that are run in containerized `Aframe` [project](../projects/README.md) environments.
+## Introduction to Tasks
+Beyond running individual projects in containerized environments, it might be nice to 1) specify arguments with configs, and 2) incorporate tasks as steps in a larger pipeline. To do this, we take advantage of a library called `luigi` (and a slightly higher-level wrapper, `law`) to construct configurable, modular, scalable tasks that can be strung into pipelines. 
+
+
+`Tasks` are isolated pieces of code that are meant to run in isolated `Aframe` [project](../projects/README.md) environments. 
 
 A `Task` is a class that defines two main methods 
 
 - `requires()` specifies other `Task` dependencies
-- `output()` specifies a `Target`, which typically corresponds to a artifact on disk
+- `output()` specifies a `Target`, which typically corresponds to an artifact on disk
 
 A `Task` is considered complete if it's `output` "exists". Complete `Tasks` will not be re-run.
-
-All `Aframe` `Tasks` also come with a built-in `--dev` arg which will automatically map your current code into the container using `--bind` for super low-friction development.
 
 `Tasks` can be run by specifying the python path to the `Task`, e.g.
 ```
 poetry run law run aframe.tasks.TrainLocal ...
 ```
 
-to see potential arguments for a `Task` you can run e.g.
-
-```
-poetry run law run aframe.tasks.TrainLocal --help
-```
+## Tips and Tricks
+All `Aframe` `Tasks` also come with a built-in `--dev` arg which will automatically map your current code into the container using Apptainers `--bind` for low-friction development.
 
 
 ## Examples
