@@ -35,7 +35,7 @@ apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 
 > **_Note It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default expecatation in `luigi`/`law` tasks_**
 
-Each projects `README` has instructions for building it's environment.
+Each projects `README` has instructions for building its environment.
 
 ## Executing a Container
 Most projects come with a command line interface (CLI) built with the extremely flexible [jsonargparse](https://jsonargparse.readthedocs.io/en/stable/). As an example of how you might run a command inside the container, let's use the CLI in the data container to query for science-mode segments from (gwosc)[https://gwosc.org/]

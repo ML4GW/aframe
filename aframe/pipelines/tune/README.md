@@ -5,7 +5,7 @@
 conducting large scale hyperparameter tuning jobs. Please read through the Ray Tune docs to get familiar with how Ray Tune operates. 
 
 ## Tune Pipeline
-The `Tune` pipeline `Task` is a wrapper around the [tune command line interface](../../../projects/train/train/tune/cli.py), defined in the `Aframe` train project. It will manage launching, connecting to, and tearing down Ray clustere deployed via kubernetes on the Nautilus hypercluster.
+The `Tune` pipeline `Task` is a wrapper around the [tune command line interface](../../../projects/train/train/tune/cli.py), defined in the `Aframe` train project. It will manage launching, connecting to, and tearing down Ray clusters deployed via kubernetes on the Nautilus hypercluster.
 
 In short, the `Tune` pipeline will do the following:
 

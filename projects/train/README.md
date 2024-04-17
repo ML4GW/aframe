@@ -75,13 +75,13 @@ You can even train using multiple GPUS for free! Just specify a list of comma-se
 You can assign various attributes to your W&B logger
 - name: name the run will be assigned
 - group: group to which the run will be assigned. This is useful for runs that are part of the same experiment but execute in different scripts, e.g. a hyperparameter sweep or maybe separate train, inferenence, and evaluation scripts
-- tags: comma separate list of tags to give your run. Makes it easy to filter in the dashboard e.g. for autoencoder runs
+- tags: comma-separated list of tags to give your run. Makes it easy to filter in the dashboard e.g. for autoencoder runs
 - project: the workspace consisting of multiple related experiments that your run is a part of, e.g. aframe
 - entity: the group managing the experiments your run is associated, e.g. ml4gw. If left blank, the project and run will be associated with your personal account
 
 > **_Note_** All the attributes above can also be configured via [environment variables](https://docs.wandb.ai/guides/track/environment-variables#optional-environment-variables)
 
-Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove all the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
+Once your run is started, you can go to [wandb.ai](https://wandb.ai) and track your loss and validation score. If you don't want to track your run with W&B, just remove the first three `--trainer` arguments above. This will save your training metrics to a local CSV in the `save_dir`.
 
 ### Tune
 In addition, the train project consists of a tuning script for performing a distributed hyper-parameter search with Ray Tune. 
