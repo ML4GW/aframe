@@ -2,7 +2,7 @@
 Training Aframe networks using [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) and hyper-parameter tuning using [Ray Tune](https://docs.ray.io/en/latest/tune/index.html) 
 
 ## Environment
-The train project environment is manged entirely by `poetry`.
+The `train` project environment is manged by `poetry`.
 
 In the root of the `train` project, run 
 ```bash

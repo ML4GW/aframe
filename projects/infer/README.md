@@ -13,4 +13,4 @@ poetry install
 in the root infer project directory
 
 ## Scripts
-TODO: 
+TODO: explain inference deployment
