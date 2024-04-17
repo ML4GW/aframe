@@ -90,8 +90,8 @@ export AFRAME_TRAIN_DATA_DIR=s3://{your-bucket}/$RUN_LABEL/data
 export AFRAME_TRAIN_RUN_DIR=s3://{your-bucket}/$RUN_LABEL/training
 ```
 
-The `law` `Tasks` responsible for training data generation will automatically transfer your data to the s3 storage! 
-The rest of the pipeline will work out of the box!
+The `law` `Tasks` responsible for training data generation will automatically transfer your data to s3 storage. The
+rest of the pipeline (export, inference, etc.) is compatible with s3 storage and will work out of the box.
 
 ## Tips and Tricks
 If you wish to launch an analysis with the freedom of ending

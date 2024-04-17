@@ -32,6 +32,9 @@ def build_condor_submit(
     model_version: int = -1,
     zero_lag: bool = False,
 ) -> Job:
+    """
+    Build a condor submit file that will launch multiple infer jobs in parallel
+    """
     param_names = "background_fname,shift"
     parameters = ""
 
