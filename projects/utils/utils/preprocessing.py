@@ -121,7 +121,7 @@ class BatchWhitener(torch.nn.Module):
             sample_rate,
             fftlength=fftlength,
             overlap=None,
-            average="mean",
+            average="median",
             fast=highpass is not None,
         )
         self.whitener = Whiten(fduration, sample_rate, highpass)
