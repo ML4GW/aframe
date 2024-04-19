@@ -8,11 +8,11 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
+      class_path: train.architectures.supervised.SupervisedFrequencyDomainResNet
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          class_path: ml4gw.nn.norm.GroupNorm2DGetter
           init_args:
             groups: 16
     metric:
@@ -28,14 +28,14 @@ model:
     # early stop
     patience: 50
 data:
-  class_path: train.data.TimeDomainSupervisedAframeDataset
+  class_path: train.data.FrequencyDomainSupervisedAframeDataset
   init_args:
     # loading args
     # data_dir:
     # ifos:
 
     # preprocessing args
-    batch_size: 384
+    batch_size: 576
     # kernel_length:
     psd_length: 8
     # fduration:
@@ -44,16 +44,24 @@ data:
 
     # augmentation args
     waveform_prob: 0.277
-    snr_thresh: 4
+    snr_thresh: 10
     max_snr: 100
     snr_alpha: 3
     swap_prob: 0.014
     mute_prob: 0.055
     trigger_pad: -0.75
+    num_f_bins: 64
+    num_t_bins: 128
+    qtransform:
+      class_path: ml4gw.transforms.SingleQTransform
+      init_args:
+        duration: 8
+        sample_rate: 1024
+        q: 45.6
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 
-        x_min: 4
+        x_min: 10
         x_max: 100
         alpha: 3
       # uncomment below and comment above for 
