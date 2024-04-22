@@ -44,26 +44,23 @@ data:
 
     # augmentation args
     waveform_prob: 0.277
-    snr_thresh: 10
-    max_snr: 100
-    snr_alpha: 3
     swap_prob: 0.014
     mute_prob: 0.055
     trigger_pad: -0.75
     num_f_bins: 64
     num_t_bins: 128
+    snr_sampler:
+      class_path: ml4gw.distributions.PowerLaw
+      init_args: 
+        minimum: 10
+        maximum: 100
+        index: -3
     qtransform:
       class_path: ml4gw.transforms.SingleQTransform
       init_args:
         duration: 8
         sample_rate: 1024
         q: 45.6
-    snr_sampler:
-      class_path: ml4gw.distributions.PowerLaw
-      init_args: 
-        x_min: 10
-        x_max: 100
-        alpha: 3
       # uncomment below and comment above for 
       # snr scheduling
        

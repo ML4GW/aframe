@@ -3,7 +3,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import h5py
 import lightning.pytorch as pl
@@ -21,6 +21,7 @@ from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
 Tensor = torch.Tensor
+TransformedDist = torch.distributions.TransformedDistribution
 
 
 # TODO: using this right now because
@@ -68,7 +69,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         trigger_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
-        snr_sampler: Optional[Callable[[int], torch.Tensor]] = None,
+        snr_sampler: Optional[TransformedDist] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
@@ -274,7 +275,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         this dataset on its own.
         """
         window_length = self.hparams.kernel_length + self.hparams.fduration
-        fftlength = self.hparams.fftlength or window_length
+        fftlength = 2  # self.hparams.fftlength or window_length
         self.psd_estimator = PsdEstimator(
             window_length,
             sample_rate,

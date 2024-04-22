@@ -49,7 +49,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         *params, polarizations, mask = self.waveform_sampler(X, sample_prob)
 
         N = len(params[0])
-        snrs = self.snr_sampler(N).to(X.device)
+        snrs = self.snr_sampler.sample((N,)).to(X.device)
         responses = self.projector(*params, snrs, psds[mask], **polarizations)
         kernels = sample_kernels(
             responses,

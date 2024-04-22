@@ -1,3 +1,5 @@
+import torch
+
 from ml4gw.transforms.qtransform import SingleQTransform
 from projects.train.train.data.base import Tensor
 from train.data.supervised import SupervisedAframeDataset
@@ -27,5 +29,10 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
     ) -> tuple[Tensor, Tensor]:
         X_bg, X_fg = super().build_val_batches(background, signals)
         X_bg = self.qtransform(X_bg, self.num_f_bins, self.num_t_bins)
-        X_fg = self.qtransform(X_fg, self.num_f_bins, self.num_t_bins)
+        X_fg = torch.stack(
+            [
+                self.qtransform(X, self.num_f_bins, self.num_t_bins)
+                for X in X_fg
+            ]
+        )
         return X_bg, X_fg
