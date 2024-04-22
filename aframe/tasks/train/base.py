@@ -102,6 +102,7 @@ class TrainBase(law.Task):
         # train projects config.yaml file.
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
+        args.append("--data.fftlength=" + str(self.fftlength))
         args.append("--data.highpass=" + str(self.highpass))
         return args
 

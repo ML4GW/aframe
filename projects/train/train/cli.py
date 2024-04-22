@@ -24,6 +24,11 @@ class AframeCLI(LightningCLI):
             type=str,
             default="highest",
         )
+        parser.add_argument(
+            "--ckpt_path",
+            type=str,
+            default=None,
+        )
 
 
 def main(args=None):

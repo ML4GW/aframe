@@ -275,7 +275,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         this dataset on its own.
         """
         window_length = self.hparams.kernel_length + self.hparams.fduration
-        fftlength = 2  # self.hparams.fftlength or window_length
+        fftlength = self.hparams.fftlength or window_length
         self.psd_estimator = PsdEstimator(
             window_length,
             sample_rate,
