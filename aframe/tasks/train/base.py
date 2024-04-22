@@ -34,6 +34,9 @@ class TrainBaseParameters(law.Task):
     highpass = luigi.FloatParameter(
         description="Highpass frequency in Hz to apply during whitening"
     )
+    fftlength = luigi.FloatParameter(
+        description="Duration in seconds of data used for FFT calculation"
+    )
     fduration = luigi.FloatParameter(
         description="Duration in seconds of the whitening filter to use,"
     )
@@ -46,6 +49,11 @@ class TrainBaseParameters(law.Task):
         "It is expected to contain a `signals.hdf5` file of signals, "
         "and a `/background` sub-directory containing background "
         "files used for training"
+    )
+    ckpt_path = luigi.Parameter(
+        default=None,
+        description="Path to checkpoint file from which "
+        "to restart training",
     )
 
 
