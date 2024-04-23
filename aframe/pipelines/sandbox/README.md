@@ -78,7 +78,7 @@ The end to end pipeline can take a few days to run. The most time consuming step
 ## Remote Training
 Model training can be run on the nautilus hypercluster simply by setting the `AFRAME_TRAIN_RUN_DIR` and `AFRAME_TRAIN_DATA_DIR` environment variables to point to an s3 path:
 
-```basj
+```bash
 export AFRAME_TRAIN_DATA_DIR=s3://{your-bucket}/$RUN_LABEL/data
 export AFRAME_TRAIN_RUN_DIR=s3://{your-bucket}/$RUN_LABEL/training
 ```
