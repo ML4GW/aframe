@@ -85,9 +85,10 @@ def build_condor_submit(
     job = Job(
         name="infer-clients",
         executable=shutil.which("infer"),
-        error=str(log_dir),
-        log=str(log_dir),
-        output=str(log_dir),
+        error=str(log_dir / "error"),
+        log=str(log_dir / "log"),
+        output=str(log_dir / "output"),
+        suffix="-$(ProcID)",
         submit=str(condor_dir),
         request_memory="6G",
         request_disk="1G",
