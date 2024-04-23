@@ -61,7 +61,7 @@ def main(args=None):
     ):
         logging.info(
             "Background and foreground files already exist at "
-            "specified output directory, skipping inference."
+            f"{cfg.outdir}, skipping inference."
         )
         return
 
