@@ -72,7 +72,6 @@ class Sequence:
         self.shifts = [int(i * self.sample_rate) for i in shifts]
         self.stride = int(self.sample_rate / inference_sampling_rate)
         self.step_size = self.stride * batch_size
-        print(self.stride, self.step_size, self.batch_size, self.remainder)
         # initialize some containers for handling during
         # the inference response callback
         self._started = {}
@@ -143,7 +142,6 @@ class Sequence:
                 for ifo, shift in zip(self.ifos, self.shifts):
                     start = shift + i * self.step_size
                     end = start + self.step_size
-                    print(i, last)
                     if last:
                         end = start + self.remainder
                     data = f[ifo][start:end]
@@ -181,7 +179,6 @@ class Sequence:
         # sequences have completed, return them both,
         # slicing off the dummy data from the last batch
         if self.done:
-            print(self.num_slice, self.num_pad)
             return tuple(
                 self._sequences[self.id + i][: -self.num_slice]
                 for i in range(2)

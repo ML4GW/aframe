@@ -26,3 +26,7 @@ repos:
   rev: v0.1.15
   hooks:
     - id: helmlint
+- repo: https://github.com/dhruvmanila/remove-print-statements
+  rev: v0.5.2  
+  hooks:
+  - id: remove-print-statements

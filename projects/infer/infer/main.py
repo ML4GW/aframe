@@ -45,8 +45,6 @@ def infer(
         logging.debug(
             f"Submitting inference request {i} for sequence {sequence.id}"
         )
-
-        print(x.shape, x_inj.shape)
         client.infer(
             x,
             request_id=i,
