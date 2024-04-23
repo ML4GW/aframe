@@ -28,12 +28,13 @@ def infer(
     """
     logging.info(
         "Beginning inference on sequence {} corresponding "
-        "to {}s of data from {} with shifts {}, beginning "
+        "to {}s of data from {} with shifts {} and sample rate {}, beginning "
         "at GPS time {}".format(
             sequence.id,
             sequence.duration,
             sequence.background_fname,
             sequence.shifts / sequence.sample_rate,
+            sequence.sample_rate,
             sequence.t0,
         )
     )
@@ -44,7 +45,6 @@ def infer(
         logging.debug(
             f"Submitting inference request {i} for sequence {sequence.id}"
         )
-
         client.infer(
             x,
             request_id=i,
