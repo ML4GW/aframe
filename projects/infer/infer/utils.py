@@ -74,7 +74,7 @@ def build_condor_submit(
     --data.background_fname $(background_fname)
     --data.shifts=$(shift)
     --outdir {output_dir / output_pattern}
-    --logfile {output_dir / "log" / log_pattern}
+    --logfile {output_dir / "logs" / log_pattern}
     """
 
     arguments = dedent(arguments).replace("\n", " ")
