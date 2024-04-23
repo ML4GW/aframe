@@ -92,12 +92,15 @@ class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
             self.channels,
             self.sample_rate,
         )
-
+        size = int(duration * self.sample_rate)
         with self.output().open("w") as f:
             with h5py.File(f, "w") as h5file:
                 # write with chunking for dataloading perf increase
                 X.write(
-                    h5file, format="hdf5", chunks=(131072,), compression=None
+                    h5file,
+                    format="hdf5",
+                    chunks=(min(size, 131072),),
+                    compression=None,
                 )
 
 
