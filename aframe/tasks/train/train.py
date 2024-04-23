@@ -213,11 +213,23 @@ class Train(AframeWrapperTask):
     you don't care where the training is run.
     """
 
-    train_remote = luigi.BoolParameter(
-        default=False,
-        description="If `True`, run training remotely on nautilus"
-        " otherwise run locally",
-    )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.train_remote = self.validate_dirs()
+
+    def validate_dirs(self) -> bool:
+        # train remotely if run_dir stars with s3://
+
+        # Note: one can specify a remote data_dir, but
+        # train locally
+        train_remote = self.run_dir.startswith("s3://")
+
+        if train_remote and not self.data_dir.startswith("s3://"):
+            raise ValueError(
+                "If run_dir is an s3 path, data_dir must also be an s3 path"
+                "Got data_dir: {self.data_dir} and run_dir: {self.run_dir}"
+            )
+        return train_remote
 
     def requires(self):
         if self.train_remote:

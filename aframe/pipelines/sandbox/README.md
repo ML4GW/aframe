@@ -76,22 +76,17 @@ The end to end pipeline can take a few days to run. The most time consuming step
 
 
 ## Remote Training
-Model training can be run on the nautilus hypercluster by setting the `train_remote` flag of the `Train` `Task`
+Model training can be run on the nautilus hypercluster simply by setting the `AFRAME_TRAIN_RUN_DIR` and `AFRAME_TRAIN_DATA_DIR` environment variables to point to an s3 path:
 
-```
-[luigi_Train]
-train_remote = true
-```
-
-You will also need to ensure that the `AFRAME_TRAIN_DATA_DIR` and `AFRAME_TRAIN_RUN_DIR` point to s3 bucket paths, e.g.
-
-```bash
+```basj
 export AFRAME_TRAIN_DATA_DIR=s3://{your-bucket}/$RUN_LABEL/data
 export AFRAME_TRAIN_RUN_DIR=s3://{your-bucket}/$RUN_LABEL/training
 ```
 
 The `law` `Tasks` responsible for training data generation will automatically transfer your data to s3 storage. The
 rest of the pipeline (export, inference, etc.) is compatible with s3 storage and will work out of the box.
+
+It is also possible to train locally on the LDG using a remote dataset. The training code will automatically download the dataset from s3.
 
 ## Tips and Tricks
 If you wish to launch an analysis with the freedom of ending
