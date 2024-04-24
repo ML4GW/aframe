@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import h5py
 import jsonargparse
@@ -13,7 +13,7 @@ from ledger.injections import InjectionParameterSet
 from plots import compute, tools
 from plots.gwtc3 import catalog_results
 from plots.vetoes import VetoParser, get_catalog_vetoes
-from priors.priors import end_o3_ratesandpops, log_normal_masses
+from priors.priors import log_normal_masses
 
 from utils.logging import configure_logging
 
@@ -44,6 +44,7 @@ def main(
     foreground: Path,
     rejected_params: Path,
     mass_combos: List[tuple],
+    source_prior: Callable,
     output_dir: Path,
     log_file: Optional[Path] = None,
     dt: Optional[float] = None,
@@ -135,7 +136,7 @@ def main(
             )
 
     logging.info("Computing data likelihood under source prior")
-    source, _ = end_o3_ratesandpops(cosmology)
+    source, _ = source_prior(cosmology)
     source_probs = get_prob(source, foreground)
     source_rejected_probs = get_prob(source, rejected_params)
 
