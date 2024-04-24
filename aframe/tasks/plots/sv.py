@@ -14,6 +14,9 @@ class SensitiveVolume(AframeSingularityTask):
     Compute and plot the sensitive volume of an aframe analysis
     """
 
+    mass_combos = luigi.ListParameter(
+        description="Mass combinations for which to calculate sensitive volume"
+    )
     dt = luigi.FloatParameter(
         default=math.inf,
         description="Time difference to enforce "
@@ -48,6 +51,7 @@ class SensitiveVolume(AframeSingularityTask):
             Path(background.path),
             Path(foreground.path),
             Path(rejected),
+            mass_combos=self.mass_combos,
             dt=self.dt,
             output_dir=Path(self.output_dir),
         )

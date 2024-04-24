@@ -68,12 +68,35 @@ def plot_err_bands(p, x, y, err, **kwargs):
 
 
 def make_grid(combos):
-    if len(combos) != 4:
+    num_plots = len(combos)
+    if num_plots not in [1, 4]:
         raise ValueError(
-            "Only support 2x2 grids, can't plot {} combos".format(len(combos))
+            f"Only support 2x2 or 1x1 grids, can't plot {num_plots} combos"
         )
 
     plots = []
+    if num_plots == 1:
+        kwargs = dict(
+            title=r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(*combos[0]),
+            x_axis_type="log",
+            tools="save",
+            width=380,
+            height=260,
+        )
+
+        kwargs["x_axis_label"] = (
+            r"$$\text{False Alarm Rate " r"[months}^{-1}\text{]}$$"
+        )
+        kwargs["x_axis_label"] = (
+            r"$$\text{False Alarm Rate " r"[months}^{-1}\text{]}$$"
+        )
+        p = get_figure(**kwargs)
+        p.outline_line_color = "#ffffff"
+
+        plots.append(p)
+
+        return plots
+
     for i, combo in enumerate(combos):
         kwargs = dict(
             title=r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(*combo),

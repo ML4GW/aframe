@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import h5py
 import jsonargparse
@@ -43,6 +43,7 @@ def main(
     background: Path,
     foreground: Path,
     rejected_params: Path,
+    mass_combos: List[tuple],
     output_dir: Path,
     log_file: Optional[Path] = None,
     dt: Optional[float] = None,
@@ -156,9 +157,7 @@ def main(
     x = np.arange(1, max_events + 1) / Tb
     thresholds = np.sort(background.detection_statistic)[-max_events:][::-1]
 
-    mass_combos = [(35, 35), (35, 20), (20, 20), (20, 10)]
-
-    weights = np.zeros((4, len(source_probs)))
+    weights = np.zeros((len(mass_combos), len(source_probs)))
     for i, combo in enumerate(mass_combos):
         logging.info(f"Computing likelihoods under {combo} log normal")
         prior, _ = log_normal_masses(*combo, sigma=sigma, cosmology=cosmology)
