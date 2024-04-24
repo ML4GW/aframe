@@ -2,7 +2,7 @@ import torch
 
 from ml4gw.transforms.qtransform import SingleQTransform
 from projects.train.train.data.base import Tensor
-from train.data.supervised import SupervisedAframeDataset
+from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
