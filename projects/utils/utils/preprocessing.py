@@ -104,7 +104,7 @@ class BatchWhitener(torch.nn.Module):
         batch_size: int,
         fduration: float,
         fftlength: float,
-        augmentor: Callable = None,
+        augmentor: Optional[Callable] = None,
         highpass: Optional[float] = None,
     ) -> None:
         super().__init__()
