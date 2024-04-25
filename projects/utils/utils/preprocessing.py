@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 
@@ -104,13 +104,11 @@ class BatchWhitener(torch.nn.Module):
         batch_size: int,
         fduration: float,
         fftlength: float,
-        augmentor: Optional[Callable] = None,
         highpass: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
-        self.augmentor = augmentor
 
         # do foreground length calculation in units of samples,
         # then convert back to length to guard for intification
@@ -156,6 +154,4 @@ class BatchWhitener(torch.nn.Module):
         # the batch dimension after unfolding
         x = unfold_windows(x, self.kernel_size, self.stride_size)
         x = x.reshape(-1, num_channels, self.kernel_size)
-        if self.augmentor is not None:
-            x = self.augmentor(x)
         return x

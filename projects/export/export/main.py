@@ -1,8 +1,6 @@
-import io
 import logging
 from typing import Optional
 
-import h5py
 import s3fs
 import torch
 from export.snapshotter import add_streaming_input_preprocessor
@@ -34,7 +32,6 @@ def open_file(path, mode="rb"):
 def export(
     weights: str,
     repository_directory: str,
-    batch_file: str,
     num_ifos: int,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -43,7 +40,6 @@ def export(
     fduration: float,
     psd_length: float,
     fftlength: Optional[float] = None,
-    q: Optional[float] = None,
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
@@ -67,11 +63,6 @@ def export(
         repository_directory:
             Directory to which to save the models and their
             configs
-        batch_file:
-            Path to file containing a batch of data from model
-            training. This is used to determine the input size
-            of the model. File structure is assumed to match
-            the structure of the file written during training
         logdir:
             Directory to which logs will be written
         num_ifos:
@@ -143,11 +134,8 @@ def export(
     if aframe_instances is not None:
         scale_model(aframe, aframe_instances)
 
-    with open_file(batch_file, "rb") as f:
-        batch_file = h5py.File(io.BytesIO(f.read()))
-        size = batch_file["X"].shape[2:]
-
-    input_shape = (batch_size, num_ifos) + tuple(size)
+    size = int(kernel_length * sample_rate)
+    input_shape = (batch_size, num_ifos, size)
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -187,11 +175,9 @@ def export(
             aframe.inputs["whitened"],
             psd_length=psd_length,
             sample_rate=sample_rate,
-            kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             fduration=fduration,
             fftlength=fftlength,
-            q=q,
             highpass=highpass,
             preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,

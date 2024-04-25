@@ -39,6 +39,7 @@ class AframeBase(pl.LightningModule):
         metric: TimeSlideAUROC,
         learning_rate: float,
         pct_lr_ramp: float,
+        augmentor: Optional[torch.nn.Module] = None,
         weight_decay: float = 0.0,
         patience: Optional[int] = None,
         save_top_k_models: int = 10,
@@ -48,8 +49,9 @@ class AframeBase(pl.LightningModule):
         # construct our model up front and record all
         # our hyperparameters to our logdir
         self.model = arch
+        self.augmentor = augmentor
         self.metric = metric
-        self.save_hyperparameters(ignore=["arch", "metric"])
+        self.save_hyperparameters(ignore=["arch", "augmentor", "metric"])
         self.verbose = verbose
         self._logger = self.get_logger()
 
