@@ -48,8 +48,11 @@ class AframeBase(pl.LightningModule):
         super().__init__()
         # construct our model up front and record all
         # our hyperparameters to our logdir
-        self.model = arch
+        if augmentor is None:
+            augmentor = torch.nn.Identity()
+        self.arch = (arch,)
         self.augmentor = augmentor
+        self.model = torch.nn.Sequential(augmentor, arch)
         self.metric = metric
         self.save_hyperparameters(ignore=["arch", "augmentor", "metric"])
         self.verbose = verbose
