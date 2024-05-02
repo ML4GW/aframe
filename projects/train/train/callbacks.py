@@ -16,7 +16,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         torch.cuda.empty_cache()
         module = pl_module.__class__.load_from_checkpoint(
             self.best_model_path,
-            arch=pl_module.arch[0],
+            arch=pl_module.model,
             augmentor=pl_module.augmentor,
             metric=pl_module.metric,
         )
@@ -24,8 +24,9 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         device = pl_module.device
         batch = next(iter(trainer.train_dataloader)).to(device)
         sample_input, _ = trainer.datamodule.augment(batch[0])
+        sample_input = sample_input[0].to("cpu")
 
-        trace = torch.jit.trace(module.model.to("cpu"), sample_input.to("cpu"))
+        trace = torch.jit.trace(module.model.to("cpu"), sample_input)
 
         save_dir = trainer.logger.log_dir or trainer.logger.save_dir
         if save_dir.startswith("s3://"):
