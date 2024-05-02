@@ -11,8 +11,6 @@ class SupervisedAframe(AframeBase):
         super().__init__(arch, *args, **kwargs)
 
     def forward(self, X):
-        if self.augmentor is not None:
-            X = self.augmentor(X)
         return self.model(X)
 
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:

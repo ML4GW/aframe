@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Optional
 
 from hermes.quiver import Platform
 from hermes.quiver.streaming import utils as streaming_utils
+from ml4gw.transforms import SingleQTransform
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 if TYPE_CHECKING:
@@ -25,19 +26,31 @@ def add_streaming_input_preprocessor(
     input: "ExposedTensor",
     psd_length: float,
     sample_rate: float,
+    kernel_length: float,
     inference_sampling_rate: float,
     fduration: float,
     fftlength: float,
+    q: Optional[float] = None,
     highpass: Optional[float] = None,
     preproc_instances: Optional[int] = None,
     streams_per_gpu: int = 1,
 ) -> "ExposedTensor":
     """Create a snapshotter model and add it to the repository"""
 
-    batch_size, num_ifos, kernel_size = input.shape
+    batch_size, num_ifos, *kernel_size = input.shape
+    if len(kernel_size) == 2:
+        augmentor = SingleQTransform(
+            duration=kernel_length,
+            sample_rate=sample_rate,
+            spectrogram_shape=kernel_size,
+            q=q,
+        )
+    else:
+        augmentor = None
+
     snapshotter = BackgroundSnapshotter(
         psd_length=psd_length,
-        kernel_length=kernel_size / sample_rate,
+        kernel_length=kernel_length,
         fduration=fduration,
         sample_rate=sample_rate,
         inference_sampling_rate=inference_sampling_rate,
@@ -60,13 +73,14 @@ def add_streaming_input_preprocessor(
     ensemble.add_input(streaming_model.inputs["stream"])
 
     preprocessor = BatchWhitener(
-        kernel_length=kernel_size / sample_rate,
+        kernel_length=kernel_length,
         sample_rate=sample_rate,
         batch_size=batch_size,
         inference_sampling_rate=inference_sampling_rate,
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
+        augmentor=augmentor,
     )
     preproc_model = ensemble.repository.add(
         "preprocessor", platform=Platform.TORCHSCRIPT

@@ -37,6 +37,9 @@ class TrainBaseParameters(law.Task):
     fftlength = luigi.FloatParameter(
         description="Duration in seconds of data used for FFT calculation"
     )
+    q = luigi.FloatParameter(
+        default=None, description="Value of Q used for Q-transform"
+    )
     fduration = luigi.FloatParameter(
         description="Duration in seconds of the whitening filter to use,"
     )
@@ -104,6 +107,7 @@ class TrainBase(law.Task):
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.fftlength=" + str(self.fftlength))
         args.append("--data.highpass=" + str(self.highpass))
+        args.append("--data.qtransform.init_args.q=" + str(self.q))
         return args
 
     def get_args(self):

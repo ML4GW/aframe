@@ -15,6 +15,7 @@ class ExportParams(law.Task):
     inference_sampling_rate = luigi.FloatParameter()
     sample_rate = luigi.FloatParameter()
     repository_directory = luigi.Parameter()
+    batch_file = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
     preproc_instances = luigi.IntParameter()
@@ -22,6 +23,7 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
+    q = luigi.FloatParameter()
     fftlength = luigi.FloatParameter(default=0)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     # TODO: resolve enum platform parsing error
@@ -54,11 +56,16 @@ class ExportLocal(AframeSingularityTask):
         if not self.fftlength:
             self.fftlength = None
 
+        # Assuming a convention for batch file/model file
+        # names and locations
         weights = self.input().path
+        weights_dir = "/".join(weights.split("/")[:-1])
+        batch_file = weights_dir + "/batch.h5"
 
         export(
             weights,
             self.repository_directory,
+            batch_file,
             self.num_ifos,
             self.kernel_length,
             self.inference_sampling_rate,
@@ -67,6 +74,7 @@ class ExportLocal(AframeSingularityTask):
             self.fduration,
             self.psd_length,
             self.fftlength,
+            self.q,
             self.highpass,
             self.streams_per_gpu,
             self.aframe_instances,
