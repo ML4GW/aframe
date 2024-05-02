@@ -71,7 +71,7 @@ data:
          # max_min_snr: 12
          # min_min_snr: 4
          # max_snr: 100
-         # alpha: 3
+         # alpha: -3
          # decay_steps: 989
     # validation args
     valid_frac: 0.25
