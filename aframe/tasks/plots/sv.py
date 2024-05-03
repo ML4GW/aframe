@@ -29,7 +29,7 @@ class SensitiveVolume(AframeSingularityTask):
         description="Mass combinations for which to calculate sensitive volume"
     )
     source_prior = luigi.Parameter(
-        "Python path to prior to use for waveform generation"
+        "Python path to prior used for generating testing waveform injections"
     )
     dt = luigi.FloatParameter(
         default=math.inf,

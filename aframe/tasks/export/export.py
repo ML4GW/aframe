@@ -58,7 +58,7 @@ class ExportLocal(AframeSingularityTask):
         # Assuming a convention for batch file/model file
         # names and locations
         weights = self.input().path
-        weights_dir = "/".join(weights.split("/")[:-1])
+        weights_dir = os.path.dirname(weights)
         batch_file = weights_dir + "/batch.h5"
 
         export(
