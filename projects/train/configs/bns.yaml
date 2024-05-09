@@ -56,13 +56,8 @@ data:
         minimum: 10
         maximum: 100
         index: -3
-    qtransform:
-      class_path: ml4gw.transforms.SingleQTransform
-      init_args:
-        duration: 8
-        sample_rate: 1024
-        spectrogram_shape: [64, 128]
-        q: 45.6
+    spectrogram_shape: [64, 128]
+    q: 45.6
       # uncomment below and comment above for 
       # snr scheduling
        

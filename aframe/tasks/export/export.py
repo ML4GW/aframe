@@ -23,6 +23,7 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
+    q = luigi.OptionalFloatParameter(default=None)
     fftlength = luigi.FloatParameter(default=0)
     ifos = luigi.ListParameter(default=["H1", "L1"])
     # TODO: resolve enum platform parsing error
@@ -73,6 +74,7 @@ class ExportLocal(AframeSingularityTask):
             self.fduration,
             self.psd_length,
             self.fftlength,
+            self.q,
             self.highpass,
             self.streams_per_gpu,
             self.aframe_instances,

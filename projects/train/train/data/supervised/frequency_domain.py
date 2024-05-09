@@ -6,9 +6,21 @@ from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
-    def __init__(self, *args, qtransform: SingleQTransform, **kwargs):
+    def __init__(
+        self, q: float, spectrogram_shape: list[int, int], *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
-        self.qtransform = qtransform
+        self.q = q
+        self.spectrogram_shape = spectrogram_shape
+
+    def setup(self, *args, **kwargs):
+        super().setup(*args, **kwargs)
+        self.qtransform = SingleQTransform(
+            duration=self.hparams.kernel_length,
+            sample_rate=self.sample_rate,
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
 
     def augment(self, X):
         X, y = super().augment(X)
