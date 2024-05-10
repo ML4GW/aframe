@@ -7,11 +7,13 @@ import numpy as np
 import torch
 from online_deployment.buffer import DataBuffer
 from online_deployment.dataloading import data_iterator
+from online_deployment.parameter_estimation import run_amplfi, set_up_amplfi
 from online_deployment.snapshot_whitener import SnapshotWhitener
 from online_deployment.trigger import Searcher, Trigger
 
 from aframe.architectures import architecturize
-from utils.logging import configure_logging
+from aframe.logging import configure_logging
+from ml4gw.transforms import SpectralDensity, Whiten
 
 
 @architecturize
@@ -19,6 +21,7 @@ from utils.logging import configure_logging
 def main(
     architecture: Callable,
     outdir: Path,
+    weights_path: Path,
     datadir: Path,
     ifos: List[str],
     channel: str,
@@ -57,10 +60,10 @@ def main(
     )
 
     # instantiate network and load in its optimized parameters
-    weights_path = outdir / "training" / "weights.pt"
     logging.info(f"Build network and loading weights from {weights_path}")
 
-    nn = architecture(num_ifos).to("cuda")
+    # Aframe setup
+    aframe = architecture(num_ifos).to("cuda")
     fftlength = fftlength or kernel_length + fduration
     whitener = SnapshotWhitener(
         num_channels=num_ifos,
@@ -75,8 +78,19 @@ def main(
     current_state = whitener.get_initial_state().to("cuda")
 
     weights = torch.load(weights_path)
-    nn.load_state_dict(weights)
-    nn.eval()
+    aframe.load_state_dict(weights)
+    aframe.eval()
+
+    # Amplfi setup. Hard code most of it for now
+    spectral_density = SpectralDensity(
+        sample_rate=sample_rate,
+        fftlength=fftlength,
+        average="median",
+    ).to("cuda")
+    pe_whitener = Whiten(
+        fduration=fduration, sample_rate=sample_rate, highpass=highpass
+    ).to("cuda")
+    amplfi, std_scaler = set_up_amplfi()
 
     # set up some objects to use for finding
     # and submitting triggers
@@ -147,11 +161,24 @@ def main(
                     integrated[-1], t0 - 1, len(integrated) - 1
                 )
                 trigger = get_trigger(event)
-                trigger.submit(event, ifos, datadir, ifo_suffix)
+                response = trigger.submit(event, ifos, datadir, ifo_suffix)
+                logging.info(response.json().keys())
                 searcher.detecting = False
                 last_event_written = False
                 last_event_trigger = trigger
                 last_event_time = event.gpstime
+                bilby_res, mollview_plot = run_amplfi(
+                    last_event_time,
+                    buffer.input_buffer,
+                    fduration,
+                    spectral_density,
+                    pe_whitener,
+                    amplfi,
+                    std_scaler,
+                    outdir / "whitened_data_plots",
+                )
+                graceid = response.json()["graceid"]
+                trigger.submit_pe(bilby_res, mollview_plot, graceid)
 
             # check if this is because the frame stream stopped
             # being analysis ready, or if it's because frames
@@ -183,7 +210,7 @@ def main(
 
         X = X.to("cuda")
         batch, current_state, full_psd_present = whitener(X, current_state)
-        y = nn(batch)[:, 0]
+        y = aframe(batch)[:, 0]
         integrated = buffer.update(
             input_update=X,
             output_update=y,
@@ -200,10 +227,22 @@ def main(
 
         if event is not None:
             trigger = get_trigger(event)
-            trigger.submit(event, ifos, datadir, ifo_suffix)
+            response = trigger.submit(event, ifos, datadir, ifo_suffix)
             last_event_written = False
             last_event_trigger = trigger
             last_event_time = event.gpstime
+            bilby_res, mollview_plot = run_amplfi(
+                last_event_time,
+                buffer.input_buffer,
+                fduration,
+                spectral_density,
+                pe_whitener,
+                amplfi,
+                std_scaler,
+                outdir / "whitened_data_plots",
+            )
+            graceid = response.json()["graceid"]
+            trigger.submit_pe(bilby_res, mollview_plot, graceid)
 
         if (
             not last_event_written

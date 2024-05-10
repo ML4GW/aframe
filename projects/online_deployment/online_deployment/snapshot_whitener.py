@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
+from aframe.architectures import BackgroundSnapshotter, BatchWhitener
 
 
 class SnapshotWhitener(torch.nn.Module):
