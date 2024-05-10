@@ -15,8 +15,7 @@ from bilby.core.prior import (
     Uniform,
 )
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
-
-from aframe.priors.utils import (
+from priors.utils import (
     mass_condition_powerlaw,
     mass_condition_uniform,
     mass_constraints,

@@ -6,8 +6,8 @@ from typing import List, Optional
 
 import h5py
 import numpy as np
+from ledger.events import EventSet, RecoveredInjectionSet
 
-from aframe.ledger.events import EventSet, RecoveredInjectionSet
 from pycondor.cluster import JobStatus
 from pycondor.job import Job
 

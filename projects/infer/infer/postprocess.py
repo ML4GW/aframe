@@ -1,6 +1,5 @@
 import numpy as np
-
-from aframe.ledger.events import EventSet
+from ledger.events import EventSet
 
 
 class Postprocessor:
