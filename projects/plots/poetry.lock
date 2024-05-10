@@ -22,41 +22,6 @@ type = "directory"
 url = "../.."
 
 [[package]]
-name = "aframe-ledger"
-version = "0.1.0"
-description = "Objects for storing and manipulating aframe data"
-optional = false
-python-versions = ">=3.8,<3.11"
-files = []
-develop = true
-
-[package.dependencies]
-bilby = "^2.2.2"
-h5py = "^3.10.0"
-
-[package.source]
-type = "directory"
-url = "../../libs/ledger"
-
-[[package]]
-name = "aframe-priors"
-version = "0.1.0"
-description = "Priors used for aframe analysis"
-optional = false
-python-versions = ">=3.9,<3.11"
-files = []
-develop = true
-
-[package.dependencies]
-astropy = "^5.0"
-bilby = "^2.2.2"
-numpy = "^1.26.4"
-
-[package.source]
-type = "directory"
-url = "../../libs/priors"
-
-[[package]]
 name = "aiohttp"
 version = "3.9.3"
 description = "Async http client/server framework (asyncio)"
@@ -2278,6 +2243,23 @@ luigi = {version = ">=2.8.2", markers = "python_version >= \"3.0\""}
 six = ">=1.13"
 
 [[package]]
+name = "ledger"
+version = "0.1.0"
+description = "Objects for storing and manipulating aframe data"
+optional = false
+python-versions = ">=3.8,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+bilby = "^2.2.2"
+h5py = "^3.10.0"
+
+[package.source]
+type = "directory"
+url = "../../libs/ledger"
+
+[[package]]
 name = "ligo-segments"
 version = "1.4.0"
 description = "Representations of semi-open intervals"
@@ -3247,6 +3229,24 @@ files = [
 [package.extras]
 docs = ["furo (>=2023.9.10)", "proselint (>=0.13)", "sphinx (>=7.2.6)", "sphinx-autodoc-typehints (>=1.25.2)"]
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4.3)", "pytest-cov (>=4.1)", "pytest-mock (>=3.12)"]
+
+[[package]]
+name = "priors"
+version = "0.1.0"
+description = "Priors used for aframe analysis"
+optional = false
+python-versions = ">=3.9,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+astropy = "^5.0"
+bilby = "^2.2.2"
+numpy = "^1.26.4"
+
+[package.source]
+type = "directory"
+url = "../../libs/priors"
 
 [[package]]
 name = "prometheus-client"
@@ -4885,4 +4885,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "1251f690c87a4663aca22cd8210b1412c53324f39763f8091e8b7e1239528724"
+content-hash = "899bf6832dd1d228ccd5e6b94d0f6a9928edd49e1489136f6dcd9d2b5c9592b5"

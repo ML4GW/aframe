@@ -17,7 +17,7 @@ tqdm = "^4.66"
 ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["serve"]}
 utils = {path = "../utils", develop = true}
 aframe = {path = "../../", develop = true}
-"aframe.ledger" = {path = "../../libs/ledger", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
 pycondor = {path = "../../pycondor", develop = true}
 
 [tool.poetry.group.dev.dependencies]

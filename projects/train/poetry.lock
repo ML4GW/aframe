@@ -22,40 +22,6 @@ type = "directory"
 url = "../.."
 
 [[package]]
-name = "aframe-architectures"
-version = "0.1.0"
-description = "Aframe neural network architectures"
-optional = false
-python-versions = ">=3.8,<3.11"
-files = []
-develop = true
-
-[package.dependencies]
-h5py = "^3.9.0"
-ml4gw = {path = "../../ml4gw", develop = true}
-
-[package.source]
-type = "directory"
-url = "../../libs/architectures"
-
-[[package]]
-name = "aframe-ledger"
-version = "0.1.0"
-description = "Objects for storing and manipulating aframe data"
-optional = false
-python-versions = ">=3.8,<3.11"
-files = []
-develop = true
-
-[package.dependencies]
-bilby = "^2.2.2"
-h5py = "^3.10.0"
-
-[package.source]
-type = "directory"
-url = "../../libs/ledger"
-
-[[package]]
 name = "aiohttp"
 version = "3.9.5"
 description = "Async http client/server framework (asyncio)"
@@ -233,6 +199,23 @@ files = [
     {file = "appnope-0.1.4-py2.py3-none-any.whl", hash = "sha256:502575ee11cd7a28c0205f379b525beefebab9d161b7c964670864014ed7213c"},
     {file = "appnope-0.1.4.tar.gz", hash = "sha256:1de3860566df9caf38f01f86f65e0e13e379af54f9e4bee1e66b48f2efffd1ee"},
 ]
+
+[[package]]
+name = "architectures"
+version = "0.1.0"
+description = "Aframe neural network architectures"
+optional = false
+python-versions = ">=3.8,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+h5py = "^3.9.0"
+ml4gw = {path = "../../ml4gw", develop = true}
+
+[package.source]
+type = "directory"
+url = "../../libs/architectures"
 
 [[package]]
 name = "argon2-cffi"
@@ -2292,6 +2275,23 @@ files = [
 [package.dependencies]
 luigi = {version = ">=2.8.2", markers = "python_version >= \"3.0\""}
 six = ">=1.13"
+
+[[package]]
+name = "ledger"
+version = "0.1.0"
+description = "Objects for storing and manipulating aframe data"
+optional = false
+python-versions = ">=3.8,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+bilby = "^2.2.2"
+h5py = "^3.10.0"
+
+[package.source]
+type = "directory"
+url = "../../libs/ledger"
 
 [[package]]
 name = "lightning"
@@ -5770,4 +5770,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "5090951a78022b9815dab102708fa32a9068a4e6b6b31bcb0770a71276a9571d"
+content-hash = "7f37ff7380f99fa3f021fb77bff3f52d31431da4907943c08d2835555a3db767"

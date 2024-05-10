@@ -8,13 +8,13 @@ import numpy as np
 from astropy.cosmology import Planck15 as cosmology
 from bokeh.io import save
 from bokeh.layouts import gridplot
+from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.injections import InjectionParameterSet
 from plots import compute, tools
 from plots.gwtc3 import catalog_results
 from plots.vetoes import VetoParser, get_catalog_vetoes
+from priors.priors import log_normal_masses
 
-from aframe.ledger.events import EventSet, RecoveredInjectionSet
-from aframe.ledger.injections import InjectionParameterSet
-from aframe.priors.priors import log_normal_masses
 from utils.logging import configure_logging
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
