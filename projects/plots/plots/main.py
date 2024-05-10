@@ -14,7 +14,7 @@ from plots.vetoes import VetoParser, get_catalog_vetoes
 
 from aframe.ledger.events import EventSet, RecoveredInjectionSet
 from aframe.ledger.injections import InjectionParameterSet
-from aframe.priors.priors import end_o3_ratesandpops, log_normal_masses
+from aframe.priors.priors import log_normal_masses
 from utils.logging import configure_logging
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)

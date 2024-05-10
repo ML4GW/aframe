@@ -15,8 +15,12 @@ from bilby.core.prior import (
     Uniform,
 )
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
-from aframe.priors.utils import mass_condition_powerlaw, mass_constraints, mass_condition_uniform
 
+from aframe.priors.utils import (
+    mass_condition_powerlaw,
+    mass_condition_uniform,
+    mass_constraints,
+)
 
 # default cosmology
 COSMOLOGY = cosmo.Planck15
