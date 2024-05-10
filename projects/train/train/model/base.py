@@ -4,8 +4,8 @@ from typing import Optional, Sequence, Union
 import lightning.pytorch as pl
 import ray
 import torch
+from architectures import Architecture
 
-from train.architectures import Architecture
 from train.callbacks import ModelCheckpoint, SaveAugmentedBatch
 from train.metrics import TimeSlideAUROC
 

@@ -2,9 +2,9 @@ from collections.abc import Callable, Sequence
 from typing import Optional
 
 import torch
+from architectures import Architecture
 from torchtyping import TensorType
 
-from aframe.architectures import Architecture
 from ml4gw.nn.autoencoder import ConvolutionalAutoencoder, SkipConnection
 
 # need this for type checking
