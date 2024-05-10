@@ -38,7 +38,6 @@ def add_streaming_input_preprocessor(
     """Create a snapshotter model and add it to the repository"""
 
     batch_size, num_ifos, *kernel_size = input.shape
-    q = 12
     if q is not None:
         if len(kernel_size) != 2:
             raise ValueError(
