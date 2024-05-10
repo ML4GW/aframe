@@ -38,7 +38,13 @@ def add_streaming_input_preprocessor(
     """Create a snapshotter model and add it to the repository"""
 
     batch_size, num_ifos, *kernel_size = input.shape
-    if len(kernel_size) == 2:
+    q = 12
+    if q is not None:
+        if len(kernel_size) != 2:
+            raise ValueError(
+                "If q is not None, the input kernel should be 2D, "
+                f"got {len(kernel_size)} dimension(s)"
+            )
         augmentor = SingleQTransform(
             duration=kernel_length,
             sample_rate=sample_rate,

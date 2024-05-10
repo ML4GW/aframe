@@ -3,7 +3,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Union
 
 import h5py
 import lightning.pytorch as pl
@@ -69,7 +69,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         trigger_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
-        snr_sampler: Optional[TransformedDist] = None,
+        snr_sampler: Optional[
+            Union[TransformedDist, Callable[int, Tensor]]
+        ] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
