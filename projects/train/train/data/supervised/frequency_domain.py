@@ -1,24 +1,36 @@
-from ml4gw.transforms.spectrogram import MultiResolutionSpectrogram
+import torch
+
+from ml4gw.transforms.qtransform import SingleQTransform
 from projects.train.train.data.base import Tensor
-from train.data.supervised import SupervisedAframeDataset
+from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
     def __init__(
-        self, *args, spectrogram: MultiResolutionSpectrogram, **kwargs
+        self, q: float, spectrogram_shape: list[int, int], *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.spectrogram = spectrogram
+        self.q = q
+        self.spectrogram_shape = spectrogram_shape
+
+    def setup(self, *args, **kwargs):
+        super().setup(*args, **kwargs)
+        self.qtransform = SingleQTransform(
+            duration=self.hparams.kernel_length,
+            sample_rate=self.sample_rate,
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
 
     def augment(self, X):
         X, y = super().augment(X)
-        X = self.spectrogram(X)
+        X = self.qtransform(X)
         return X, y
 
     def build_val_batches(
         self, background: Tensor, signals: Tensor
     ) -> tuple[Tensor, Tensor]:
         X_bg, X_fg = super().build_val_batches(background, signals)
-        X_bg = self.spectrogram(X_bg)
-        X_fg = self.spectrogram(X_fg)
+        X_bg = self.qtransform(X_bg)
+        X_fg = torch.stack([self.qtransform(X) for X in X_fg])
         return X_bg, X_fg

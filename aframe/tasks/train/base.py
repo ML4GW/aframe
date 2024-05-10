@@ -34,6 +34,12 @@ class TrainBaseParameters(law.Task):
     highpass = luigi.FloatParameter(
         description="Highpass frequency in Hz to apply during whitening"
     )
+    fftlength = luigi.FloatParameter(
+        description="Duration in seconds of data used for FFT calculation"
+    )
+    q = luigi.OptionalFloatParameter(
+        default=None, description="Value of Q used for Q-transform"
+    )
     fduration = luigi.FloatParameter(
         description="Duration in seconds of the whitening filter to use,"
     )
@@ -46,6 +52,11 @@ class TrainBaseParameters(law.Task):
         "It is expected to contain a `signals.hdf5` file of signals, "
         "and a `/background` sub-directory containing background "
         "files used for training"
+    )
+    ckpt_path = luigi.Parameter(
+        default=None,
+        description="Path to checkpoint file from which "
+        "to restart training",
     )
 
 
@@ -94,7 +105,10 @@ class TrainBase(law.Task):
         # train projects config.yaml file.
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
+        args.append("--data.fftlength=" + str(self.fftlength))
         args.append("--data.highpass=" + str(self.highpass))
+        if self.q is not None:
+            args.append("--data.q=" + str(self.q))
         return args
 
     def get_args(self):

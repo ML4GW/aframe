@@ -11,11 +11,11 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
+      class_path: train.architectures.supervised.SupervisedFrequencyDomainResNet
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          class_path: ml4gw.nn.norm.GroupNorm2DGetter
           init_args:
             groups: 16
     metric:
@@ -31,14 +31,14 @@ model:
     # early stop
     patience: 50
 data:
-  class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
+  class_path: train.data.supervised.FrequencyDomainSupervisedAframeDataset
   init_args:
     # loading args
     # data_dir:
     # ifos:
 
     # preprocessing args
-    batch_size: 384
+    batch_size: 576
     # kernel_length:
     psd_length: 8
     # fduration:
@@ -53,9 +53,11 @@ data:
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 
-        minimum: 4
+        minimum: 10
         maximum: 100
         index: -3
+    spectrogram_shape: [64, 128]
+    q: 45.6
       # uncomment below and comment above for 
       # snr scheduling
        

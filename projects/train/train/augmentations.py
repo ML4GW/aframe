@@ -1,9 +1,10 @@
 from typing import Optional, Union
 
 import torch
+from torch.distributions.uniform import Uniform
 
 from ml4gw import gw
-from ml4gw.distributions import Cosine, PowerLaw, Uniform
+from ml4gw.distributions import Cosine, PowerLaw
 
 
 class ChannelSwapper(torch.nn.Module):
@@ -207,7 +208,7 @@ class SnrSampler:
         self.dist = PowerLaw(max_min_snr, max_snr, alpha)
 
     def __call__(self, N):
-        return self.dist(N)
+        return self.dist.sample((N,))
 
     def step(self):
         self._step += 1
@@ -299,9 +300,9 @@ class WaveformSampler(torch.nn.Module):
         N = mask.sum().item()
 
         # sample sky parameters for each injections
-        dec = self.dec(N).to(X.device)
-        psi = self.psi(N).to(X.device)
-        phi = self.phi(N).to(X.device)
+        dec = self.dec.sample((N,)).to(X.device)
+        psi = self.psi.sample((N,)).to(X.device)
+        phi = self.phi.sample((N,)).to(X.device)
 
         # now sample the actual waveforms we want to inject
         idx = torch.randperm(self.num_waveforms)[:N]

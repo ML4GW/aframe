@@ -18,13 +18,11 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             self.best_model_path, arch=pl_module.model, metric=pl_module.metric
         )
 
-        datamodule = trainer.datamodule
-        kernel_size = int(
-            datamodule.hparams.kernel_length * datamodule.sample_rate
-        )
-        sample_input = torch.randn(1, datamodule.num_ifos, kernel_size)
-        model = module.model.to("cpu")
-        trace = torch.jit.trace(model, sample_input)
+        device = pl_module.device
+        batch = next(iter(trainer.train_dataloader)).to(device)
+        sample_input, _ = trainer.datamodule.augment(batch[0])
+
+        trace = torch.jit.trace(module.model.to("cpu"), sample_input.to("cpu"))
 
         save_dir = trainer.logger.log_dir or trainer.logger.save_dir
         if save_dir.startswith("s3://"):

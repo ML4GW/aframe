@@ -24,6 +24,11 @@ class AframeCLI(LightningCLI):
             type=str,
             default="highest",
         )
+        parser.add_argument(
+            "--ckpt_path",
+            type=str,
+            default=None,
+        )
 
 
 def main(args=None):
@@ -48,7 +53,9 @@ def main(args=None):
         configure_logging()
 
     torch.set_float32_matmul_precision(cli.config["matmul_precision"])
-    cli.trainer.fit(cli.model, cli.datamodule)
+    cli.trainer.fit(
+        cli.model, cli.datamodule, ckpt_path=cli.config["ckpt_path"]
+    )
 
 
 if __name__ == "__main__":
