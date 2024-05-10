@@ -1,12 +1,9 @@
 [tool.poetry]
-name = "aframe.architectures"
+name = "architectures"
 version = "0.1.0"
 description = "Aframe neural network architectures"
 authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
-packages = [
-    {include = "aframe"}
-]
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"

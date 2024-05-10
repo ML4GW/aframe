@@ -1,12 +1,9 @@
 [tool.poetry]
-name = "aframe.priors"
+name = "priors"
 version = "0.1.0"
 description = "Priors used for aframe analysis"
 authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
-packages = [
-    {include = "aframe"}
-]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
