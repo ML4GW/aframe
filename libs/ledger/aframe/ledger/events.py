@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
 import numpy as np
-from ledger.injections import InterferometerResponseSet
-from ledger.ledger import Ledger, metadata, parameter
+
+from aframe.ledger.injections import InterferometerResponseSet
+from aframe.ledger.ledger import Ledger, metadata, parameter
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)

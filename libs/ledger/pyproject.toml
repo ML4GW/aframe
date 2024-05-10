@@ -1,10 +1,13 @@
 [tool.poetry]
-name = "ledger"
+name = "aframe.ledger"
 version = "0.1.0"
 description = "Objects for storing and manipulating aframe data"
 authors = ["Ethan Marx <emarx@mit.edu>"]
 license = "MIT"
 #readme = "README.md"
+packages = [
+    {include = "aframe"}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"

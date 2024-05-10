@@ -12,6 +12,7 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../ml4gw /opt/aframe/ml4gw
 ../../libs/ledger /opt/aframe/libs/ledger
+../../libs/architectures /opt/aframe/libs/architectures
 
 %post
 # installing the local package editably via pip

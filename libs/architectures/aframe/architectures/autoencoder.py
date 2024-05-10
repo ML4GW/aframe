@@ -4,13 +4,13 @@ from typing import Optional
 import torch
 from torchtyping import TensorType
 
+from aframe.architectures import Architecture
 from ml4gw.nn.autoencoder import ConvolutionalAutoencoder, SkipConnection
-from train.architectures import Architecture
 
 # need this for type checking
 batch = channels = time = None
 Tensor = TensorType["batch", "channels", "time"]
-Module = Callable[[...], torch.nn.Module]
+Module = Callable[..., torch.nn.Module]
 
 
 class AutoencoderArchitecture(Architecture):

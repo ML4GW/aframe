@@ -5,9 +5,10 @@ from zlib import adler32
 
 import h5py
 import numpy as np
-from ledger.events import EventSet, RecoveredInjectionSet
-from ledger.injections import LigoResponseSet
 from ratelimiter import RateLimiter
+
+from aframe.ledger.events import EventSet, RecoveredInjectionSet
+from aframe.ledger.injections import LigoResponseSet
 
 
 class Sequence:
