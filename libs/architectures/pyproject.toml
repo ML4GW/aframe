@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "architectures"
+version = "0.1.0"
+description = "Aframe neural network architectures"
+authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+ml4gw = {path = "../../ml4gw", develop = true}
+h5py = "^3.9.0"
+
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu118"
+secondary = true
+default = false
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

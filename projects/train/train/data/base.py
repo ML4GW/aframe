@@ -70,7 +70,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
         snr_sampler: Optional[
-            Union[TransformedDist, Callable[int, Tensor]]
+            Union[TransformedDist, Callable[[int], Tensor]]
         ] = None,
         # validation args
         valid_stride: Optional[float] = None,

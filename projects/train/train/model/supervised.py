@@ -1,6 +1,6 @@
 import torch
+from architectures.supervised import SupervisedArchitecture
 
-from train.architectures.supervised import SupervisedArchitecture
 from train.model.base import AframeBase
 
 Tensor = torch.Tensor

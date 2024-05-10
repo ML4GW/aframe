@@ -1,12 +1,12 @@
 from typing import Literal, Optional
 
+from architectures import Architecture
+from architectures.networks import WaveNet, Xylophone
 from torch import Tensor
 from torchtyping import TensorType
 
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
-from train.architectures import Architecture
-from train.architectures.networks import WaveNet, Xylophone
 
 # need this for type checking
 batch = channels = None

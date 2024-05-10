@@ -11,7 +11,7 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: train.architectures.supervised.SupervisedTimeDomainResNet
+      class_path: architectures.supervised.SupervisedTimeDomainResNet
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
