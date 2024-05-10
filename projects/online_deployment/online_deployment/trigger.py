@@ -9,9 +9,10 @@ from typing import List, Literal
 
 import numpy as np
 from gwpy.time import tconvert
-from ledger.events import EventSet
 from ligo.gracedb.rest import GraceDb
 from online_deployment.dataloading import get_prefix
+
+from aframe.analysis.ledger.events import EventSet
 
 Gdb = Literal["local", "playground", "test", "production"]
 SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
@@ -173,6 +174,9 @@ class LocalGdb:
     def createEvent(self, filename: str, **_):
         return filename
 
+    def writeLog(self, filename: str, **_):
+        return filename
+
 
 class Trigger:
     def __init__(self, server: Gdb, write_dir: Path) -> None:
@@ -232,3 +236,21 @@ class Trigger:
             f.write(latency)
 
         return response
+
+    def submit_pe(self, bilby_result, mollview_plot, graceid):
+        corner_fname = self.write_dir / "corner_plot.png"
+        bilby_result.plot_corner(filename=corner_fname)
+        self.gdb.writeLog(
+            graceid, "Corner plot", filename=corner_fname, tag_name="pe"
+        )
+
+        mollview_fname = self.write_dir / "mollview_plot.png"
+        mollview_plot.savefig(mollview_fname, dpi=300)
+        self.gdb.writeLog(
+            graceid,
+            "Mollview projection",
+            filename=mollview_fname,
+            tag_name="sky_loc",
+        )
+
+        self.gdb.writeLog(graceid, "O3 Replay")

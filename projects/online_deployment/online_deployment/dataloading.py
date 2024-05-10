@@ -62,7 +62,7 @@ def get_prefix(datadir: Path):
     if len(matches) == 0:
         raise ValueError(f"No valid .gwf files in data directory '{datadir}'")
 
-    t0 = min([int(i.group("start")) for i in matches])
+    t0 = max([int(i.group("start")) for i in matches])
     prefixes = set([i.group("prefix") for i in matches])
     if len(prefixes) > 1:
         raise ValueError(
@@ -118,7 +118,7 @@ def data_iterator(
 
     # give ourselves a little buffer so we don't
     # try to grab a frame that's been filtered out
-    t0 += length * 2
+    # t0 += length * 2
     frame_buffer = np.zeros((2, 0))
     slc = slice(-int(2 * sample_rate), -int(sample_rate))
     last_ready = True
@@ -189,7 +189,7 @@ def data_iterator(
                 )
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, 16384:]
-                yield torch.Tensor(x), t0 - 1, last_ready
+                yield torch.Tensor(x).double(), t0 - 1, last_ready
 
             last_ready = ready
             t0 += length
