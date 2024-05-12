@@ -8,7 +8,7 @@ from utils.logging import configure_logging
 
 def build_parser():
     parser = jsonargparse.ArgumentParser()
-    parser.add_argument("--verbose", type=str, required=True)
+    parser.add_argument("--verbose", type=str, default=False)
     parser.add_function_arguments(main)
     return parser
 

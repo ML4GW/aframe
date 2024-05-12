@@ -3,11 +3,11 @@ From: mambaorg/micromamba:1.5
 Stage: build
 
 %files
-. /opt/aframe/projects/online_deployment/
+. /opt/aframe/projects/online/
 ../utils /opt/aframe/projects/utils
+../../libs/architectures /opt/aframe/libs/architectures
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../ml4gw /opt/aframe/ml4gw
-../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
@@ -19,7 +19,7 @@ apt-get install -y --no-install-recommends git
 
 # activate micromamba and create environment from lockfile
 /bin/bash /root/.bashrc
-micromamba create -p /opt/env -f /opt/aframe/projects/online_deployment/conda-lock.yml
+micromamba create -p /opt/env -f /opt/aframe/projects/online/conda-lock.yml
 
 # install poetry so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
@@ -29,7 +29,7 @@ micromamba run -p /opt/env python -m \
 micromamba run -p /opt/env \
     poetry config virtualenvs.create false
 
-cd /opt/aframe/projects/online_deployment/
+cd /opt/aframe/projects/online/
 micromamba run -p /opt/env \
     poetry install 
 
