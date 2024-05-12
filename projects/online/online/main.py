@@ -226,7 +226,6 @@ def main(
     ifo_suffix: str = None,
     input_buffer_length=75,
     output_buffer_length=8,
-    verbose: bool = False,
 ):
     gdb = gracedb_factory(server)
     num_ifos = len(ifos)
