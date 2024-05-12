@@ -10,6 +10,7 @@ from gwpy.timeseries import TimeSeries
 from scipy.signal import resample
 
 PATH_LIKE = Union[str, Path]
+GWF_SAMPLE_RATE = 16384
 
 patterns = {
     "prefix": "[a-zA-Z0-9_:-]+",
@@ -180,7 +181,7 @@ def data_iterator(
 
             frame = np.stack(frames)
             frame_buffer = np.append(frame_buffer, frame, axis=1)
-            dur = frame_buffer.shape[-1] / 16384
+            dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
             # Need at least 3 seconds to be able to crop out edge effects
             # from resampling and just yield the middle second
             if dur >= 3:
@@ -188,15 +189,19 @@ def data_iterator(
                     frame_buffer, int(sample_rate * dur), axis=1, window="hann"
                 )
                 x = x[:, slc]
-                frame_buffer = frame_buffer[:, 16384:]
+                frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
                 yield torch.Tensor(x).double(), t0 - 1, last_ready
 
             last_ready = ready
             t0 += length
 
 
-def read_channel(fname, channel):
-    for i in range(3):
+def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
+    """
+    Read a channel from a frame file, retrying if the read fails
+    and handling common errors that can occur when reading frame files
+    """
+    for i in range(num_retries):
         try:
             x = TimeSeries.read(fname, channel=channel)
         except ValueError as e:

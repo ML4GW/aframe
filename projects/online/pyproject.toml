@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "online_deployment"
+name = "online"
 version = "0.0.1"
 description = "Deploy aframe models over live data"
-authors = ["Will Benoit <benoi090@umn.edu", "Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+authors = ["Will Benoit <benoi090@umn.edu>", "Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
 license = "MIT"
 #readme = "README.md"
 
@@ -12,7 +12,12 @@ python = ">=3.9,<3.11"
 # local deps
 utils = {path = "../utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
-aframe = {path = "../..", develop = true}
+architectures = {path = "../../libs/architectures", develop = true}
+jsonargparse = "^4.28.0"
+healpy = "^1.16.6"
+ligo-gracedb = "^2.12.0"
+gwpy = "^3.0.8"
+lalsuite = "^7.22"
 
 [build-system]
 requires = ["poetry-core"]
