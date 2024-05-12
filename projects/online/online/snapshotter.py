@@ -27,6 +27,7 @@ class OnlineSnapshotter(BackgroundSnapshotter):
 
     def reset(self):
         self.contiguous_update_size = 0
+        return self.initial_state
 
     def forward(self, update, state):
         X, state = super().forward(update, state)

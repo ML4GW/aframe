@@ -102,6 +102,7 @@ def search(
     outdir: Path,
 ):
     integrated = None
+    in_spec = False
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         X = X.to("cuda")
@@ -150,6 +151,15 @@ def search(
 
                 # nothing left to do, so move on to next frame
                 continue
+
+        elif not in_spec:
+            # the frame is analysis ready, but previous frames
+            # weren't, so reset our running states
+            logging.info(f"Frame {t0} is ready again, resetting states")
+            state = snapshotter.reset()
+            input_buffer.reset_state()
+            output_buffer.reset_state()
+            in_spec = True
 
         # we have a frame that is analysis ready,
         # so lets analyze it:
