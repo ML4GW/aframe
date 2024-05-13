@@ -106,13 +106,6 @@ class Searcher:
         # of detecting an event between frames
         self.detecting = False
 
-        # flat that declares if the most previous frame
-        # was analysis ready or not
-        self.in_spec = False
-
-        # initialize the whitener state
-        self.state = self.whitener.initial_state
-
         self.last_detection_time = time.time() - self.refractory_period
 
         # calculate the detection statistic threshold

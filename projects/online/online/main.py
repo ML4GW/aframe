@@ -14,7 +14,7 @@ from online.pe import run_amplfi
 from online.searcher import Event, Searcher
 from online.snapshotter import OnlineSnapshotter
 
-from ml4gw.transforms import SpectralDensity, Whiten
+from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
 
 # seconds of data per update
@@ -29,7 +29,17 @@ def load_model(model: Architecture, weights: Path):
     model.load_state_dict(arch_weights)
     model.to("cuda")
     model.eval()
-    return model
+    return model, checkpoint
+
+
+def load_amplfi(model: Architecture, weights: Path, num_params: int):
+    model, checkpoint = load_model(model, weights)
+    checkpoint = torch.load(weights)
+    scaler_weights = {
+        k: v for k, v in checkpoint.items() if k.startswith("scaler.")
+    }
+    scaler = ChannelWiseScaler(num_params).load_state_dict(scaler_weights)
+    return model, scaler
 
 
 def get_time_offset(
@@ -65,8 +75,8 @@ def process_event(
     buffer: InputBuffer,
     spectral_density: SpectralDensity,
     pe_whitener: Whiten,
-    amplfi: torch.nn.Module,
-    std_scaler: torch.nn.Module,
+    amplfi: Architecture,
+    scaler: ChannelWiseScaler,
     outdir: Path,
 ):
     response = gdb.submit(event)
@@ -77,7 +87,7 @@ def process_event(
         spectral_density,
         pe_whitener,
         amplfi,
-        std_scaler,
+        scaler,
         outdir / "whitened_data_plots",
     )
     graceid = response.json()["graceid"]
@@ -88,7 +98,7 @@ def process_event(
 def search(
     gdb: GraceDb,
     pe_whitener: Whiten,
-    std_scaler: torch.nn.Module,
+    scaler: torch.nn.Module,
     spectral_density: SpectralDensity,
     whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
@@ -102,7 +112,12 @@ def search(
     outdir: Path,
 ):
     integrated = None
+
+    # flat that declares if the most previous frame
+    # was analysis ready or not
     in_spec = False
+
+    #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         X = X.to("cuda")
@@ -125,7 +140,7 @@ def search(
                         spectral_density,
                         pe_whitener,
                         amplfi,
-                        std_scaler,
+                        scaler,
                         outdir,
                     )
                     searcher.detecting = False
@@ -146,8 +161,8 @@ def search(
                     "resetting states".format(t0)
                 )
 
-                input_buffer.reset_state()
-                output_buffer.reset_state()
+                input_buffer.reset()
+                output_buffer.reset()
 
                 # nothing left to do, so move on to next frame
                 continue
@@ -157,8 +172,8 @@ def search(
             # weren't, so reset our running states
             logging.info(f"Frame {t0} is ready again, resetting states")
             state = snapshotter.reset()
-            input_buffer.reset_state()
-            output_buffer.reset_state()
+            input_buffer.reset()
+            output_buffer.reset()
             in_spec = True
 
         # we have a frame that is analysis ready,
@@ -193,7 +208,7 @@ def search(
                 spectral_density,
                 pe_whitener,
                 amplfi,
-                std_scaler,
+                scaler,
                 outdir,
             )
             searcher.detecting = False
@@ -210,6 +225,7 @@ def main(
     outdir: Path,
     datadir: Path,
     ifos: List[str],
+    inference_params: List[str],
     channel: str,
     sample_rate: float,
     kernel_length: float,
@@ -249,8 +265,10 @@ def main(
         f"Loading Aframe from weights at path {aframe_weights}\n"
         f"Loading AMPLFI from weights at path {amplfi_weights}"
     )
-    aframe = load_model(aframe_architecture, aframe_weights)
-    amplfi = load_model(amplfi_architecture, amplfi_weights)
+    aframe, _ = load_model(aframe_architecture, aframe_weights)
+    amplfi, scaler = load_amplfi(
+        amplfi_architecture, amplfi_weights, len(inference_params)
+    )
 
     fftlength = fftlength or kernel_length + fduration
 
@@ -308,7 +326,7 @@ def main(
     search(
         gdb,
         pe_whitener,
-        None,
+        scaler,
         spectral_density,
         whitener,
         snapshotter,

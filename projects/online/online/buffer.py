@@ -38,7 +38,7 @@ class InputBuffer:
         self.buffer_size = int(buffer_length * sample_rate)
         self.pe_window = pe_window
         self.event_position = event_position
-        self.reset_state()
+        self.reset()
 
     def write(self, write_path, event_time):
         start = self.t0
@@ -50,8 +50,8 @@ class InputBuffer:
             f.create_dataset("H1", data=self.input_buffer[0, :].cpu())
             f.create_dataset("L1", data=self.input_buffer[1, :].cpu())
 
-    def reset_state(self):
-        self.t0 = 0
+    def reset(self):
+        self.t0 = None
         self.input_buffer = torch.zeros(
             (self.num_channels, self.buffer_size), device="cuda"
         )
@@ -103,8 +103,8 @@ class OutputBuffer:
         self.buffer_size = int(buffer_length * inference_sampling_rate)
         self.reset_state()
 
-    def reset_state(self):
-        self.t0 = 0
+    def reset(self):
+        self.t0 = None
         self.output_buffer = torch.zeros((self.buffer_size,), device="cuda")
         self.integrated_buffer = torch.zeros(
             (self.buffer_size,), device="cuda"
