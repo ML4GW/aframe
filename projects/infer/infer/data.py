@@ -71,8 +71,7 @@ class Sequence:
             end=self.t0 + self.duration,
             shifts=shifts,
         )
-
-        if not len(injection_set):
+        if len(injection_set) == 0:
             logging.info(
                 f"No injections found in {injection_set_fname} "
                 f"for segment {background_fname} and "
@@ -212,7 +211,7 @@ class Sequence:
             foreground = None
             if self.injection_set is not None:
                 foreground = self._sequences[self.id + 1][: -self.num_slice]
-            return tuple(background, foreground)
+            return background, foreground
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)

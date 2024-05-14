@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 import subprocess
 from pathlib import Path
 
@@ -125,8 +126,15 @@ class InferLocal(InferBase):
         Get the local, cluster-internal IP address
         Currently not a general function.
         """
-        nets = psutil.net_if_addrs()
-        return nets["enp1s0f0"][0].address
+
+        for _, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if (
+                    addr.family == socket.AF_INET
+                    and not addr.address.startswith("127.")
+                ):
+                    return addr.address
+        return None
 
     @property
     def model_repo_dir(self):
