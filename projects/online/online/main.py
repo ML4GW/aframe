@@ -22,7 +22,7 @@ UPDATE_SIZE = 1
 
 
 def load_model(model: Architecture, weights: Path):
-    checkpoint = torch.load(weights)
+    checkpoint = torch.load(weights, map_location="cpu")
     arch_weights = {
         k: v for k, v in checkpoint.items() if k.startswith("model.")
     }
@@ -34,9 +34,10 @@ def load_model(model: Architecture, weights: Path):
 
 def load_amplfi(model: Architecture, weights: Path, num_params: int):
     model, checkpoint = load_model(model, weights)
-    checkpoint = torch.load(weights)
     scaler_weights = {
-        k: v for k, v in checkpoint.items() if k.startswith("scaler.")
+        k[len("scaler") :]: v
+        for k, v in checkpoint.items()
+        if k.startswith("scaler.")
     }
     scaler = ChannelWiseScaler(num_params).load_state_dict(scaler_weights)
     return model, scaler

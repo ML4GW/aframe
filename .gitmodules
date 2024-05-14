@@ -4,3 +4,9 @@
 [submodule "hermes"]
 	path = hermes
 	url = git@github.com:ML4GW/hermes.git
+[submodule "pycondor"]
+	path = pycondor
+	url = git@github.com:ML4GW/pycondor.git
+[submodule "amplfi"]
+	path = amplfi
+	url = git@github.com:ML4GW/amplfi.git

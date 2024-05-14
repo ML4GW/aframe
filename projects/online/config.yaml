@@ -8,10 +8,23 @@ aframe_architecture:
       class_path: ml4gw.nn.norm.GroupNorm1DGetter
       init_args:
         groups: 16
-aframe_weights: /home/william.benoit/aframe/o4b_bbh_model/training/weights.pt
+aframe_weights: "/home/william.benoit/aframe/o4b_bbh_model/training/weights.pt"
 amplfi_architecture: 
-  class_path: architectures.supervised.SupervisedTimeDomainResNet
-  init_args: 
+  class_path: architectures.amplfi.InverseAutoregressiveFlow
+  init_args:
+    hidden_features: 150
+    num_transforms: 80
+    num_blocks: 6
+    context_dim: 8
+    embedding_net: 
+      class_path: architectures.amplfi.embeddings.ResNet
+      init_args:
+        layers: [5, 3, 3]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 8
+
 amplfi_weights: 
 ifos: ["H1", "L1"]
 channel: "GDS-CALIB_STRAIN"
