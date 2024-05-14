@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional, Tuple
 import numpy as np
 import torch
 from architectures import Architecture
+from amplfi.architectures.flow.base import FlowArchitecture
 from ledger.events import EventSet
 from ligo.gracedb.rest import GraceDb
 from online.utils.buffer import InputBuffer, OutputBuffer
@@ -32,7 +33,7 @@ def load_model(model: Architecture, weights: Path):
     return model, checkpoint
 
 
-def load_amplfi(model: Architecture, weights: Path, num_params: int):
+def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
     model, checkpoint = load_model(model, weights)
     scaler_weights = {
         k[len("scaler") :]: v
@@ -76,7 +77,7 @@ def process_event(
     buffer: InputBuffer,
     spectral_density: SpectralDensity,
     pe_whitener: Whiten,
-    amplfi: Architecture,
+    amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
     outdir: Path,
 ):

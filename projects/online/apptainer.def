@@ -9,6 +9,7 @@ Stage: build
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../ml4gw /opt/aframe/ml4gw
 ../../pyproject.toml /opt/aframe/pyproject.toml
+../../amplfi/amplfi/architectures /opt/aframe/amplfi/amplfi/architectures
 
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop

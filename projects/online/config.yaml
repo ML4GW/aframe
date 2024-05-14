@@ -24,7 +24,6 @@ amplfi_architecture:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-
 amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
 ifos: ["H1", "L1"]
 channel: "GDS-CALIB_STRAIN"
