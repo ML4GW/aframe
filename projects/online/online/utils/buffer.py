@@ -5,8 +5,9 @@ import torch
 
 class InputBuffer:
     """
-    A buffer for storing raw strain data for use in parameter estimation
-    followup of events detected by Aframe
+    A buffer for storing raw strain data f
+    or use in parameter estimation (amplfi) followup
+    of events detected by Aframe
 
     Args:
         num_channels:
