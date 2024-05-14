@@ -22,7 +22,7 @@ class TimeSlideWaveformsParams(law.Task):
     start = luigi.FloatParameter()
     end = luigi.FloatParameter()
     ifos = luigi.ListParameter()
-    Tb = luigi.FloatParameter()
+    num_injections = luigi.IntParameter()
     output_dir = luigi.Parameter()
     shifts = luigi.ListParameter()
     spacing = luigi.FloatParameter()
@@ -98,8 +98,11 @@ class DeployTimeslideWaveforms(
 
     @property
     def shifts_required(self):
-        return utils.get_num_shifts(
-            self.test_segments, self.Tb, self.max_shift
+        return utils.get_num_shifts_from_num_injections(
+            self.test_segments,
+            self.num_injections,
+            self.spacing,
+            self.max_shift,
         )
 
     @property

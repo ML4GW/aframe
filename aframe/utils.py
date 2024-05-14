@@ -95,12 +95,33 @@ def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
     return math.ceil(N)
 
 
-def get_num_shifts(
+def get_num_shifts_from_Tb(
     segments: List[Tuple[float, float]], Tb: float, shift: float
 ) -> int:
     """
     Calculates the number of required time shifts based on a list
-    of background segments
+    of background segments and the desired total background duration.
     """
     T = sum([stop - start for start, stop in segments])
     return calc_shifts_required(Tb, T, shift)
+
+
+def get_num_shifts_from_num_injections(
+    segments,
+    num_injections: int,
+    spacing: float,
+    shift: float,
+    buffer: float,
+) -> int:
+    """
+    Calculates the number of required time shifts based on a list
+    of background segments, injection spacing, and the desired total
+    number of injections
+    """
+    T = sum([stop - start for start, stop in segments])
+    a = -shift / 2
+    b = T - 2 * buffer - (shift / 2)
+    c = -num_injections * spacing
+    discriminant = b**2 - 4 * a * c
+    N = math.ceil(-b + discriminant**0.5) / (2 * a)
+    return N

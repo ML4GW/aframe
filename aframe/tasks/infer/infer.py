@@ -138,7 +138,9 @@ class InferLocal(InferBase):
         from aframe import utils
 
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
 
         background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
@@ -239,7 +241,9 @@ class InferRemote(InferBase):
 
         # infer segment start and stop times directly from file names
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
 
         background_fnames = [f.path for f in self.background_fnames]
         deploy_remote(
