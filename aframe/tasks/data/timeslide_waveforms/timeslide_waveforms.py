@@ -47,7 +47,7 @@ class DeployTimeslideWaveforms(
     StaticMemoryWorkflow,
 ):
     def workflow_requires(self):
-        reqs = super().workflow_requires()
+        reqs = {}
         reqs["test_segments"] = FetchTest.req(
             self,
             segments_file=os.path.join(self.output_dir, "segments.txt"),
@@ -103,6 +103,7 @@ class DeployTimeslideWaveforms(
             self.num_injections,
             self.spacing,
             self.max_shift,
+            self.buffer,
         )
 
     @property

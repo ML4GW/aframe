@@ -122,6 +122,6 @@ def get_num_shifts_from_num_injections(
     a = -shift / 2
     b = T - 2 * buffer - (shift / 2)
     c = -num_injections * spacing
-    discriminant = b**2 - 4 * a * c
-    N = math.ceil(-b + discriminant**0.5) / (2 * a)
-    return N
+    discriminant = (b**2) - 4 * a * c
+    N = (-b + (discriminant**0.5)) / (2 * a)
+    return math.ceil(N)
