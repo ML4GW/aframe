@@ -53,13 +53,14 @@ def infer(
             sequence_end=sequence_end,
         )
 
-        client.infer(
-            x_inj,
-            request_id=i,
-            sequence_id=sequence.id + 1,
-            sequence_start=sequence_start,
-            sequence_end=sequence_end,
-        )
+        if x_inj is not None:
+            client.infer(
+                x_inj,
+                request_id=i,
+                sequence_id=sequence.id + 1,
+                sequence_start=sequence_start,
+                sequence_end=sequence_end,
+            )
 
         # wait for the first response to come back
         # for both sequences to allow for some
