@@ -1,5 +1,5 @@
-outdir: "/home/william.benoit/aframe/o4b_bbh_model/"
-datadir: "/dev/shm/kafka"
+outdir: ${oc.env:AFRAME_ONLINE_OUTDIR}
+datadir: ${oc.env:ONLINE_DATADIR}
 aframe_architecture:
   class_path: architectures.supervised.SupervisedTimeDomainResNet
   init_args:
@@ -8,16 +8,16 @@ aframe_architecture:
       class_path: ml4gw.nn.norm.GroupNorm1DGetter
       init_args:
         groups: 16
-aframe_weights: "/home/william.benoit/aframe/o4b_bbh_model/training/weights.pt"
+aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_architecture: 
-  class_path: architectures.amplfi.InverseAutoregressiveFlow
+  class_path: amplfi.architectures.InverseAutoregressiveFlow
   init_args:
     hidden_features: 150
     num_transforms: 80
     num_blocks: 6
     context_dim: 8
     embedding_net: 
-      class_path: architectures.amplfi.embeddings.ResNet
+      class_path: amplfi.architectures.embeddings.ResNet
       init_args:
         layers: [5, 3, 3]
         norm_layer:
@@ -25,7 +25,7 @@ amplfi_architecture:
           init_args:
             groups: 8
 
-amplfi_weights: 
+amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
 ifos: ["H1", "L1"]
 channel: "GDS-CALIB_STRAIN"
 sample_rate: 2048

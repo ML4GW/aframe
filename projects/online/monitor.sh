@@ -1,8 +1,17 @@
 #!/bin/bash
 
-AFRAME_CONTAINER_ROOT=/home/william.benoit/aframe/images/
+# trained model weights
+export AMPLFI_WEIGHTS=
+export AFRAME_WEIGHTS=
+# location where low latency data
+# is streamed, typically /dev/shm/kakfka
+export ONLINE_DATADIR=/dev/shm/kafka/
+# where results will be writen
+export AFRAME_ONLINE_OUTDIR=
+
+AFRAME_CONTAINER_ROOT=~/aframe/images/
 config=./config.yaml
-log_dir=/home/william.benoit/online_monitoring
+log_dir=
 mkdir -p $log_dir
 
 export CUDA_VISIBLE_DEVICES=2
