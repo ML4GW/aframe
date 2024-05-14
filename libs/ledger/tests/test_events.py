@@ -19,6 +19,20 @@ class TestEventSet:
         shifts = np.split(obj1.shift, 2)
         assert (shifts[0] == shifts[1] * -1).all()
 
+        # test with empty object
+        obj1 = events.EventSet()
+        det_stats, times, shifts = (
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
+            np.array([7, 8, 9]),
+        )
+        obj2 = events.EventSet(det_stats, times, shifts, 100)
+        obj2.append(obj1)
+        assert obj2.Tb == 100
+        assert (obj2.detection_statistic == det_stats).all()
+        assert (obj2.detection_time == times).all()
+        assert (obj2.shift == shifts).all()
+
     def test_nb(self):
         det_stats = np.arange(10)
         times = np.arange(10)
