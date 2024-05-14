@@ -7,7 +7,8 @@ from utils.logging import configure_logging
 
 
 def build_parser():
-    parser = jsonargparse.ArgumentParser()
+    # use omegaconf to suppor env var interpolation
+    parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
     parser.add_argument("--verbose", type=str, default=False)
     parser.add_function_arguments(main)
     return parser

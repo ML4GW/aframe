@@ -15,6 +15,7 @@ ledger = {path = "../../libs/ledger", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
 
 "amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
+omegaconf = "^2.3.0"
 
 [build-system]
 requires = ["poetry-core"]
