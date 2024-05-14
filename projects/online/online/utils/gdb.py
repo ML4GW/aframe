@@ -7,8 +7,7 @@ import bilby
 import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-
-from projects.online.online.searcher import Event
+from online.utils.searcher import Event
 
 GdbServer = Literal["local", "playground", "test", "production"]
 

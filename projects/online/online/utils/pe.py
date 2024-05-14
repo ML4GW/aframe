@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 
 if TYPE_CHECKING:
-    from online.buffer import InputBuffer
+    from online.utils.buffer import InputBuffer
 
 
 def run_amplfi(

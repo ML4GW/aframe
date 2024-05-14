@@ -7,12 +7,12 @@ import torch
 from architectures import Architecture
 from ledger.events import EventSet
 from ligo.gracedb.rest import GraceDb
-from online.buffer import InputBuffer, OutputBuffer
-from online.dataloading import data_iterator
-from online.gdb import gracedb_factory
-from online.pe import run_amplfi
-from online.searcher import Event, Searcher
-from online.snapshotter import OnlineSnapshotter
+from online.utils.buffer import InputBuffer, OutputBuffer
+from online.utils.dataloading import data_iterator
+from online.utils.gdb import gracedb_factory
+from online.utils.pe import run_amplfi
+from online.utils.searcher import Event, Searcher
+from online.utils.snapshotter import OnlineSnapshotter
 
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
