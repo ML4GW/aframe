@@ -5,7 +5,6 @@ from typing import Iterable, List, Optional, Tuple
 import numpy as np
 import torch
 from architectures import Architecture
-from amplfi.architectures.flow.base import FlowArchitecture
 from ledger.events import EventSet
 from ligo.gracedb.rest import GraceDb
 from online.utils.buffer import InputBuffer, OutputBuffer
@@ -15,6 +14,7 @@ from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 
+from amplfi.architectures.flow.base import FlowArchitecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
 
