@@ -84,7 +84,7 @@ class PsdEstimator(torch.nn.Module):
         # if we have 2 batch elements in our input data,
         # it will be assumed that the 0th element is data
         # being used to calculate the psd to whiten the
-        # 1st element. Used when we wan't to use raw background
+        # 1st element. Used when we want to use raw background
         # data to calculate the PSDs to whiten data with injected signals
         if X.ndim == 3 and X.size(0) == 2:
             # 0th background element is used to calculate PSDs
