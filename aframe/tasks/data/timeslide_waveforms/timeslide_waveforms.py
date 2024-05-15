@@ -101,6 +101,7 @@ class DeployTimeslideWaveforms(
         return utils.get_num_shifts_from_num_injections(
             self.test_segments,
             self.num_injections,
+            self.waveform_duration,
             self.spacing,
             self.max_shift,
             self.buffer,

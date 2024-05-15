@@ -124,7 +124,6 @@ class InferLocal(InferBase):
     def get_ip_address() -> str:
         """
         Get the local, cluster-internal IP address
-        Currently not a general function.
         """
 
         for _, addrs in psutil.net_if_addrs().items():
@@ -134,7 +133,7 @@ class InferLocal(InferBase):
                     and not addr.address.startswith("127.")
                 ):
                     return addr.address
-        return None
+        raise ValueError("No valid IP address found")
 
     @property
     def model_repo_dir(self):

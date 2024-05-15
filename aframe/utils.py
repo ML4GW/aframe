@@ -76,8 +76,7 @@ def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
     Calculate the number of shifts required to generate Tb
     seconds of background.
 
-    The algebra to get this is gross but straightforward.
-    Just solving
+    Solve:
     $$\sum_{i=1}^{N}(T - i\delta) \geq T_b$$
     for the lowest value of N, where \delta is the
     shift increment.
@@ -109,6 +108,7 @@ def get_num_shifts_from_Tb(
 def get_num_shifts_from_num_injections(
     segments,
     num_injections: int,
+    waveform_duration: float,
     spacing: float,
     shift: float,
     buffer: float,
@@ -118,6 +118,8 @@ def get_num_shifts_from_num_injections(
     of background segments, injection spacing, and the desired total
     number of injections
     """
+    buffer += waveform_duration
+    spacing += waveform_duration
     T = sum([stop - start for start, stop in segments])
     a = -shift / 2
     b = T - 2 * buffer - (shift / 2)
