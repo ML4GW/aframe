@@ -118,7 +118,7 @@ def get_num_shifts_from_num_injections(
     of background segments, injection spacing, and the desired total
     number of injections
     """
-    buffer += waveform_duration
+    buffer += waveform_duration // 2
     spacing += waveform_duration
     T = sum([stop - start for start, stop in segments])
     a = -shift / 2
