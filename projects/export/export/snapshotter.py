@@ -62,8 +62,8 @@ def add_streaming_input_preprocessor(
     )
 
     stride = int(sample_rate / inference_sampling_rate)
-    state_shape = (1, num_ifos, snapshotter.state_size)
-    input_shape = (1, num_ifos, batch_size * stride)
+    state_shape = (2, num_ifos, snapshotter.state_size)
+    input_shape = (2, num_ifos, batch_size * stride)
     streaming_model = streaming_utils.add_streaming_model(
         ensemble.repository,
         streaming_layer=snapshotter,
