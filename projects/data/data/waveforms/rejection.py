@@ -27,6 +27,7 @@ def rejection_sample(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str,
+    coalescence_time: float,
     highpass: float,
     snr_threshold: float,
     psds: torch.Tensor,
@@ -44,6 +45,7 @@ def rejection_sample(
         minimum_frequency=minimum_frequency,
         reference_frequency=reference_frequency,
         waveform_approximant=waveform_approximant,
+        coalescence_time=coalescence_time,
     )
 
     # create a dictionary to store accepted

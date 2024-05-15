@@ -51,6 +51,9 @@ class WaveformParams(law.Task):
         default="IMRPhenomPv2",
         description="Approximant to use for waveform generation",
     )
+    coalescence_time = luigi.FloatParameter(
+        description="Time of coalescence within the generated signal"
+    )
 
 
 @inherits(WaveformParams)
@@ -77,6 +80,7 @@ class TrainingWaveforms(AframeDataTask):
             self.minimum_frequency,
             self.reference_frequency,
             waveform_approximant=self.waveform_approximant,
+            coalescence_time=self.coalescence_time,
         )
         prior = load_prior(self.prior)
         prior, detector_frame_prior = prior()
