@@ -1,3 +1,4 @@
+import logging
 import math
 from contextlib import nullcontext
 from typing import Optional
@@ -23,8 +24,12 @@ class Sequence:
     ):
         """
         Object used for iterating over a segment of data,
-        performing timeshifts, injecting waveforms, and
+        performing timeshifts, optionally injecting waveforms, and
         aggregating the returned inference outputs.
+
+        If the injection set is empty for this given
+        segment and shifts, infernece on injections will be skipped,
+        and `None` will be returned for the foreground events.
 
         Args:
             background_fname:
@@ -56,13 +61,25 @@ class Sequence:
             self.t0 = dataset.attrs["x0"]
             self.duration = self.size / self.sample_rate
 
-        # use this to load in our injections up front
-        self.injection_set = LigoResponseSet.read(
+        # load in our injections up front
+        # if there are no injections for
+        # this shift, set it to None so
+        # we don't run inference on injections
+        injection_set = LigoResponseSet.read(
             injection_set_fname,
             start=self.t0,
             end=self.t0 + self.duration,
             shifts=shifts,
         )
+        if len(injection_set) == 0:
+            logging.info(
+                f"No injections found in {injection_set_fname} "
+                f"for segment {background_fname} and "
+                f"shifts {shifts}, skipping."
+            )
+            injection_set = None
+
+        self.injection_set = injection_set
 
         # derive some properties from that metadata,
         # including come up with a semi-unique sequence
@@ -83,6 +100,12 @@ class Sequence:
             self._started[seq_id] = False
             self._done[seq_id] = False
             self._sequences[seq_id] = np.zeros(size)
+
+        # if there are no injections, we can mark
+        # the injection sequence as started and done
+        if self.injection_set is None:
+            self._done[self.id + 1] = True
+            self._started[self.id + 1] = True
 
     @property
     def started(self):
@@ -152,9 +175,14 @@ class Sequence:
                     x.append(data)
                 x = np.stack(x).astype(np.float32)
 
-                # injection any waveforms into a copy of the background
+                # if there are any injections for this shift,
+                # inject waveforms into a copy of the background
+                x_inj = None
                 offset = i * self.batch_size / self.inference_sampling_rate
-                x_inj = self.injection_set.inject(x.copy(), self.t0 + offset)
+                if self.injection_set is not None:
+                    x_inj = self.injection_set.inject(
+                        x.copy(), self.t0 + offset
+                    )
 
                 # return the two sets of updates, possibly
                 # rate limited if we specified a max rate
@@ -179,10 +207,11 @@ class Sequence:
         # sequences have completed, return them both,
         # slicing off the dummy data from the last batch
         if self.done:
-            return tuple(
-                self._sequences[self.id + i][: -self.num_slice]
-                for i in range(2)
-            )
+            background = self._sequences[self.id][: -self.num_slice]
+            foreground = None
+            if self.injection_set is not None:
+                foreground = self._sequences[self.id + 1][: -self.num_slice]
+            return background, foreground
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)

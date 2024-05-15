@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 import subprocess
 from pathlib import Path
 
@@ -123,10 +124,16 @@ class InferLocal(InferBase):
     def get_ip_address() -> str:
         """
         Get the local, cluster-internal IP address
-        Currently not a general function.
         """
-        nets = psutil.net_if_addrs()
-        return nets["enp1s0f0"][0].address
+
+        for _, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if (
+                    addr.family == socket.AF_INET
+                    and not addr.address.startswith("127.")
+                ):
+                    return addr.address
+        raise ValueError("No valid IP address found")
 
     @property
     def model_repo_dir(self):
@@ -138,7 +145,9 @@ class InferLocal(InferBase):
         from aframe import utils
 
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
 
         background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
@@ -239,7 +248,9 @@ class InferRemote(InferBase):
 
         # infer segment start and stop times directly from file names
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
 
         background_fnames = [f.path for f in self.background_fnames]
         deploy_remote(
