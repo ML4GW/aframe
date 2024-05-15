@@ -1,6 +1,7 @@
 import logging
 import time
 
+import numpy as np
 from infer.data import Sequence
 from infer.postprocess import Postprocessor
 from tqdm import tqdm
@@ -46,7 +47,7 @@ def infer(
             f"Submitting inference request {i} for sequence {sequence.id}"
         )
         client.infer(
-            x,
+            np.stack([x, x]),
             request_id=i,
             sequence_id=sequence.id,
             sequence_start=sequence_start,
@@ -54,8 +55,10 @@ def infer(
         )
 
         if x_inj is not None:
+            # pass injected data __and__ background
+            # data to be used for whitening
             client.infer(
-                x_inj,
+                np.stack([x, x_inj]),
                 request_id=i,
                 sequence_id=sequence.id + 1,
                 sequence_start=sequence_start,
