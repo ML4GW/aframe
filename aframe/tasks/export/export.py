@@ -18,7 +18,7 @@ class ExportParams(law.Task):
     batch_file = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
-    preproc_instances = luigi.IntParameter()
+    preproc_instances = luigi.IntParameter(default=1)
     clean = luigi.BoolParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
