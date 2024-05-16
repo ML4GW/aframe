@@ -168,7 +168,7 @@ class DeployValidationWaveforms(
         from data.waveforms.rejection import rejection_sample
         from ledger.injections import LigoWaveformSet
 
-        os.makedirs(self.tmp_dir, exist_ok=True)
+        os.makedirs(self.branch_tmp_dir, exist_ok=True)
         num_signals, psd_segment = self.branch_data
 
         # read in psd
