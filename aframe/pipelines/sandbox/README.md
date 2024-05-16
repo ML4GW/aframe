@@ -34,6 +34,8 @@ Lastly, environment variables are used to control locations of data and analysis
 - `AFRAME_TRAIN_RUN_DIR` Training artifact storage
 - `AFRAME_CONDOR_DIR` Condor submit files and logs
 - `AFRAME_RESULTS_DIR` Inference and sensitive volume results
+- `AFRAME_TMPDIR` Intermediate data product storage 
+
 
 It is recommended to store these in a `.env` file. The following pattern could prove useful:
 
@@ -45,6 +47,7 @@ export AFRAME_TEST_DATA_DIR=$AFRAME_BASE/$RUN_LABEL/data/test
 export AFRAME_TRAIN_RUN_DIR=$AFRAME_BASE/$RUN_LABEL/training
 export AFRAME_CONDOR_DIR=$AFRAME_BASE/$RUN_LABEL/condor
 export AFRAME_RESULTS_DIR=$AFRAME_BASE/$RUN_LABEL/results
+export AFRAME_TMPDIR=$AFRAME_BASE/$RUN_LABEL/data/tmp/
 ```
 
 To export these environment variables, simply run
@@ -76,14 +79,11 @@ The end to end pipeline can take a few days to run. The most time consuming step
 
 
 ## Remote Training
-Model training can be run on the nautilus hypercluster simply by setting the `AFRAME_TRAIN_RUN_DIR` and `AFRAME_TRAIN_DATA_DIR` environment variables to point to an s3 path. You will also need to set the 
-`AFRAME_TMPDIR` environment variable, which will locally store intermediate data products before sending 
-to s3.
+Model training can be run on the nautilus hypercluster simply by setting the `AFRAME_TRAIN_RUN_DIR` and `AFRAME_TRAIN_DATA_DIR` environment variables to point to an s3 path.
 
 ```bash
 export AFRAME_TRAIN_DATA_DIR=s3://{your-bucket}/$RUN_LABEL/data
 export AFRAME_TRAIN_RUN_DIR=s3://{your-bucket}/$RUN_LABEL/training
-export AFRAME_TMPDIR=$AFRAME_BASE/$RUN_LABEL/data/tmp/
 ```
 
 The `law` `Tasks` responsible for training data generation will automatically transfer your data to s3 storage. The
