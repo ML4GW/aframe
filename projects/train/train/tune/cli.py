@@ -41,11 +41,12 @@ def main(args: Optional[list[str]] = None) -> str:
         prefix = "s3://"
         storage_dir = storage_dir.removeprefix(prefix)
 
+        endpoint_url = os.getenv("AWS_ENDPOINT_URL")
         # for accessing s3 filesystem from inside the cluster,
         internal_fs = s3fs.S3FileSystem(
             key=os.getenv("AWS_ACCESS_KEY_ID"),
             secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+            endpoint_url=endpoint_url,
         )
         internal_fs = pyarrow.fs.PyFileSystem(
             pyarrow.fs.FSSpecHandler(internal_fs)
