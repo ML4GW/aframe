@@ -101,6 +101,11 @@ class DeployValidationWaveforms(
     output_dir = luigi.Parameter(
         description="Directory where validation waveforms will be saved"
     )
+    tmp_dir = luigi.Parameter(
+        description="Directory where temporary validation "
+        "waveforms will be saved before being merged",
+        default=os.getenv("AFRAME_TMPDIR", f"/local/{os.getenv('USER')}"),
+    )
     ifos = luigi.ListParameter(
         description="Interferometers for which waveforms will be generated"
     )
@@ -126,12 +131,12 @@ class DeployValidationWaveforms(
         return reqs
 
     @property
-    def tmp_dir(self):
-        return os.path.join(self.output_dir, f"tmp-{self.branch}")
+    def branch_tmp_dir(self):
+        return os.path.join(self.tmp_dir, f"tmp-{self.branch}")
 
     def output(self):
         return law.LocalFileTarget(
-            os.path.join(self.tmp_dir, "val_waveforms.hdf5")
+            os.path.join(self.branch_tmp_dir, "val_waveforms.hdf5")
         )
 
     def create_branch_map(self):
@@ -203,7 +208,7 @@ class ValidationWaveforms(AframeDataTask):
     """
 
     output_dir = luigi.Parameter(
-        description="Directory where validation waveforms will be saved"
+        description="Directory where merged validation waveforms will be saved"
     )
     condor_directory = luigi.Parameter(
         default=os.path.join(
@@ -217,7 +222,7 @@ class ValidationWaveforms(AframeDataTask):
         self.output_file = os.path.join(self.output_dir, "val_waveforms.hdf5")
 
     def output(self):
-        return (s3_or_local(self.output_file),)
+        return s3_or_local(self.output_file)
 
     def requires(self):
         return DeployValidationWaveforms.req(self)
@@ -233,9 +238,8 @@ class ValidationWaveforms(AframeDataTask):
     def run(self):
         from ledger.injections import LigoWaveformSet
 
-        LigoWaveformSet.aggregate(
-            self.waveform_files, self.output_file, clean=True
-        )
+        with self.output().open("w") as f:
+            LigoWaveformSet.aggregate(self.waveform_files, f, clean=True)
 
         # clean up temporary directories
         for dirname in glob.glob(os.path.join(self.output_dir, "tmp-*")):
