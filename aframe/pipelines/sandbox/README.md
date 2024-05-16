@@ -91,9 +91,6 @@ rest of the pipeline (export, inference, etc.) is compatible with s3 storage and
 
 It is also possible to train locally on the LDG using a remote dataset. The training code will automatically download the dataset from s3.
 
-> **_Note: If you are running on the LDG, **
-
-
 
 ## Tips and Tricks
 If you wish to launch an analysis with the freedom of ending
