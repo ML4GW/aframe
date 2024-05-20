@@ -199,6 +199,7 @@ class AframeBase(pl.LightningModule):
             mode="max",
         )
         if not ray.is_initialized():
+            print("RAY INIT")
             callbacks.append(checkpoint)
 
         if self.hparams.patience is not None:
