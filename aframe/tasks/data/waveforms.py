@@ -191,6 +191,7 @@ class DeployValidationWaveforms(
             self.sample_rate,
             self.waveform_duration,
             self.waveform_approximant,
+            self.coalescence_time,
             self.highpass,
             self.snr_threshold,
             psds,

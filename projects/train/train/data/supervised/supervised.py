@@ -52,7 +52,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         snrs = self.snr_sampler.sample((N,)).to(X.device)
         responses = self.projector(*params, snrs, psds[mask], **polarizations)
         max_val = responses.size(-1) - X.size(-1) + 1
-        idx = torch.randint(max_val, size=N).to(X.device)
+        idx = torch.randint(max_val, size=(N,)).to(X.device)
         kernels = slice_kernels(
             responses,
             idx=idx,

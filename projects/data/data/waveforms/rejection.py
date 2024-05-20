@@ -132,6 +132,7 @@ def rejection_sample(
         idx += num_accepted
         num_signals -= num_accepted
 
+    parameters["coalescence_time"] = coalescence_time
     parameters["sample_rate"] = sample_rate
     parameters["duration"] = waveform_duration
     parameters["num_injections"] = num_injections

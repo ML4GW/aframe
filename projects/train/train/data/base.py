@@ -177,7 +177,7 @@ class BaseAframeDataset(pl.LightningDataModule):
     def left_pad_size(self) -> int:
         """
         Minimum numer of samples that the defining point of the
-        signal will be from the left edge of the unwhitened kernel
+        signal will be from the left edge of the _whitened_ kernel.
         """
         return int(self.hparams.left_pad * self.sample_rate)
 
@@ -185,7 +185,7 @@ class BaseAframeDataset(pl.LightningDataModule):
     def right_pad_size(self) -> int:
         """
         Minimum numer of samples that the defining point of the
-        signal will be from the left edge of the unwhitened kernel
+        signal will be from the left edge of the _whitened_ kernel
         """
         return int(self.hparams.right_pad * self.sample_rate)
 
@@ -240,6 +240,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         signal_idx = int(self.signal_time * self.sample_rate)
         kernel_size = int(self.hparams.kernel_length * self.sample_rate)
+        filter_size = int(self.hparams.fduration * self.sample_rate)
 
         if kernel_size < self.left_pad_size + self.right_pad_size:
             raise ValueError(
@@ -248,7 +249,10 @@ class BaseAframeDataset(pl.LightningDataModule):
             )
 
         signal_start = signal_idx - (kernel_size - self.right_pad_size)
-        signal_stop = signal_idx + kernel_size - self.left_pad_size
+        signal_start += filter_size // 2
+
+        signal_stop = signal_idx + (kernel_size - self.left_pad_size)
+        signal_stop += filter_size // 2
 
         # If signal_start is less than 0, add padding on the left
         left_pad = -1 * min(signal_start, 0)
@@ -495,6 +499,10 @@ class BaseAframeDataset(pl.LightningDataModule):
         # portion of the signal
         kernel_size = X.size(-1)
         signal_idx = int(self.signal_time * self.sample_rate)
+        max_stop_idx = signal_idx + kernel_size - self.left_pad_size
+        pad = max_stop_idx - signals.size(-1)
+        if pad > 0:
+            signals = torch.nn.functional.pad(signals, [0, pad])
 
         step = kernel_size - self.left_pad_size - self.right_pad_size
         step /= self.hparams.num_valid_views - 1
