@@ -50,11 +50,11 @@ data:
     swap_prob: 0.014
     mute_prob: 0.055
     left_pad: 0.25
-    right_pad: 0
+    right_pad: 0.0
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 
-        minimum: 99
+        minimum: 4
         maximum: 100
         index: -3
       # uncomment below and comment above for 
@@ -90,7 +90,7 @@ trainer:
   # strategy: set to ddp if len(devices) > 1
   #precision: 16-mixed
   accelerator: auto
-  max_epochs: 2
+  max_epochs: 200
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
   benchmark: true
