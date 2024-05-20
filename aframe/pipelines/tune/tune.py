@@ -28,7 +28,6 @@ class TuneInfer(InferLocal):
         ts_waveforms = TimeslideWaveforms.req(
             self,
             output_dir=paths().test_datadir,
-            condor_directory=os.path.join(paths().condordir),
         )
         fetch = ts_waveforms.requires().workflow_requires()["test_segments"]
 

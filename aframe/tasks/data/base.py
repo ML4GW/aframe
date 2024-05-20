@@ -40,6 +40,12 @@ class AframeDataSandbox(AframeSandbox):
             if os.path.exists(dir):
                 volumes[dir] = dir
 
+        # bind users /local directory for
+        # storing large tmp files,
+        # e.g. for local storage before
+        # being dumped to s3 by luigi
+        tmpdir = f"/local/{os.getenv('USER')}"
+        volumes[tmpdir] = tmpdir
         # bind aws directory that contains s3 credentials
         aws_dir = os.path.expanduser("~/.aws/")
         volumes[aws_dir] = aws_dir

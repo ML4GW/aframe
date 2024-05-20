@@ -41,6 +41,7 @@ class HelmChart:
         self.api = api
 
     def install(self):
+        logging.info(f"Installing chart from {self.chart_url}")
         try:
             subprocess.run(self.base_cmd, check=True)
         except subprocess.CalledProcessError as e:
@@ -98,6 +99,7 @@ class RayCluster(HelmChart):
             if p.name.startswith(self.release)
             and p.status.phase in ["Pending", "Running"]
         ]
+
         head = [p for p in pods if "head" in p.name][0]
         workers = [p for p in pods if "worker" in p.name]
         return head, workers
@@ -105,6 +107,7 @@ class RayCluster(HelmChart):
     def wait(self):
         # get pods related to this release
         head, workers = self.get_pods()
+
         # wait for pods to be ready;
         # can subclass to define "readiness"
         ready = False

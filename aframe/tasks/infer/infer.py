@@ -50,7 +50,7 @@ class InferParameters(law.Task):
     streams_per_gpu = luigi.IntParameter()
     repository_directory = luigi.Parameter(default="")
     rate_per_gpu = luigi.FloatParameter(
-        default="", description="Inferences per second per gpu"
+        default=100.0, description="Inferences per second per gpu"
     )
     zero_lag = luigi.BoolParameter(default=False)
 

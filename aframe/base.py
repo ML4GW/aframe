@@ -110,8 +110,19 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
         # which does not contain that much memory.
         # map in local tmpdir (should be /local/albert.einstein)
         # which has is enough memory to write large temp
-        # files with luigi/law
-        env["TMPDIR"] = f"/local/{os.getenv('USER')}"
+        # files with luigi/law. This is the location where
+        # luigi/law will write temporary files to disk before
+        # they are sent to s3
+        local = f"/local/{os.getenv('USER')}"
+        env["TMPDIR"] = local
+
+        # location for storing "temporary" files
+        # that will eventually be merged (and uploaded to s3)
+        # but want to keep around in case the workflow fails
+        # so that luigi/law caching can keep track of them.
+        # Can't use `AFRAME_TRAIN_DATA_DIR` because that might
+        # refer to an s3/remote directory
+        env["AFRAME_TMPDIR"] = os.getenv("AFRAME_TMPDIR", local)
 
         # if gpus are specified, expose them inside container
         # via CUDA_VISIBLE_DEVICES env variable

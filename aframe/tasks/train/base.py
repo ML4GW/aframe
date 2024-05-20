@@ -54,7 +54,7 @@ class TrainBaseParameters(law.Task):
         "files used for training"
     )
     ckpt_path = luigi.Parameter(
-        default=None,
+        default="",
         description="Path to checkpoint file from which "
         "to restart training",
     )
