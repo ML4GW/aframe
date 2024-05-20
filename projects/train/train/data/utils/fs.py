@@ -102,7 +102,11 @@ def download_training_data(bucket: str, data_dir: str):
 
     # check to make sure the specified bucket
     # actually has data to download
-    s3 = s3fs.S3FileSystem()
+    s3 = s3fs.S3FileSystem(
+        key=os.getenv("AWS_ACCESS_KEY_ID"),
+        secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+    )
     background_fnames = s3.glob(f"{bucket}/background/*.hdf5")
     if not background_fnames:
         raise ValueError(f"No background data at {bucket} to download")

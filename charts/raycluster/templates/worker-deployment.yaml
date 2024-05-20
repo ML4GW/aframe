@@ -98,8 +98,10 @@ spec:
             limits:
               nvidia.com/gpu: {{ .Values.worker.gpu | quote }}
               cpu: {{ .Values.worker.cpu | quote }}
+              ephemeral-storage: 110Gi
               memory: {{ .Values.worker.memory | quote }}
             requests:
               nvidia.com/gpu: {{ .Values.worker.gpu | quote }}
               cpu: {{ .Values.worker.cpu | quote }}
+              ephemeral-storage: 100Gi
               memory: {{ .Values.worker.memory | quote }}
