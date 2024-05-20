@@ -66,7 +66,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         snr_thresh: float = 4,
         max_snr: float = 100,
         snr_alpha: float = 3,
-        trigger_pad: float = 0,
         left_pad: float = 0,
         right_pad: float = 0,
         fftlength: Optional[float] = None,
@@ -164,14 +163,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             + self.hparams.fduration
             + self.hparams.psd_length
         )
-
-    @property
-    def pad_size(self) -> int:
-        """
-        Number of samples away from edge of kernel to ensure
-        that waveforms are injected at.
-        """
-        return int(self.hparams.trigger_pad * self.sample_rate)
 
     @property
     def filter_size(self) -> int:
@@ -436,22 +427,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             X_bg, X_fg = self.build_val_batches(background, signals)
             batch = (shift, X_bg, X_fg)
         return batch
-
-    def pad_waveforms(self, waveforms, kernel_size):
-        """
-        Add padding after a batch of waveforms to
-        ensure that a uniformly sampled kernel will
-        always be at least `self.pad_size` away
-        from the end of the waveform (assumed to
-        contain the coalescence) _after_ whitening.
-        """
-        filter_pad = self.filter_size // 2
-        pad = kernel_size - filter_pad
-        waveforms = waveforms[:, :, -pad - self.pad_size :]
-
-        pad = kernel_size - self.pad_size
-        waveforms = torch.nn.functional.pad(waveforms, [0, pad])
-        return waveforms
 
     @torch.no_grad()
     def augment(self, X):
