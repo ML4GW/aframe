@@ -67,6 +67,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         max_snr: float = 100,
         snr_alpha: float = 3,
         trigger_pad: float = 0,
+        left_pad: float = 0,
+        right_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
         snr_sampler: Optional[
@@ -171,6 +173,22 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         return int(self.hparams.trigger_pad * self.sample_rate)
 
+    @property
+    def left_pad_size(self) -> int:
+        """
+        Minimum numer of samples that the defining point of the
+        signal will be from the left edge of the unwhitened kernel
+        """
+        return int(self.hparams.left_pad * self.sample_rate)
+
+    @property
+    def right_pad_size(self) -> int:
+        """
+        Minimum numer of samples that the defining point of the
+        signal will be from the left edge of the unwhitened kernel
+        """
+        return int(self.hparams.right_pad * self.sample_rate)
+
     # TODO: Come up with a more clever scheme for breaking up
     # our training and validation background data
     @property
@@ -216,13 +234,30 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def load_signals(self, dataset, start, stop):
         """
-        Loads waveforms assuming that the coalescence
-        is in the middle, but we should really stop
-        this. TODO: stop this
+        Loads waveforms with signals placed `signal_time`
+        seconds into the timeseries. Loads only as much
+        signal as could be required, padding if needed
         """
-        size = int(dataset.shape[-1] // 2)
-        pad = int(0.02 * self.sample_rate)
-        signals = torch.Tensor(dataset[start:stop, : size + pad])
+        signal_idx = int(self.signal_time * self.sample_rate)
+        kernel_size = int(self.hparams.kernel_length * self.sample_rate)
+
+        if kernel_size < self.left_pad_size + self.right_pad_size:
+            raise ValueError(
+                f"Kernel size ({kernel_size}) cannot be less than total "
+                f"padding ({self.left_pad_size} + {self.right_pad_size})"
+            )
+
+        signal_start = signal_idx - (kernel_size - self.right_pad_size)
+        signal_stop = signal_idx + kernel_size - self.left_pad_size
+
+        # If signal_start is less than 0, add padding on the left
+        left_pad = -1 * min(signal_start, 0)
+        # If signal_stop is larger than the dataset, add padding on the right
+        right_pad = max(signal_stop - dataset.shape[-1], 0)
+
+        signals = torch.Tensor(dataset[start:stop])
+        signals = torch.nn.functional.pad(signals, [left_pad, right_pad])
+        signals = signals[..., signal_start:signal_stop]
         self._logger.info("Waveforms loaded")
 
         cross, plus = signals[:, 0], signals[:, 1]
@@ -240,6 +275,9 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def load_train_waveforms(self, f, world_size, rank):
         dataset = f["signals"]
+        # Get the signal time here and assume it's the
+        # same for the validation waveforms
+        self.signal_time = f.attrs["coalescence_time"]
         num_train = len(dataset)
         if not rank:
             self._logger.info(f"Training on {num_train} waveforms")
@@ -456,13 +494,13 @@ class BaseAframeDataset(pl.LightningDataModule):
         # the background, each showing a different, overlapping
         # portion of the signal
         kernel_size = X.size(-1)
-        center = signals.size(-1) // 2
+        signal_idx = int(self.signal_time * self.sample_rate)
 
-        step = kernel_size + 2 * self.pad_size
+        step = kernel_size - self.left_pad_size - self.right_pad_size
         step /= self.hparams.num_valid_views - 1
         X_inj = []
         for i in range(self.hparams.num_valid_views):
-            start = center + self.pad_size - int(i * step)
+            start = signal_idx - self.left_pad_size - int(i * step)
             stop = start + kernel_size
             injected = X + signals[:, :, int(start) : int(stop)]
             injected = self.whitener(injected, psd)

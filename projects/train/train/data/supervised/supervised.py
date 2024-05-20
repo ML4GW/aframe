@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from ml4gw.utils.slicing import sample_kernels
+from ml4gw.utils.slicing import slice_kernels
 from train import augmentations as aug
 from train.data.base import BaseAframeDataset
 
@@ -51,11 +51,12 @@ class SupervisedAframeDataset(BaseAframeDataset):
         N = len(params[0])
         snrs = self.snr_sampler.sample((N,)).to(X.device)
         responses = self.projector(*params, snrs, psds[mask], **polarizations)
-        kernels = sample_kernels(
+        max_val = responses.size(-1) - X.size(-1) + 1
+        idx = torch.randint(max_val, size=N).to(X.device)
+        kernels = slice_kernels(
             responses,
+            idx=idx,
             kernel_size=X.size(-1),
-            max_center_offset=self.pad_size,
-            coincident=True,
         )
 
         # perform augmentations on the responses themselves,

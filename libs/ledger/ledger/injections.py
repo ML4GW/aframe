@@ -35,6 +35,7 @@ class InjectionMetadata(Ledger):
     sample_rate: np.ndarray = metadata()
     duration: np.ndarray = metadata()
     num_injections: int = metadata(default=0)
+    coalescence_time: float = metadata()
 
     def __post_init__(self):
         # verify that all waveforms have the appropriate duration
@@ -302,14 +303,14 @@ class InterferometerResponseSet(WaveformSet):
             if all([i is None for i in [start, end, shifts]]):
                 return cls._load_with_idx(f, None)
 
-            duration = f.attrs["duration"]
+            coalescence_time = f.attrs["coalescence_time"]
             times = f["parameters"]["injection_time"][:]
 
             mask = True
             if start is not None:
-                mask &= (times + duration / 2) >= start
+                mask &= (times + coalescence_time) >= start
             if end is not None:
-                mask &= (times - duration / 2) <= end
+                mask &= (times - coalescence_time) <= end
             if shifts is not None:
                 shifts = np.array(shifts)
                 ndim = shifts.ndim
@@ -354,8 +355,8 @@ class InterferometerResponseSet(WaveformSet):
         initial timestamp `start`
         """
         stop = start + x.shape[-1] / self.sample_rate
-        mask = self.injection_time >= (start - self.duration / 2)
-        mask &= self.injection_time <= (stop + self.duration / 2)
+        mask = self.injection_time >= (start - self.coalescence_time)
+        mask &= self.injection_time <= (stop + self.coalescence_time)
 
         if not mask.any():
             return x
@@ -366,7 +367,7 @@ class InterferometerResponseSet(WaveformSet):
         # potentially pad x to inject waveforms
         # that fall over the boundaries of chunks
         pad = []
-        earliest = (times - self.duration / 2 - start).min()
+        earliest = (times - self.coalescence_time - start).min()
         if earliest < 0:
             num_early = int(-earliest * self.sample_rate)
             pad.append(num_early)
@@ -374,7 +375,7 @@ class InterferometerResponseSet(WaveformSet):
         else:
             pad.append(0)
 
-        latest = (times + self.duration / 2 - stop).max()
+        latest = (times + self.coalescence_time - stop).max()
         if latest > 0:
             num_late = int(latest * self.sample_rate)
             pad.append(num_late)
@@ -388,7 +389,9 @@ class InterferometerResponseSet(WaveformSet):
         # create matrix of indices of waveform_size for each waveform
         waveforms = waveforms.transpose((1, 0, 2))
         _, num_waveforms, waveform_size = waveforms.shape
-        idx = np.arange(waveform_size) - waveform_size // 2
+        coalescence_time_idx = int(self.coalescence_time * self.sample_rate)
+
+        idx = np.arange(waveform_size) - coalescence_time_idx
         idx = idx[None]
         idx = np.repeat(idx, num_waveforms, axis=0)
 
