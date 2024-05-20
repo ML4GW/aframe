@@ -54,7 +54,7 @@ data:
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 
-        minimum: 4
+        minimum: 99
         maximum: 100
         index: -3
       # uncomment below and comment above for 
@@ -90,7 +90,7 @@ trainer:
   # strategy: set to ddp if len(devices) > 1
   #precision: 16-mixed
   accelerator: auto
-  max_epochs: 200
+  max_epochs: 2
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
   benchmark: true

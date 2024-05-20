@@ -249,7 +249,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             )
 
         signal_start = signal_idx - (kernel_size - self.right_pad_size)
-        signal_start += filter_size // 2
+        signal_start -= filter_size // 2
 
         signal_stop = signal_idx + (kernel_size - self.left_pad_size)
         signal_stop += filter_size // 2
