@@ -198,6 +198,11 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
+
+
+        print(checkpoint.default_root_dir)
+        print(self.trainer.logger.log_dir)
+        print(self.trainer.logger.save_dir)
         if not ray.is_initialized():
             print("RAY INIT")
             callbacks.append(checkpoint)
