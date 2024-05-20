@@ -174,6 +174,13 @@ class BaseAframeDataset(pl.LightningDataModule):
         return int(self.hparams.trigger_pad * self.sample_rate)
 
     @property
+    def filter_size(self) -> int:
+        """
+        Length of the time-domain whitening filter in samples
+        """
+        return int(self.hparams.fduration * self.sample_rate)
+
+    @property
     def left_pad_size(self) -> int:
         """
         Minimum numer of samples that the defining point of the
@@ -240,7 +247,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         signal_idx = int(self.signal_time * self.sample_rate)
         kernel_size = int(self.hparams.kernel_length * self.sample_rate)
-        filter_size = int(self.hparams.fduration * self.sample_rate)
 
         if kernel_size < self.left_pad_size + self.right_pad_size:
             raise ValueError(
@@ -249,10 +255,10 @@ class BaseAframeDataset(pl.LightningDataModule):
             )
 
         signal_start = signal_idx - (kernel_size - self.right_pad_size)
-        signal_start -= filter_size // 2
+        signal_start -= self.filter_size // 2
 
         signal_stop = signal_idx + (kernel_size - self.left_pad_size)
-        signal_stop += filter_size // 2
+        signal_stop += self.filter_size // 2
 
         # If signal_start is less than 0, add padding on the left
         left_pad = -1 * min(signal_start, 0)
@@ -439,7 +445,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         from the end of the waveform (assumed to
         contain the coalescence) _after_ whitening.
         """
-        filter_pad = int(self.hparams.fduration * self.sample_rate // 2)
+        filter_pad = self.filter_size // 2
         pad = kernel_size - filter_pad
         waveforms = waveforms[:, :, -pad - self.pad_size :]
 
@@ -499,16 +505,24 @@ class BaseAframeDataset(pl.LightningDataModule):
         # portion of the signal
         kernel_size = X.size(-1)
         signal_idx = int(self.signal_time * self.sample_rate)
-        max_stop_idx = signal_idx + kernel_size - self.left_pad_size
-        pad = max_stop_idx - signals.size(-1)
+        max_start = int(
+            signal_idx - self.left_pad_size - self.filter_size // 2
+        )
+        max_stop = max_start + kernel_size
+        pad = max_stop - signals.size(-1)
         if pad > 0:
             signals = torch.nn.functional.pad(signals, [0, pad])
 
-        step = kernel_size - self.left_pad_size - self.right_pad_size
+        step = (
+            kernel_size
+            - self.left_pad_size
+            - self.right_pad_size
+            - self.filter_size
+        )
         step /= self.hparams.num_valid_views - 1
         X_inj = []
         for i in range(self.hparams.num_valid_views):
-            start = signal_idx - self.left_pad_size - int(i * step)
+            start = max_start - int(i * step)
             stop = start + kernel_size
             injected = X + signals[:, :, int(start) : int(stop)]
             injected = self.whitener(injected, psd)
