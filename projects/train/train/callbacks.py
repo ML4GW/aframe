@@ -90,9 +90,6 @@ class AframeTrainReportCallback(Callback):
             shutil.rmtree(self.tmpdir_prefix)
 
     def on_train_epoch_end(self, trainer, pl_module) -> None:
-        import logging
-
-        logger = logging.getLogger("Checkpoint")
         # Creates a checkpoint dir with fixed name
         tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
         os.makedirs(tmpdir, exist_ok=True)
@@ -126,9 +123,6 @@ class AframeTrainReportCallback(Callback):
             torch.jit.save(trace, f)
 
         # save lightning checkpoint to local
-        # Save checkpoint to local
-
-        logger.info(tmpdir)
         ckpt_path = os.path.join(tmpdir, "checkpoint.ckpt")
         trainer.save_checkpoint(ckpt_path, weights_only=False)
 
