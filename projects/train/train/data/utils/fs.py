@@ -49,41 +49,26 @@ def get_data_dir(data_dir: str):
 
 
 def _download(
-    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 5
+    s3: s3fs.S3FileSystem, source: str, target: str
 ):
     """
     Cheap wrapper around s3.get to try to avoid issues
-    from interrupted reads.
+    from downloading same file from multiple processes
     """
 
     lockfile = target + ".lock"
     logging.info(f"Downloading {source} to {target}")
-    for i in range(num_retries):
-        with FileLock(lockfile):
-            if os.path.exists(target):
-                logging.info(
-                    f"Object {source} already downloaded by another process"
-                )
-                return
-            try:
-                s3.get(source, target)
-                break
-            except (ResponseStreamingError, FSTimeoutError, ClientError):
-                logging.info(
-                    "Download attempt {} for object {} "
-                    "was interrupted, retrying".format(i + 1, source)
-                )
-                time.sleep(5)
-                try:
-                    os.remove(target)
-                except FileNotFoundError:
-                    continue
 
-    else:
-        raise RuntimeError(
-            "Failed to download object {} due to repeated "
-            "connection interruptions".format(source)
-        )
+    with FileLock(lockfile):
+        if os.path.exists(target):
+            logging.info(
+                f"Object {source} already downloaded by another process"
+            )
+            return
+        
+        s3.get(source, target)
+          
+
 
 
 def download_training_data(bucket: str, data_dir: str):
@@ -105,7 +90,7 @@ def download_training_data(bucket: str, data_dir: str):
 
     retry_config = {
         'retries': {
-            'total_max_attempts': 5,
+            'total_max_attempts': 10,
             'mode': 'adaptive'  
         }
     }

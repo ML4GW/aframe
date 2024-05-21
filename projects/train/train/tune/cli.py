@@ -42,7 +42,7 @@ def main(args: Optional[list[str]] = None) -> str:
         storage_dir = storage_dir.removeprefix(prefix)
         retry_config = {
             'retries': {
-                'total_max_attempts': 5,
+                'total_max_attempts': 10,
                 'mode': 'adaptive'  
             }
         }
