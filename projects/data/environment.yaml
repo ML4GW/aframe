@@ -18,7 +18,6 @@ dependencies:
   - lalsuite
   - astropy
   - bilby>1.4,<2
-  - pycbc
   - libgcc
   # auth libs
   - krb5
