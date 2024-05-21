@@ -198,7 +198,13 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
+
+        self._logger.info(checkpoint.dirpath)
+        self._logger.info(self.trainer.default_root_dir)
+        self._logger.info(self.trainer.logger.log_dir)
+        self._logger.info(self.trainer.logger.save_dir)
         if not ray.is_initialized():
+            self._logger.info("RAY NOT INIT")
             callbacks.append(checkpoint)
 
         if self.hparams.patience is not None:
