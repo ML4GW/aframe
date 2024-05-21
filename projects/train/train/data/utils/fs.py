@@ -48,23 +48,42 @@ def get_data_dir(data_dir: str):
     return data_dir
 
 
-def _download(s3: s3fs.S3FileSystem, source: str, target: str):
+def _download(
+    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 5
+):
     """
     Cheap wrapper around s3.get to try to avoid issues
-    from downloading same file from multiple processes
+    from interrupted reads.
     """
 
     lockfile = target + ".lock"
     logging.info(f"Downloading {source} to {target}")
+    for i in range(num_retries):
+        with FileLock(lockfile):
+            if os.path.exists(target):
+                logging.info(
+                    f"Object {source} already downloaded by another process"
+                )
+                return
+            try:
+                s3.get(source, target)
+                break
+            except (ResponseStreamingError, FSTimeoutError, ClientError):
+                logging.info(
+                    "Download attempt {} for object {} "
+                    "was interrupted, retrying".format(i + 1, source)
+                )
+                time.sleep(5)
+                try:
+                    os.remove(target)
+                except FileNotFoundError:
+                    continue
 
-    with FileLock(lockfile):
-        if os.path.exists(target):
-            logging.info(
-                f"Object {source} already downloaded by another process"
-            )
-            return
-
-        s3.get(source, target)
+    else:
+        raise RuntimeError(
+            "Failed to download object {} due to repeated "
+            "connection interruptions".format(source)
+        )
 
 
 def download_training_data(bucket: str, data_dir: str):

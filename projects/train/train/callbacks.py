@@ -9,7 +9,8 @@ import torch
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from ray import train
-
+from botocore.exceptions import ClientError
+import time
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def on_train_end(self, trainer, pl_module):
@@ -55,6 +56,15 @@ class SaveAugmentedBatch(Callback):
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
 
+
+def report_with_retries(metrics, checkpoint, retries: int = 10):
+    for i in range(retries):
+        try:
+            train.report(metrics=metrics, checkpoint=checkpoint)
+            break
+        except ClientError:
+            time.sleep(5)
+            continue
 
 class AframeTrainReportCallback(Callback):
     """
@@ -117,7 +127,9 @@ class AframeTrainReportCallback(Callback):
 
         # Report to train session
         checkpoint = train.Checkpoint.from_directory(tmpdir)
-        train.report(metrics=metrics, checkpoint=checkpoint)
+
+        report_with_retries(metrics, checkpoint)
+        
 
         # Add a barrier to ensure all workers finished reporting here
         torch.distributed.barrier()
