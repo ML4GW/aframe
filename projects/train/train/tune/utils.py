@@ -155,8 +155,6 @@ class TrainFunc:
         passed here using our CLI.
         """
 
-        logging.getLogger("lightning.pytorch").setLevel(logging.DEBUG)
-
         ray_train_logger = logging.getLogger("ray.train")
         ray_train_logger.setLevel(logging.DEBUG)
 
