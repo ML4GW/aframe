@@ -2,15 +2,16 @@ import io
 import os
 import shutil
 import tempfile
+import time
 
 import h5py
 import s3fs
 import torch
+from botocore.exceptions import ClientError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from ray import train
-from botocore.exceptions import ClientError
-import time
+
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def on_train_end(self, trainer, pl_module):
@@ -58,13 +59,18 @@ class SaveAugmentedBatch(Callback):
 
 
 def report_with_retries(metrics, checkpoint, retries: int = 10):
-    for i in range(retries):
+    """
+    Call `train.report`, which will persist checkpoints to s3,
+    retrying after any possible errors
+    """
+    for _ in range(retries):
         try:
             train.report(metrics=metrics, checkpoint=checkpoint)
             break
         except ClientError:
             time.sleep(5)
             continue
+
 
 class AframeTrainReportCallback(Callback):
     """
@@ -85,6 +91,7 @@ class AframeTrainReportCallback(Callback):
 
     def on_train_epoch_end(self, trainer, pl_module) -> None:
         import logging
+
         logger = logging.getLogger("Checkpoint")
         # Creates a checkpoint dir with fixed name
         tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
@@ -119,7 +126,7 @@ class AframeTrainReportCallback(Callback):
             torch.jit.save(trace, f)
 
         # save lightning checkpoint to local
-        # Save checkpoint to local 
+        # Save checkpoint to local
 
         logger.info(tmpdir)
         ckpt_path = os.path.join(tmpdir, "checkpoint.ckpt")
@@ -127,9 +134,7 @@ class AframeTrainReportCallback(Callback):
 
         # Report to train session
         checkpoint = train.Checkpoint.from_directory(tmpdir)
-
         report_with_retries(metrics, checkpoint)
-        
 
         # Add a barrier to ensure all workers finished reporting here
         torch.distributed.barrier()

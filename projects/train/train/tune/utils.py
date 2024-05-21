@@ -23,7 +23,6 @@ difficulty finding resources from other people dealing with
 this issue.
 """
 
-import logging
 import importlib
 import math
 import os
@@ -147,7 +146,6 @@ class TrainFunc:
         self.name = name
         self.config = config
 
-
     def __call__(self, config):
         """
         Dump the config to a file, then parse it
@@ -155,17 +153,6 @@ class TrainFunc:
         passed here using our CLI.
         """
 
-        """
-        ray_train_logger = logging.getLogger("ray.train")
-        ray_train_logger.setLevel(logging.DEBUG)
-
-        ray_train_logger = logging.getLogger("ray.tune")
-        ray_train_logger.setLevel(logging.DEBUG)
-
-        logger = logging.getLogger("ray")
-        logger.setLevel(logging.DEBUG)
-        """
-        
         with NamedTemporaryFile(mode="w") as f:
             yaml.dump(self.config, f)
             args = ["-c", f.name]

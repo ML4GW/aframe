@@ -85,7 +85,11 @@ class Defaults:
 
 # mapping from external to internal nautilus urls
 nautilus_urls = {
-    "https://s3-west.nrp-nautilus.io": "http://rook-ceph-rgw-nautiluss3.rook",
+    # after chatting with computing folks from nautilus,
+    # learned that internal url was experiencing transient permission issues,
+    # so just map from external to external for the time being
+    # (which apparently is slower, but will still work) before this is fixed
+    "https://s3-west.nrp-nautilus.io": "https://s3-west.nrp-nautilus.io",
     "https://s3-central.nrp-nautilus.io": "http://rook-ceph-rgw-centrals3.rook-central",  # noqa: E501
     "https://s3-east.nrp-nautilus.io": "http://rook-ceph-rgw-easts3.rook-east",
 }
