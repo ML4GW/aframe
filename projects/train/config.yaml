@@ -39,6 +39,7 @@ data:
 
     # preprocessing args
     batch_size: 384
+    batches_per_epoch: 200
     # kernel_length:
     psd_length: 8
     # fduration:
