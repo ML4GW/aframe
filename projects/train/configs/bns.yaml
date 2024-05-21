@@ -36,7 +36,7 @@ data:
     # loading args
     # data_dir:
     # ifos:
-
+    batches_per_epoch: 200
     # preprocessing args
     batch_size: 576
     # kernel_length:

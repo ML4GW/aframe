@@ -56,6 +56,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         data_dir: str,
         ifos: Sequence[str],
         valid_frac: float,
+        batches_per_epoch: int,
         # preprocessing args
         batch_size: int,
         kernel_length: float,
@@ -498,13 +499,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
-        num_waveforms = self.waveform_sampler.num_waveforms
-
-        waveforms_per_batch = (
-            self.hparams.batch_size * self.hparams.waveform_prob
-        )
-        steps_per_epoch = 20 #int(4 * num_waveforms / waveforms_per_batch)
-
         # TODO: potentially introduce chunking here via
         # chunk_size/batches_per_chunk class args that
         # default to None
@@ -513,7 +507,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             channels=self.hparams.ifos,
             kernel_size=int(self.sample_rate * self.sample_length),
             batch_size=self.hparams.batch_size,
-            batches_per_epoch=steps_per_epoch,
+            batches_per_epoch=self.hparams.batches_per_epoch,
             coincident=False,
         )
 
