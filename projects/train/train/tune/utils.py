@@ -164,6 +164,14 @@ class TrainFunc:
         logger = logging.getLogger("ray")
         logger.setLevel(logging.DEBUG)
 
+        s3_logger = logging.getLogger("s3fs")
+        s3_logger.setLevel(logging.DEBUG)
+
+        logging.getLogger('boto3').setLevel(logging.DEBUG)
+        logging.getLogger('botocore').setLevel(logging.DEBUG)
+        
+
+
 
         with NamedTemporaryFile(mode="w") as f:
             yaml.dump(self.config, f)

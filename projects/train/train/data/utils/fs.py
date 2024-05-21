@@ -48,9 +48,7 @@ def get_data_dir(data_dir: str):
     return data_dir
 
 
-def _download(
-    s3: s3fs.S3FileSystem, source: str, target: str
-):
+def _download(s3: s3fs.S3FileSystem, source: str, target: str):
     """
     Cheap wrapper around s3.get to try to avoid issues
     from downloading same file from multiple processes
@@ -65,10 +63,8 @@ def _download(
                 f"Object {source} already downloaded by another process"
             )
             return
-        
-        s3.get(source, target)
-          
 
+        s3.get(source, target)
 
 
 def download_training_data(bucket: str, data_dir: str):
@@ -88,17 +84,12 @@ def download_training_data(bucket: str, data_dir: str):
     # check to make sure the specified bucket
     # actually has data to download
 
-    retry_config = {
-        'retries': {
-            'total_max_attempts': 10,
-            'mode': 'adaptive'  
-        }
-    }
+    retry_config = {"retries": {"total_max_attempts": 10, "mode": "adaptive"}}
     s3 = s3fs.S3FileSystem(
         key=os.getenv("AWS_ACCESS_KEY_ID"),
         secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
         endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
-        config_kwargs=retry_config
+        config_kwargs=retry_config,
     )
     background_fnames = s3.glob(f"{bucket}/background/*.hdf5")
     if not background_fnames:
