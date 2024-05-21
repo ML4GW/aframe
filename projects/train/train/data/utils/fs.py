@@ -102,10 +102,18 @@ def download_training_data(bucket: str, data_dir: str):
 
     # check to make sure the specified bucket
     # actually has data to download
+
+    retry_config = {
+        'retries': {
+            'total_max_attempts': 5,
+            'mode': 'adaptive'  
+        }
+    }
     s3 = s3fs.S3FileSystem(
         key=os.getenv("AWS_ACCESS_KEY_ID"),
         secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
         endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+        config_kwargs=retry_config
     )
     background_fnames = s3.glob(f"{bucket}/background/*.hdf5")
     if not background_fnames:
