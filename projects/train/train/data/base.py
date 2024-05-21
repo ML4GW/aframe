@@ -503,7 +503,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         waveforms_per_batch = (
             self.hparams.batch_size * self.hparams.waveform_prob
         )
-        steps_per_epoch = int(4 * num_waveforms / waveforms_per_batch)
+        steps_per_epoch = 20 #int(4 * num_waveforms / waveforms_per_batch)
 
         # TODO: potentially introduce chunking here via
         # chunk_size/batches_per_chunk class args that
