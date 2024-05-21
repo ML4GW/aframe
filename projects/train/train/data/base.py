@@ -288,6 +288,14 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def load_val_waveforms(self, f, world_size, rank):
         waveform_set = LigoWaveformSet.read(f)
+
+        if waveform_set.coalescence_time != self.signal_time:
+            raise ValueError(
+                "Training waveforms and validation waveforms have different "
+                f"signal times, got {self.signal_time} and "
+                f"{waveform_set.coalescence_time}, respectively"
+            )
+
         length = len(waveform_set.waveforms)
 
         if not rank:
