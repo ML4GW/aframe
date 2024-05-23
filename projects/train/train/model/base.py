@@ -198,6 +198,7 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
+
         if not ray.is_initialized():
             callbacks.append(checkpoint)
 

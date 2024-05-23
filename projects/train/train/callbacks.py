@@ -2,10 +2,12 @@ import io
 import os
 import shutil
 import tempfile
+import time
 
 import h5py
 import s3fs
 import torch
+from botocore.exceptions import ClientError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from ray import train
@@ -54,6 +56,20 @@ class SaveAugmentedBatch(Callback):
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
+
+
+def report_with_retries(metrics, checkpoint, retries: int = 10):
+    """
+    Call `train.report`, which will persist checkpoints to s3,
+    retrying after any possible errors
+    """
+    for _ in range(retries):
+        try:
+            train.report(metrics=metrics, checkpoint=checkpoint)
+            break
+        except ClientError:
+            time.sleep(5)
+            continue
 
 
 class AframeTrainReportCallback(Callback):
@@ -107,13 +123,12 @@ class AframeTrainReportCallback(Callback):
             torch.jit.save(trace, f)
 
         # save lightning checkpoint to local
-        # Save checkpoint to local
         ckpt_path = os.path.join(tmpdir, "checkpoint.ckpt")
         trainer.save_checkpoint(ckpt_path, weights_only=False)
 
         # Report to train session
         checkpoint = train.Checkpoint.from_directory(tmpdir)
-        train.report(metrics=metrics, checkpoint=checkpoint)
+        report_with_retries(metrics, checkpoint)
 
         # Add a barrier to ensure all workers finished reporting here
         torch.distributed.barrier()

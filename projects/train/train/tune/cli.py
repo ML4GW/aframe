@@ -9,6 +9,7 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
 from train.cli import AframeCLI
+from train.data.utils.fs import retry_config
 from train.tune import utils as tune_utils
 
 
@@ -47,6 +48,7 @@ def main(args: Optional[list[str]] = None) -> str:
             key=os.getenv("AWS_ACCESS_KEY_ID"),
             secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
             endpoint_url=endpoint_url,
+            config_kwargs=retry_config,
         )
         internal_fs = pyarrow.fs.PyFileSystem(
             pyarrow.fs.FSSpecHandler(internal_fs)
@@ -58,6 +60,7 @@ def main(args: Optional[list[str]] = None) -> str:
             key=os.getenv("AWS_ACCESS_KEY_ID"),
             secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
             endpoint_url=os.getenv("AWS_EXTERNAL_ENDPOINT_URL"),
+            config_kwargs=retry_config,
         )
         external_fs = pyarrow.fs.PyFileSystem(
             pyarrow.fs.FSSpecHandler(external_fs)
