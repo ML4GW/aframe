@@ -90,10 +90,9 @@ def main(args: Optional[list[str]] = None) -> str:
     search_space = tune_utils.get_search_space(tune_config["space"])
 
     # restore from a previous tuning run
-    path = os.path.join(storage_dir, tune_config["name"])
-    if tune.Tuner.can_restore(path, storage_filesystem=external_fs):
+    if tune.Tuner.can_restore(storage_dir, storage_filesystem=external_fs):
         tuner = tune.Tuner.restore(
-            path,
+            storage_dir,
             train_func,
             resume_errored=True,
             storage_filesystem=external_fs,
