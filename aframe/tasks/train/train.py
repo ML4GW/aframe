@@ -1,5 +1,4 @@
 import json
-import os
 import shlex
 import sys
 from typing import Dict
@@ -103,9 +102,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return args
 
     def output(self):
-        return LawS3Target(
-            os.path.join(self.run_dir, "model.pt"), format=Bytes
-        )
+        return LawS3Target(self.run_dir / "model.pt", format=Bytes)
 
     @property
     def gpu_constraints(self):

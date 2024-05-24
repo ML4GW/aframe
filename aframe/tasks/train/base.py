@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 import law
@@ -6,6 +5,7 @@ import luigi
 from luigi.util import inherits
 
 from aframe.config import Defaults
+from aframe.parameters import PathParameter
 from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
 from aframe.tasks.train.config import wandb
@@ -43,17 +43,17 @@ class TrainBaseParameters(law.Task):
     fduration = luigi.FloatParameter(
         description="Duration in seconds of the whitening filter to use,"
     )
-    run_dir = luigi.Parameter(
+    run_dir = PathParameter(
         description="Directory where the training logger "
         "will save checkpoints, logs, etc. "
     )
-    data_dir = luigi.Parameter(
+    data_dir = PathParameter(
         description="Directory where training data is stored."
         "It is expected to contain a `signals.hdf5` file of signals, "
         "and a `/background` sub-directory containing background "
         "files used for training"
     )
-    ckpt_path = luigi.Parameter(
+    ckpt_path = PathParameter(
         default="",
         description="Path to checkpoint file from which "
         "to restart training",
@@ -66,12 +66,11 @@ class TrainBase(law.Task):
         reqs = {}
         reqs["strain"] = FetchTrain.req(
             self,
-            segments_file=os.path.join(self.data_dir, "segments.txt"),
-            data_dir=os.path.join(self.data_dir, "background"),
+            segments_file=self.data_dir / "segments.txt",
+            data_dir=self.data_dir / "background",
         )
         reqs["train_waveforms"] = TrainingWaveforms.req(
-            self,
-            output_file=os.path.join(self.data_dir, "train_waveforms.hdf5"),
+            self, output_file=self.data_dir / "train_waveforms.hdf5"
         )
 
         reqs["val_waveforms"] = ValidationWaveforms.req(
