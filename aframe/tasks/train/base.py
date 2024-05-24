@@ -118,7 +118,7 @@ class TrainBase(law.Task):
             str(self.seed),
             f"--data.ifos=[{','.join(self.ifos)}]",
             "--data.data_dir",
-            self.data_dir,
+            str(self.data_dir),
         ]
         args = self.configure_data_args(args)
         if self.use_wandb and not wandb().api_key:
