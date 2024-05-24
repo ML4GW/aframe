@@ -16,12 +16,12 @@ class PathParameter(luigi.Parameter):
 
     def parse(self, x: PATH_LIKE):
         if isinstance(x, (Path, CloudPath)):
-            return x
-        elif isinstance(x, str):
+            return x / ""
+        if isinstance(x, str):
             if x.startswith("s3://"):
-                return CloudPath(x)
+                x = CloudPath(x) / ""
             else:
-                return Path(x)
+                x = Path(x) / ""
         else:
             raise ValueError(
                 f"Expected string, Path, or CloudPath, got {type(x)}"
