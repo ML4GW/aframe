@@ -1,5 +1,3 @@
-import os
-
 from aframe.base import AframeWrapperTask
 from aframe.pipelines.config import paths
 from aframe.tasks import ExportLocal, TimeslideWaveforms
@@ -12,7 +10,7 @@ class TuneExport(ExportLocal):
         return TuneRemote.req(
             self,
             data_dir=paths().train_datadir,
-            run_dir=os.path.join(paths().train_rundir),
+            run_dir=paths().train_rundir,
         )
 
 
@@ -20,10 +18,7 @@ class TuneInfer(InferLocal):
     def requires(self):
         reqs = {}
         reqs["model_repository"] = TuneExport.req(
-            self,
-            repository_directory=os.path.join(
-                paths().results_dir, "model_repo"
-            ),
+            self, repository_directory=paths().results_dir / "model_repo"
         )
         ts_waveforms = TimeslideWaveforms.req(
             self,
@@ -42,5 +37,5 @@ class Tune(AframeWrapperTask):
         # call all necessary downstream tasks!
         yield TuneInfer.req(
             self,
-            output_dir=os.path.join(paths().results_dir, "infer"),
+            output_dir=paths().results_dir / "infer",
         )
