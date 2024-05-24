@@ -52,7 +52,8 @@ class WaveformParams(law.Task):
         description="Approximant to use for waveform generation",
     )
     coalescence_time = luigi.FloatParameter(
-        description="Time of coalescence within the generated signal"
+        description="Location of the defining point of the signal "
+        "within the generated waveform"
     )
 
 
