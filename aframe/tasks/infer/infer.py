@@ -1,5 +1,4 @@
 import logging
-import os
 import socket
 import subprocess
 from pathlib import Path
@@ -11,6 +10,7 @@ from luigi.util import inherits
 
 from aframe.base import AframeSandboxTask
 from aframe.config import s3
+from aframe.parameters import PathParameter
 from aframe.tasks.export.export import ExportParams
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
@@ -34,7 +34,7 @@ def get_poetry_env(path):
 
 
 class InferParameters(law.Task):
-    output_dir = luigi.Parameter()
+    output_dir = PathParameter()
     ifos = luigi.ListParameter(default=["H1", "L1"])
     inference_sampling_rate = luigi.FloatParameter()
     batch_size = luigi.IntParameter()
@@ -84,15 +84,15 @@ class InferBase(AframeSandboxTask):
 
     @property
     def foreground_output(self):
-        return os.path.join(self.output_dir, "foreground.hdf5")
+        return self.output_dir / "foreground.hdf5"
 
     @property
     def background_output(self):
-        return os.path.join(self.output_dir, "background.hdf5")
+        return self.output_dir / "background.hdf5"
 
     @property
     def zero_lag_output(self):
-        return os.path.join(self.output_dir, "0lag.hdf5")
+        return self.output_dir / "0lag.hdf5"
 
     @property
     def background_fnames(self):
@@ -166,7 +166,7 @@ class InferLocal(InferBase):
             inference_sampling_rate=self.inference_sampling_rate,
             integration_window_length=self.integration_window_length,
             cluster_window_length=self.cluster_window_length,
-            output_dir=Path(self.output_dir),
+            output_dir=self.output_dir,
             model_version=self.model_version,
             num_parallel_jobs=self.num_clients,
             rate=self.rate_per_client,
@@ -267,7 +267,7 @@ class InferRemote(InferBase):
             inference_sampling_rate=self.inference_sampling_rate,
             integration_window_length=self.integration_window_length,
             cluster_window_length=self.cluster_window_length,
-            output_dir=Path(self.output_dir),
+            output_dir=self.output_dir,
             model_version=self.model_version,
             num_parallel_jobs=self.num_parallel_jobs,
         )

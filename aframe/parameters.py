@@ -19,9 +19,9 @@ class PathParameter(luigi.Parameter):
             return x / ""
         if isinstance(x, str):
             if x.startswith("s3://"):
-                x = CloudPath(x) / ""
+                return CloudPath(x) / ""
             else:
-                x = Path(x) / ""
+                return Path(x) / ""
         else:
             raise ValueError(
                 f"Expected string, Path, or CloudPath, got {type(x)}"

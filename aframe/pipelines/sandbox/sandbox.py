@@ -1,5 +1,3 @@
-import os
-
 import luigi
 
 from aframe.base import AframeWrapperTask
@@ -51,7 +49,7 @@ class SandboxSV(SensitiveVolume):
         )
         reqs["infer"] = SandboxInfer.req(
             self,
-            output_dir=os.path.join(paths().results_dir, "infer"),
+            output_dir=paths().results_dir / "infer",
             train_task=self.train_task,
         )
         return reqs
@@ -65,7 +63,7 @@ class _Sandbox(AframeWrapperTask):
         # call all necessary downstream tasks!
         return SandboxSV.req(
             self,
-            output_dir=os.path.join(paths().results_dir, "plots"),
+            output_dir=paths().results_dir / "plots",
             train_task=self.train_task,
         )
 
