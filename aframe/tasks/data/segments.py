@@ -1,5 +1,6 @@
 import luigi
 
+from aframe.parameters import PathParameter
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 
@@ -11,7 +12,7 @@ class Query(AframeDataTask):
 
     start = luigi.FloatParameter(description="Start time of segments to query")
     end = luigi.FloatParameter(description="End time of segments to query")
-    segments_file = luigi.Parameter(
+    segments_file = PathParameter(
         description="Output path where segments are written"
     )
     ifos = luigi.ListParameter(
