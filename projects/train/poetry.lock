@@ -11,6 +11,7 @@ develop = true
 
 [package.dependencies]
 boto3 = "^1.34.4"
+cloudpathlib = "^0.18.1"
 kr8s = "^0.10.0"
 law = "^0.1"
 luigi = "^3.0"
@@ -778,6 +779,26 @@ files = [
 
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[[package]]
+name = "cloudpathlib"
+version = "0.18.1"
+description = "pathlib-style classes for cloud storage services."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "cloudpathlib-0.18.1-py3-none-any.whl", hash = "sha256:20efd5d772c75df91bb2ac52e053be53fd9000f5e9755fd92375a2a9fe6005e0"},
+    {file = "cloudpathlib-0.18.1.tar.gz", hash = "sha256:ffd22f324bfbf9c3f2bc1bec6e8372cb372a0feef17c7f2b48030cd6810ea859"},
+]
+
+[package.dependencies]
+typing_extensions = {version = ">4", markers = "python_version < \"3.11\""}
+
+[package.extras]
+all = ["cloudpathlib[azure]", "cloudpathlib[gs]", "cloudpathlib[s3]"]
+azure = ["azure-storage-blob (>=12)"]
+gs = ["google-cloud-storage"]
+s3 = ["boto3"]
 
 [[package]]
 name = "colorama"
