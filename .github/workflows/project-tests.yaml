@@ -37,7 +37,7 @@ jobs:
           # don't run non-existent .github/workflow tests,
           # and exclude projects, whose tests are run in 
           # a different CI script
-          - library: 'workflow'
+          - project: 'workflow'
     permissions:
       packages: read
     container:
