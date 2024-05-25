@@ -12,10 +12,10 @@ on:
       - main
 
 jobs:
-  project-changes:
+  projectchanges:
     runs-on: ubuntu-latest
     outputs:
-      projects: ${{ steps.filter.outputs.project-changes }}
+      projects: ${{ steps.filter.outputs.projectchanges }}
     steps:
     - uses: actions/checkout@v2
     - uses: dorny/paths-filter@v2
@@ -28,11 +28,11 @@ jobs:
   # unit tests on these libs and projects
   tests:
     runs-on: ubuntu-latest
-    needs: project-changes
+    needs: projectchanges
     strategy:
       fail-fast: false # is this desired behavior here?
       matrix:
-        project: ${{ fromJSON(needs.project-changes.outputs.projects) }}
+        project: ${{ fromJSON(needs.projectchanges.outputs.projects) }}
         exclude:
           # don't run non-existent .github/workflow tests,
           # and exclude projects, whose tests are run in 
