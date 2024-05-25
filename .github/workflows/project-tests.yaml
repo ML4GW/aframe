@@ -38,7 +38,7 @@ jobs:
     permissions:
       packages: read
     container:
-      image: godlovedc/apptainer:sif-latest
+      image: quay.io/singularity/singularity:v3.8.1
       options: --privileged
     steps:
       - name: Checkout repository
@@ -49,8 +49,8 @@ jobs:
       - name: Build Apptainer image
         run: |
           cd projects/${{ matrix.project }}
-          apptainer build --fakeroot ${{ matrix.project }}.sif apptainer.def
+          singularity build --fakeroot ${{ matrix.project }}.sif apptainer.def
 
       - name: Run tests in Apptainer container
         run: |
-          apptainer exec --fakeroot ${{ matrix.project }}.sif poetry run pytest
+          singularity exec --fakeroot ${{ matrix.project }}.sif poetry run pytest
