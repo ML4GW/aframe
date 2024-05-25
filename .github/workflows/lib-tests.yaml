@@ -70,5 +70,6 @@ jobs:
         env:
           test_dir: /github/workspace/${{ matrix.library }}
         run: |
+            cd $test_dir
             poetry run pytest
         shell: bash
