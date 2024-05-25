@@ -1,0 +1,73 @@
+name: lib-tests
+ 
+on:
+  pull_request:
+   types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  push:
+    branches:
+      - main
+
+jobs:
+  # first job users filters to output which libraries
+  # and projects have updates that need testing
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      libraries: ${{ steps.filter.outputs.changes }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: dorny/paths-filter@v2
+      id: filter 
+      with:
+        filters: .github/filters.yaml
+    if: github.event.pull_request.draft == false
+
+  # second job takes those outputs and runs
+  # unit tests on these libs and projects
+  tests:
+    runs-on: ubuntu-latest
+    needs: changes
+    strategy:
+      fail-fast: true # is this desired behavior here?
+      matrix:
+        library: ${{ fromJSON(needs.changes.outputs.libraries) }}
+        exclude:
+          # don't run non-existent .github/workflow tests,
+          # and exclude projects, whose tests are run in 
+          # a different CI script
+          - library: 'workflow'
+          - library: 'projects/**'
+    permissions:
+      packages: read
+    container:
+      image: python:3.10.12-slim-bullseye
+      volumes:
+        - ${{ github.workspace }}:/github/workspace
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      # build the libraries environment
+      -
+        name: build environment
+        env:
+          test_dir: /github/workspace/${{ matrix.library }}
+        # TODO: use case statement here, or add separate matrix.build_args
+        run: |
+            python -m pip install poetry
+            poetry install
+        shell: bash
+
+      # run its unit tests inside that environment
+      - 
+        name: run tests 
+        env:
+          test_dir: /github/workspace/${{ matrix.library }}
+        run: |
+            poetry run pytest
+        shell: bash
