@@ -38,7 +38,7 @@ jobs:
     permissions:
       packages: read
     container:
-      image: quay.io/singularity/singularity:v3.8.1
+      image: godlovedc/apptainer:sif-latest
       options: --privileged
     steps:
       - name: Checkout repository
