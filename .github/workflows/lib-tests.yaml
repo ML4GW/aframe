@@ -32,7 +32,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     strategy:
-      fail-fast: true # is this desired behavior here?
       matrix:
         library: ${{ fromJSON(needs.changes.outputs.libraries) }}
         exclude:
