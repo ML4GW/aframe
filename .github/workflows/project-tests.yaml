@@ -12,7 +12,7 @@ on:
       - main
 
 jobs:
-  projectchanges:
+  changes:
     runs-on: ubuntu-latest
     outputs:
       projects: ${{ steps.filter.outputs.projectchanges }}
@@ -28,11 +28,11 @@ jobs:
 
   tests:
     runs-on: ubuntu-latest
-    needs: projectchanges
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.projectchanges.outputs.projects) }}
+        project: ${{ fromJSON(needs.changes.outputs.projects) }}
         exclude:
           - project: 'workflow' # Fixed the exclusion key
     permissions:
