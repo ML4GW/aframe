@@ -4,22 +4,49 @@
 # to convert between the formats in order to handle
 # the large memory footprints of our containers without
 # toppling over the GitHub runner nodes this executes on.
-name: container-build 
-on: 
+name: project tests
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   push:
+    branches:
+      - main
+
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.filter.outputs.changes }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Filter project changes
+      id: filter 
+      uses: dorny/paths-filter@v2
+      with:
+        filters: .github/project-filters.yaml
+      if: github.event.pull_request.draft == false
+
+  build-test:
+    runs-on: ubuntu-latest
+    needs: changes
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        project: [train, export, data]
+        project: ${{ fromJSON(needs.changes.outputs.projects) }}
+        exclude:
+          - project: 'workflow' # Fixed the exclusion key
     steps:
     -
       name: Delete huge unnecessary tools folder
@@ -55,11 +82,16 @@ jobs:
           quay.io/singularity/singularity:v3.8.1 \
           -c 'singularity build --sandbox /tmp/app apptainer.def && tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
 
+    - 
+      name: Run tests
+      run: |
+        singularity run /tmp/app poetry run pytest
+        
     # now copy the fs contents into an empty
     # container and push it to the registry,
     # using a lowercase version of the tag since
     # the github environment variables are case-sensitive
-    # TODO: add step to run tests inside docker
+
     
     # TODO: currently combining path for nvidia variables 
     # necessary to launch triton in export container
