@@ -23,7 +23,3 @@ libs/architectures/:
 libs/ledger:
   - *workflow
   - 'libs/ledger/**'
-
-libs/priors:
-  - *workflow
-  - '/libs/priors/**'
