@@ -15,7 +15,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      projects: ${{ steps.filter.outputs.projectchanges }}
+      projects: ${{ steps.filter.outputs.changes }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
