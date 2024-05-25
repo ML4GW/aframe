@@ -61,9 +61,8 @@ jobs:
           test_dir: /github/workspace/${{ matrix.library }}
         # TODO: use case statement here, or add separate matrix.build_args
         run: |
-            pwd
-            ls
             python -m pip install poetry
+            cd $test_dir
             poetry install
         shell: bash
 
@@ -73,10 +72,6 @@ jobs:
         env:
           test_dir: /github/workspace/${{ matrix.library }}
         run: |
-            pwd
-            ls
             cd $test_dir
-            pwd
-            ls
             poetry run pytest
         shell: bash
