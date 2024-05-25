@@ -2,7 +2,7 @@ name: project tests
 
 on:
   pull_request:
-   types:
+    types:
       - opened
       - reopened
       - synchronize
@@ -17,27 +17,24 @@ jobs:
     outputs:
       projects: ${{ steps.filter.outputs.projectchanges }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: dorny/paths-filter@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Filter project changes
       id: filter 
+      uses: dorny/paths-filter@v2
       with:
         filters: .github/project-filters.yaml
-    if: github.event.pull_request.draft == false
+      if: github.event.pull_request.draft == false
 
-  # second job takes those outputs and runs
-  # unit tests on these libs and projects
   tests:
     runs-on: ubuntu-latest
     needs: projectchanges
     strategy:
-      fail-fast: false # is this desired behavior here?
+      fail-fast: false
       matrix:
         project: ${{ fromJSON(needs.projectchanges.outputs.projects) }}
         exclude:
-          # don't run non-existent .github/workflow tests,
-          # and exclude projects, whose tests are run in 
-          # a different CI script
-          - project: 'workflow'
+          - project: 'workflow' # Fixed the exclusion key
     permissions:
       packages: read
     container:
