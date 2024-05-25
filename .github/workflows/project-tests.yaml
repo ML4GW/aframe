@@ -1,0 +1,38 @@
+name: Project Tests
+
+on:
+  pull_request:
+   types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/singularity/singularity:v3.8.1
+      options: --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [train, export, data]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Build Apptainer image
+      run: |
+        cd projects/${{ matrix.project }}
+        apptainer build --fakeroot ${matrix.project}.sif apptainer.def
+
+    - name: Run tests in Apptainer container
+      run: |
+        cd projects/${{ matrix.project }}
+        apptainer exec --fakeroot ${matrix.project}.sif poetry run pytest
