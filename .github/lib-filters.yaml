@@ -4,8 +4,8 @@
 # filter for changes
 # to workflow
 workflow: &workflow
-  - '.github/filters.yaml'
-  - '.github/workflows/ci-tests.yaml'
+  - '.github/lib-filters.yaml'
+  - '.github/workflows/lib-tests.yaml'
 
 
 # use paths for filter names 
