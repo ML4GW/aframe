@@ -28,7 +28,7 @@ jobs:
   # unit tests on these libs and projects
   tests:
     runs-on: ubuntu-latest
-    needs: changes
+    needs: project-changes
     strategy:
       fail-fast: false # is this desired behavior here?
       matrix:
