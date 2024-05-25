@@ -4,6 +4,7 @@ import law
 import luigi
 from law.contrib import htcondor
 
+from aframe.parameters import PathParameter
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 
@@ -12,7 +13,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     Base class for law workflows that run via condor on LDG
     """
 
-    condor_directory = luigi.Parameter()
+    condor_directory = PathParameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
     request_disk = luigi.Parameter(default="1024")
@@ -46,9 +47,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
 
     @property
     def htcondor_log_dir(self):
-        return law.LocalDirectoryTarget(
-            os.path.join(self.condor_directory, "logs")
-        )
+        return law.LocalDirectoryTarget(self.condor_directory / "logs")
 
     @property
     def job_file_dir(self):

@@ -1,5 +1,3 @@
-import glob
-import importlib
 import os
 import shutil
 from pathlib import Path
@@ -8,20 +6,11 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.parameters import PathParameter, load_prior
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTrain
-
-
-def load_prior(path):
-    """
-    Load prior from python path string
-    """
-    module_path, prior = path.rsplit(".", 1)
-    module = importlib.import_module(module_path)
-    prior = getattr(module, prior)
-    return prior
 
 
 class WaveformParams(law.Task):
@@ -59,7 +48,7 @@ class TrainingWaveforms(AframeDataTask):
     Generate waveforms for training
     """
 
-    output_file = luigi.Parameter()
+    output_file = PathParameter()
 
     def output(self):
         return s3_or_local(self.output_file)
@@ -80,6 +69,7 @@ class TrainingWaveforms(AframeDataTask):
         )
         prior = load_prior(self.prior)
         prior, detector_frame_prior = prior()
+
         samples = prior.sample(self.num_signals)
         if not detector_frame_prior:
             samples = convert_to_detector_frame(samples)
@@ -98,10 +88,10 @@ class DeployValidationWaveforms(
     Generate waveforms for validation via rejection sampling
     """
 
-    output_dir = luigi.Parameter(
+    output_dir = PathParameter(
         description="Directory where validation waveforms will be saved"
     )
-    tmp_dir = luigi.Parameter(
+    tmp_dir = PathParameter(
         description="Directory where temporary validation "
         "waveforms will be saved before being merged",
         default=os.getenv("AFRAME_TMPDIR", f"/local/{os.getenv('USER')}"),
@@ -125,19 +115,17 @@ class DeployValidationWaveforms(
         reqs = super().workflow_requires()
         reqs["psd_segment"] = FetchTrain.req(
             self,
-            data_dir=os.path.join(self.output_dir, "background"),
-            segments_file=os.path.join(self.output_dir, "segments.txt"),
+            data_dir=self.output_dir / "background",
+            segments_file=self.output_dir / "segments.txt",
         )
         return reqs
 
     @property
     def branch_tmp_dir(self):
-        return os.path.join(self.tmp_dir, f"tmp-{self.branch}")
+        return self.tmp_dir / f"tmp-{self.branch}"
 
     def output(self):
-        return law.LocalFileTarget(
-            os.path.join(self.branch_tmp_dir, "val_waveforms.hdf5")
-        )
+        return law.LocalFileTarget(self.branch_tmp_dir / "val_waveforms.hdf5")
 
     def create_branch_map(self):
         # split the number of signals into num_jobs branches
@@ -207,10 +195,10 @@ class ValidationWaveforms(AframeDataTask):
     rejection sampling, and merge results into a single file
     """
 
-    output_dir = luigi.Parameter(
+    output_dir = PathParameter(
         description="Directory where merged validation waveforms will be saved"
     )
-    condor_directory = luigi.Parameter(
+    condor_directory = PathParameter(
         default=os.path.join(
             os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
             "validation_waveforms",
@@ -219,7 +207,7 @@ class ValidationWaveforms(AframeDataTask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.output_file = os.path.join(self.output_dir, "val_waveforms.hdf5")
+        self.output_file = self.output_dir / "val_waveforms.hdf5"
 
     def output(self):
         return s3_or_local(self.output_file)
@@ -242,5 +230,5 @@ class ValidationWaveforms(AframeDataTask):
             LigoWaveformSet.aggregate(self.waveform_files, f, clean=True)
 
         # clean up temporary directories
-        for dirname in glob.glob(os.path.join(self.output_dir, "tmp-*")):
+        for dirname in self.output_dir.glob("tmp-*"):
             shutil.rmtree(dirname)

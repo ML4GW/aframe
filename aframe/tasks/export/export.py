@@ -5,6 +5,7 @@ import luigi
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
+from aframe.parameters import PathParameter
 from aframe.tasks.export.target import ModelRepositoryTarget
 
 
@@ -14,7 +15,7 @@ class ExportParams(law.Task):
     kernel_length = luigi.FloatParameter()
     inference_sampling_rate = luigi.FloatParameter()
     sample_rate = luigi.FloatParameter()
-    repository_directory = luigi.Parameter()
+    repository_directory = PathParameter()
     batch_file = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
@@ -34,7 +35,7 @@ class ExportParams(law.Task):
 class ExportLocal(AframeSingularityTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        os.makedirs(self.repository_directory, exist_ok=True)
+        self.repository_directory.mkdir(exist_ok=True, parents=True)
 
     def output(self):
         return ModelRepositoryTarget(self.repository_directory)

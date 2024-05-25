@@ -87,7 +87,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return cluster
 
     def output(self):
-        return LawS3Target(f"{self.run_dir}/best.pt")
+        path = self.run_dir / "best.pt"
+        return LawS3Target(str(path))
 
     def run(self):
         from train.tune.cli import main

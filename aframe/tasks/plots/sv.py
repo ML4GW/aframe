@@ -1,4 +1,3 @@
-import importlib
 import math
 import os
 
@@ -6,18 +5,9 @@ import law
 import luigi
 
 from aframe.base import AframeSingularityTask
+from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.timeslide_waveforms import DeployTimeslideWaveforms
 from aframe.tasks.infer import InferLocal
-
-
-def load_prior(path):
-    """
-    Load prior from python path string
-    """
-    module_path, prior = path.rsplit(".", 1)
-    module = importlib.import_module(module_path)
-    prior = getattr(module, prior)
-    return prior
 
 
 class SensitiveVolume(AframeSingularityTask):
@@ -36,7 +26,7 @@ class SensitiveVolume(AframeSingularityTask):
         description="Time difference to enforce "
         "between injected and recovered events",
     )
-    output_dir = luigi.Parameter(
+    output_dir = PathParameter(
         description="Path to the directory to save the output plots and data"
     )
 

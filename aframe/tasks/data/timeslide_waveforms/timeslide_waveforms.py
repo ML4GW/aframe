@@ -1,5 +1,3 @@
-import glob
-import importlib
 import os
 import shutil
 from pathlib import Path
@@ -10,6 +8,7 @@ import luigi
 from luigi.util import inherits
 
 import aframe.utils as utils
+from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTest
@@ -23,7 +22,7 @@ class TimeSlideWaveformsParams(law.Task):
     end = luigi.FloatParameter()
     ifos = luigi.ListParameter()
     num_injections = luigi.IntParameter()
-    output_dir = luigi.Parameter()
+    output_dir = PathParameter()
     shifts = luigi.ListParameter()
     spacing = luigi.FloatParameter()
     buffer = luigi.FloatParameter()
@@ -50,16 +49,10 @@ class DeployTimeslideWaveforms(
         reqs = {}
         reqs["test_segments"] = FetchTest.req(
             self,
-            segments_file=os.path.join(self.output_dir, "segments.txt"),
-            data_dir=os.path.join(self.output_dir, "background"),
+            segments_file=self.output_dir / "segments.txt",
+            data_dir=self.output_dir / "background",
         )
         return reqs
-
-    def load_prior(self):
-        module_path, prior = self.prior.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        prior = getattr(module, prior)
-        return prior
 
     # for now, require that testing segments exist.
     # in principle, we could just require that the segments __file__
@@ -90,10 +83,8 @@ class DeployTimeslideWaveforms(
     @workflow_condition.output
     def output(self):
         return [
-            law.LocalFileTarget(os.path.join(self.tmp_dir, "waveforms.hdf5")),
-            law.LocalFileTarget(
-                os.path.join(self.tmp_dir, "rejected-parameters.hdf5")
-            ),
+            law.LocalFileTarget(self.tmp_dir / "waveforms.hdf5"),
+            law.LocalFileTarget(self.tmp_dir / "rejected-parameters.hdf5"),
         ]
 
     @property
@@ -126,7 +117,7 @@ class DeployTimeslideWaveforms(
 
     @property
     def tmp_dir(self):
-        return os.path.join(self.output_dir, f"tmp-{self.branch}")
+        return self.output_dir / f"tmp-{self.branch}"
 
     def run(self):
         import io
@@ -136,7 +127,7 @@ class DeployTimeslideWaveforms(
             timeslide_waveforms,
         )
 
-        prior = self.load_prior()
+        prior = load_prior(self.prior)
         start, end, shift, psd_segment = self.branch_data
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
@@ -163,7 +154,7 @@ class DeployTimeslideWaveforms(
 
 @inherits(DeployTimeslideWaveforms)
 class TimeslideWaveforms(AframeDataTask):
-    condor_directory = luigi.Parameter(
+    condor_directory = PathParameter(
         default=os.path.join(
             os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
             "timeslide_waveforms",
@@ -172,10 +163,8 @@ class TimeslideWaveforms(AframeDataTask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.waveform_output = os.path.join(self.output_dir, "waveforms.hdf5")
-        self.rejected_output = os.path.join(
-            self.output_dir, "rejected-parameters.hdf5"
-        )
+        self.waveform_output = self.output_dir / "waveforms.hdf5"
+        self.rejected_output = self.output_dir / "rejected-parameters.hdf5"
 
     def output(self):
         return [
@@ -213,5 +202,5 @@ class TimeslideWaveforms(AframeDataTask):
             self.rejected_parameter_files, self.rejected_output, clean=True
         )
         # clean up temporary directories
-        for dirname in glob.glob(os.path.join(self.output_dir, "tmp-*")):
+        for dirname in self.output_dir.glob("tmp-*"):
             shutil.rmtree(dirname)

@@ -48,7 +48,7 @@ spec:
           - name: GITSYNC_REPO
             value: {{ .Values.gitRepo.url }}
           - name: GITSYNC_REF
-            value: main
+            value: {{ .Values.gitRepo.ref }} 
           - name: GITSYNC_ROOT
             value: /opt
           - name: GITSYNC_LINK
