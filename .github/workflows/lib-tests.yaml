@@ -23,7 +23,7 @@ jobs:
     - uses: dorny/paths-filter@v2
       id: filter 
       with:
-        filters: .github/filters.yaml
+        filters: .github/lib-filters.yaml
     if: github.event.pull_request.draft == false
 
   # second job takes those outputs and runs
@@ -40,8 +40,6 @@ jobs:
           # and exclude projects, whose tests are run in 
           # a different CI script
           - library: 'workflow'
-          - library: 'projects/**'
-          - library: 'projects/export/'
     permissions:
       packages: read
     container:
@@ -59,7 +57,6 @@ jobs:
         name: build environment
         env:
           test_dir: /github/workspace/${{ matrix.library }}
-        # TODO: use case statement here, or add separate matrix.build_args
         run: |
             python -m pip install poetry
             cd $test_dir
