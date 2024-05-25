@@ -38,21 +38,23 @@ jobs:
           # and exclude projects, whose tests are run in 
           # a different CI script
           - library: 'workflow'
+    permissions:
+      packages: read
     container:
       image: quay.io/singularity/singularity:v3.8.1
       options: --privileged
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Build Apptainer image
-      run: |
-        cd projects/${{ matrix.project }}
-        apptainer build --fakeroot ${matrix.project}.sif apptainer.def
+      - name: Build Apptainer image
+        run: |
+          cd projects/${{ matrix.project }}
+          apptainer build --fakeroot ${matrix.project}.sif apptainer.def
 
-    - name: Run tests in Apptainer container
-      run: |
-        cd projects/${{ matrix.project }}
-        apptainer exec --fakeroot ${matrix.project}.sif poetry run pytest
+      - name: Run tests in Apptainer container
+        run: |
+          cd projects/${{ matrix.project }}
+          apptainer exec --fakeroot ${matrix.project}.sif poetry run pytest
