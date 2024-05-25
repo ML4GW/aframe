@@ -1,4 +1,4 @@
-name: Library Tests
+name: library tests
  
 on:
   pull_request:

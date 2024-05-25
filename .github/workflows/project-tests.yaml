@@ -1,4 +1,4 @@
-name: Project Tests
+name: project tests
 
 on:
   pull_request:
@@ -12,15 +12,35 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.filter.outputs.changes }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: dorny/paths-filter@v2
+      id: filter 
+      with:
+        filters: .github/project-filters.yaml
+    if: github.event.pull_request.draft == false
+
+  # second job takes those outputs and runs
+  # unit tests on these libs and projects
+  tests:
+    runs-on: ubuntu-latest
+    needs: changes
+    strategy:
+      fail-fast: false # is this desired behavior here?
+      matrix:
+        project: ${{ fromJSON(needs.changes.outputs.projects) }}
+        exclude:
+          # don't run non-existent .github/workflow tests,
+          # and exclude projects, whose tests are run in 
+          # a different CI script
+          - library: 'workflow'
     container:
       image: quay.io/singularity/singularity:v3.8.1
       options: --privileged
-    strategy:
-      fail-fast: false
-      matrix:
-        project: [train, export, data]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
