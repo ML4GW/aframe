@@ -49,8 +49,8 @@ jobs:
       - name: Build Apptainer image
         run: |
           cd projects/${{ matrix.project }}
-          singularity build --fakeroot ${{ matrix.project }}.sif apptainer.def
+          singularity build ${{ matrix.project }}.sif apptainer.def
 
       - name: Run tests in Apptainer container
         run: |
-          singularity exec --fakeroot ${{ matrix.project }}.sif poetry run pytest
+          singularity exec ${{ matrix.project }}.sif poetry run pytest
