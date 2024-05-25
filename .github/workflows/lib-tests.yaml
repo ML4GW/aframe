@@ -44,7 +44,8 @@ jobs:
     permissions:
       packages: read
     container:
-      image: python:3.10.12-slim-bullseye
+      # container with python and git
+      image: cicirello/pyaction:4.14.0
       volumes:
         - ${{ github.workspace }}:/github/workspace
     steps:
