@@ -94,7 +94,7 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec /opt/aframe/sandbox --env PATH=${{ env.PATH }} poetry run pytest'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox poetry run pytest'
 
     - name: tar singularity sandbox
       run: |
