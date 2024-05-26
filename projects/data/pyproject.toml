@@ -16,6 +16,9 @@ priors = {path = "../../libs/priors", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
 aframe = {path = "../..", develop = true}
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
