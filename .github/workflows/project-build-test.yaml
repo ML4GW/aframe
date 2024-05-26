@@ -91,7 +91,7 @@ jobs:
           --workdir /opt/aframe/projects/${{ matrix.project }} \
           --privileged \
           quay.io/singularity/singularity:v3.8.1 \
-          /bin/bash -c 'singularity exec /opt/aframe/sandbox poetry run pytest`
+          /bin/bash -c 'singularity exec /opt/aframe/sandbox poetry run pytest'
 
     - name: tar singularity sandbox
       run: |
@@ -101,7 +101,7 @@ jobs:
           --workdir /opt/aframe/projects/${{ matrix.project }} \
           --privileged \
           quay.io/singularity/singularity:v3.8.1 \
-          tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
+          tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
         
     # now copy the fs contents into an empty
     # container and push it to the registry,
