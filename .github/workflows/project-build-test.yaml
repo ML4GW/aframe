@@ -112,11 +112,14 @@ jobs:
     # Should add conditionals in this workflow to set these dynamically
     - 
       name: build docker image
+      # only run on pushes
+      if: ${{ github.event_name == 'push' }}
       env:
         tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
       run: |
         export TAG_LC=${tag,,}
         cat app.tar.gz | docker import --change "ENV PATH=${{ env.PATH }}" - $TAG_LC
         docker push $TAG_LC
+
 
     
