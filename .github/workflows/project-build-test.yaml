@@ -90,18 +90,13 @@ jobs:
           -v ${{ github.workspace }}:/opt/aframe \
           --workdir /opt/aframe/projects/${{ matrix.project }} \
           --privileged \
+          --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          /bin/bash -c 'singularity exec /opt/aframe/sandbox poetry run pytest'
+          -c 'singularity exec /opt/aframe/sandbox poetry run pytest'
 
     - name: tar singularity sandbox
       run: |
-        docker run \
-          --rm \
-          -v ${{ github.workspace }}:/opt/aframe \
-          --workdir /opt/aframe/projects/${{ matrix.project }} \
-          --privileged \
-          quay.io/singularity/singularity:v3.8.1 \
-          tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
+          tar -czf app.tar.gz -C ${{ github.workspace }}/sandbox .'
         
     # now copy the fs contents into an empty
     # container and push it to the registry,
