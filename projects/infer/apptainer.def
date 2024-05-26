@@ -45,6 +45,6 @@ apt-get install -y --no-install-recommends git
 apt-get clean
 
 
-cd /opt/aframe/projects/train
+cd /opt/aframe/projects/infer
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
