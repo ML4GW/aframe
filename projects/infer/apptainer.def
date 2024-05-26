@@ -6,13 +6,14 @@ Stage: build
 # only copy precisely the files we need to keep things
 # light and protect against any large files that might
 # accidentally get created in this repo
-. /opt/aframe/projects/train
+. /opt/aframe/projects/infer
 ../utils /opt/aframe/projects/utils
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
+../../hermes /opt/aframe/hermes
 ../../ml4gw /opt/aframe/ml4gw
 ../../libs/ledger /opt/aframe/libs/ledger
-../../libs/architectures /opt/aframe/libs/architectures
+../../pycondor /opt/aframe/pycondor
 
 %post
 # installing the local package editably via pip
@@ -24,8 +25,8 @@ Stage: build
 # the virtualenv package in the base environment, so
 # we'll hard pin it to the value we need.
 # TODO: there's got to be a better solution here
-python -m pip install poetry
-cd /opt/aframe/projects/train
+python -m pip install poetry==1.7.1
+cd /opt/aframe/projects/infer
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
 
@@ -37,9 +38,9 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
-# install pytest so we can run unit tests
-# inside container during CI
-cd /opt/aframe/projects/train
+# install pytest so we can run unittests
+# inside the container during CI
+cd /opt/aframe/projects/infer
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
 pip install pytest

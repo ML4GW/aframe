@@ -61,46 +61,6 @@ class ChannelMuter(torch.nn.Module):
         return X, indices
 
 
-class SignalInverter(torch.nn.Module):
-    """
-    Data augmentation that randomly inverts data in a kernel
-
-    Args:
-        prob:
-            Probability that a kernel is inverted
-    """
-
-    def __init__(self, prob: float = 0.5):
-        super().__init__()
-        self.prob = prob
-
-    def forward(self, X):
-        if self.training:
-            mask = torch.rand(size=X.shape[:-1]) < self.prob
-            X[mask] *= -1
-        return X
-
-
-class SignalReverser(torch.nn.Module):
-    """
-    Data augmentation that randomly reverses data in a kernel
-
-    Args:
-        prob:
-            Probability that a kernel is reversed
-    """
-
-    def __init__(self, prob: float = 0.5):
-        super().__init__()
-        self.prob = prob
-
-    def forward(self, X):
-        if self.training:
-            mask = torch.rand(size=X.shape[:-1]) < self.prob
-            X[mask] = X[mask].flip(-1)
-        return X
-
-
 class SnrRescaler(torch.nn.Module):
     """
     Module that calculates SNRs of injections relative

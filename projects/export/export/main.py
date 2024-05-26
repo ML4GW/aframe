@@ -23,7 +23,7 @@ def scale_model(model, instances):
 
 
 def open_file(path, mode="rb"):
-    if path.startswith("s3://"):
+    if str(path).startswith("s3://"):
         fs = s3fs.S3FileSystem()
         return fs.open(path, mode)
     else:

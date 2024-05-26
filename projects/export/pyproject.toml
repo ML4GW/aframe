@@ -40,6 +40,11 @@ urllib3 = ">=1.25.4,<1.27"
 name = "torch"
 url = "https://download.pytorch.org/whl/cpu"
 
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.1"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -101,7 +101,7 @@ class WaveNet(torch.nn.Module):
         self.init_conv = nn.Conv1d(
             in_channels, res_channels, kernel_size=2, dilation=1
         )
-        self.norm1 = norm_layer(res_channels)
+        self.norm1 = self.norm_layer(res_channels)
         self.layers_per_block = layers_per_block
         self.num_blocks = num_blocks
         self.res_channels = res_channels
