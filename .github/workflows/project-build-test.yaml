@@ -49,7 +49,7 @@ jobs:
           - project: 'workflow' # Fixed the exclusion key
     steps:
     -
-      name: Delete huge unnecessary tools folder
+      name: delete huge unnecessary tools folder
       run: rm -rf /opt/hostedtoolcache 
     -
       name: Checkout repository
@@ -57,7 +57,7 @@ jobs:
       with:
         submodules: recursive
     - 
-      name: Log in to the Container registry
+      name: log in to the Container registry
       uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
       with:
         registry: ${{ env.REGISTRY }}
@@ -71,7 +71,7 @@ jobs:
     # in one fell swoop because of permissions discrepancies
     # inside and outside the container.
     -
-      name: Build singularity image
+      name: build singularity image
       run: |
         docker run \
           --rm \
@@ -80,14 +80,28 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity build --sandbox /tmp/app apptainer.def && tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
+          -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
 
-    - 
-      name: Run tests
+    
+    - name: run tests in singularity sandbox
       run: |
         docker run \
+          --rm \
+          -v ${{ github.workspace }}:/opt/aframe \
+          --workdir /opt/aframe/projects/${{ matrix.project }} \
+          --privileged \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec /tmp/app poetry run pytest'
+          /bin/bash -c 'singularity exec /opt/aframe/sandbox poetry run pytest`
+
+    - name: tar singularity sandbox
+      run: |
+        docker run \
+          --rm \
+          -v ${{ github.workspace }}:/opt/aframe \
+          --workdir /opt/aframe/projects/${{ matrix.project }} \
+          --privileged \
+          quay.io/singularity/singularity:v3.8.1 \
+          tar -czf /opt/aframe/app.tar.gz -C /tmp/app .'
         
     # now copy the fs contents into an empty
     # container and push it to the registry,
