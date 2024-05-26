@@ -95,6 +95,8 @@ jobs:
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
           -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && tar -czf app.tar.gz -C /opt/aframe/sandbox .'
+        pwd
+        ls
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
