@@ -85,7 +85,9 @@ jobs:
     - 
       name: Run tests
       run: |
-        singularity run /tmp/app poetry run pytest
+        docker run \
+          quay.io/singularity/singularity:v3.8.1 \
+          -c 'singularity exec /tmp/app poetry run pytest'
         
     # now copy the fs contents into an empty
     # container and push it to the registry,
