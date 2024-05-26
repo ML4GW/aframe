@@ -85,7 +85,7 @@ jobs:
           -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
 
     
-    - name: run tests in singularity sandbox
+    - name: run tests in singularity sandbox and tar
       run: |
         docker run \
           --rm \
@@ -94,12 +94,8 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && tar -czf app.tar.gz -C /opt/aframe/sandbox .'
 
-    - name: tar singularity sandbox
-      run: |
-          tar -czf app.tar.gz -C ${{ github.workspace }}/sandbox .
-        
     # now copy the fs contents into an empty
     # container and push it to the registry,
     # using a lowercase version of the tag since
