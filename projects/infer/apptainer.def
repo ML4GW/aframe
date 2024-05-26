@@ -37,14 +37,9 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
-# need git to install ray-kube
-# TODO: longer term, this should probably just
-# a submodule of this project
-apt-get update
-apt-get install -y --no-install-recommends git
-apt-get clean
-
-
+# install pytest so we can run unittests
+# inside the container during CI
 cd /opt/aframe/projects/infer
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
+pip install pytest
