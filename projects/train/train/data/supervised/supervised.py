@@ -52,10 +52,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         snrs = self.snr_sampler.sample((N,)).to(X.device)
         responses = self.projector(*params, snrs, psds[mask], **polarizations)
         kernels = sample_kernels(
-            responses,
-            kernel_size=X.size(-1),
-            max_center_offset=self.pad_size,
-            coincident=True,
+            responses, kernel_size=X.size(-1), coincident=True
         )
 
         # perform augmentations on the responses themselves,

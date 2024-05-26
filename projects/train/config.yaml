@@ -50,7 +50,8 @@ data:
     waveform_prob: 0.277
     swap_prob: 0.014
     mute_prob: 0.055
-    trigger_pad: -0.75
+    left_pad: 0.25
+    right_pad: 0.0
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 

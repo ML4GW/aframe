@@ -32,6 +32,10 @@ class TimeSlideWaveformsParams(law.Task):
     sample_rate = luigi.FloatParameter()
     waveform_duration = luigi.FloatParameter()
     waveform_approximant = luigi.Parameter()
+    coalescence_time = luigi.FloatParameter(
+        description="Location of the defining point of the signal "
+        "within the generated waveform"
+    )
     highpass = luigi.FloatParameter()
     snr_threshold = luigi.FloatParameter()
     psd_length = luigi.FloatParameter()
@@ -144,6 +148,7 @@ class DeployTimeslideWaveforms(
                 self.sample_rate,
                 self.waveform_duration,
                 self.waveform_approximant,
+                self.coalescence_time,
                 self.highpass,
                 self.snr_threshold,
                 psd_file,
