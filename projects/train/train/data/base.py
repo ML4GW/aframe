@@ -11,6 +11,7 @@ import ray
 import torch
 from ledger.injections import LigoWaveformSet
 
+from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
@@ -86,8 +87,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.num_ifos = len(ifos)
 
         # Set up some of our data augmentation modules
-        self.inverter = aug.SignalInverter(0.5)
-        self.reverser = aug.SignalReverser(0.5)
+        self.inverter = SignalInverter(0.5)
+        self.reverser = SignalReverser(0.5)
 
         # these are modules that require our data to be
         # downloaded first, either for loading signals
