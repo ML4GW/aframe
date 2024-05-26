@@ -82,6 +82,11 @@ def output_dir(tmp_path):
     return output_dir
 
 
+@pytest.fixture
+def fduration():
+    return 1
+
+
 def load_config(config_path: Path):
     config = ModelConfig()
     text_format.Merge(config_path.read_text(), config)
@@ -296,19 +301,18 @@ def test_export_for_shapes(
 def test_export_for_weights(
     repo_dir,
     output_dir,
-    architecture,
+    num_ifos,
+    kernel_length,
+    sample_rate,
+    psd_length,
+    inference_sampling_rate,
+    fduration,
     trace_network_weights,
     validate_repo,
     batch_size,
     batch_file,
     platform,
 ):
-    num_ifos = 2
-    kernel_length = 2
-    sample_rate = 128
-    psd_length = 16
-    inference_sampling_rate = 4
-    fduration = 1
     weights = output_dir / "weights.pt"
     trace_network_weights(
         num_ifos, weights, sample_rate, kernel_length, batch_size
@@ -383,17 +387,17 @@ def test_export_for_scaling(
     aframe_instances,
     preproc_instances,
     clean,
+    num_ifos,
+    kernel_length,
+    sample_rate,
+    psd_length,
+    inference_sampling_rate,
+    fduration,
     validate_repo,
     trace_network_weights,
     batch_size,
     platform,
 ):
-    num_ifos = 2
-    kernel_length = 2
-    sample_rate = 128
-    psd_length = 16
-    inference_sampling_rate = 4
-    fduration = 1
     weights = output_dir / "weights.pt"
     trace_network_weights(
         num_ifos, weights, sample_rate, kernel_length, batch_size

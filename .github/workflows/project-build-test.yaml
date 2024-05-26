@@ -98,7 +98,7 @@ jobs:
 
     - name: tar singularity sandbox
       run: |
-          tar -czf app.tar.gz -C ${{ github.workspace }}/sandbox .'
+          tar -czf app.tar.gz -C ${{ github.workspace }}/sandbox .
         
     # now copy the fs contents into an empty
     # container and push it to the registry,
