@@ -87,7 +87,6 @@ jobs:
     
     - name: run tests in singularity sandbox and tar
       run: |
-        echo ${{ github.workspace }}
         docker run \
           --rm \
           -v ${{ github.workspace }}:/opt/aframe \
@@ -96,9 +95,6 @@ jobs:
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
           -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
-        pwd
-        ls ${{ github.workspace }}
-        ls
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
