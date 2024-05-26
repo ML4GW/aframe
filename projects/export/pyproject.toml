@@ -43,7 +43,6 @@ url = "https://download.pytorch.org/whl/cpu"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"
-architectures = {path = "../../libs/architectures", develop = true}
 
 
 [build-system]

@@ -11,6 +11,7 @@ Stage: build
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../hermes /opt/aframe/hermes
+../../ml4gw /opt/aframe/ml4gw
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../pycondor /opt/aframe/pycondor
 
@@ -24,7 +25,7 @@ Stage: build
 # the virtualenv package in the base environment, so
 # we'll hard pin it to the value we need.
 # TODO: there's got to be a better solution here
-python -m pip install poetry
+python -m pip install poetry==1.7.1
 cd /opt/aframe/projects/infer
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
