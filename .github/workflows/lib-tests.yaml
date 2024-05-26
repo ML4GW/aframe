@@ -56,7 +56,7 @@ jobs:
       -
         name: build environment
         env:
-          test_dir: /github/workspace/${{ matrix.library }}
+          test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
             python -m pip install poetry
             cd $test_dir
@@ -67,7 +67,7 @@ jobs:
       - 
         name: run tests 
         env:
-          test_dir: /github/workspace/${{ matrix.library }}
+          test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
             cd $test_dir
             poetry run pytest

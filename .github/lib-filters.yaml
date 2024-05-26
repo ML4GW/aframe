@@ -15,11 +15,11 @@ workflow: &workflow
 # if workflow file is changed?
 
 # libraries
-libs/architectures/:
+architectures:
   - *workflow
   - 'libs/architectures/**'
   - 'ml4gw/**'
 
-libs/ledger:
+ledger:
   - *workflow
   - 'libs/ledger/**'
