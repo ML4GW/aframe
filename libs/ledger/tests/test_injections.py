@@ -41,6 +41,7 @@ class TestLigoResponseSet:
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N,
+                coalescence_time=duration / 2,
                 **kwargs,
             )
         assert str(exc.value).startswith("Specified waveform duration")
@@ -53,6 +54,7 @@ class TestLigoResponseSet:
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N - 1,
+                coalescence_time=duration / 2,
                 **kwargs,
             )
         assert str(exc.value).startswith("LigoResponseSet")
@@ -61,6 +63,7 @@ class TestLigoResponseSet:
             sample_rate=sample_rate,
             duration=duration,
             num_injections=N,
+            coalescence_time=duration / 2,
             **kwargs,
         )
 
@@ -166,6 +169,7 @@ class TestLigoResponseSet:
         # now try with times
         ligo_response_set.injection_time = np.arange(N) % (N // 2)
         ligo_response_set.duration = 2
+        ligo_response_set.coalescence_time = ligo_response_set.duration / 2
         for ifo in "hl":
             key = f"{ifo}1"
             old = getattr(ligo_response_set, key)
