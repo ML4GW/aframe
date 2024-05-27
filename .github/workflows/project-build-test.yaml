@@ -94,7 +94,8 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest \ 
+          && if [ "${{ github.event_name == 'push'}} ]; then tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
