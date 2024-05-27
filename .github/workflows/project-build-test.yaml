@@ -85,7 +85,7 @@ jobs:
           -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
 
     
-    - name: run tests in singularity sandbox and tar
+    - name: run tests
       run: |
         docker run \
           --rm \
@@ -94,7 +94,20 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest'
+
+
+    - name: tar sandbox
+      if: ${{ github.event_name == 'push' }}
+      run: |
+        docker run \
+          --rm \
+          -v ${{ github.workspace }}:/opt/aframe \
+          --workdir /opt/aframe/projects/${{ matrix.project }} \
+          --privileged \
+          --entrypoint /bin/bash \
+          quay.io/singularity/singularity:v3.8.1 \
+          -c 'singularity exec tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
@@ -107,7 +120,7 @@ jobs:
     # with path required by train / data projects. 
     # Should add conditionals in this workflow to set these dynamically
     - 
-      name: build docker image
+      name: build and push docker image
       # only run on pushes
       if: ${{ github.event_name == 'push' }}
       env:

@@ -1836,13 +1836,13 @@ files = [
 
 [[package]]
 name = "jsonargparse"
-version = "4.28.0"
+version = "4.29.0"
 description = "Implement minimal boilerplate CLIs derived from type hints and parse from command line, config files and environment variables."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "jsonargparse-4.28.0-py3-none-any.whl", hash = "sha256:9dcda241349547e8035c630d51de73b8b4ba67bdc2b014d7f76734d404e82518"},
-    {file = "jsonargparse-4.28.0.tar.gz", hash = "sha256:ac835a290ef18cc2a5309e6bfa8ada9c5d63f46ff18701583fc8f3e95314679c"},
+    {file = "jsonargparse-4.29.0-py3-none-any.whl", hash = "sha256:e093d9509996b031d156fe8d4a087e2d91adbfc654b9e2c783878d45ad0dfefe"},
+    {file = "jsonargparse-4.29.0.tar.gz", hash = "sha256:03d407122c856095c48b07c58107002c9d3eaeb2795d8040efad831db5817494"},
 ]
 
 [package.dependencies]
@@ -2869,7 +2869,6 @@ files = [
     {file = "msgpack-1.0.8-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:5fbb160554e319f7b22ecf530a80a3ff496d38e8e07ae763b9e82fadfe96f273"},
     {file = "msgpack-1.0.8-cp39-cp39-win32.whl", hash = "sha256:f9af38a89b6a5c04b7d18c492c8ccf2aee7048aff1ce8437c4683bb5a1df893d"},
     {file = "msgpack-1.0.8-cp39-cp39-win_amd64.whl", hash = "sha256:ed59dd52075f8fc91da6053b12e8c89e37aa043f8986efd89e61fae69dc1b011"},
-    {file = "msgpack-1.0.8-py3-none-any.whl", hash = "sha256:24f727df1e20b9876fa6e95f840a2a2651e34c0ad147676356f4bf5fbb0206ca"},
     {file = "msgpack-1.0.8.tar.gz", hash = "sha256:95c02b0e27e706e48d0e5426d1710ca78e0f0628d6e89d5b5a5b91a5f12274f3"},
 ]
 
@@ -5833,4 +5832,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "4a8598243b9b7794fd46a33032b3203b2fd04e82a0f899f8d0beead517d9c7fb"
+content-hash = "f31db74059c3a20bd1fb8a543eb7e38813949d65e225b30235b6154f0eb47284"

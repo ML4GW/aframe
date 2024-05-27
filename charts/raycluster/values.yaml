@@ -8,6 +8,7 @@ gitRepo:
   name: aframe
   url: git@github.com:ML4GW/aframev2.git
   mountPath: /opt
+  ref: main
 
 head:
   cpu: "1"

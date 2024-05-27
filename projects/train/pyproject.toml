@@ -18,7 +18,7 @@ train = "train.main:main"
 python = ">=3.9,<3.11"
 torchmetrics = "^0.11"
 lightning = "^2.0"
-jsonargparse = {version = "^4.17", extras = ["signatures"]}
+jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
 # plotting/logging dependencies
 wandb = "^0.15"

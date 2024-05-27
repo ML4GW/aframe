@@ -51,7 +51,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         stream_command(cmd)
 
     def output(self):
-        dir = law.LocalDirectoryTarget(self.run_dir)
+        dir = law.LocalDirectoryTarget(str(self.run_dir))
         return dir.child("model.pt", type="f")
 
 
@@ -60,11 +60,11 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.run_dir.startswith("s3://"):
+        if not str(self.run_dir).startswith("s3://"):
             raise ValueError(
                 "run_dir must be an s3 path for remote training tasks"
             )
-        if not self.data_dir.startswith("s3://"):
+        if not str(self.data_dir).startswith("s3://"):
             raise ValueError(
                 "data_dir must be an s3 path for remote training tasks"
             )
@@ -102,7 +102,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return args
 
     def output(self):
-        return LawS3Target(self.run_dir / "model.pt", format=Bytes)
+        return LawS3Target(str(self.run_dir / "model.pt"), format=Bytes)
 
     @property
     def gpu_constraints(self):
@@ -219,9 +219,9 @@ class Train(AframeWrapperTask):
 
         # Note: one can specify a remote data_dir, but
         # train locally
-        train_remote = self.run_dir.startswith("s3://")
+        train_remote = str(self.run_dir).startswith("s3://")
 
-        if train_remote and not self.data_dir.startswith("s3://"):
+        if train_remote and not str(self.data_dir).startswith("s3://"):
             raise ValueError(
                 "If run_dir is an s3 path, data_dir must also be an s3 path"
                 "Got data_dir: {self.data_dir} and run_dir: {self.run_dir}"
