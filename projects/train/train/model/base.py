@@ -46,11 +46,13 @@ class AframeBase(pl.LightningModule):
     ) -> None:
         super().__init__()
         # construct our model up front and record all
-        # our hyperparameters to our logdir
+        # our hyperparameters to our logdir;
         self.model = arch
         self.metric = metric
         self.verbose = verbose
         self._logger = self.get_logger()
+        self.save_hyperparameters(ignore=["arch", "metric"])
+
         self.save_hyperparameters(ignore=["arch", "metric"])
 
     def get_logger(self):
