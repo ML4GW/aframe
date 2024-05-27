@@ -98,7 +98,7 @@ jobs:
 
 
     - name: tar sandbox
-      if: ${{ github.event_name == 'push' }}
+      #if: ${{ github.event_name == 'push' }}
       run: |
         docker run \
           --rm \
@@ -107,7 +107,7 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
@@ -122,7 +122,7 @@ jobs:
     - 
       name: build and push docker image
       # only run on pushes
-      if: ${{ github.event_name == 'push' }}
+      #if: ${{ github.event_name == 'push' }}
       env:
         tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
       run: |
