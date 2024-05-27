@@ -1,10 +1,11 @@
 # workflow that builds docker container images
 # from the singularity apptainer definition files
-# we use for local development. Uses tar archives
-# to convert between the formats in order to handle
-# the large memory footprints of our containers without
-# toppling over the GitHub runner nodes this executes on.
-name: project tests
+# we use for local development, and runs any tests. 
+# Uses tar archives to convert between the formats 
+# in order to handle the large memory footprints of 
+# our containers without toppling over the 
+# GitHub runner nodes this executes on.
+name: project build and tests
 
 on:
   pull_request:
@@ -17,6 +18,10 @@ on:
     branches:
       - main
 
+# TODO: currently combining path for nvidia variables 
+# necessary to launch triton in export container
+# with path required by train / data projects. 
+# Should add conditionals in this workflow to set these dynamically
 env:
   REGISTRY: ghcr.io
   PATH: /opt/env/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/cuda-11.8/bin:/opt/tritonserver/bin:/usr/local/mpi/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/ucx/bin
@@ -84,8 +89,12 @@ jobs:
           quay.io/singularity/singularity:v3.8.1 \
           -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
 
-    
-    - name: run tests
+    # run tests inside the sandbox;
+    # if this is a push event, tar the sandbox
+    # so that we can import it into docker
+    # container and push it to the registry;
+    # otherwise (e.g. for a PR) just run the tests
+    - name: run tests and tar sandbox
       run: |
         docker run \
           --rm \
@@ -94,22 +103,17 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && if [ "${{ github.event_name == 'push'}}" == "false" ]; then tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .; fi'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && if [ "${{ github.event_name == 'push'}}" == "true" ]; then tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .; fi'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
     # using a lowercase version of the tag since
     # the github environment variables are case-sensitive
-
-    
-    # TODO: currently combining path for nvidia variables 
-    # necessary to launch triton in export container
-    # with path required by train / data projects. 
-    # Should add conditionals in this workflow to set these dynamically
     - 
       name: build and push docker image
-      # only run on pushes
-      #if: ${{ github.event_name == 'push' }}
+      # only run on pushes so that we aren't
+      # building containers for PRs
+      if: ${{ github.event_name == 'push' }}
       env:
         tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
       run: |
