@@ -107,7 +107,7 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
+          -c 'singularity exec --env PATH=${{ env.PATH }} tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
