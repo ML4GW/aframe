@@ -25,10 +25,10 @@ spec:
           medium: Memory
       - name: {{ .Values.gitRepo.name }}-volume
         emptyDir: {}
-      - name: git-secret
+      - name: {{ .Release.Name }}-git-secret
         secret:
           defaultMode: 0400
-          secretName: git-creds
+          secretName: {{ .Release.Name }}-git-creds
       securityContext:
         fsGroup: 65533
     {{- if .Values.dev }}
@@ -57,7 +57,7 @@ spec:
           volumeMounts:
             - name: {{ .Values.gitRepo.name }}-volume
               mountPath: {{ .Values.gitRepo.mountPath }}
-            - name: git-secret
+            - name: {{ .Release.Name }}-git-secret
               mountPath: /etc/git-secret
               readOnly: true
           securityContext:
@@ -90,7 +90,7 @@ spec:
             value: {{ .Values.awsUrl }} 
           envFrom:
           - secretRef:
-              name: credentials
+              name: {{ .Release.Name }}-credentials
           resources:
             limits:
               cpu: {{ .Values.head.cpu | quote }}

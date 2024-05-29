@@ -25,6 +25,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             )
         else:
             self.swapper = None
+            self.swap_prob = 0
 
         if mute_prob is not None and 0 < mute_prob < 1:
             self.muter = aug.ChannelMuter(mute_prob)
@@ -35,6 +36,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             )
         else:
             self.muter = None
+            self.mute_prob = 0
 
     @torch.no_grad()
     def augment(self, X):
@@ -57,6 +59,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
 
         # perform augmentations on the responses themselves,
         # keep track of which indices have been augmented
+        swap_indices = mute_indices = []
         idx = torch.where(mask)[0]
         if self.swapper is not None:
             kernels, swap_indices = self.swapper(kernels)
