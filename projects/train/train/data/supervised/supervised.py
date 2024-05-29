@@ -62,17 +62,15 @@ class SupervisedAframeDataset(BaseAframeDataset):
         idx = torch.where(mask)[0]
         if self.swapper is not None:
             kernels, swap_indices = self.swapper(kernels)
+            mask[idx[swap_indices]] = 0
         if self.muter is not None:
             kernels, mute_indices = self.muter(kernels)
+            mask[idx[mute_indices]] = 0
 
         # inject the IFO responses and whiten
         X[mask] += kernels
         X = self.whitener(X, psds)
 
-        # make labels, turning off injection mask where
-        # we swapped or muted
-        mask[idx[swap_indices]] = 0
-        mask[idx[mute_indices]] = 0
         y = torch.zeros((X.size(0), 1), device=X.device)
         y[mask] += 1
         return X, y
