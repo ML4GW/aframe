@@ -1,3 +1,5 @@
+import logging
+import math
 from contextlib import nullcontext
 from typing import Optional
 from zlib import adler32
@@ -20,6 +22,31 @@ class Sequence:
         batch_size: int,
         rate: Optional[float] = None,
     ):
+        """
+        Object used for iterating over a segment of data,
+        performing timeshifts, optionally injecting waveforms, and
+        aggregating the returned inference outputs.
+
+        If the injection set is empty for this given
+        segment and shifts, infernece on injections will be skipped,
+        and `None` will be returned for the foreground events.
+
+        Args:
+            background_fname:
+                Path to the background segment
+            injection_set_fname:
+                Path to the injection set file
+            ifos:
+                Interferometer names
+            shifts:
+                Time shifts to apply to each interferometer
+            inference_sampling_rate:
+                Rate at which inference is performed
+            batch_size:
+                Number of inference requests to send to the model at once
+            rate:
+                Rate at which to send requests in Hz
+        """
         self.background_fname = background_fname
         self.ifos = ifos
         self.inference_sampling_rate = inference_sampling_rate
@@ -34,13 +61,25 @@ class Sequence:
             self.t0 = dataset.attrs["x0"]
             self.duration = self.size / self.sample_rate
 
-        # use this to load in our injections up front
-        self.injection_set = LigoResponseSet.read(
+        # load in our injections up front
+        # if there are no injections for
+        # this shift, set it to None so
+        # we don't run inference on injections
+        injection_set = LigoResponseSet.read(
             injection_set_fname,
             start=self.t0,
             end=self.t0 + self.duration,
             shifts=shifts,
         )
+        if len(injection_set) == 0:
+            logging.info(
+                f"No injections found in {injection_set_fname} "
+                f"for segment {background_fname} and "
+                f"shifts {shifts}, skipping."
+            )
+            injection_set = None
+
+        self.injection_set = injection_set
 
         # derive some properties from that metadata,
         # including come up with a semi-unique sequence
@@ -50,7 +89,6 @@ class Sequence:
         self.shifts = [int(i * self.sample_rate) for i in shifts]
         self.stride = int(self.sample_rate / inference_sampling_rate)
         self.step_size = self.stride * batch_size
-
         # initialize some containers for handling during
         # the inference response callback
         self._started = {}
@@ -63,6 +101,12 @@ class Sequence:
             self._done[seq_id] = False
             self._sequences[seq_id] = np.zeros(size)
 
+        # if there are no injections, we can mark
+        # the injection sequence as started and done
+        if self.injection_set is None:
+            self._done[self.id + 1] = True
+            self._started[self.id + 1] = True
+
     @property
     def started(self):
         return all(self._started.values())
@@ -71,8 +115,31 @@ class Sequence:
     def done(self):
         return all(self._done.values())
 
+    @property
+    def remainder(self):
+        # the number of remaining data points not filling a full batch
+        return (self.size - max(self.shifts)) % self.step_size
+
+    @property
+    def num_pad(self):
+        # the number of zeros we need to pad the last batch
+        # to make it a full batch
+        return self.step_size - self.remainder
+
+    @property
+    def num_slice(self):
+        # the number of inference requests we need to slice
+        # off the end of the sequences to remove the dummy data
+        # from the last batch
+        return self.num_pad // self.stride
+
     def __len__(self):
-        return (self.size - max(self.shifts)) // self.step_size
+        # this include excess data at end of sequence that can't
+        # be used for a full batch. We'll end up padding it
+        # with zeros to make it a full batch and
+        # slicing off the actual useful inference requests
+        # corresponding to the excess
+        return math.ceil((self.size - max(self.shifts)) / self.step_size)
 
     def __iter__(self):
         if self.rate is not None:
@@ -89,17 +156,33 @@ class Sequence:
 
         with h5py.File(self.background_fname, "r") as f:
             for i in range(len(self)):
+                # if this is the last batch, we may need to pad it
+                # to make it a full batch
+                last = i == len(self) - 1
                 # grab the current batch of updates from the file
                 # and stack it into a 2D array
                 x = []
                 for ifo, shift in zip(self.ifos, self.shifts):
                     start = shift + i * self.step_size
-                    x.append(f[ifo][start : start + self.step_size])
+                    end = start + self.step_size
+                    if last:
+                        end = start + self.remainder
+                    data = f[ifo][start:end]
+                    # if this is the last batch
+                    # possibly pad it to make it a full batch
+                    if last:
+                        data = np.pad(data, (0, self.num_pad), "constant")
+                    x.append(data)
                 x = np.stack(x).astype(np.float32)
 
-                # injection any waveforms into a copy of the background
+                # if there are any injections for this shift,
+                # inject waveforms into a copy of the background
+                x_inj = None
                 offset = i * self.batch_size / self.inference_sampling_rate
-                x_inj = self.injection_set.inject(x.copy(), self.t0 + offset)
+                if self.injection_set is not None:
+                    x_inj = self.injection_set.inject(
+                        x.copy(), self.t0 + offset
+                    )
 
                 # return the two sets of updates, possibly
                 # rate limited if we specified a max rate
@@ -121,9 +204,14 @@ class Sequence:
             self._done[sequence_id] = True
 
         # if both the background and foreground
-        # sequences have completed, return them both
+        # sequences have completed, return them both,
+        # slicing off the dummy data from the last batch
         if self.done:
-            return tuple(self._sequences[self.id + i] for i in range(2))
+            background = self._sequences[self.id][: -self.num_slice]
+            foreground = None
+            if self.injection_set is not None:
+                foreground = self._sequences[self.id + 1][: -self.num_slice]
+            return background, foreground
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)

@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "plots"
+version = "0.0.1"
+description = "Aframe performance summary plots"
+authors = ["Alec Gunny"]
+
+[tool.poetry.scripts]
+sensitive-volume = "plots.cli:main"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+bokeh = "^3.0"
+scipy = "^1.7"
+h5py = "^3.5"
+gwpy = "^3.0.2"
+
+ledger = {path = "../../libs/ledger", develop = true}
+priors = {path = "../../libs/priors", develop = true}
+
+aframe = {path = "../../", develop = true}
+python-ligo-lw = "^1.8.3"
+lalsuite = "^7.19"
+jsonargparse = "^4.27.4"
+utils = {path = "../utils", develop = true}
+
+# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

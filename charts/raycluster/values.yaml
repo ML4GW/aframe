@@ -1,0 +1,31 @@
+name: ray-cluster
+image: rayproject/ray:2.3.0
+imagePullPolicy: Always
+
+dev: false 
+
+gitRepo:
+  name: aframe
+  url: git@github.com:ML4GW/aframev2.git
+  mountPath: /opt
+  ref: main
+
+head:
+  cpu: "1"
+  memory: "32G"
+
+worker:
+  replicas: 1
+  cpu: "32"
+  memory: "32G"
+  gpu: "1"
+  min_gpu_memory: "15000"
+
+awsUrl: http://rook-ceph-rgw-nautiluss3.rook
+
+# these should be filled out 
+# with corresponding env variables
+secret:
+  wandbKey: WANDB_API_KEY
+  awsId: AWS_ACCESS_KEY_ID
+  awsKey: AWS_SECRET_ACCESS_KEY

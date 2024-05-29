@@ -3,18 +3,44 @@ From: python:3.10.12-slim-bullseye
 Stage: build
 
 %files
+# only copy precisely the files we need to keep things
+# light and protect against any large files that might
+# accidentally get created in this repo
 . /opt/aframe/projects/infer
 ../utils /opt/aframe/projects/utils
-../export /opt/aframe/projects/export
-../../hermes /opt/aframe/hermes
-../../ml4gw /opt/aframe/ml4gw
-../../pycondor /opt/aframe/pycondor
-../../libs/ledger /opt/aframe/libs/ledger
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
+../../hermes /opt/aframe/hermes
+../../ml4gw /opt/aframe/ml4gw
+../../libs/ledger /opt/aframe/libs/ledger
+../../pycondor /opt/aframe/pycondor
 
 %post
-python -m pip install poetry 'virtualenv==20.4.7'
-poetry config virtualenvs.create false
+# installing the local package editably via pip
+# works, but none of the dependencies (e.g. ml4gw)
+# are installed editably, so we'll opt for using
+# the full poetry machinery without using a
+# virtual environment. Note that this can potentially
+# cause issues if the poetry install makes changes to
+# the virtualenv package in the base environment, so
+# we'll hard pin it to the value we need.
+# TODO: there's got to be a better solution here
+python -m pip install poetry==1.7.1
 cd /opt/aframe/projects/infer
-poetry install 
+poetry export -o requirements.txt --without-hashes \
+    && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
+
+Bootstrap: docker
+From: python:3.10.12-slim-bullseye
+Stage: final
+
+%files from build
+/opt/aframe /opt/aframe
+
+%post
+# install pytest so we can run unittests
+# inside the container during CI
+cd /opt/aframe/projects/infer
+pip install -r requirements.txt --no-deps --no-cache-dir
+pip install -e . --no-deps --no-cache-dir
+pip install pytest

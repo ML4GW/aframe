@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from ledger.events import EventSet
 
@@ -13,6 +15,27 @@ class Postprocessor:
         integration_window_length: float,
         cluster_window_length: float,
     ) -> None:
+        """
+        Postprocessor object for converting timeseries
+        of inference outputs into a set of events.
+
+        Args:
+            t0:
+                GPS time of the start of the data segment
+            shifts:
+                Time shifts to applied to each interferometer
+            psd_length:
+                Length of the PSD data used in inference in seconds
+            fduration:
+                Duration of the whitening filter used in seconds
+            inference_sampling_rate:
+                Rate at which inference was performed
+            integration_window_length:
+                Length of the integration window in seconds
+            cluster_window_length:
+                Length of the clustering window in seconds
+        """
+
         self.inference_sampling_rate = inference_sampling_rate
         self.shifts = shifts
 
@@ -83,7 +106,13 @@ class Postprocessor:
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
         return EventSet(events, times, shifts, Tb)
 
-    def __call__(self, y):
+    def __call__(self, y: Optional[np.ndarray] = None) -> EventSet:
+        # in the case where we didn't perform
+        # injections on this shift
+        # just return an empty event set
+        if y is None:
+            return EventSet()
+
         y = y[self.offset :]
         y = self.integrate(y)
         y = self.cluster(y)

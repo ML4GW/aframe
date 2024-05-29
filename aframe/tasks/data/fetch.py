@@ -4,24 +4,27 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.parameters import PathParameter
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
-from aframe.tasks.data.condor.workflows import DynamicMemoryWorklow
+from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.segments import Query
 
 
 @inherits(Query)
-class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
-    data_dir = luigi.Parameter()
+class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
+    data_dir = PathParameter()
     sample_rate = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)
     prefix = luigi.Parameter(default="background")
     channels = luigi.ListParameter()
 
+    exclude_params_req = {"condor_directory"}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.data_dir.startswith("s3://"):
-            os.makedirs(self.data_dir, exist_ok=True)
+        if not str(self.data_dir).startswith("s3://"):
+            self.data_dir.mkdir(exist_ok=True, parents=True)
 
         if self.job_log and not os.path.isabs(self.job_log):
             log_dir = os.path.join(self.data_dir, "logs")
@@ -32,9 +35,14 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
     def workflow_condition(self) -> bool:
         return self.workflow_input()["segments"].exists()
 
+    def load_segments(self):
+        with self.workflow_input()["segments"].open("r") as f:
+            segments = f.read().splitlines()[1:]
+        return segments
+
     @workflow_condition.create_branch_map
     def create_branch_map(self):
-        segments = self.workflow_input()["segments"].load().splitlines()[1:]
+        segments = self.load_segments()
         branch_map, i = {}, 1
         for segment in segments:
             segment = segment.split("\t")
@@ -68,8 +76,8 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
         start = int(float(start))
         duration = int(float(duration))
         fname = "{}-{}-{}.hdf5".format(self.prefix, start, duration)
-        fname = os.path.join(self.data_dir, fname)
-        return s3_or_local(fname, self.client)
+        fname = self.data_dir / fname
+        return s3_or_local(fname)
 
     def run(self):
         import h5py
@@ -85,7 +93,30 @@ class Fetch(law.LocalWorkflow, DynamicMemoryWorklow, AframeDataTask):
             self.channels,
             self.sample_rate,
         )
-
+        size = int(duration * self.sample_rate)
         with self.output().open("w") as f:
             with h5py.File(f, "w") as h5file:
-                X.write(h5file, format="hdf5")
+                # write with chunking for dataloading perf increase
+                X.write(
+                    h5file,
+                    format="hdf5",
+                    chunks=(min(size, 131072),),
+                    compression=None,
+                )
+
+
+# renaming tasks to allow specifying diff params in config files
+class FetchTest(Fetch):
+    condor_directory = PathParameter(
+        default=os.path.join(
+            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "test"
+        )
+    )
+
+
+class FetchTrain(Fetch):
+    condor_directory = PathParameter(
+        default=os.path.join(
+            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "train"
+        )
+    )

@@ -4,6 +4,7 @@ import law
 import luigi
 from law.contrib import htcondor
 
+from aframe.parameters import PathParameter
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 
@@ -12,12 +13,14 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     Base class for law workflows that run via condor on LDG
     """
 
-    condor_directory = luigi.Parameter()
+    condor_directory = PathParameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
     request_disk = luigi.Parameter(default="1024")
     request_memory = luigi.Parameter(default="32678")
     request_cpus = luigi.IntParameter(default=1)
+
+    exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,9 +47,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
 
     @property
     def htcondor_log_dir(self):
-        return law.LocalDirectoryTarget(
-            os.path.join(self.condor_directory, "logs")
-        )
+        return law.LocalDirectoryTarget(self.condor_directory / "logs")
 
     @property
     def job_file_dir(self):
@@ -55,6 +56,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     @property
     def law_config(self):
         path = os.getenv("LAW_CONFIG_FILE", "")
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
         return path
 
     def build_environment(self):
@@ -70,6 +73,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         # forward current path and law config
         environment += f'PATH={os.getenv("PATH")} '
         environment += f"LAW_CONFIG_FILE={self.law_config} "
+        environment += f"USER={os.getenv('USER')} "
+        environment += f"TMPDIR={os.getenv('TMPDIR')} "
 
         # forward any env variables that start with AFRAME_
         # that the law config may need to parse

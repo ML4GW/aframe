@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
@@ -24,12 +24,21 @@ class WaveformGenerator(BilbyGenerator):
         minimum_frequency: float = 20,
         reference_frequency: float = 50,
         waveform_approximant: str = "IMRPhenomPv2",
+        coalescence_time: Optional[float] = None,
     ):
         self.sample_rate = sample_rate
         self.waveform_duration = waveform_duration
         self.waveform_approximant = waveform_approximant
         self.minimum_frequency = minimum_frequency
         self.reference_frequency = reference_frequency
+        self.coalescence_time = coalescence_time or waveform_duration / 2
+
+        if self.coalescence_time > self.waveform_duration:
+            raise ValueError(
+                f"Cannot place coalescence at {coalescence_time} seconds "
+                f"because the waveform duration is {waveform_duration} seconds"
+            )
+
         super().__init__(
             duration=waveform_duration,
             sampling_frequency=sample_rate,
@@ -84,11 +93,9 @@ class WaveformGenerator(BilbyGenerator):
                 [polarizations[p] for p in polarization_names]
             )
 
-            # center so that coalescence time is middle sample
-            dt = self.waveform_duration / 2
-            polarizations = np.roll(
-                polarizations, int(dt * self.sample_rate), axis=-1
-            )
+            # move the coalscence point to the specified time
+            shift = int(self.coalescence_time * self.sample_rate)
+            polarizations = np.roll(polarizations, shift, axis=-1)
             signals[i] = polarizations
 
         return signals
@@ -121,6 +128,7 @@ def write_waveforms(
                 "waveform_approximant": generator.waveform_approximant,
                 "reference_frequency:": generator.reference_frequency,
                 "minimum_frequency": generator.minimum_frequency,
+                "coalescence_time": generator.coalescence_time,
             }
         )
     return output_file

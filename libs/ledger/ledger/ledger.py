@@ -5,6 +5,7 @@ from typing import Iterable, Optional, Union
 
 import h5py
 import numpy as np
+from tqdm import tqdm
 
 PATH = Union[str, bytes, os.PathLike]
 
@@ -266,7 +267,7 @@ class Ledger:
             target.attrs["length"] = length
 
             idx = 0
-            for source in _iter_open(files, "r", clean=clean):
+            for source in tqdm(_iter_open(files, "r", clean=clean)):
                 source_length = source.attrs["length"]
                 if source_length == 0:
                     continue
@@ -277,9 +278,13 @@ class Ledger:
                     if attr.metadata["kind"] == "metadata":
                         # for metadata, let compare_metadata decide
                         # how metadata fields should be aggregated
-                        # for child classes with special behavior
+                        # for child classes with special behavior.
+
+                        # if the key is not in the target,
+                        # use the default value in the class,
+                        # which will be `None` if not specified explicitly
                         if key not in target.attrs:
-                            ours = None
+                            ours = getattr(cls, key)
                         else:
                             ours = target.attrs[key]
 

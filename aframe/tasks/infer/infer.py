@@ -1,15 +1,16 @@
 import logging
-import os
+import socket
 import subprocess
 from pathlib import Path
 
 import law
 import luigi
 import psutil
-from kubeml import KubernetesTritonCluster
 from luigi.util import inherits
 
-from aframe.base import AframeSandboxTask, S3Task
+from aframe.base import AframeSandboxTask
+from aframe.config import s3
+from aframe.parameters import PathParameter
 from aframe.tasks.export.export import ExportParams
 
 INFER_DIR = Path(__file__).parent.parent.parent.parent / "projects" / "infer"
@@ -33,7 +34,7 @@ def get_poetry_env(path):
 
 
 class InferParameters(law.Task):
-    output_dir = luigi.Parameter()
+    output_dir = PathParameter()
     ifos = luigi.ListParameter(default=["H1", "L1"])
     inference_sampling_rate = luigi.FloatParameter()
     batch_size = luigi.IntParameter()
@@ -46,7 +47,12 @@ class InferParameters(law.Task):
     sequence_id = luigi.IntParameter()
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
-    clients_per_gpu = luigi.IntParameter()
+    streams_per_gpu = luigi.IntParameter()
+    repository_directory = luigi.Parameter(default="")
+    rate_per_gpu = luigi.FloatParameter(
+        default=100.0, description="Inferences per second per gpu"
+    )
+    zero_lag = luigi.BoolParameter(default=False)
 
 
 @inherits(InferParameters)
@@ -65,16 +71,28 @@ class InferBase(AframeSandboxTask):
         raise NotImplementedError
 
     @property
-    def num_parallel_jobs(self):
-        return self.clients_per_gpu * self.num_gpus
+    def num_clients(self):
+        # account for two streams per condor job: background and injection
+        return self.streams_per_gpu * self.num_gpus // 2
+
+    @property
+    def rate_per_client(self):
+        if not self.rate_per_gpu:
+            return None
+        total_rate = self.num_gpus * self.rate_per_gpu
+        return total_rate / self.num_clients
 
     @property
     def foreground_output(self):
-        return os.path.join(self.output_dir, "foreground.hdf5")
+        return self.output_dir / "foreground.hdf5"
 
     @property
     def background_output(self):
-        return os.path.join(self.output_dir, "background.hdf5")
+        return self.output_dir / "background.hdf5"
+
+    @property
+    def zero_lag_output(self):
+        return self.output_dir / "0lag.hdf5"
 
     @property
     def background_fnames(self):
@@ -85,10 +103,13 @@ class InferBase(AframeSandboxTask):
         return self.input()["waveforms"][0].path
 
     def output(self):
-        return [
+        outputs = [
             law.LocalFileTarget(self.foreground_output),
             law.LocalFileTarget(self.background_output),
         ]
+        if self.zero_lag:
+            outputs.append(law.LocalFileTarget(self.zero_lag_output))
+        return outputs
 
 
 @inherits(InferParameters)
@@ -103,14 +124,20 @@ class InferLocal(InferBase):
     def get_ip_address() -> str:
         """
         Get the local, cluster-internal IP address
-        Currently not a general function.
         """
-        nets = psutil.net_if_addrs()
-        return nets["enp1s0f0"][0].address
+
+        for _, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if (
+                    addr.family == socket.AF_INET
+                    and not addr.address.startswith("127.")
+                ):
+                    return addr.address
+        raise ValueError("No valid IP address found")
 
     @property
     def model_repo_dir(self):
-        return self.input()["export"].path
+        return self.input()["model_repository"].path
 
     def run(self):
         from infer.deploy.local import deploy_local
@@ -118,7 +145,10 @@ class InferLocal(InferBase):
         from aframe import utils
 
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
+
         background_fnames = [f.path for f in self.background_fnames]
         deploy_local(
             ip_address=self.get_ip_address(),
@@ -136,14 +166,16 @@ class InferLocal(InferBase):
             inference_sampling_rate=self.inference_sampling_rate,
             integration_window_length=self.integration_window_length,
             cluster_window_length=self.cluster_window_length,
-            output_dir=Path(self.output_dir),
+            output_dir=self.output_dir,
             model_version=self.model_version,
-            num_parallel_jobs=self.num_parallel_jobs,
+            num_parallel_jobs=self.num_clients,
+            rate=self.rate_per_client,
+            zero_lag=self.zero_lag,
         )
 
 
 @inherits(InferParameters, ExportParams)
-class InferRemote(InferBase, S3Task):
+class InferRemote(InferBase):
     """
     Launch inference on a remote kubernetes cluster.
     """
@@ -185,22 +217,14 @@ class InferRemote(InferBase, S3Task):
         ]
 
     def configure_cluster(self, cluster):
-        secret = self.get_s3_credentials()
+        secret = s3().get_s3_credentials()
         cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
+        cluster.set_env({"AWS_ENDPOINT_URL": s3().get_internal_s3_url()})
         return cluster
 
     def sandbox_before_run(self):
-        cluster = KubernetesTritonCluster(
-            self.image,
-            self.command,
-            self.args,
-            self.replicas,
-            self.gpus_per_replica,
-            self.cpus_per_replica,
-            self.memory,
-            self.min_gpu_memory,
-        )
+        # TODO: build triton helm chart
+        cluster = None
         cluster.dump("cluster.yaml")
         cluster.create()
         cluster.wait()
@@ -222,8 +246,11 @@ class InferRemote(InferBase, S3Task):
 
         from aframe import utils
 
+        # infer segment start and stop times directly from file names
         segments = utils.segments_from_paths(self.background_fnames)
-        num_shifts = utils.get_num_shifts(segments, self.Tb, max(self.shifts))
+        num_shifts = utils.get_num_shifts_from_Tb(
+            segments, self.Tb, max(self.shifts)
+        )
 
         background_fnames = [f.path for f in self.background_fnames]
         deploy_remote(
@@ -240,7 +267,7 @@ class InferRemote(InferBase, S3Task):
             inference_sampling_rate=self.inference_sampling_rate,
             integration_window_length=self.integration_window_length,
             cluster_window_length=self.cluster_window_length,
-            output_dir=Path(self.output_dir),
+            output_dir=self.output_dir,
             model_version=self.model_version,
             num_parallel_jobs=self.num_parallel_jobs,
         )

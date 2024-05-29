@@ -1,7 +1,7 @@
 import torch
+from architectures.autoencoder import AutoencoderArchitecture
 
 from ml4gw.transforms import ShiftedPearsonCorrelation
-from train.architectures.autoencoder import AutoencoderArchitecture
 from train.model.base import AframeBase
 
 Tensor = torch.Tensor

@@ -14,15 +14,14 @@ ray = "^2.6"
 jsonargparse = "^4.24"
 tqdm = "^4.66"
 
+ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["serve", "torch"]}
 utils = {path = "../utils", develop = true}
 aframe = {path = "../../", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 pycondor = {path = "../../pycondor", develop = true}
 
-
-# hermes utilities
-"hermes.aeriel" = {path = "../../hermes/hermes/hermes.aeriel", extras=["serve"], develop = true}
-"hermes.stillwater" = {path = "../../hermes/hermes/hermes.stillwater", develop = true}
+# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

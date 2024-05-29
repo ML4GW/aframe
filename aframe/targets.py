@@ -1,6 +1,11 @@
+from typing import Literal
+
 import luigi
 from luigi.contrib.s3 import S3Target
 from luigi.format import BaseWrapper, WrappedFormat
+
+from aframe.config import s3
+from aframe.parameters import PATH_LIKE
 
 
 # format for writing h5 files to s3
@@ -32,13 +37,15 @@ class LawLocalTarget(luigi.LocalTarget):
 
 # use s3 if path starts with s3://,
 # otherwise use a local target
-def s3_or_local(path, client):
+def s3_or_local(path: PATH_LIKE, format: Literal["hdf5", "txt"] = "hdf5"):
+    format = Bytes if format == "hdf5" else None
+    path = str(path)
     if path.startswith("s3://"):
         return LawS3Target(
             path,
-            client=client,
+            client=s3().client,
             ContentType="application/octet-stream",
-            format=Bytes,
+            format=format,
         )
     else:
-        return LawLocalTarget(path, format=Bytes)
+        return LawLocalTarget(path, format=format)

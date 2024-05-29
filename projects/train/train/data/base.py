@@ -3,15 +3,16 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Union
 
 import h5py
 import lightning.pytorch as pl
 import ray
 import torch
+from ledger.injections import LigoWaveformSet
 
+from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
-from ml4gw.distributions import PowerLaw
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
@@ -21,6 +22,7 @@ from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
 Tensor = torch.Tensor
+TransformedDist = torch.distributions.TransformedDistribution
 
 
 # TODO: using this right now because
@@ -55,32 +57,38 @@ class BaseAframeDataset(pl.LightningDataModule):
         data_dir: str,
         ifos: Sequence[str],
         valid_frac: float,
+        batches_per_epoch: int,
         # preprocessing args
         batch_size: int,
         kernel_length: float,
         fduration: float,
         psd_length: float,
         # augmentation args
+        waveform_prob: float = 1,
         snr_thresh: float = 4,
         max_snr: float = 100,
         snr_alpha: float = 3,
-        trigger_pad: float = 0,
+        left_pad: float = 0,
+        right_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
+        snr_sampler: Optional[
+            Union[TransformedDist, Callable[[int], Tensor]]
+        ] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
         min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
+        verbose: bool = False,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
         self.num_ifos = len(ifos)
 
         # Set up some of our data augmentation modules
-        self.inverter = aug.SignalInverter(0.5)
-        self.reverser = aug.SignalReverser(0.5)
-        self.snr_sampler = PowerLaw(snr_thresh, max_snr, snr_alpha)
+        self.inverter = SignalInverter(0.5)
+        self.reverser = SignalReverser(0.5)
 
         # these are modules that require our data to be
         # downloaded first, either for loading signals
@@ -91,11 +99,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = None
         self.psd_estimator = None
         self._on_device = False
+        self.snr_sampler = snr_sampler
 
         # generate our local node data directory
         # if our specified data source is remote
         self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
-        print(self.data_dir)
+        self.verbose = verbose
 
     # ================================================ #
     # Distribution utilities
@@ -140,8 +149,10 @@ class BaseAframeDataset(pl.LightningDataModule):
     def get_logger(self, world_size, rank):
         logger_name = "AframeDataset"
         if world_size > 1:
-            logger_name += f":{rank}"
-        return logging.getLogger(logger_name)
+            logger_name += f"{rank}"
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        return logger
 
     # ================================================ #
     # Re-paramterizing some attributes
@@ -156,12 +167,27 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
     @property
-    def pad_size(self) -> int:
+    def filter_size(self) -> int:
         """
-        Number of samples away from edge of kernel to ensure
-        that waveforms are injected at.
+        Length of the time-domain whitening filter in samples
         """
-        return int(self.hparams.trigger_pad * self.sample_rate)
+        return int(self.hparams.fduration * self.sample_rate)
+
+    @property
+    def left_pad_size(self) -> int:
+        """
+        Minimum numer of samples that the defining point of the
+        signal will be from the left edge of the _whitened_ kernel.
+        """
+        return int(self.hparams.left_pad * self.sample_rate)
+
+    @property
+    def right_pad_size(self) -> int:
+        """
+        Minimum numer of samples that the defining point of the
+        signal will be from the left edge of the _whitened_ kernel
+        """
+        return int(self.hparams.right_pad * self.sample_rate)
 
     # TODO: Come up with a more clever scheme for breaking up
     # our training and validation background data
@@ -206,45 +232,35 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
         fs_utils.download_training_data(bucket, self.data_dir)
 
-    @torch.no_grad()
-    def project_val_waveforms(
-        self,
-        cross: torch.Tensor,
-        plus: torch.Tensor,
-        dec: torch.Tensor,
-        psi: torch.Tensor,
-        phi: torch.Tensor,
-        psd: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Pre-project validation waveforms to interferometer
-        responses and threshold their SNRs at our minimum value.
-        """
-
-        num_batches = x_per_y(len(plus), self.val_batch_size)
-        responses = []
-        for i in range(num_batches):
-            slc = slice(i * self.val_batch_size, (i + 1) * self.val_batch_size)
-            params = [i[slc] for i in [dec, phi, psi]]
-            response = self.projector(
-                *params,
-                snrs=self.hparams.snr_thresh,
-                psds=psd,
-                cross=cross[slc],
-                plus=plus[slc],
-            )
-            responses.append(response.cpu())
-        return torch.cat(responses, dim=0)
-
     def load_signals(self, dataset, start, stop):
         """
-        Loads waveforms assuming that the coalescence
-        is in the middle, but we should really stop
-        this. TODO: stop this
+        Loads waveforms with signals placed `signal_time`
+        seconds into the timeseries. Loads only as much
+        signal as could be required, padding if needed
         """
-        size = int(dataset.shape[-1] // 2)
-        pad = int(0.02 * self.sample_rate)
-        signals = torch.Tensor(dataset[start:stop, : size + pad])
+        signal_idx = int(self.signal_time * self.sample_rate)
+        kernel_size = int(self.hparams.kernel_length * self.sample_rate)
+
+        if kernel_size < self.left_pad_size + self.right_pad_size:
+            raise ValueError(
+                f"Kernel size ({kernel_size}) cannot be less than total "
+                f"padding ({self.left_pad_size} + {self.right_pad_size})"
+            )
+
+        signal_start = signal_idx - (kernel_size - self.right_pad_size)
+        signal_start -= self.filter_size // 2
+
+        signal_stop = signal_idx + (kernel_size - self.left_pad_size)
+        signal_stop += self.filter_size // 2
+
+        # If signal_start is less than 0, add padding on the left
+        left_pad = -1 * min(signal_start, 0)
+        # If signal_stop is larger than the dataset, add padding on the right
+        right_pad = max(signal_stop - dataset.shape[-1], 0)
+
+        signals = torch.Tensor(dataset[start:stop])
+        signals = torch.nn.functional.pad(signals, [left_pad, right_pad])
+        signals = signals[..., signal_start:signal_stop]
         self._logger.info("Waveforms loaded")
 
         cross, plus = signals[:, 0], signals[:, 1]
@@ -260,33 +276,38 @@ class BaseAframeDataset(pl.LightningDataModule):
         stop = (rank + 1) * per_dev
         return start, stop
 
-    def load_train_signals(self, f, world_size, rank):
+    def load_train_waveforms(self, f, world_size, rank):
         dataset = f["signals"]
-        num_valid = int(len(dataset) * self.hparams.valid_frac)
-        num_train = len(dataset) - num_valid
+        # Get the signal time here and assume it's the
+        # same for the validation waveforms
+        self.signal_time = f.attrs["coalescence_time"]
+        num_train = len(dataset)
         if not rank:
-            self._logger.info(
-                f"Training on {num_train} waveforms, with {num_valid} "
-                "reserved for validation"
-            )
+            self._logger.info(f"Training on {num_train} waveforms")
 
         start, stop = self.get_slice_bounds(num_train, world_size, rank)
         return self.load_signals(dataset, start, stop)
 
-    def load_val_signals(self, f, world_size, rank):
-        dataset = f["signals"]
-        total = int(len(dataset) * self.hparams.valid_frac)
-        stop, start = self.get_slice_bounds(total, world_size, rank)
+    def load_val_waveforms(self, f, world_size, rank):
+        waveform_set = LigoWaveformSet.read(f)
+
+        if waveform_set.coalescence_time != self.signal_time:
+            raise ValueError(
+                "Training waveforms and validation waveforms have different "
+                f"signal times, got {self.signal_time} and "
+                f"{waveform_set.coalescence_time}, respectively"
+            )
+
+        length = len(waveform_set.waveforms)
+
+        if not rank:
+            self._logger.info(f"Validating on {length} waveforms")
+        stop, start = self.get_slice_bounds(length, world_size, rank)
 
         self._logger.info(f"Loading {start - stop} validation signals")
         start, stop = -start, -stop or None
-        cross, plus = self.load_signals(dataset, start, stop)
-
-        params = {}
-        for param in ["dec", "psi", "ra"]:
-            params[param] = torch.Tensor(f[param][start:stop])
-        params["phi"] = params.pop("ra")
-        return cross, plus, params
+        waveforms = torch.as_tensor(waveform_set.waveforms[start:stop])
+        return waveforms
 
     def load_val_background(self, fnames: list[str]):
         self._logger.info("Loading validation background data")
@@ -319,6 +340,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
         )
+
         self.sample_rate = sample_rate
 
     def setup(self, stage: str) -> None:
@@ -327,6 +349,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         with h5py.File(self.train_fnames[0], "r") as f:
             sample_rate = 1 / f[self.hparams.ifos[0]].attrs["dx"]
+
         self._logger.info(f"Inferred sample rate {sample_rate}")
 
         # now define some of the augmentation transforms
@@ -353,32 +376,15 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.val_batch_size,
         )
 
-        # calculate the validation background PSD up front
-        # on the CPU then move the psd estimator to the device
-        psd = self.psd_estimator.spectral_density(val_background[0].double())
-
         self._logger.info("Loading waveforms")
-        with h5py.File(f"{self.data_dir}/signals.hdf5", "r") as f:
-            cross, plus = self.load_train_signals(f, world_size, rank)
-            try:
-                waveform_prob = self.hparams.waveform_prob
-            except AttributeError:
-                waveform_prob = 1
-            self.waveform_sampler = aug.WaveformSampler(
-                waveform_prob, cross=cross, plus=plus
-            )
+        with h5py.File(f"{self.data_dir}/train_waveforms.hdf5", "r") as f:
+            cross, plus = self.load_train_waveforms(f, world_size, rank)
+            self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
 
-            # subsample which waveforms we're using
-            # based on the fraction of shifts that
-            # are getting done on this device
-            cross, plus, params = self.load_val_signals(f, world_size, rank)
-        params["psd"] = psd
-
-        self._logger.info("Projecting validation waveforms to IFO responses")
-        # now finally project our raw polarizations into
-        # inteferometer responses on this device using
-        # the PSD from the entire background segment
-        self.val_waveforms = self.project_val_waveforms(cross, plus, **params)
+        val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
+        self.val_waveforms = self.load_val_waveforms(
+            val_waveform_file, world_size, rank
+        )
         self._logger.info("Initial dataloading complete")
 
     # ================================================ #
@@ -432,22 +438,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             batch = (shift, X_bg, X_fg)
         return batch
 
-    def pad_waveforms(self, waveforms, kernel_size):
-        """
-        Add padding after a batch of waveforms to
-        ensure that a uniformly sampled kernel will
-        always be at least `self.pad_size` away
-        from the end of the waveform (assumed to
-        contain the coalescence) _after_ whitening.
-        """
-        filter_pad = int(self.hparams.fduration * self.sample_rate // 2)
-        pad = kernel_size - filter_pad
-        waveforms = waveforms[:, :, -pad - self.pad_size :]
-
-        pad = kernel_size - self.pad_size
-        waveforms = torch.nn.functional.pad(waveforms, [0, pad])
-        return waveforms
-
     @torch.no_grad()
     def augment(self, X):
         """
@@ -499,13 +489,25 @@ class BaseAframeDataset(pl.LightningDataModule):
         # the background, each showing a different, overlapping
         # portion of the signal
         kernel_size = X.size(-1)
-        center = signals.size(-1) // 2
+        signal_idx = int(self.signal_time * self.sample_rate)
+        max_start = int(
+            signal_idx - self.left_pad_size - self.filter_size // 2
+        )
+        max_stop = max_start + kernel_size
+        pad = max_stop - signals.size(-1)
+        if pad > 0:
+            signals = torch.nn.functional.pad(signals, [0, pad])
 
-        step = kernel_size + 2 * self.pad_size
+        step = (
+            kernel_size
+            - self.left_pad_size
+            - self.right_pad_size
+            - self.filter_size
+        )
         step /= self.hparams.num_valid_views - 1
         X_inj = []
         for i in range(self.hparams.num_valid_views):
-            start = center + self.pad_size - int(i * step)
+            start = max_start - int(i * step)
             stop = start + kernel_size
             injected = X + signals[:, :, int(start) : int(stop)]
             injected = self.whitener(injected, psd)
@@ -541,14 +543,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
-        num_waveforms = self.waveform_sampler.num_waveforms
-        try:
-            waveform_prob = self.hparams.waveform_prob
-        except AttributeError:
-            waveform_prob = 1
-        waveforms_per_batch = self.hparams.batch_size * waveform_prob
-        steps_per_epoch = int(4 * num_waveforms / waveforms_per_batch)
-
         # TODO: potentially introduce chunking here via
         # chunk_size/batches_per_chunk class args that
         # default to None
@@ -557,7 +551,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             channels=self.hparams.ifos,
             kernel_size=int(self.sample_rate * self.sample_length),
             batch_size=self.hparams.batch_size,
-            batches_per_epoch=steps_per_epoch,
+            batches_per_epoch=self.hparams.batches_per_epoch,
             coincident=False,
         )
 
