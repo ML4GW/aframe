@@ -1,12 +1,17 @@
 import logging
 import os
-from concurrent.futures import ProcessPoolExecutor
+import time
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from tempfile import gettempdir
 
-import ray
 import s3fs
-from botocore.exceptions import ResponseStreamingError
+from botocore.exceptions import ClientError, ResponseStreamingError
+from filelock import FileLock
+from fsspec.exceptions import FSTimeoutError
+
+# s3 retry configuration
+retry_config = {"retries": {"total_max_attempts": 10, "mode": "adaptive"}}
 
 
 def split_data_dir(data_dir: str):
@@ -38,18 +43,8 @@ def get_data_dir(data_dir: str):
         # worker process downloads its own copy of the data
         # only on its first training run
         tmpdir = gettempdir()
-        if ray.is_initialized():
-            logging.info(
-                "Downloading data to ray worker-specific tmp directory"
-            )
-            worker_id = ray.get_runtime_context().get_worker_id()
-            data_dir = f"{tmpdir}/{worker_id}"
-        # if not using ray, and just doing
-        # distributed training, just download
-        # to a specified temporary directory
-        else:
-            logging.info("Downloading data to local tmp directory")
-            data_dir = f"{tmpdir}/data-tmp"
+        logging.info("Downloading data to local tmp directory")
+        data_dir = f"{tmpdir}/data-tmp"
 
     logging.info(f"Downloading data to {data_dir}")
     os.makedirs(data_dir, exist_ok=True)
@@ -57,31 +52,36 @@ def get_data_dir(data_dir: str):
 
 
 def _download(
-    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 3
+    s3: s3fs.S3FileSystem, source: str, target: str, num_retries: int = 5
 ):
     """
     Cheap wrapper around s3.get to try to avoid issues
     from interrupted reads.
     """
 
-    if os.path.exists(target):
-        logging.info(f"Object {source} already downloaded")
-        return
-
+    lockfile = target + ".lock"
     logging.info(f"Downloading {source} to {target}")
     for i in range(num_retries):
-        try:
-            s3.get(source, target)
-            break
-        except ResponseStreamingError:
-            logging.info(
-                "Download attempt {} for object {} "
-                "was interrupted, retrying".format(i + 1, source)
-            )
+        with FileLock(lockfile):
+            if os.path.exists(target):
+                logging.info(
+                    f"Object {source} already downloaded by another process"
+                )
+                return
             try:
-                os.remove(target)
-            except FileNotFoundError:
-                continue
+                s3.get(source, target)
+                break
+            except (ResponseStreamingError, FSTimeoutError, ClientError):
+                logging.info(
+                    "Download attempt {} for object {} "
+                    "was interrupted, retrying".format(i + 1, source)
+                )
+                time.sleep(5)
+                try:
+                    os.remove(target)
+                except FileNotFoundError:
+                    continue
+
     else:
         raise RuntimeError(
             "Failed to download object {} due to repeated "
@@ -105,7 +105,12 @@ def download_training_data(bucket: str, data_dir: str):
 
     # check to make sure the specified bucket
     # actually has data to download
-    s3 = s3fs.S3FileSystem()
+    s3 = s3fs.S3FileSystem(
+        key=os.getenv("AWS_ACCESS_KEY_ID"),
+        secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+        config_kwargs=retry_config,
+    )
     background_fnames = s3.glob(f"{bucket}/background/*.hdf5")
     if not background_fnames:
         raise ValueError(f"No background data at {bucket} to download")
@@ -115,11 +120,12 @@ def download_training_data(bucket: str, data_dir: str):
         data_dir + f.replace(f"{bucket}", "") for f in background_fnames
     ]
     download = partial(_download, s3)
-    path = "signals.hdf5"
-    with ProcessPoolExecutor() as executor:
-        future = executor.submit(
-            download, f"{bucket}/{path}", f"{data_dir}/{path}"
-        )
+    paths = ["train_waveforms.hdf5", "val_waveforms.hdf5"]
+    with ThreadPoolExecutor() as executor:
+        for path in paths:
+            future = executor.submit(
+                download, f"{bucket}/{path}", f"{data_dir}/{path}"
+            )
         executor.map(download, background_fnames, targets)
 
     future.result()

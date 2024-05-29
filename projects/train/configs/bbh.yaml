@@ -1,0 +1,96 @@
+# commented args represent values filled out
+# by train task at run time. To build a functional
+# standalone config, add these in.
+ 
+# To start training from a checkpoint, uncomment the below argument
+# and specify a path to the desired checkpoint
+# ckpt_path: ""
+matmul_precision: "highest"
+model:
+  class_path: train.model.SupervisedAframe
+  init_args:
+    # architecture
+    arch:
+      class_path: architectures.supervised.SupervisedTimeDomainResNet
+      init_args:
+        layers: [3, 4, 6, 3]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 16
+    metric:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+
+    # optimization params
+    weight_decay: 0.0
+    learning_rate: 0.000585
+    pct_lr_ramp: 0.115
+    # early stop
+    patience: 50
+data:
+  class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
+  init_args:
+    # loading args
+    # data_dir:
+    # ifos:
+    batches_per_epoch: 200
+    # preprocessing args
+    batch_size: 384
+    # kernel_length:
+    psd_length: 8
+    # fduration:
+    # highpass: 
+    fftlength: null
+
+    # augmentation args
+    waveform_prob: 0.277
+    swap_prob: 0.014
+    mute_prob: 0.055
+    left_pad: 0.25
+    right_pad: 0.0
+    snr_sampler:
+      class_path: ml4gw.distributions.PowerLaw
+      init_args: 
+        minimum: 4
+        maximum: 100
+        index: -3
+      # uncomment below and comment above for 
+      # snr scheduling
+       
+      # class_path: train.augmentations.SnrSampler
+      # init_args:
+         # max_min_snr: 12
+         # min_min_snr: 4
+         # max_snr: 100
+         # alpha: -3
+         # decay_steps: 989
+    # validation args
+    valid_frac: 0.25
+    valid_stride: 0.5
+    num_valid_views: 5
+    valid_livetime: 57600 
+trainer:
+  # by default, use a local CSV logger.
+  # Options in train task for using a
+  # wandb logger instead
+  logger:
+    - class_path: lightning.pytorch.loggers.CSVLogger
+      init_args:
+        # save_dir:
+        flush_logs_every_n_steps: 10
+  # uncomment below if you want to profile
+  # profiler:
+    # class_path: lightning.pytorch.profilers.PyTorchProfiler
+    # dict_kwargs:
+      # profile_memory: true
+  # devices:
+  # strategy: set to ddp if len(devices) > 1
+  #precision: 16-mixed
+  accelerator: auto
+  max_epochs: 200
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 20
+  benchmark: true

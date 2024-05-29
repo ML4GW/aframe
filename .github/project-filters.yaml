@@ -1,0 +1,29 @@
+workflow: &workflow
+  - '.github/lib-filters.yaml'
+  - '.github/workflows/lib-tests.yaml'
+
+data:
+  - *workflow
+  - 'projects/data/**'
+  - 'ml4gw/**'
+  - 'libs/ledger/**'
+  - 'libs/priors/**'
+
+infer:
+  - *workflow
+  - 'projects/infer/**'
+  - 'hermes/**'
+  - 'libs/ledger/**'
+  
+train:
+  - *workflow
+  - 'projects/train/**'
+  - 'ml4gw/**'
+  - 'libs/ledger/**'
+  - 'libs/architectures/**'
+
+export:
+  - *workflow
+  - 'projects/export/**'
+  - 'ml4gw/**'
+  - 'hermes/**'

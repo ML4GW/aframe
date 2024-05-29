@@ -1,9 +1,10 @@
 from typing import Optional, Union
 
 import torch
+from torch.distributions.uniform import Uniform
 
 from ml4gw import gw
-from ml4gw.distributions import Cosine, PowerLaw, Uniform
+from ml4gw.distributions import Cosine, PowerLaw
 
 
 class ChannelSwapper(torch.nn.Module):
@@ -58,46 +59,6 @@ class ChannelMuter(torch.nn.Module):
             X[indices, channel] = torch.zeros(X.shape[-1], device=X.device)
 
         return X, indices
-
-
-class SignalInverter(torch.nn.Module):
-    """
-    Data augmentation that randomly inverts data in a kernel
-
-    Args:
-        prob:
-            Probability that a kernel is inverted
-    """
-
-    def __init__(self, prob: float = 0.5):
-        super().__init__()
-        self.prob = prob
-
-    def forward(self, X):
-        if self.training:
-            mask = torch.rand(size=X.shape[:-1]) < self.prob
-            X[mask] *= -1
-        return X
-
-
-class SignalReverser(torch.nn.Module):
-    """
-    Data augmentation that randomly reverses data in a kernel
-
-    Args:
-        prob:
-            Probability that a kernel is reversed
-    """
-
-    def __init__(self, prob: float = 0.5):
-        super().__init__()
-        self.prob = prob
-
-    def forward(self, X):
-        if self.training:
-            mask = torch.rand(size=X.shape[:-1]) < self.prob
-            X[mask] = X[mask].flip(-1)
-        return X
 
 
 class SnrRescaler(torch.nn.Module):
@@ -207,7 +168,7 @@ class SnrSampler:
         self.dist = PowerLaw(max_min_snr, max_snr, alpha)
 
     def __call__(self, N):
-        return self.dist(N)
+        return self.dist.sample((N,))
 
     def step(self):
         self._step += 1
@@ -273,15 +234,12 @@ class WaveformSampler(torch.nn.Module):
     different waveforms for each device.
     """
 
-    def __init__(
-        self, inject_prob: float, **polarizations: torch.Tensor
-    ) -> None:
+    def __init__(self, **polarizations: torch.Tensor) -> None:
         super().__init__()
         self.dec = Cosine()
         self.psi = Uniform(0, torch.pi)
         self.phi = Uniform(-torch.pi, torch.pi)
 
-        self.inject_prob = inject_prob
         self.num_waveforms = None
         for polar, x in polarizations.items():
             if self.num_waveforms is None:
@@ -295,16 +253,16 @@ class WaveformSampler(torch.nn.Module):
                 )
         self.polarizations = polarizations
 
-    def forward(self, X):
+    def forward(self, X, prob: float):
         # sample which batch elements of X we're going to inject on
         rvs = torch.rand(size=X.shape[:1], device=X.device)
-        mask = rvs < self.inject_prob
+        mask = rvs < prob
         N = mask.sum().item()
 
         # sample sky parameters for each injections
-        dec = self.dec(N).to(X.device)
-        psi = self.psi(N).to(X.device)
-        phi = self.phi(N).to(X.device)
+        dec = self.dec.sample((N,)).to(X.device)
+        psi = self.psi.sample((N,)).to(X.device)
+        phi = self.phi.sample((N,)).to(X.device)
 
         # now sample the actual waveforms we want to inject
         idx = torch.randperm(self.num_waveforms)[:N]

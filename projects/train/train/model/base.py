@@ -2,9 +2,10 @@ import logging
 from typing import Optional, Sequence, Union
 
 import lightning.pytorch as pl
+import ray
 import torch
+from architectures import Architecture
 
-from train.architectures import Architecture
 from train.callbacks import ModelCheckpoint, SaveAugmentedBatch
 from train.metrics import TimeSlideAUROC
 
@@ -38,20 +39,27 @@ class AframeBase(pl.LightningModule):
         metric: TimeSlideAUROC,
         learning_rate: float,
         pct_lr_ramp: float,
+        weight_decay: float = 0.0,
         patience: Optional[int] = None,
         save_top_k_models: int = 10,
+        verbose: bool = False,
     ) -> None:
         super().__init__()
         # construct our model up front and record all
-        # our hyperparameters to our logdir
+        # our hyperparameters to our logdir;
         self.model = arch
         self.metric = metric
-        self.save_hyperparameters(ignore=["arch", "metric"])
+        self.verbose = verbose
         self._logger = self.get_logger()
+        self.save_hyperparameters(ignore=["arch", "metric"])
+
+        self.save_hyperparameters(ignore=["arch", "metric"])
 
     def get_logger(self):
         logger_name = "AframeModel"
-        return logging.getLogger(logger_name)
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        return logger
 
     def forward(self, X: Tensor) -> Tensor:
         """
@@ -180,6 +188,11 @@ class AframeBase(pl.LightningModule):
         # that will be used for downstream export
         # and inference tasks
         # checkpoint for saving multiple best models
+        callbacks = []
+        callbacks.append(SaveAugmentedBatch())
+
+        # if using ray tune don't append lightning
+        # model checkpoint since we'll be using ray's
         checkpoint = ModelCheckpoint(
             monitor="valid_auroc",
             save_top_k=self.hparams.save_top_k_models,
@@ -187,8 +200,10 @@ class AframeBase(pl.LightningModule):
             auto_insert_metric_name=False,
             mode="max",
         )
-        save = SaveAugmentedBatch()
-        callbacks = [checkpoint, save]
+
+        if not ray.is_initialized():
+            callbacks.append(checkpoint)
+
         if self.hparams.patience is not None:
             early_stop = pl.callbacks.EarlyStopping(
                 monitor="valid_auroc",
@@ -209,11 +224,14 @@ class AframeBase(pl.LightningModule):
         # https://arxiv.org/pdf/1706.02677.pdf
         lr = self.hparams.learning_rate * world_size
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr)
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(), lr, weight_decay=self.hparams.weight_decay
+        )
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             pct_start=self.hparams.pct_lr_ramp,
             max_lr=self.hparams.learning_rate,
             total_steps=self.trainer.estimated_stepping_batches,
         )
-        return [optimizer], [scheduler]
+        scheduler_config = dict(scheduler=scheduler, interval="step")
+        return dict(optimizer=optimizer, lr_scheduler=scheduler_config)

@@ -4,10 +4,8 @@ from pathlib import Path
 import law
 import luigi
 from law.contrib.singularity.config import config_defaults
-from luigi.contrib.s3 import S3Client
 
 from aframe.base import AframeSandbox, AframeSingularityTask
-from aframe.config import s3
 from aframe.tasks.data import DATAFIND_ENV_VARS
 
 root = Path(__file__).resolve().parent.parent.parent
@@ -42,6 +40,12 @@ class AframeDataSandbox(AframeSandbox):
             if os.path.exists(dir):
                 volumes[dir] = dir
 
+        # bind users /local directory for
+        # storing large tmp files,
+        # e.g. for local storage before
+        # being dumped to s3 by luigi
+        tmpdir = f"/local/{os.getenv('USER')}"
+        volumes[tmpdir] = tmpdir
         # bind aws directory that contains s3 credentials
         aws_dir = os.path.expanduser("~/.aws/")
         volumes[aws_dir] = aws_dir
@@ -55,8 +59,8 @@ class AframeDataTask(AframeSingularityTask):
     job_log = luigi.Parameter(default="")
 
     @property
-    def client(self):
-        return S3Client(endpoint_url=s3().endpoint_url)
+    def default_image(self):
+        return "data.sif"
 
     @property
     def sandbox(self):

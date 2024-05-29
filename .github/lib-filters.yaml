@@ -1,0 +1,25 @@
+# define filters for file changes
+# to trigger unit tests
+
+# filter for changes
+# to workflow
+workflow: &workflow
+  - '.github/lib-filters.yaml'
+  - '.github/workflows/lib-tests.yaml'
+
+
+# use paths for filter names 
+# for simplicity in ci-test.yaml
+
+# cleaner way to run all jobs
+# if workflow file is changed?
+
+# libraries
+architectures:
+  - *workflow
+  - 'libs/architectures/**'
+  - 'ml4gw/**'
+
+ledger:
+  - *workflow
+  - 'libs/ledger/**'

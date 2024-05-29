@@ -1,8 +1,11 @@
+import logging
 import shutil
 from pathlib import Path
 from textwrap import dedent
-from typing import List
+from typing import List, Optional
 
+import h5py
+import numpy as np
 from ledger.events import EventSet, RecoveredInjectionSet
 
 from pycondor.cluster import JobStatus
@@ -25,16 +28,25 @@ def build_condor_submit(
     fduration: float,
     output_dir: Path,
     num_parallel_jobs: int,
+    rate: Optional[float] = None,
     model_version: int = -1,
+    zero_lag: bool = False,
 ) -> Job:
+    """
+    Build a condor submit file that will launch multiple infer jobs in parallel
+    """
     param_names = "background_fname,shift"
     parameters = ""
+
     for fname in background_fnames:
         for i in range(num_shifts):
             _shifts = (
                 "'[" + ", ".join([str(s * (i + 1)) for s in shifts]) + "]'"
             )
             parameters += f"{fname},{_shifts}\n"
+
+        if zero_lag:
+            parameters += f"{fname},'[0, 0]'\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
@@ -44,6 +56,7 @@ def build_condor_submit(
 
     log_pattern = "infer-$(ProcID).log"
     output_pattern = "tmp/output-$(ProcID)"
+    rate = rate or "null"
 
     arguments = f"""
     --client.address={ip_address}:8001
@@ -53,6 +66,7 @@ def build_condor_submit(
     --data.batch_size {batch_size}
     --data.inference_sampling_rate {inference_sampling_rate}
     --data.injection_set_fname {injection_set_fname}
+    --data.rate {rate}
     --postprocessor.integration_window_length {integration_window_length}
     --postprocessor.cluster_window_length {cluster_window_length}
     --postprocessor.psd_length {psd_length}
@@ -60,8 +74,9 @@ def build_condor_submit(
     --data.background_fname $(background_fname)
     --data.shifts=$(shift)
     --outdir {output_dir / output_pattern}
-    --logfile {output_dir / "log" / log_pattern}
+    --logfile {output_dir / "logs" / log_pattern}
     """
+
     arguments = dedent(arguments).replace("\n", " ")
     log_dir = condor_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -70,9 +85,10 @@ def build_condor_submit(
     job = Job(
         name="infer-clients",
         executable=shutil.which("infer"),
-        error=str(log_dir),
-        log=str(log_dir),
-        output=str(log_dir),
+        error=str(log_dir / "error"),
+        log=str(log_dir / "log"),
+        output=str(log_dir / "output"),
+        suffix="-$(ProcID)",
         submit=str(condor_dir),
         request_memory="6G",
         request_disk="1G",
@@ -86,31 +102,49 @@ def build_condor_submit(
 
 def wait(cluster):
     while not cluster.check_status(JobStatus.COMPLETED, how="all"):
-        n_jobs = len(cluster.procs)
-        print(f"Waiting for {n_jobs} jobs to complete...")
         if cluster.check_status(
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):
             for proc in cluster.procs:
-                print(proc.err)
+                logging.error(proc.err)
             cluster.rm()
-            raise ValueError("Something went wrong!")
+            raise RuntimeError("Something went wrong!")
 
 
-def aggregate_results(output_directory: Path):
+def get_shifts(files: List[Path]):
+    shifts = []
+    for f in files:
+        with h5py.File(f) as f:
+            shift = f["parameters"]["shift"][0]
+            shifts.append(shift)
+    return shifts
+
+
+def aggregate_results(output_directory: Path, clean: bool = False):
     """
     Combine results from across segments into a single
     background file and foreground file. Remove the directory
     containing the individual segment results.
     """
-    background, foreground = EventSet(), RecoveredInjectionSet()
-    for data_dir in (output_directory / "tmp").iterdir():
-        bckground = EventSet.read(data_dir / "background.hdf5")
-        frground = RecoveredInjectionSet.read(data_dir / "foreground.hdf5")
+    tmpdir = output_directory / "tmp"
 
-        background.append(bckground)
-        foreground.append(frground)
+    back_files = np.array([d / "background.hdf5" for d in tmpdir.iterdir()])
+    fore_files = [d / "foreground.hdf5" for d in tmpdir.iterdir()]
 
-    background.write(output_directory / "background.hdf5")
-    foreground.write(output_directory / "foreground.hdf5")
-    shutil.rmtree(output_directory / "tmp")
+    # separate 0lag and background events into different files
+    shifts = get_shifts(back_files)
+    zero_lag = np.array([all(shift == [0, 0]) for shift in shifts])
+
+    zero_lag_files = back_files[zero_lag]
+    back_files = back_files[~zero_lag]
+
+    EventSet.aggregate(
+        back_files, output_directory / "background.hdf5", clean=clean
+    )
+    RecoveredInjectionSet.aggregate(
+        fore_files, output_directory / "foreground.hdf5", clean=clean
+    )
+    if len(zero_lag_files) > 0:
+        EventSet.aggregate(
+            zero_lag_files, output_directory / "0lag.hdf5", clean=clean
+        )

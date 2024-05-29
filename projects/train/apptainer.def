@@ -11,7 +11,8 @@ Stage: build
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../ml4gw /opt/aframe/ml4gw
-
+../../libs/ledger /opt/aframe/libs/ledger
+../../libs/architectures /opt/aframe/libs/architectures
 
 %post
 # installing the local package editably via pip
@@ -36,14 +37,9 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
-# need git to install ray-kube
-# TODO: longer term, this should probably just
-# a submodule of this project
-apt-get update
-apt-get install -y --no-install-recommends git
-apt-get clean
-
-
+# install pytest so we can run unit tests
+# inside container during CI
 cd /opt/aframe/projects/train
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
+pip install pytest

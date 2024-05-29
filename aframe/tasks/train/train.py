@@ -1,27 +1,33 @@
 import json
-import os
 import shlex
 import sys
-from typing import TYPE_CHECKING, Dict
+from typing import Dict
 
 import law
 import luigi
 import yaml
 from kr8s.objects import Secret
 from luigi.contrib.kubernetes import KubernetesJobTask
+from luigi.util import inherits
 
-from aframe.base import AframeRayTask, AframeSingularityTask, logger
-from aframe.config import ray_worker
-from aframe.targets import LawS3Target
-from aframe.tasks.train.base import RemoteTrainBase, TrainBase
+from aframe.base import AframeSingularityTask, AframeWrapperTask, logger
+from aframe.config import s3
+from aframe.targets import Bytes, LawS3Target
+from aframe.tasks.train.base import (
+    RemoteParameters,
+    RemoteTrainBase,
+    TrainBase,
+    TrainBaseParameters,
+)
 from aframe.tasks.train.config import wandb
 from aframe.utils import stream_command
 
-if TYPE_CHECKING:
-    from ray_kube import KubernetesRayCluster
-
 
 class TrainLocal(TrainBase, AframeSingularityTask):
+    @property
+    def default_image(self):
+        return "train.sif"
+
     def sandbox_env(self, _) -> Dict[str, str]:
         env = super().sandbox_env(_)
         for key in ["name", "entity", "project", "group", "tags", "api_key"]:
@@ -45,16 +51,27 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         stream_command(cmd)
 
     def output(self):
-        dir = law.LocalDirectoryTarget(self.run_dir)
+        dir = law.LocalDirectoryTarget(str(self.run_dir))
         return dir.child("model.pt", type="f")
 
 
-class TrainRemote(RemoteTrainBase, KubernetesJobTask):
-    image = luigi.Parameter(default="ghcr.io/ml4gw/aframev2/train:dev")
-    min_gpu_memory = luigi.IntParameter(default=15000)
-    request_gpus = luigi.IntParameter(default=4)
-    request_cpus = luigi.IntParameter(default=24)
-    request_cpu_memory = luigi.Parameter(default="64Gi")
+class TrainRemote(KubernetesJobTask, RemoteTrainBase):
+    dev = luigi.BoolParameter(default=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not str(self.run_dir).startswith("s3://"):
+            raise ValueError(
+                "run_dir must be an s3 path for remote training tasks"
+            )
+        if not str(self.data_dir).startswith("s3://"):
+            raise ValueError(
+                "data_dir must be an s3 path for remote training tasks"
+            )
+
+    @property
+    def default_image(self):
+        return None
 
     @property
     def name(self):
@@ -66,7 +83,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
 
     @property
     def pod_creation_wait_interal(self):
-        return 120
+        return 7200
 
     def get_config(self):
         with open(self.config, "r") as f:
@@ -75,8 +92,8 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
         return json_string
 
     def get_args(self):
-        # get args from base class, remove the first two
-        # which reference the config file, since we'll
+        # get args from base class removing the first two
+        # which reference the config file. We'll
         # need to set this as an environment variable of
         # raw yaml content to run remotely.
         args = super().get_args()
@@ -85,7 +102,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
         return args
 
     def output(self):
-        return LawS3Target(os.path.join(self.run_dir, "model.pt"))
+        return LawS3Target(str(self.run_dir / "model.pt"), format=Bytes)
 
     @property
     def gpu_constraints(self):
@@ -120,7 +137,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
             "kind": "Secret",
             "metadata": {"name": "s3-credentials", "type": "Opaque"},
         }
-        spec["stringData"] = self.get_s3_credentials()
+        spec["stringData"] = s3().get_s3_credentials()
 
         return Secret(resource=spec)
 
@@ -130,20 +147,20 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
         spec["containers"] = [
             {
                 "name": "train",
-                "image": self.image,
+                "image": self.remote_image,
                 "volumeMounts": [{"mountPath": "/dev/shm", "name": "dshm"}],
                 "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
                 "resources": {
                     "limits": {
-                        "memory": f"{self.request_cpu_memory}",
-                        "cpu": f"{self.request_cpus}",
+                        "memory": f"{self.cpu_memory}",
+                        "cpu": f"{self.num_cpus}",
                         "nvidia.com/gpu": f"{self.request_gpus}",
                     },
                     "requests": {
-                        "memory": f"{self.request_cpu_memory}",
-                        "cpu": f"{self.request_cpus}",
+                        "memory": f"{self.cpu_memory}",
+                        "cpu": f"{self.num_cpus}",
                         "nvidia.com/gpu": f"{self.request_gpus}",
                     },
                 },
@@ -151,7 +168,7 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
                 "env": [
                     {
                         "name": "AWS_ENDPOINT_URL",
-                        "value": self.get_internal_s3_url(),
+                        "value": s3().get_internal_s3_url(),
                     },
                     {
                         "name": "WANDB_API_KEY",
@@ -164,57 +181,55 @@ class TrainRemote(RemoteTrainBase, KubernetesJobTask):
         spec["volumes"] = [
             {
                 "name": "dshm",
-                "emptyDir": {"sizeLimit": "16Gi", "medium": "Memory"},
+                "emptyDir": {"sizeLimit": "32Gi", "medium": "Memory"},
             }
         ]
         return spec
 
     def run(self):
-        self.secret.create()
+        if not self.secret.exists():
+            self.secret.create()
         super().run()
 
+    def on_failure(self, exc):
+        self.secret.delete()
+        super().on_failure(exc)
 
-class TuneRemote(RemoteTrainBase, AframeRayTask):
-    search_space = luigi.Parameter()
-    num_samples = luigi.IntParameter()
-    min_epochs = luigi.IntParameter()
-    max_epochs = luigi.IntParameter()
-    reduction_factor = luigi.IntParameter()
-    num_workers = luigi.IntParameter(default=ray_worker().replicas)
-    gpus_per_worker = luigi.IntParameter(default=ray_worker().gpus_per_replica)
+    def on_success(self):
+        self.secret.delete()
+        super().on_success()
 
-    @property
-    def use_wandb(self):
-        # always use wandb logging for tune jobs
-        return True
 
-    def get_ip(self):
-        ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
-        ip += ":10001"
-        return ip
+@inherits(TrainBaseParameters, RemoteParameters)
+class Train(AframeWrapperTask):
+    """
+    Class that dynamically chooses between
+    remote training on nautilus or local training on LDG.
 
-    def configure_cluster(self, cluster: "KubernetesRayCluster"):
-        secret = self.get_s3_credentials()
-        cluster.add_secret("s3-credentials", env=secret)
-        cluster.set_env({"AWS_ENDPOINT_URL": self.get_internal_s3_url()})
-        cluster.set_env({"WANDB_API_KEY": wandb().api_key})
-        return cluster
+    Useful for incorporating into pipelines where
+    you don't care where the training is run.
+    """
 
-    def complete(self):
-        return False
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.train_remote = self.validate_dirs()
 
-    def run(self):
-        from train.tune.cli import main
+    def validate_dirs(self) -> bool:
+        # train remotely if run_dir stars with s3://
 
-        args = self.get_args()
-        args.append(f"--tune.address={self.get_ip()}")
-        args.append(f"--tune.space={self.search_space}")
-        args.append(f"--tune.num_workers={self.num_workers}")
-        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
-        args.append("--tune.cpus_per_gpu=" + str(ray_worker().cpus_per_gpu))
-        args.append(f"--tune.num_samples={self.num_samples}")
-        args.append(f"--tune.min_epochs={self.min_epochs}")
-        args.append(f"--tune.max_epochs={self.max_epochs}")
-        args.append(f"--tune.reduction_factor={self.reduction_factor}")
-        args.append(f"--tune.storage_dir={self.run_dir}")
-        main(args)
+        # Note: one can specify a remote data_dir, but
+        # train locally
+        train_remote = str(self.run_dir).startswith("s3://")
+
+        if train_remote and not str(self.data_dir).startswith("s3://"):
+            raise ValueError(
+                "If run_dir is an s3 path, data_dir must also be an s3 path"
+                "Got data_dir: {self.data_dir} and run_dir: {self.run_dir}"
+            )
+        return train_remote
+
+    def requires(self):
+        if self.train_remote:
+            return TrainRemote.req(self)
+        else:
+            return TrainLocal.req(self)

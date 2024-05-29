@@ -22,6 +22,7 @@ def timeslide_waveforms(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str,
+    coalescence_time: float,
     highpass: float,
     snr_threshold: float,
     psd_file: Path,
@@ -70,6 +71,9 @@ def timeslide_waveforms(
             Duration of waveform in seconds
         waveform_approximant:
             Name of the waveform approximant to use.
+        coalescence_time:
+            Location of the defining point of the signal within
+            the generated waveform
         highpass:
             The frequency to use for a highpass filter, specified
             in Hz
@@ -121,6 +125,7 @@ def timeslide_waveforms(
         sample_rate,
         waveform_duration,
         waveform_approximant,
+        coalescence_time,
         highpass,
         snr_threshold,
         psds,
@@ -128,7 +133,7 @@ def timeslide_waveforms(
 
     # now, set the injection times and shifts,
     # and create the LigoResponseSet object
-    parameters["gps_time"] = injection_times
+    parameters["injection_time"] = injection_times
     parameters["shift"] = np.array([shifts for _ in range(n_samples)])
 
     output_dir.mkdir(parents=True, exist_ok=True)

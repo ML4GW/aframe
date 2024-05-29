@@ -1,5 +1,6 @@
 import os
 
+import torch
 from lightning.pytorch.cli import LightningCLI
 
 from train.data import BaseAframeDataset
@@ -18,6 +19,16 @@ class AframeCLI(LightningCLI):
             "data.init_args.valid_stride",
             "model.init_args.metric.init_args.stride",
         )
+        parser.add_argument(
+            "--matmul_precision",
+            type=str,
+            default="highest",
+        )
+        parser.add_argument(
+            "--ckpt_path",
+            type=str,
+            default=None,
+        )
 
 
 def main(args=None):
@@ -31,18 +42,20 @@ def main(args=None):
         seed_everything_default=101588,
         args=args,
     )
-
     # CSV Logger and WandB logger use different
     # names for this variable. Unfortunate.
     log_dir = cli.trainer.logger.log_dir or cli.trainer.logger.save_dir
     if not log_dir.startswith("s3://"):
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.join(log_dir, "train.log")
-        configure_logging(log_file)
+        configure_logging(log_file, verbose=True)
     else:
         configure_logging()
 
-    cli.trainer.fit(cli.model, cli.datamodule)
+    torch.set_float32_matmul_precision(cli.config["matmul_precision"])
+    cli.trainer.fit(
+        cli.model, cli.datamodule, ckpt_path=cli.config["ckpt_path"]
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,1 @@
-from .timeslide_waveforms import (
-    GenerateTimeslideWaveforms,
-    MergeTimeslideWaveforms,
-)
+from .timeslide_waveforms import DeployTimeslideWaveforms, TimeslideWaveforms

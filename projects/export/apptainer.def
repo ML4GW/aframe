@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: nvcr.io/nvidia/tritonserver:22.12-py3
+From: python:3.10.12-slim-bullseye
 Stage: build
 
 %files
@@ -20,24 +20,22 @@ Stage: build
 # poetry has already done dependency resolution for us,
 # so turn that off with the --no-deps flag to increase performance.
 # Lastly, install the export project itself
-python3.8 -m pip install poetry
+python -m pip install poetry==1.7.1
 cd /opt/aframe/projects/export
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
 
-
 Bootstrap: docker
-From: nvcr.io/nvidia/tritonserver:22.12-py3
+From: python:3.10.12-slim-bullseye
 Stage: final
 
-%files from build 
-/opt/aframe/ /opt/aframe
+%files from build
+/opt/aframe /opt/aframe
 
 %post
-apt-get update
-apt-get install -y --no-install-recommends git
-apt-get clean
-
+# install pytest so we can run 
+# unit tests during CI inside container
 cd /opt/aframe/projects/export
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir
+pip install pytest

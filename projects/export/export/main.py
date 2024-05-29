@@ -1,6 +1,9 @@
+import io
 import logging
 from typing import Optional
 
+import h5py
+import s3fs
 import torch
 from export.snapshotter import add_streaming_input_preprocessor
 
@@ -19,9 +22,19 @@ def scale_model(model, instances):
         model.config.add_instance_group(count=instances)
 
 
+def open_file(path, mode="rb"):
+    if str(path).startswith("s3://"):
+        fs = s3fs.S3FileSystem()
+        return fs.open(path, mode)
+    else:
+        # For local paths
+        return open(path, mode)
+
+
 def export(
     weights: str,
     repository_directory: str,
+    batch_file: str,
     num_ifos: int,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -30,9 +43,11 @@ def export(
     fduration: float,
     psd_length: float,
     fftlength: Optional[float] = None,
+    q: Optional[float] = None,
     highpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
+    preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
     clean: bool = False,
     verbose: bool = False,
@@ -47,10 +62,16 @@ def export(
         weights:
             File Like object or Path representing
             a set of trained weights that will be
-            exported to a model_repository.
+            exported to a model_repository. Supports
+            local and S3 paths.
         repository_directory:
             Directory to which to save the models and their
             configs
+        batch_file:
+            Path to file containing a batch of data from model
+            training. This is used to determine the input size
+            of the model. File structure is assumed to match
+            the structure of the file written during training
         logdir:
             Directory to which logs will be written
         num_ifos:
@@ -99,7 +120,10 @@ def export(
 
     # load in the model graph
     logging.info("Initializing model graph")
-    graph = nn = torch.jit.load(weights)
+
+    with open_file(weights, "rb") as f:
+        graph = nn = torch.jit.load(f, map_location="cpu")
+
     graph.eval()
     logging.info(f"Initialize:\n{nn}")
 
@@ -119,8 +143,11 @@ def export(
     if aframe_instances is not None:
         scale_model(aframe, aframe_instances)
 
-    size = int(kernel_length * sample_rate)
-    input_shape = (batch_size, num_ifos, size)
+    with open_file(batch_file, "rb") as f:
+        batch_file = h5py.File(io.BytesIO(f.read()))
+        size = batch_file["X"].shape[2:]
+
+    input_shape = (batch_size, num_ifos) + tuple(size)
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -160,10 +187,13 @@ def export(
             aframe.inputs["whitened"],
             psd_length=psd_length,
             sample_rate=sample_rate,
+            kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             fduration=fduration,
             fftlength=fftlength,
+            q=q,
             highpass=highpass,
+            preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,
         )
         ensemble.pipe(whitened, aframe.inputs["whitened"])

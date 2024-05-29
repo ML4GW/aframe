@@ -1,0 +1,111 @@
+import os
+from typing import TYPE_CHECKING
+
+import luigi
+
+from aframe.base import AframeRayTask
+from aframe.config import ray_head, ray_worker, s3
+from aframe.targets import LawS3Target
+from aframe.tasks.train.base import RemoteTrainBase
+from aframe.tasks.train.config import wandb
+
+if TYPE_CHECKING:
+    from aframe.helm import RayCluster
+
+
+class TuneRemote(RemoteTrainBase, AframeRayTask):
+    name = luigi.Parameter(
+        default="ray-tune",
+        description="Name of the tune job. "
+        "Will be used to group runs in WandB",
+    )
+    search_space = luigi.Parameter(
+        default="train.tune.search_space",
+        description="Import path to the search space file "
+        "used for hyperparameter tuning. This file is expected "
+        "to contain a dictionary named `space` of the search space",
+    )
+    num_samples = luigi.IntParameter(description="Number of trials to run")
+    min_epochs = luigi.IntParameter(
+        description="Minimum number of epochs each trial "
+        "can run before early stopping is considered."
+    )
+    max_epochs = luigi.IntParameter(
+        description="Maximum number of epochs each trial can run"
+    )
+    reduction_factor = luigi.IntParameter(
+        description="Fraction of poor performing trials to stop early"
+    )
+    workers_per_trial = luigi.IntParameter(
+        default=1, description="Number of ray workers to use per trial"
+    )
+    gpus_per_worker = luigi.IntParameter(
+        default=1, description="Number of gpus to allocate to each ray worker"
+    )
+
+    # image used locally to connect to the ray cluster
+    @property
+    def default_image(self):
+        return "train.sif"
+
+    @property
+    def use_wandb(self):
+        # always use wandb logging for tune jobs
+        return True
+
+    def get_ip(self):
+        """
+        Get the ip of the ray cluster that
+        is stored via an environment variable
+        """
+        ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
+        ip += ":10001"
+        return ip
+
+    def configure_cluster(self, cluster: "RayCluster"):
+        secret = s3().get_s3_credentials()
+        values = {
+            # image parameters
+            "image": self.container,
+            "imagePullPolicy": self.image_pull_policy,
+            # secrets / env variables
+            "awsUrl": s3().get_internal_s3_url(),
+            "secret.awsId": secret["AWS_ACCESS_KEY_ID"],
+            "secret.awsKey": secret["AWS_SECRET_ACCESS_KEY"],
+            "secret.wandbKey": wandb().api_key,
+            # compute resources
+            "worker.replicas": ray_worker().replicas,
+            "worker.cpu": ray_worker().cpus_per_replica,
+            "worker.gpu": ray_worker().gpus_per_replica,
+            "worker.memory": ray_worker().memory_per_replica,
+            "worker.min_gpu_memory": ray_worker().min_gpu_memory,
+            "head.cpu": ray_head().cpus,
+            "head.memory": ray_head().memory,
+            "dev": str(self.dev).lower(),
+        }
+        cluster.build_command(values)
+        return cluster
+
+    def output(self):
+        path = self.run_dir / "best.pt"
+        return LawS3Target(str(path))
+
+    def run(self):
+        from train.tune.cli import main
+
+        args = self.get_args()
+        args.append(f"--tune.name={self.name}")
+        args.append(f"--tune.address={self.get_ip()}")
+        args.append(f"--tune.space={self.search_space}")
+        args.append(f"--tune.workers_per_trial={self.workers_per_trial}")
+        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
+        args.append(f"--tune.cpus_per_gpu={ray_worker().cpus_per_gpu}")
+        args.append(f"--tune.num_samples={self.num_samples}")
+        args.append(f"--tune.min_epochs={self.min_epochs}")
+        args.append(f"--tune.max_epochs={self.max_epochs}")
+        args.append(f"--tune.reduction_factor={self.reduction_factor}")
+        args.append(f"--tune.storage_dir={self.run_dir}")
+
+        weights = main(args)
+        # copy the best weights to the output location
+        s3().client.copy(weights, self.output().path)

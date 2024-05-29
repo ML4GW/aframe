@@ -3,17 +3,41 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
-import kr8s
 import law
 import luigi
-from kubeml import KubernetesRayCluster
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import nautilus_urls, ray_head, ray_worker, s3
+from aframe.config import s3
+from aframe.helm import RayCluster
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
+
+
+class AframeParameters(law.Task):
+    dev = luigi.BoolParameter(
+        default=False,
+        significant=False,
+        description="If `True`, mount the local aframe repo "
+        "into the container. This will allow python code "
+        "changes to be reflected in the container. "
+        "However, if there are any environment changes, "
+        " the container will need to be rebuilt.",
+    )
+    gpus = luigi.Parameter(
+        default=os.getenv("CUDA_VISIBLE_DEVICES", ""),
+        significant=False,
+        description="Comma separated list of gpu ids to be exposed "
+        "via the `CUDA_VISIBLE_DEVICES` environment variable.",
+    )
+
+
+# aframe wrapper task to ensure that all wrapper tasks
+# take dev and gpu parameters that can be passed to
+# dependencies via .req() calls
+class AframeWrapperTask(law.WrapperTask, AframeParameters):
+    pass
 
 
 class AframeSandbox(singularity.SingularitySandbox):
@@ -52,7 +76,7 @@ class AframeSandbox(singularity.SingularitySandbox):
 law.config.update(AframeSandbox.config())
 
 
-class AframeSandboxTask(law.SandboxTask):
+class AframeSandboxTask(law.SandboxTask, AframeParameters):
     """
     Base task for __any__ Sandbox task (e.g. singularity, poetry/venv etc.)
 
@@ -65,9 +89,6 @@ class AframeSandboxTask(law.SandboxTask):
     (for singularity sandboxes)or environment (when using poetry / venv)
     one wishes to run the task in.
     """
-
-    dev = luigi.BoolParameter(default=False, significant=False)
-    gpus = luigi.Parameter(default="", significant=False)
 
     @property
     def sandbox(self):
@@ -89,9 +110,19 @@ class AframeSandboxTask(law.SandboxTask):
         # which does not contain that much memory.
         # map in local tmpdir (should be /local/albert.einstein)
         # which has is enough memory to write large temp
-        # files with luigi/law
-        for envvar in ["TMPDIR"]:
-            env[envvar] = os.getenv(envvar, "")
+        # files with luigi/law. This is the location where
+        # luigi/law will write temporary files to disk before
+        # they are sent to s3
+        local = f"/local/{os.getenv('USER')}"
+        env["TMPDIR"] = local
+
+        # location for storing "temporary" files
+        # that will eventually be merged (and uploaded to s3)
+        # but want to keep around in case the workflow fails
+        # so that luigi/law caching can keep track of them.
+        # Can't use `AFRAME_TRAIN_DATA_DIR` because that might
+        # refer to an s3/remote directory
+        env["AFRAME_TMPDIR"] = os.getenv("AFRAME_TMPDIR", local)
 
         # if gpus are specified, expose them inside container
         # via CUDA_VISIBLE_DEVICES env variable
@@ -114,20 +145,35 @@ class AframeSingularityTask(AframeSandboxTask):
     inherit from this class.
     """
 
-    image = luigi.Parameter(default="")
-    container_root = luigi.Parameter(
-        default=os.getenv("AFRAME_CONTAINER_ROOT", ""), significant=False
+    image = luigi.Parameter(
+        default="",
+        description="The path to the singularity container "
+        "image to run the task in. If the path is not absolute, "
+        "it is assumed to be relative to the `container_root`",
     )
+    container_root = luigi.Parameter(
+        default=os.getenv("AFRAME_CONTAINER_ROOT", ""),
+        significant=False,
+        description="The root directory where aframe "
+        "container images are stored.",
+    )
+
+    # don't pass image parameter between task.req()
+    exclude_params_req = {"image"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not os.path.isabs(self.image):
-            self.image = os.path.join(self.container_root, self.image)
+            self.image = os.path.join(self.container_root, self.default_image)
 
         if not os.path.exists(self.image):
             raise ValueError(
                 f"Could not find path to container image {self.image}"
             )
+
+    @property
+    def default_image(self):
+        raise NotImplementedError
 
     @property
     def singularity_args(self) -> Callable:
@@ -160,11 +206,14 @@ class AframeRayTask(AframeSingularityTask):
     """
 
     container = luigi.Parameter(
-        default="ghcr.io/ml4gw/aframev2/train:dev", significant=False
+        default="ghcr.io/ml4gw/aframev2/train:main",
+        significant=False,
+        description="The container image used for launching ray workers",
     )
+    image_pull_policy = luigi.Parameter(default="Always", significant=False)
     kubeconfig = luigi.Parameter(default="", significant=False)
     namespace = luigi.Parameter(default="", significant=False)
-    label = luigi.Parameter(default="", significant=False)
+    name = luigi.Parameter(default="tune", significant=False)
 
     def configure_cluster(self, cluster):
         return cluster
@@ -174,6 +223,11 @@ class AframeRayTask(AframeSingularityTask):
         # that gets run in the container.
         env = super().sandbox_env(_)
         env["AFRAME_RAY_CLUSTER_IP"] = self.ip
+        env["AWS_ACCESS_KEY_ID"] = s3().aws_access_key_id
+        env["AWS_SECRET_ACCESS_KEY"] = s3().aws_secret_access_key
+        env["AWS_ENDPOINT_URL"] = s3().get_internal_s3_url()
+        env["AWS_EXTERNAL_ENDPOINT_URL"] = s3().endpoint_url
+
         return env
 
     def sandbox_before_run(self):
@@ -185,28 +239,14 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster = None
             return
 
-        api = kr8s.api(kubeconfig=self.kubeconfig or None)
-
-        worker_cpus = ray_worker().cpus_per_gpu * ray_worker().gpus_per_replica
-        cluster = KubernetesRayCluster(
-            self.container,
-            num_workers=ray_worker().replicas,
-            worker_cpus=worker_cpus,
-            worker_memory=ray_worker().memory,
-            gpus_per_worker=ray_worker().gpus_per_replica,
-            head_cpus=ray_head().cpus,
-            head_memory=ray_head().memory,
-            min_gpu_memory=ray_worker().min_gpu_memory,
-            api=api,
-            label=self.label or None,
+        cluster = RayCluster(
+            self.name,
+            chart_path="/home/ethan.marx/projects/aframev2/charts/raycluster/",
         )
         cluster = self.configure_cluster(cluster)
-
-        logger.info("Creating ray cluster")
-        cluster.create()
-        cluster.wait()
-        logger.info("ray cluster online")
         self.cluster = cluster
+        cluster.install()
+        cluster.wait()
         self.ip = cluster.get_ip()
 
     def sandbox_after_run(self):
@@ -216,24 +256,10 @@ class AframeRayTask(AframeSingularityTask):
         """
         if self.cluster is not None:
             logger.info("Deleting ray cluster")
-            self.cluster.delete()
+            self.cluster.uninstall()
             self.cluster = None
 
-
-class S3Task:
-    def get_s3_credentials(self):
-        keys = ["aws_access_key_id", "aws_secret_access_key"]
-        secret = {}
-        for key in keys:
-            secret[key.upper()] = getattr(s3(), key)
-        return secret
-
-    def get_internal_s3_url(self):
-        # if user specified an external nautilus url,
-        # map to the corresponding internal url,
-        # since the internal url is what is used by the
-        # kubernetes cluster to access s3
-        url = s3().endpoint_url
-        if url in nautilus_urls:
-            return nautilus_urls[url]
-        return url
+    def on_failure(self, exc):
+        if self.cluster is not None:
+            self.cluster.uninstall()
+            self.cluster = None

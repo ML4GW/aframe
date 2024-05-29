@@ -35,6 +35,7 @@ class InjectionMetadata(Ledger):
     sample_rate: np.ndarray = metadata()
     duration: np.ndarray = metadata()
     num_injections: int = metadata(default=0)
+    coalescence_time: float = metadata()
 
     def __post_init__(self):
         # verify that all waveforms have the appropriate duration
@@ -177,7 +178,7 @@ class EventParameterSet(Ledger):
     Assume GPS times always correspond to un-shifted data
     """
 
-    gps_time: np.ndarray = parameter()
+    injection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()  # 2D with shift values along 1th axis
     snr: np.ndarray = parameter()
 
@@ -195,9 +196,9 @@ class EventParameterSet(Ledger):
 
         mask = True
         if start is not None:
-            mask &= self.gps_time >= start
+            mask &= self.injection_time >= start
         if end is not None:
-            mask &= self.gps_time < end
+            mask &= self.injection_time < end
         return self[mask]
 
 
@@ -216,17 +217,11 @@ class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
 
 
 @dataclass
-class ExtrinsicParameterSet(EventParameterSet, SkyLocationParameterSet):
-    pass
+class WaveformSet(InjectionMetadata, InjectionParameterSet):
+    """
+    A set of waveforms projected onto a set of interferometers
+    """
 
-
-# note, dataclass inheritance goes from last to first,
-# so the ordering of kwargs here would be:
-# mass1, mass2, ..., ra, dec, psi, gps_time, shift, sample_rate, h1, l1
-@dataclass
-class InterferometerResponseSet(
-    InjectionMetadata, ExtrinsicParameterSet, IntrinsicParameterSet
-):
     def __post_init__(self):
         InjectionMetadata.__post_init__(self)
         self._waveforms = None
@@ -240,6 +235,28 @@ class InterferometerResponseSet(
             self._waveforms = waveforms
         return self._waveforms
 
+
+@dataclass
+class LigoWaveformSet(WaveformSet):
+    h1: np.ndarray = waveform()
+    l1: np.ndarray = waveform()
+
+
+# TODO: rename this to InjectionCampaign
+
+
+# note, dataclass inheritance goes from last to first,
+# so the ordering of kwargs here would be:
+# mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate, h1, l1
+@dataclass
+class InterferometerResponseSet(WaveformSet):
+    """
+    Represents a set of projected waveforms to be used in an injection campaign
+    """
+
+    injection_time: np.ndarray = parameter()
+    shift: np.ndarray = parameter()
+
     @classmethod
     def _raise_bad_shift_dim(cls, fname, dim1, dim2):
         raise ValueError(
@@ -248,6 +265,25 @@ class InterferometerResponseSet(
                 dim1, cls.__name__, fname, dim2
             )
         )
+
+    def get_shift(self, shift):
+        mask = self.shift == shift
+        if self.shift.ndim == 2:
+            mask = mask.all(axis=-1)
+        return self[mask]
+
+    def get_times(
+        self, start: Optional[float] = None, end: Optional[float] = None
+    ):
+        if start is None and end is None:
+            raise ValueError("Must specify one of start or end")
+
+        mask = True
+        if start is not None:
+            mask &= self.injection_time >= start
+        if end is not None:
+            mask &= self.injection_time < end
+        return self[mask]
 
     @classmethod
     def read(
@@ -267,14 +303,14 @@ class InterferometerResponseSet(
             if all([i is None for i in [start, end, shifts]]):
                 return cls._load_with_idx(f, None)
 
-            duration = f.attrs["duration"]
-            times = f["parameters"]["gps_time"][:]
+            coalescence_time = f.attrs["coalescence_time"]
+            times = f["parameters"]["injection_time"][:]
 
             mask = True
             if start is not None:
-                mask &= (times + duration / 2) >= start
+                mask &= (times + coalescence_time) >= start
             if end is not None:
-                mask &= (times - duration / 2) <= end
+                mask &= (times - coalescence_time) <= end
             if shifts is not None:
                 shifts = np.array(shifts)
                 ndim = shifts.ndim
@@ -319,19 +355,19 @@ class InterferometerResponseSet(
         initial timestamp `start`
         """
         stop = start + x.shape[-1] / self.sample_rate
-        mask = self.gps_time >= (start - self.duration / 2)
-        mask &= self.gps_time <= (stop + self.duration / 2)
+        mask = self.injection_time >= (start - self.coalescence_time)
+        mask &= self.injection_time <= (stop + self.coalescence_time)
 
         if not mask.any():
             return x
 
-        times = self.gps_time[mask]
+        times = self.injection_time[mask]
         waveforms = self.waveforms[mask]
 
         # potentially pad x to inject waveforms
         # that fall over the boundaries of chunks
         pad = []
-        earliest = (times - self.duration / 2 - start).min()
+        earliest = (times - self.coalescence_time - start).min()
         if earliest < 0:
             num_early = int(-earliest * self.sample_rate)
             pad.append(num_early)
@@ -339,7 +375,7 @@ class InterferometerResponseSet(
         else:
             pad.append(0)
 
-        latest = (times + self.duration / 2 - stop).max()
+        latest = (times + self.coalescence_time - stop).max()
         if latest > 0:
             num_late = int(latest * self.sample_rate)
             pad.append(num_late)
@@ -353,7 +389,9 @@ class InterferometerResponseSet(
         # create matrix of indices of waveform_size for each waveform
         waveforms = waveforms.transpose((1, 0, 2))
         _, num_waveforms, waveform_size = waveforms.shape
-        idx = np.arange(waveform_size) - waveform_size // 2
+        coalescence_time_idx = int(self.coalescence_time * self.sample_rate)
+
+        idx = np.arange(waveform_size) - coalescence_time_idx
         idx = idx[None]
         idx = np.repeat(idx, num_waveforms, axis=0)
 

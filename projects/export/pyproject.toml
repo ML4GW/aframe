@@ -11,9 +11,8 @@ export-model = "export.main:export"
 export-and-launch-triton = "export.remote:main"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.11"
 
-torch = {version = "^1.10", source = "torch"}
 
 # nautilus/remote file access
 # dependencies for s3 support. Should probably put these
@@ -23,7 +22,9 @@ torch = {version = "^1.10", source = "torch"}
 boto3 = "^1.30"
 fsspec = {version = "^2023.10", extras=["s3"]}
 
+
 # local deps
+ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["torch"]}
 aframe = {path = "../../", develop = true}
 utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
@@ -34,13 +35,15 @@ tensorrt = "8.5.1.7"
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"
 
-[tool.poetry.dependencies."hermes.quiver"]
-path = "../../hermes/hermes/hermes.quiver"
-develop = true
 
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cpu"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.1"
+
 
 [build-system]
 requires = ["poetry-core"]
