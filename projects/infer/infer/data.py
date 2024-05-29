@@ -7,7 +7,7 @@ from zlib import adler32
 import h5py
 import numpy as np
 from ledger.events import EventSet, RecoveredInjectionSet
-from ledger.injections import LigoResponseSet
+from ledger.injections import InterferometerResponseSet, waveform_class_factory
 from ratelimiter import RateLimiter
 
 
@@ -65,7 +65,10 @@ class Sequence:
         # if there are no injections for
         # this shift, set it to None so
         # we don't run inference on injections
-        injection_set = LigoResponseSet.read(
+        cls = waveform_class_factory(
+            ifos, InterferometerResponseSet, "ResponseSet"
+        )
+        injection_set = cls.read(
             injection_set_fname,
             start=self.t0,
             end=self.t0 + self.duration,

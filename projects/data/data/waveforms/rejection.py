@@ -15,7 +15,7 @@ from ml4gw.gw import (
     get_ifo_geometry,
 )
 
-LigoResponseSetFields = Dict[str, Union[np.ndarray, float]]
+ResponseSetFields = Dict[str, Union[np.ndarray, float]]
 
 
 def rejection_sample(
@@ -32,7 +32,7 @@ def rejection_sample(
     snr_threshold: float,
     psds: torch.Tensor,
     return_raw: bool = False,
-) -> Tuple[LigoResponseSetFields, InjectionParameterSet]:
+) -> Tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
     tensors, vertices = get_ifo_geometry(*ifos)

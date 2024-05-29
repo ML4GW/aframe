@@ -1,5 +1,5 @@
 from concurrent.futures import Executor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, make_dataclass
 from typing import Optional
 
 import h5py
@@ -236,12 +236,6 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
         return self._waveforms
 
 
-@dataclass
-class LigoWaveformSet(WaveformSet):
-    h1: np.ndarray = waveform()
-    l1: np.ndarray = waveform()
-
-
 # TODO: rename this to InjectionCampaign
 
 
@@ -412,7 +406,12 @@ class InterferometerResponseSet(WaveformSet):
         return x
 
 
-@dataclass
-class LigoResponseSet(InterferometerResponseSet):
-    h1: np.ndarray = waveform()
-    l1: np.ndarray = waveform()
+def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
+    """
+    Factor function for creating ledger
+    dataclasses with arbitrary waveform fields
+    """
+    fields = [(ifo, waveform()) for ifo in ifos]
+    fields = [(name, field.type, field) for name, field in fields]
+    cls = make_dataclass(cls_name, fields, bases=(base_cls,))
+    return cls

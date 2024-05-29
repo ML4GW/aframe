@@ -121,7 +121,7 @@ class TestRecoveredInjectionSet:
         return events.EventSet(det_stats, times, shifts, 100)
 
     @pytest.fixture
-    def response_set(self):
+    def response_set(self, response_set_cls):
         times = np.array([1.4, 8.6, 3.1])
         times = np.concatenate((times, times))
         shifts = np.array([0] * 3 + [1] * 3)
@@ -131,7 +131,7 @@ class TestRecoveredInjectionSet:
             "shift": shifts,
             "sample_rate": 2048,
         }
-        fields = injections.LigoResponseSet.__dataclass_fields__
+        fields = response_set_cls.__dataclass_fields__
         for name, attr in fields.items():
             if name in ["injection_time", "sample_rate", "shift"]:
                 continue
