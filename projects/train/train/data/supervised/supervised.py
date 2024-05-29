@@ -25,6 +25,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             )
         else:
             self.swapper = None
+            self.swap_prob = 0
 
         if mute_prob is not None and 0 < mute_prob < 1:
             self.muter = aug.ChannelMuter(mute_prob)
@@ -35,6 +36,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             )
         else:
             self.muter = None
+            self.mute_prob = 0
 
     @torch.no_grad()
     def augment(self, X):
