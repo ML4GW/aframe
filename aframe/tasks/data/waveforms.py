@@ -238,7 +238,11 @@ class ValidationWaveforms(AframeDataTask):
     def run(self):
         from ledger.injections import WaveformSet, waveform_class_factory
 
-        cls = waveform_class_factory(self.ifos, WaveformSet, "WaveformSet")
+        cls = waveform_class_factory(
+            list(map(lambda x: x.lower(), self.ifos)),
+            WaveformSet,
+            "WaveformSet",
+        )
 
         with self.output().open("w") as f:
             cls.aggregate(self.waveform_files, f, clean=True)

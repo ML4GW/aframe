@@ -9,7 +9,7 @@ import h5py
 import lightning.pytorch as pl
 import ray
 import torch
-from ledger.injections import LigoWaveformSet
+from ledger.injections import WaveformSet, waveform_class_factory
 
 from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
@@ -217,6 +217,16 @@ class BaseAframeDataset(pl.LightningDataModule):
     # ================================================ #
     # Utilities for initial data loading and preparation
     # ================================================ #
+
+    @property
+    def waveform_set_cls(self):
+        cls = waveform_class_factory(
+            list(map(lambda x: x.lower(), self.hparams.ifos)),
+            WaveformSet,
+            "WaveformSet",
+        )
+        return cls
+
     def prepare_data(self):
         """
         Download s3 data if it doesn't exist.
@@ -289,7 +299,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         return self.load_signals(dataset, start, stop)
 
     def load_val_waveforms(self, f, world_size, rank):
-        waveform_set = LigoWaveformSet.read(f)
+        waveform_set = self.waveform_set_cls.read(f)
 
         if waveform_set.coalescence_time != self.signal_time:
             raise ValueError(

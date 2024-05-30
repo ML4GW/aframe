@@ -410,6 +410,16 @@ def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
     """
     Factory function for creating ledger
     dataclasses with arbitrary waveform fields
+
+    Args:
+        ifos:
+            List of interferometers for which waveform
+            fields will be populated
+        base_cls:
+            Base class the resulting dataclass will inherit from
+        cls_name:
+            Name of resulting dataclass
+
     """
     fields = [(ifo, waveform()) for ifo in ifos]
     fields = [(name, field.type, field) for name, field in fields]
