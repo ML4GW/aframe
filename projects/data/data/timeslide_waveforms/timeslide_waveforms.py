@@ -133,7 +133,9 @@ def timeslide_waveforms(
 
     # create the ResponseSet dataclass based on the passed ifos
     ResponseSet = waveform_class_factory(
-        ifos, InterferometerResponseSet, cls_name="ResponseSet"
+        list(map(lambda x: x.lower(), ifos)),
+        InterferometerResponseSet,
+        cls_name="ResponseSet",
     )
 
     # now, set the injection times and shifts,

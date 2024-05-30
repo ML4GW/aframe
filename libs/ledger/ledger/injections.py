@@ -408,7 +408,7 @@ class InterferometerResponseSet(WaveformSet):
 
 def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
     """
-    Factor function for creating ledger
+    Factory function for creating ledger
     dataclasses with arbitrary waveform fields
     """
     fields = [(ifo, waveform()) for ifo in ifos]

@@ -161,7 +161,11 @@ class DeployValidationWaveforms(
         from data.waveforms.rejection import rejection_sample
         from ledger.injections import WaveformSet, waveform_class_factory
 
-        cls = waveform_class_factory(self.ifos, WaveformSet, "IfoWaveformSet")
+        cls = waveform_class_factory(
+            list(map(lambda x: x.lower(), self.ifos)),
+            WaveformSet,
+            "IfoWaveformSet",
+        )
 
         os.makedirs(self.branch_tmp_dir, exist_ok=True)
         num_signals, psd_segment = self.branch_data
