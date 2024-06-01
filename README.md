@@ -33,9 +33,11 @@ git clone git@github.com:albert-einstein/aframev2.git
 git submodule update --init
 ```
 
+When pulling changes from this repository, it's recommended to use the `--recurse-submodules` flag to pull any updates from the submodules as well.
+
 Next, follow the [instructions](./projects/README.md) for building each project's Apptainer images, and familiarize yourself with the various projects. These images are used as environments for running `Aframe` workflows, and thus are necessary to build. Once complete, you are all setup! 
 
-The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. Follow the instructions in the sandbox [README](./aframe/pipelines/sandbox/) and execute the pipeline as an introduction to interacting with the respository. 
+The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. First follow the general instructions in the aframe [README](./aframe), and then the instructions in the sandbox [README](./aframe/pipelines/sandbox/) to execute the pipeline as an introduction to interacting with the respository. 
 
 
 ## Repository structure
