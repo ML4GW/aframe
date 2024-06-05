@@ -50,7 +50,7 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     python -m data fetch \
     --start 1240579783 \
     --end 1240587612 \
-    --channels='["H1", "L1"]' \ 
+    --channels='["H1", "L1"]' \
     --sample_rate 2048 \
     --output_directory ~/aframe/data/train/background/
 
@@ -58,7 +58,7 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     python -m data fetch \
     --start 1240594562 \
     --end 1240606748 \
-    --channels='["H1", "L1"]' \ 
+    --channels='["H1", "L1"]' \
     --sample_rate 2048 \
     --output_directory ~/aframe/data/train/background/
 ```
