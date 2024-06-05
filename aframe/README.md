@@ -16,6 +16,14 @@ poetry install
 ```
 
 to install this environment
+
+
+A number of these `Tasks` launch jobs using `condor`, with the accounting group and username inferred from environment variables `LIGO_GROUP` and `LIGO_USERNAME`, respectively. These variables can be specified when launching the pipeline in the command line, or they can be added to your `.bash_profile` (or other relevant shell configuration file) with:
+
+```bash
+echo export LIGO_USERNAME=<your albert.einstein username> >> ~/.bash_profile
+echo export LIGO_GROUP=ligo.dev.o4.cbc.allsky.aframe >> ~/.bash_profile
+```
   
 
 ## Introduction to Tasks
