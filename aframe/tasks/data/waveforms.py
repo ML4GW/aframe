@@ -162,7 +162,7 @@ class DeployValidationWaveforms(
         from ledger.injections import WaveformSet, waveform_class_factory
 
         cls = waveform_class_factory(
-            list(map(lambda x: x.lower(), self.ifos)),
+            self.ifos,
             WaveformSet,
             "IfoWaveformSet",
         )
