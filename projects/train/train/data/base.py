@@ -7,7 +7,6 @@ from typing import Callable, Optional, Union
 
 import h5py
 import lightning.pytorch as pl
-import ray
 import torch
 from ledger.injections import WaveformSet, waveform_class_factory
 
@@ -109,30 +108,6 @@ class BaseAframeDataset(pl.LightningDataModule):
     # ================================================ #
     # Distribution utilities
     # ================================================ #
-    def get_local_device(self):
-        """
-        Get the device string for the device that
-        we're actually training on so that we can move
-        our transforms on to it because Lightning won't
-        do this for us in a DataModule. NOTE!!! This
-        method is currently incorrect during ray distributed
-        training, but keeping it for posterity in the hopes
-        that we can eventually get rid of self._move_to_device
-        """
-        if not self.trainer.device_ids:
-            return "cpu"
-        elif len(self.trainer.device_ids) == 1:
-            return f"cuda:{self.trainer.device_ids[0]}"
-        else:
-            _, rank = self.get_world_size_and_rank()
-            if ray.is_initialized():
-                device_ids = ray.train.torch.get_device()
-                if isinstance(device_ids, list):
-                    return device_ids[rank]
-                return device_ids
-            else:
-                device_id = self.trainer.device_ids[rank]
-                return f"cuda:{device_id}"
 
     def get_world_size_and_rank(self) -> tuple[int, int]:
         """
@@ -343,13 +318,13 @@ class BaseAframeDataset(pl.LightningDataModule):
             fftlength,
             fast=self.hparams.highpass is not None,
             average="median",
-        )
+        ).to(self.device)
         self.whitener = Whiten(
             self.hparams.fduration, sample_rate, self.hparams.highpass
-        )
+        ).to(self.device)
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
-        )
+        ).to(self.device)
 
         self.sample_rate = sample_rate
 
@@ -401,20 +376,10 @@ class BaseAframeDataset(pl.LightningDataModule):
     # Utilities for doing augmentation/preprocessing
     # after tensors have been transferred to GPU
     # ================================================ #
-    def _move_to_device(self, device):
-        """
-        This is dumb, but I genuinely cannot find a way
-        to ensure that our transforms end up on the target
-        device (see NOTE under self.get_local_device), so
-        here's a lazy workaround to move our transforms once
-        we encounter the first on-device tensor from our dataloaders.
-        """
-        if self._on_device:
-            return
-        for item in self.__dict__.values():
-            if isinstance(item, torch.nn.Module):
-                item.to(device)
-        self._on_device = True
+    @property
+    def device(self):
+        """Return the device of the associated lightning module"""
+        return self.trainer.lightning_module.device
 
     def on_after_batch_transfer(self, batch, _):
         """
@@ -428,7 +393,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
             [X] = batch
-            self._move_to_device(X)
             batch = self.augment(X)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
@@ -436,7 +400,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             # empty, so just pass them through with a 0 shift to
             # indicate that this should be ignored
             [background, _, timeslide_idx], [signals] = batch
-            self._move_to_device(background)
 
             # If we're validating, unfold the background
             # data into a batch of overlapping kernels now that
