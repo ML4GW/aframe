@@ -36,6 +36,7 @@ Stage: final
 apt-get update
 apt-get install -y --no-install-recommends git
 apt-get clean
+
 # install pytest so we can run 
 # unit tests during CI inside container
 cd /opt/aframe/projects/export

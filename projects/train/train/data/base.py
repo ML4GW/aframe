@@ -519,12 +519,14 @@ class BaseAframeDataset(pl.LightningDataModule):
         # TODO: potentially introduce chunking here via
         # chunk_size/batches_per_chunk class args that
         # default to None
+        world_size, _ = self.get_world_size_and_rank()
+        batches_per_epoch = self.hparams.batches_per_epoch // world_size
         dataset = Hdf5TimeSeriesDataset(
             self.train_fnames,
             channels=self.hparams.ifos,
             kernel_size=int(self.sample_rate * self.sample_length),
             batch_size=self.hparams.batch_size,
-            batches_per_epoch=self.hparams.batches_per_epoch,
+            batches_per_epoch=batches_per_epoch,
             coincident=False,
         )
 
