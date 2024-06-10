@@ -235,6 +235,9 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
             self._waveforms = waveforms
         return self._waveforms
 
+    def num_waveform_fields(self):
+        return len(self.waveform_fields)
+
 
 # TODO: rename this to InjectionCampaign
 
@@ -397,7 +400,7 @@ class InterferometerResponseSet(WaveformSet):
         # flatten these indices and the signals out
         # to 1D and then add them in-place all at once
         idx = idx.reshape(-1)
-        waveforms = waveforms.reshape(2, -1)
+        waveforms = waveforms.reshape(len(self.waveform_fields), -1)
         x[:, idx] += waveforms
         if any(pad):
             start, stop = pad

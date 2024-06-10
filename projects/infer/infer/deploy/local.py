@@ -74,7 +74,9 @@ def deploy_local(
         )
         with monitor:
             cluster = job.build_submit(fancyname=False)
-            wait(cluster)
+            # add sleep to allow any non-materialized
+            # condor jobs to start up
+            wait(cluster, sleep=10)
 
     logging.info("Aggregating results")
-    aggregate_results(output_dir)
+    aggregate_results(output_dir, ifos)

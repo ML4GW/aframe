@@ -1,5 +1,6 @@
 import logging
 import shutil
+import time
 from pathlib import Path
 from textwrap import dedent
 from typing import List, Optional
@@ -46,7 +47,8 @@ def build_condor_submit(
             parameters += f"{fname},{_shifts}\n"
 
         if zero_lag:
-            parameters += f"{fname},'[0, 0]'\n"
+            _shifts = "'[" + ", ".join(["0" for s in shifts]) + "]'"
+            parameters += f"{fname},{_shifts}\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
@@ -100,8 +102,9 @@ def build_condor_submit(
     return job
 
 
-def wait(cluster):
+def wait(cluster, sleep: int = 1):
     while not cluster.check_status(JobStatus.COMPLETED, how="all"):
+        time.sleep(sleep)
         if cluster.check_status(
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):
@@ -120,7 +123,9 @@ def get_shifts(files: List[Path]):
     return shifts
 
 
-def aggregate_results(output_directory: Path, clean: bool = False):
+def aggregate_results(
+    output_directory: Path, ifos: list[str], clean: bool = False
+):
     """
     Combine results from across segments into a single
     background file and foreground file. Remove the directory
@@ -133,7 +138,7 @@ def aggregate_results(output_directory: Path, clean: bool = False):
 
     # separate 0lag and background events into different files
     shifts = get_shifts(back_files)
-    zero_lag = np.array([all(shift == [0, 0]) for shift in shifts])
+    zero_lag = np.array([all(shift == [0] * len(ifos)) for shift in shifts])
 
     zero_lag_files = back_files[zero_lag]
     back_files = back_files[~zero_lag]
