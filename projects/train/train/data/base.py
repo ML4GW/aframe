@@ -196,7 +196,7 @@ class BaseAframeDataset(pl.LightningDataModule):
     @property
     def waveform_set_cls(self):
         cls = waveform_class_factory(
-            list(map(lambda x: x.lower(), self.hparams.ifos)),
+            self.hparams.ifos,
             WaveformSet,
             "WaveformSet",
         )

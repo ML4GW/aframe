@@ -424,6 +424,7 @@ def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
             Name of resulting dataclass
 
     """
+    ifos = [ifo.lower() for ifo in ifos]
     fields = [(ifo, waveform()) for ifo in ifos]
     fields = [(name, field.type, field) for name, field in fields]
     cls = make_dataclass(cls_name, fields, bases=(base_cls,))

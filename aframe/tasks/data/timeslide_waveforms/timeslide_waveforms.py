@@ -205,7 +205,7 @@ class TimeslideWaveforms(AframeDataTask):
         )
 
         cls = waveform_class_factory(
-            list(map(lambda x: x.lower(), self.ifos)),
+            self.ifos,
             InterferometerResponseSet,
             "ResponseSet",
         )

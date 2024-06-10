@@ -73,7 +73,7 @@ class Sequence:
         # we don't run inference on injections
 
         cls = waveform_class_factory(
-            [ifo.lower() for ifo in ifos],
+            ifos,
             InterferometerResponseSet,
             "ResponseSet",
         )

@@ -139,7 +139,7 @@ def timeslide_waveforms(
 
     # create the ResponseSet dataclass based on the passed ifos
     ResponseSet = waveform_class_factory(
-        list(map(lambda x: x.lower(), ifos)),
+        ifos,
         InterferometerResponseSet,
         cls_name="ResponseSet",
     )
