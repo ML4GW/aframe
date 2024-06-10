@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from ledger import injections
 
 
 class TestLigoResponseSet:
@@ -19,13 +18,12 @@ class TestLigoResponseSet:
         return 10
 
     @pytest.fixture
-    def ligo_response_set(self, duration, sample_rate, N):
+    def ligo_response_set(self, response_set_cls, duration, sample_rate, N):
         size = int(duration * sample_rate)
         params = {}
         bad_waveforms = {}
         waveforms = {}
-
-        fields = injections.LigoResponseSet.__dataclass_fields__
+        fields = response_set_cls.__dataclass_fields__
         for name, attr in fields.items():
             if attr.metadata["kind"] == "parameter":
                 params[name] = np.zeros((N,))
@@ -37,7 +35,7 @@ class TestLigoResponseSet:
             kwargs = {}
             kwargs.update(params)
             kwargs.update(bad_waveforms)
-            injections.LigoResponseSet(
+            response_set_cls(
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N,
@@ -50,7 +48,7 @@ class TestLigoResponseSet:
             kwargs = {}
             kwargs.update(params)
             kwargs.update(waveforms)
-            injections.LigoResponseSet(
+            response_set_cls(
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N - 1,
@@ -59,7 +57,7 @@ class TestLigoResponseSet:
             )
         assert str(exc.value).startswith("LigoResponseSet")
 
-        return injections.LigoResponseSet(
+        return response_set_cls(
             sample_rate=sample_rate,
             duration=duration,
             num_injections=N,
@@ -95,7 +93,7 @@ class TestLigoResponseSet:
         assert len(obj) == 5
         assert obj.num_injections == N
 
-    def test_read(self, ligo_response_set, tmp_path, N):
+    def test_read(self, response_set_cls, ligo_response_set, tmp_path, N):
         tmp_path.mkdir(exist_ok=True)
         fname = tmp_path / "obj.h5"
 
@@ -103,15 +101,15 @@ class TestLigoResponseSet:
         ligo_response_set.write(fname)
 
         # TODO: generalize logic here to duration
-        new = injections.LigoResponseSet.read(fname, start=2.5)
+        new = response_set_cls.read(fname, start=2.5)
         assert len(new) == N - 1
         assert (new.injection_time == np.arange(1, N)).all()
 
-        new = injections.LigoResponseSet.read(fname, end=6)
+        new = response_set_cls.read(fname, end=6)
         assert len(new) == N - 1
         assert (new.injection_time == np.arange(N - 1)).all()
 
-        new = injections.LigoResponseSet.read(fname, start=3.5, end=5)
+        new = response_set_cls.read(fname, start=3.5, end=5)
         assert len(new) == 6
         assert (new.injection_time == np.arange(2, 8)).all()
 

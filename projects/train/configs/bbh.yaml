@@ -50,7 +50,7 @@ data:
     swap_prob: 0.014
     mute_prob: 0.055
     left_pad: 0.25
-    right_pad: 0.0
+    right_pad: 0.05
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 

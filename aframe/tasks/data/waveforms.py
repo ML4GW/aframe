@@ -159,7 +159,13 @@ class DeployValidationWaveforms(
         import h5py
         from data.timeslide_waveforms.utils import load_psds
         from data.waveforms.rejection import rejection_sample
-        from ledger.injections import LigoWaveformSet
+        from ledger.injections import WaveformSet, waveform_class_factory
+
+        cls = waveform_class_factory(
+            self.ifos,
+            WaveformSet,
+            "IfoWaveformSet",
+        )
 
         os.makedirs(self.branch_tmp_dir, exist_ok=True)
         num_signals, psd_segment = self.branch_data
@@ -190,7 +196,7 @@ class DeployValidationWaveforms(
             self.snr_threshold,
             psds,
         )
-        waveform_set = LigoWaveformSet(**parameters)
+        waveform_set = cls(**parameters)
         waveform_set.write(self.output().path)
 
 
@@ -230,10 +236,16 @@ class ValidationWaveforms(AframeDataTask):
         return list(map(Path, [targets.path for targets in self.targets]))
 
     def run(self):
-        from ledger.injections import LigoWaveformSet
+        from ledger.injections import WaveformSet, waveform_class_factory
+
+        cls = waveform_class_factory(
+            self.ifos,
+            WaveformSet,
+            "WaveformSet",
+        )
 
         with self.output().open("w") as f:
-            LigoWaveformSet.aggregate(self.waveform_files, f, clean=True)
+            cls.aggregate(self.waveform_files, f, clean=True)
 
         # clean up temporary directories
         for dirname in self.output_dir.glob("tmp-*"):

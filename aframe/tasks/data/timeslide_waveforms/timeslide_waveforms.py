@@ -198,11 +198,19 @@ class TimeslideWaveforms(AframeDataTask):
         return list(map(Path, [targets[1].path for targets in self.targets]))
 
     def run(self):
-        from ledger.injections import InjectionParameterSet, LigoResponseSet
-
-        LigoResponseSet.aggregate(
-            self.waveform_files, self.waveform_output, clean=True
+        from ledger.injections import (
+            InjectionParameterSet,
+            InterferometerResponseSet,
+            waveform_class_factory,
         )
+
+        cls = waveform_class_factory(
+            self.ifos,
+            InterferometerResponseSet,
+            "ResponseSet",
+        )
+
+        cls.aggregate(self.waveform_files, self.waveform_output, clean=True)
         InjectionParameterSet.aggregate(
             self.rejected_parameter_files, self.rejected_output, clean=True
         )

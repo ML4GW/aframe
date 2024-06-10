@@ -6,7 +6,7 @@ import data.timeslide_waveforms.utils as utils
 import numpy as np
 from data.waveforms.rejection import rejection_sample
 from jsonargparse import ArgumentParser
-from ledger.injections import LigoResponseSet
+from ledger.injections import InterferometerResponseSet, waveform_class_factory
 
 
 def timeslide_waveforms(
@@ -95,6 +95,12 @@ def timeslide_waveforms(
         rejected parameters
     """
 
+    if len(ifos) != len(shifts):
+        raise ValueError(
+            "Number of ifos must match number of shifts"
+            f"got {len(ifos)} ifos and {len(shifts)} shifts"
+        )
+
     # seed process based on start, end and shift
     if seed is not None:
         utils.seed_worker(start, end, shifts, seed)
@@ -131,13 +137,20 @@ def timeslide_waveforms(
         psds,
     )
 
+    # create the ResponseSet dataclass based on the passed ifos
+    ResponseSet = waveform_class_factory(
+        ifos,
+        InterferometerResponseSet,
+        cls_name="ResponseSet",
+    )
+
     # now, set the injection times and shifts,
-    # and create the LigoResponseSet object
+    # and create the ResponseSet object
     parameters["injection_time"] = injection_times
     parameters["shift"] = np.array([shifts for _ in range(n_samples)])
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    response_set = LigoResponseSet(**parameters)
+    response_set = ResponseSet(**parameters)
     waveform_fname = output_dir / "waveforms.hdf5"
     utils.io_with_blocking(response_set.write, waveform_fname)
 

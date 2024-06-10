@@ -1,5 +1,5 @@
 from concurrent.futures import Executor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, make_dataclass
 from typing import Optional
 
 import h5py
@@ -235,11 +235,8 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
             self._waveforms = waveforms
         return self._waveforms
 
-
-@dataclass
-class LigoWaveformSet(WaveformSet):
-    h1: np.ndarray = waveform()
-    l1: np.ndarray = waveform()
+    def num_waveform_fields(self):
+        return len(self.waveform_fields)
 
 
 # TODO: rename this to InjectionCampaign
@@ -403,7 +400,7 @@ class InterferometerResponseSet(WaveformSet):
         # flatten these indices and the signals out
         # to 1D and then add them in-place all at once
         idx = idx.reshape(-1)
-        waveforms = waveforms.reshape(2, -1)
+        waveforms = waveforms.reshape(len(self.waveform_fields), -1)
         x[:, idx] += waveforms
         if any(pad):
             start, stop = pad
@@ -412,7 +409,23 @@ class InterferometerResponseSet(WaveformSet):
         return x
 
 
-@dataclass
-class LigoResponseSet(InterferometerResponseSet):
-    h1: np.ndarray = waveform()
-    l1: np.ndarray = waveform()
+def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
+    """
+    Factory function for creating ledger
+    dataclasses with arbitrary waveform fields
+
+    Args:
+        ifos:
+            List of interferometers for which waveform
+            fields will be populated
+        base_cls:
+            Base class the resulting dataclass will inherit from
+        cls_name:
+            Name of resulting dataclass
+
+    """
+    ifos = [ifo.lower() for ifo in ifos]
+    fields = [(ifo, waveform()) for ifo in ifos]
+    fields = [(name, field.type, field) for name, field in fields]
+    cls = make_dataclass(cls_name, fields, bases=(base_cls,))
+    return cls

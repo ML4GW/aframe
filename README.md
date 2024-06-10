@@ -27,6 +27,8 @@ Once setup, create a [fork](https://docs.github.com/en/pull-requests/collaborati
 git clone git@github.com:albert-einstein/aframev2.git
 ```
 
+Set the `AFRAME_REPO` environment variable in your `~/.bash_profile` to point to the location where you cloned the repository.
+
 `Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
 
 ```bash
@@ -34,6 +36,7 @@ git submodule update --init
 ```
 
 When pulling changes from this repository, it's recommended to use the `--recurse-submodules` flag to pull any updates from the submodules as well.
+
 
 Next, follow the [instructions](./projects/README.md) for building each project's Apptainer images, and familiarize yourself with the various projects. These images are used as environments for running `Aframe` workflows, and thus are necessary to build. Once complete, you are all setup! 
 

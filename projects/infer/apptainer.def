@@ -38,6 +38,11 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
+# install git for pip installation
+apt-get update
+apt-get install -y --no-install-recommends git
+apt-get clean
+
 # install pytest so we can run unittests
 # inside the container during CI
 cd /opt/aframe/projects/infer
