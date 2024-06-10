@@ -48,10 +48,16 @@ class Sequence:
                 Rate at which to send requests in Hz
         """
         self.background_fname = background_fname
-        self.ifos = ifos
         self.inference_sampling_rate = inference_sampling_rate
         self.batch_size = batch_size
         self.rate = rate
+        self.ifos = ifos
+
+        if len(ifos) != len(shifts):
+            raise ValueError(
+                "Number of ifos must match number of shifts"
+                f"got {len(ifos)} ifos and {len(shifts)} shifts"
+            )
 
         # read some of the metadata from our background file
         with h5py.File(background_fname, "r") as f:
@@ -65,9 +71,13 @@ class Sequence:
         # if there are no injections for
         # this shift, set it to None so
         # we don't run inference on injections
+
         cls = waveform_class_factory(
-            ifos, InterferometerResponseSet, "ResponseSet"
+            [ifo.lower() for ifo in ifos],
+            InterferometerResponseSet,
+            "ResponseSet",
         )
+
         injection_set = cls.read(
             injection_set_fname,
             start=self.t0,
@@ -177,7 +187,6 @@ class Sequence:
                         data = np.pad(data, (0, self.num_pad), "constant")
                     x.append(data)
                 x = np.stack(x).astype(np.float32)
-
                 # if there are any injections for this shift,
                 # inject waveforms into a copy of the background
                 x_inj = None

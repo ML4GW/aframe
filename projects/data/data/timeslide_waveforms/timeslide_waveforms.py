@@ -95,6 +95,12 @@ def timeslide_waveforms(
         rejected parameters
     """
 
+    if len(ifos) != len(shifts):
+        raise ValueError(
+            "Number of ifos must match number of shifts"
+            f"got {len(ifos)} ifos and {len(shifts)} shifts"
+        )
+
     # seed process based on start, end and shift
     if seed is not None:
         utils.seed_worker(start, end, shifts, seed)
