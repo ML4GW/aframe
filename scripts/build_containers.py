@@ -33,6 +33,7 @@ def build_container(project_name: str, container_root: Path) -> str:
         )
         return out
 
+    # build the container
     try:
         Client.build(
             image=str(container_path),
@@ -47,6 +48,15 @@ def build_container(project_name: str, container_root: Path) -> str:
         os.chdir(cwd)
 
 
+def validate_projects(projects: List[str]) -> None:
+    invalid = [p for p in projects if p not in PROJECTS]
+    if invalid:
+        raise ValueError(
+            f"Specified invalid projects: {', '.join(invalid)}. "
+            f"The available projects are: {', '.join(PROJECTS)}"
+        )
+
+
 def build(projects: List[str], container_root: Path, max_workers: int) -> None:
     if not container_root:
         logging.info("Container root path is not set.")
@@ -56,7 +66,6 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
         futures = {
             executor.submit(build_container, project, container_root): project
             for project in projects
-            if project in PROJECTS
         }
         for future in as_completed(futures):
             project = futures[future]
@@ -102,6 +111,8 @@ def main():
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
+
+    validate_projects(args.projects)
     build(args.projects, args.container_root, args.max_workers)
 
 
