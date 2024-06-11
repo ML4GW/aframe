@@ -15,9 +15,9 @@ PROJECTS: List[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
 
 
 def build_container(project_name: str, container_root: Path) -> str:
-    project_path: Path = BASE_DIR / project_name
-    container_path: Path = container_root / f"{project_name}.sif"
-
+    project_path = BASE_DIR / project_name
+    container_path = container_root / f"{project_name}.sif"
+    definition_path = project_path / "apptainer.def"
     # change directory to project path since
     # that's the root from where
     # the apptainer def files are defined
@@ -26,7 +26,7 @@ def build_container(project_name: str, container_root: Path) -> str:
 
     # skip this project if there
     # is no associated apptainer definition file
-    if not container_path.exists():
+    if not definition_path.exists():
         out = (
             f"Apptainer definition file for {project_name} "
             "does not exist. Skipping build."
@@ -37,7 +37,7 @@ def build_container(project_name: str, container_root: Path) -> str:
     try:
         Client.build(
             image=str(container_path),
-            recipe=str(project_path / "apptainer.def"),
+            recipe=str(definition_path),
             sudo=False,
             options=["--force"],
         )
