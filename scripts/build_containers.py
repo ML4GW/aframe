@@ -92,7 +92,7 @@ def main():
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    build(args.projects, args.container_root)
+    build(args.projects, args.container_root, args.max_workers)
 
 
 if __name__ == "__main__":
