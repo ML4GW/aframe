@@ -19,7 +19,9 @@ def build_container(project_name: str, container_root: Path) -> str:
     container_path: Path = container_root / f"{project_name}.sif"
 
     if not container_path.exists():
-        return f"Container for {project_name} does not exist. Skipping build."
+        out = f"Apptainer definition file for {project_name} "
+        "does not exist. Skipping build."
+        return out
 
     try:
         Client.build(
