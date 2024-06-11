@@ -18,6 +18,14 @@ def build_container(project_name: str, container_root: Path) -> str:
     project_path: Path = BASE_DIR / project_name
     container_path: Path = container_root / f"{project_name}.sif"
 
+    # change directory to project path since
+    # that's the root from where
+    # the apptainer def files are defined
+    cwd = os.getcwd()
+    os.chdir(project_path)
+
+    # skip this project if there
+    # is no associated apptainer definition file
     if not container_path.exists():
         out = (
             f"Apptainer definition file for {project_name} "
@@ -35,6 +43,8 @@ def build_container(project_name: str, container_root: Path) -> str:
         return f"Successfully built container for {project_name}"
     except Exception as e:
         return f"Failed to build container for {project_name}: {e}"
+    finally:
+        os.chdir(cwd)
 
 
 def build(projects: List[str], container_root: Path, max_workers: int) -> None:
