@@ -17,6 +17,7 @@ pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
 boto3 = "^1.34.4"
 numpy = "^1.26.4"
 cloudpathlib = "^0.18.1"
+spython = "^0.3.13"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -24,6 +25,9 @@ jupyter = "^1.0.0"
 jsonargparse = "^4.27.1"
 conda-lock = "^2.5.1"
 pre-commit = "^3.7.0"
+
+[tool.poetry.scripts]
+build-containers = "scripts.build_containers:main"
 
 [build-system]
 requires = ["poetry-core"]
