@@ -35,12 +35,12 @@ def build_container(project_name: str, container_root: Path) -> str:
         return f"Failed to build container for {project_name}: {e}"
 
 
-def build(projects: List[str], container_root: Path) -> None:
+def build(projects: List[str], container_root: Path, max_workers: int) -> None:
     if not container_root:
         logging.info("Container root path is not set.")
         return
 
-    with ProcessPoolExecutor() as executor:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(build_container, project, container_root): project
             for project in projects
@@ -77,6 +77,15 @@ def main():
         default=Path(os.getenv("AFRAME_CONTAINER_ROOT", "")),
         help="Path to the container root directory. "
         "Defaults to the $AFRAME_CONTAINER_ROOT environment variable.",
+    )
+
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=None,  # Set a default number of workers
+        help="Maximum number of concurrent builds. Can be useful to set if "
+        "your local TMPDIR is being overfilled when building containers. "
+        "Default is `None`.",
     )
 
     args = parser.parse_args()
