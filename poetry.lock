@@ -3464,6 +3464,17 @@ files = [
 ]
 
 [[package]]
+name = "spython"
+version = "0.3.13"
+description = "Command line python tool for working with singularity."
+optional = false
+python-versions = "*"
+files = [
+    {file = "spython-0.3.13-py3-none-any.whl", hash = "sha256:3c16e05261647dc4f5931d641adb179f21b4bd117572c161bdf54fe511cda4d8"},
+    {file = "spython-0.3.13.tar.gz", hash = "sha256:931105675f7889705e50859df72f01b8e00b5ad92ab2e5d9ef47563343419e4e"},
+]
+
+[[package]]
 name = "stack-data"
 version = "0.6.3"
 description = "Extract data from python stack frames and tracebacks for informative displays"
@@ -3861,4 +3872,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "0bd8ddf42e3e7a3303b7e2ed2208ba43bc9cb34241d0dfcaf6e13bf56e00492f"
+content-hash = "d394c7056d0537f67791eef6c3b3983837f1b6e8eb705b5f77e038beda50bb4b"
