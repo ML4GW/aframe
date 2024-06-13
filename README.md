@@ -37,6 +37,11 @@ git submodule update --init
 
 When pulling changes from this repository, it's recommended to use the `--recurse-submodules` flag to pull any updates from the submodules as well.
 
+Next, in the root of the repository, install the base `aframe` `poetry` environment.
+```
+poetry install
+```
+This environment is used to launch `luigi`/`law` tasks and pipelines. See this [README](./aframe) for more information.
 
 Next, follow the [instructions](./projects/README.md) for building each project's Apptainer images, and familiarize yourself with the various projects. These images are used as environments for running `Aframe` workflows, and thus are necessary to build. Once complete, you are all setup! 
 
@@ -54,37 +59,3 @@ For more details, please see the respective README's.
 
 ## Contributing
 If you are looking to contribute to `Aframe`, please see our [contribution guidelines](./CONTRIBUTING.md)
-
-
-### TODO: Move the below to corresponding documentation location / open up issues
-- Tuning
-    - You don't need to specify the `temp_dir` when tuning remotely, this is just a consequence of `ray` trying to write to a root directory for temp files that breaks on LDG
-    - If you're tuning remotely, your `storage_dir` should be a remote S3 bucket that all your workers can access. You'll need to specify an `AWS_ENDPOINT_URL` environment variable for those workers so they know where your bucket lives
-
-## Where things stand and where they can go
-### Optimization schemes
-- Semi-supervised
-    - Simple autoencoder implementation working, using max correlation across shifts as loss function
-        - See comments in model subclass for discussion on how to make this more exotic
-    - The key to this approach is that neither interferometer's prediction about the other is allowed to depend on any _info_ about the other
-        - Grouped convolutions ensure this for convolutional autoencoder architecture
-        - Will be more complex for more than 2 IFOs
-    - Requires using `ml4gw` branch with autoencoder library
-    - One potential future direction could be to build on Deep's VICReg work and enforce that
-        - Representations from the same event are similar in both IFOs
-            - While you don't want one channel's _prediction_ to depend on the other channel at all, there's nothing wrong with imposing a _loss_ that combines their information
-        - You could even do 2 sky samplings for the same event and enforce that these are similar
-        - This would involve using the model-specific loss terms discussed in the comments under the model
-
-## TODO's
-There's tons of `TODOS` littering the code that cover stuff I'll have missed here.
-One major one is the ability to log plots of model predictions to W&B during validation. See my comments on it [here](https://github.com/ML4GW/aframev2/blob/b2a5164d2e49f9c2701e2100091f6b9b8467678a/projects/train/train/model/base.py#L74-L87).
-Basically you should be able to define callbacks for various tasks that have an `on_validation_score` method to pass model inputs and outputs that you can log to W&B.
-I think this will be particularly important for the autoencoder work, where visualizing what it's learning will be instructive.
-
-More broadly, it will be useful to start up-leveling some of the training framework utilities to library that sits one level above `ml4gw`. I'm thinking of
-- Simple functionality for logging plots iteratively to W&B during training in a single table (see how I do this in [deepclean](https://github.com/alecgunny/deepclean-demo/blob/0874cb91e35b4bba0a3b62dfd33dae267c2deff7/projects/train/train/callbacks.py#L12))
-- Exporting of the torch trace at the end of training
-- The tuning library, which is actually pretty general already
-- Some of the data access and distribution utilities built into the base `Dataset` here
-- And of course all of the `luigi`/`law` stuff, which would probably be its own library even one layer above this.
