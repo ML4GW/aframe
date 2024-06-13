@@ -56,14 +56,17 @@ def copy_configs(
             cfg.read(config)
             cfg["core"]["inherit"] = str(path / "base.cfg")
 
+            # set the train config file
+            # to the one in the init directory
             train_task = (
                 "luigi_Train" if pipeline == "sandbox" else "luigi_TuneRemote"
             )
             cfg[train_task]["config"] = str(path / "config.yaml")
 
-            if s3_bucket is not None:
-                cfg["luigi_Train"]["train_remote"] = "true"
-
+            # set the search space for the tune pipeline
+            # to the search space file in the init directory
+            if pipeline == "tune":
+                cfg[train_task]["search_space"] = str(path / "search_space.py")
             with open(dest, "w") as f:
                 cfg.write(f)
         else:
