@@ -67,6 +67,7 @@ def copy_configs(
             # to the search space file in the init directory
             if pipeline == "tune":
                 cfg[train_task]["search_space"] = str(path / "search_space.py")
+
             with open(dest, "w") as f:
                 cfg.write(f)
         else:
@@ -133,6 +134,7 @@ def main():
     copy_configs(
         directory,
         TUNE_CONFIGS if args.pipeline == "tune" else SANDBOX_CONFIGS,
+        args.pipeline,
         args.s3_bucket,
     )
     create_env(directory, args.s3_bucket)
