@@ -27,7 +27,8 @@ Once setup, create a [fork](https://docs.github.com/en/pull-requests/collaborati
 git clone git@github.com:albert-einstein/aframev2.git
 ```
 
-Set the `AFRAME_REPO` environment variable in your `~/.bash_profile` to point to the location where you cloned the repository. 
+Export the `AFRAME_REPO` environment variable in your `~/.bash_profile` to point to the location where you cloned the repository. 
+Be sure to also `source ~/.bash_profile`.
 
 `Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
 
@@ -45,7 +46,7 @@ poetry install
 
 This environment is used to launch `luigi`/`law` tasks and pipelines (See this [README](./aframe) for more information), and also contains other helpful command line utilities for building project container images, and initializing directories with configuration files for various analyses. 
 
-You can now build each of the project apptainer container images. Set the `AFRAME_CONTAINER_ROOT` environment variable where the image files will be stored. We recommend Something like `~/aframe/images`. This might take ~ 10 minutes, so grab a coffee!
+You can now build each of the project apptainer container images. Set the `AFRAME_CONTAINER_ROOT` environment variable where the image files will be stored. We recommend something like `~/aframe/images`. This might take ~ 10 minutes, so grab a coffee!
 
 ```bash
 poetry run build-containers 

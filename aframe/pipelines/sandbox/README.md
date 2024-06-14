@@ -5,7 +5,7 @@
 > **_Note: It is assumed that you have already built each [project's container](../../../projects/README.md)_**
 
 Pipelines string together `luigi` / `law` tasks to run an end-to-end generic aframe workflow.
-In short, running the sandbox pipeline will
+In short, pipelines will
 
 1. Generate training data 
 2. Generate testing data
