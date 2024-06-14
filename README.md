@@ -27,7 +27,8 @@ Once setup, create a [fork](https://docs.github.com/en/pull-requests/collaborati
 git clone git@github.com:albert-einstein/aframev2.git
 ```
 
-Set the `AFRAME_REPO` environment variable in your `~/.bash_profile` to point to the location where you cloned the repository.
+Export the `AFRAME_REPO` environment variable in your `~/.bash_profile` to point to the location where you cloned the repository. 
+Be sure to also `source ~/.bash_profile`.
 
 `Aframe` utilizes `git` [submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). Make sure to initialize and update those
 
@@ -38,15 +39,35 @@ git submodule update --init
 When pulling changes from this repository, it's recommended to use the `--recurse-submodules` flag to pull any updates from the submodules as well.
 
 Next, in the root of the repository, install the base `aframe` `poetry` environment.
-```
+
+```bash
 poetry install
 ```
-This environment is used to launch `luigi`/`law` tasks and pipelines. See this [README](./aframe) for more information.
 
-Next, follow the [instructions](./projects/README.md) for building each project's Apptainer images, and familiarize yourself with the various projects. These images are used as environments for running `Aframe` workflows, and thus are necessary to build. Once complete, you are all setup! 
+This environment is used to launch `luigi`/`law` tasks and pipelines (See this [README](./aframe) for more information), and also contains other helpful command line utilities for building project container images, and initializing directories with configuration files for various analyses. 
 
-The default Aframe experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. First follow the general instructions in the aframe [README](./aframe), and then the instructions in the sandbox [README](./aframe/pipelines/sandbox/) to execute the pipeline as an introduction to interacting with the respository. 
+You can now build each of the project apptainer container images. Set the `AFRAME_CONTAINER_ROOT` environment variable where the image files will be stored. We recommend something like `~/aframe/images`. This might take ~ 10 minutes, so grab a coffee!
 
+```bash
+poetry run build-containers 
+```
+
+These images are containerized environments for running `Aframe` tasks in isolation, and thus are necessary to build. For more information on what is happening under the hood, please see the projects [README](./projects/README.md). Once complete, you are all setup! 
+
+
+The default `Aframe` experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. You can intialize a run directory with default configuration files using the `aframe-init` command line utility
+
+```bash
+poetry run aframe-init sandbox --directory ~/aframe/runs/my-first-run/
+```
+
+This will create configuration files and a bash executable to launch the pipeline. Feel free to edit the configuration files! Launch the pipeline via
+
+```bash
+bash ~/aframe/runs/my-first-run/run.sh
+```
+
+Please see the instructions in the sandbox [README](./aframe/pipelines/sandbox/) for more details.
 
 ## Repository structure
 The code here is structured like a [monorepo](https://medium.com/opendoor-labs/our-python-monorepo-d34028f2b6fa), with applications siloed off into isolated environments to keep dependencies lightweight, but built on top of a shared set of libraries to keep the code modular and consistent. Briefly, the repository consists of three main sub-directories:
