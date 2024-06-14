@@ -86,7 +86,7 @@ def create_runfile(
     config = path / f"{pipeline}.cfg"
     # make the below one string
     cmd = f"LAW_CONFIG_FILE={config} poetry run --directory $AFRAME_REPO "
-    cmd += f"law runaframe.pipelines.{pipeline}.{pipeline.capitalize()} "
+    cmd += f"law run aframe.pipelines.{pipeline}.{pipeline.capitalize()} "
     cmd += "--workers 5 --gpus 0"
     content = f"""
     #!/bin/bash
