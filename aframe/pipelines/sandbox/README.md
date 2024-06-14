@@ -22,7 +22,7 @@ uses a `yaml` file. See the [`config.yaml`](../../../projects/train/config.yaml)
 
 > **_Note: Parameters that are common between training and other tasks (e.g. ifos, highpass, fduration) are specified once in the `.cfg` and automatically passed to the downstream training or tuning `config.yaml` by `luigi`/`law`_**
 
-The `aframe-init` command line tool can be used to initialize a directory with configuration files for a fresh run. In the specified directory, `aframe-init` will create default `.cfg` and `.yaml` configuration files, as well as a `run.sh` file for launching the pipeline.
+The `aframe-init` command line tool can be used to initialize a directory with configuration files for a fresh run. In the specified directory, `aframe-init` will create default `.cfg` and `.yaml` configuration files, as well as a `run.sh` file for launching the pipeline. Ensure you are in the root of the repository when using `aframe-init`.
 
 ```bash
 poetry run aframe-init sandbox --directory ~/aframe/my-first-run/ 
