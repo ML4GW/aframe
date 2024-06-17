@@ -46,14 +46,27 @@ poetry install
 
 This environment is used to launch `luigi`/`law` tasks and pipelines (See this [README](./aframe) for more information), and also contains other helpful command line utilities for building project container images, and initializing directories with configuration files for various analyses. 
 
-You can now build each of the project apptainer container images. Set the `AFRAME_CONTAINER_ROOT` environment variable where the image files will be stored. We recommend something like `~/aframe/images`. This might take ~ 10 minutes, so grab a coffee!
+Set the `AFRAME_CONTAINER_ROOT` environment variable where the image files will be stored. We recommend something like `~/aframe/images`. 
+
+```bash
+echo export AFRAME_CONTAINER_ROOT=~/aframe/images/ >> ~/.bash_profile
+mkdir -p $AFRAME_CONTAINER_ROOT
+```
+
+Aframe uses Condor for parallelizing tasks across the LDG cluster. Set the `LIGO_USERNAME` and `LIGO_GROUP` environment variables for use with Condor
+
+```bash
+echo export LIGO_USERNAME=<your albert.einstein username> >> ~/.bash_profile
+echo export LIGO_GROUP=ligo.dev.o4.cbc.allsky.aframe >> ~/.bash_profile
+```
+
+You can now build each of the project apptainer container images. This might take ~ 10 minutes, so grab a coffee!
 
 ```bash
 poetry run build-containers 
 ```
 
 These images are containerized environments for running `Aframe` tasks in isolation, and thus are necessary to build. For more information on what is happening under the hood, please see the projects [README](./projects/README.md). Once complete, you are all setup! 
-
 
 The default `Aframe` experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. You can intialize a run directory with default configuration files using the `aframe-init` command line utility
 
