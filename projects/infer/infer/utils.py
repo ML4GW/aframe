@@ -41,18 +41,18 @@ def build_condor_submit(
     parameters = ""
 
     for fname in background_fnames:
-        start, stop = fname.stem.split("_")[-2:]
+        start, duration = map(float, Path(fname).stem.split("-")[-2:])
+        stop = start + duration
         for i in range(num_shifts):
             _shifts = [s * (i + 1) for s in shifts]
             # check if segment is long enough to be analyzed
             if is_analyzeable_segment(start, stop, _shifts, psd_length):
-                _shifts = map(str, _shifts)
-                parameters += f"{fname},{_shifts}\n"
+                parameters += f"{fname},'{_shifts}'\n"
                 # if segment is analyzeable for a shift > 0,
                 # will also be analyzeable for shift = 0
                 if zero_lag:
-                    _shifts = "'[" + ", ".join(["0" for s in shifts]) + "]'"
-                    parameters += f"{fname},{_shifts}\n"
+                    _shifts = [0 for s in shifts]
+                    parameters += f"{fname},'{_shifts}'\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
