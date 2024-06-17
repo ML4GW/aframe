@@ -16,12 +16,13 @@ gwpy = "^3.0.2"
 
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
+utils = {path = "../../libs/utils", develop = true}
 
 aframe = {path = "../../", develop = true}
 python-ligo-lw = "^1.8.3"
 lalsuite = "^7.19"
 jsonargparse = "^4.27.4"
-utils = {path = "../utils", develop = true}
+
 
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"

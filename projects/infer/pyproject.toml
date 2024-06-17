@@ -14,11 +14,15 @@ ray = "^2.6"
 jsonargparse = "^4.24"
 tqdm = "^4.66"
 
+# submodules
 ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["serve", "torch"]}
-utils = {path = "../utils", develop = true}
-aframe = {path = "../../", develop = true}
-ledger = {path = "../../libs/ledger", develop = true}
 pycondor = {path = "../../pycondor", develop = true}
+
+# local deps
+aframe = {path = "../../", develop = true}
+utils = {path = "../../libs/utils", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
+
 
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"

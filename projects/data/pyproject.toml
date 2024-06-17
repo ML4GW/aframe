@@ -10,7 +10,7 @@ license = "MIT"
 python = ">=3.9,<3.11" 
 
 # local deps
-utils = {path = "../utils", develop = true}
+utils = {path = "../../libs/utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}

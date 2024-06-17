@@ -11,26 +11,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 
 from pycondor.cluster import JobStatus
 from pycondor.job import Job
-
-
-def is_analyzeable_segment(
-    start: float, stop: float, shifts: list[float], psd_length: float
-) -> bool:
-    """
-    Given a segment start, stop, shift and psd length,
-    validate if this segment is sufficiently long to be analyzed
-
-    Args:
-        start: start time of the segment
-        stop: stop time of the segment
-        shifts: list of shifts
-        psd_length: length of the psd data
-    """
-
-    length = stop - start
-    length -= max(shifts)
-    length -= psd_length
-    return length > 0
+from utils.data import is_analyzeable_segment
 
 
 def build_condor_submit(

@@ -20,7 +20,7 @@ from aframe.tasks.train.base import (
     TrainBaseParameters,
 )
 from aframe.tasks.train.config import wandb
-from aframe.utils import stream_command
+from aframe.tasks.train.utils import stream_command
 
 
 class TrainLocal(TrainBase, AframeSingularityTask):
