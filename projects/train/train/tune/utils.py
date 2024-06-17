@@ -92,17 +92,31 @@ def get_host_cli(cli: type):
 
 
 def get_search_space(search_space: str):
-    module = importlib.import_module(search_space)
+    # determine if the path is a file path or a module path
+    if os.path.isfile(search_space):
+        # load the module from the file
+        module_name = os.path.splitext(os.path.basename(search_space))[0]
+        spec = importlib.util.spec_from_file_location(
+            module_name, search_space
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    else:
+        # load the module using importlib
+        module = importlib.import_module(search_space)
+
+    # try to get the 'space' attribute from the module
     try:
         space = module.space
     except AttributeError:
-        raise ValueError(f"Module {search_space} has no space dictionary")
+        raise ValueError(f"Module {module.__name__} has no space dictionary")
 
     if not isinstance(space, dict):
         raise TypeError(
             "Expected search space in module {} to be "
-            "a dictionary, found {}".format(search_space, type(space))
+            "a dictionary, found {}".format(module.__name__, type(space))
         )
+
     return space
 
 
