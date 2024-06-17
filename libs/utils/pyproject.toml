@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "utils"
+version = "0.1.0"
+description = "General utility functions for Aframe"
+authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+h5py = "^3.6"
+
+# make preprocessing modules here for use in
+# both validation and inference export
+ml4gw = {path = "../../ml4gw", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
