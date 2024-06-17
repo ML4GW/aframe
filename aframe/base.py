@@ -239,9 +239,10 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster = None
             return
 
+        # TODO: add support for specifying chart parth by hand?
         cluster = RayCluster(
             self.name,
-            chart_path="/home/ethan.marx/projects/aframev2/charts/raycluster/",
+            chart_path=str(root / "charts" / "raycluster"),
         )
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
