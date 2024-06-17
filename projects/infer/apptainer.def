@@ -7,7 +7,7 @@ Stage: build
 # light and protect against any large files that might
 # accidentally get created in this repo
 . /opt/aframe/projects/infer
-../utils /opt/aframe/projects/utils
+../utils /opt/aframe/libs/utils
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../hermes /opt/aframe/hermes
