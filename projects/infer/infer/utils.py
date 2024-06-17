@@ -48,11 +48,14 @@ def build_condor_submit(
             # check if segment is long enough to be analyzed
             if is_analyzeable_segment(start, stop, _shifts, psd_length):
                 parameters += f"{fname},'{_shifts}'\n"
-                # if segment is analyzeable for a shift > 0,
-                # will also be analyzeable for shift = 0
-                if zero_lag:
-                    _shifts = [0 for s in shifts]
-                    parameters += f"{fname},'{_shifts}'\n"
+
+        # if its somehow not analyzeable for 0lag then segment
+        # length has been set incorrectly, but put this check here anyway
+        if zero_lag and is_analyzeable_segment(
+            start, stop, [0] * len(shifts), psd_length
+        ):
+            _shifts = [0 for s in shifts]
+            parameters += f"{fname},'{_shifts}'\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
