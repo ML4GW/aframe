@@ -230,7 +230,7 @@ class AframeRayTask(AframeSingularityTask):
 
         return env
 
-    def sandbox_before_run(self):
+    def sandbox_pre_run(self):
         """
         Method called before the main `run` method to set up
         and launch the ray cluster
@@ -249,7 +249,7 @@ class AframeRayTask(AframeSingularityTask):
         cluster.wait()
         self.ip = cluster.get_ip()
 
-    def sandbox_after_run(self):
+    def sandbox_post_run(self):
         """
         Method called after the main `run` method to
         tear down the ray cluster
