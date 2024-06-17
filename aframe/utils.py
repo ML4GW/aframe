@@ -127,3 +127,23 @@ def get_num_shifts_from_num_injections(
     discriminant = (b**2) - 4 * a * c
     N = (-b + (discriminant**0.5)) / (2 * a)
     return math.ceil(N)
+
+
+def is_analyzeable_segment(
+    start: float, stop: float, shifts: list[float], psd_length: float
+) -> bool:
+    """
+    Given a segment start, stop, shift and psd length,
+    validate if this segment is sufficiently long to be analyzed
+
+    Args:
+        start: start time of the segment
+        stop: stop time of the segment
+        shifts: list of shifts
+        psd_length: length of the psd data
+    """
+
+    length = stop - start
+    length -= max(shifts)
+    length -= psd_length
+    return length > 0

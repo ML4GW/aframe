@@ -74,14 +74,19 @@ class DeployTimeslideWaveforms(
         for start, end in self.test_segments:
             for j in range(self.shifts_required):
                 shift = [(j + 1) * shift for shift in self.shifts]
-                # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (
-                    start + self.psd_length,
-                    end,
-                    shift,
-                    self.psd_segment,
-                )
-                i += 1
+
+                if utils.is_analyzeable_segment(
+                    start, end, shift, self.psd_length
+                ):
+                    # add psd_length to account for the
+                    # burn in of psd calculation
+                    branch_map[i] = (
+                        start + self.psd_length,
+                        end,
+                        shift,
+                        self.psd_segment,
+                    )
+                    i += 1
         return branch_map
 
     @workflow_condition.output

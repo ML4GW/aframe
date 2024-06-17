@@ -13,6 +13,26 @@ from pycondor.cluster import JobStatus
 from pycondor.job import Job
 
 
+def is_analyzeable_segment(
+    start: float, stop: float, shifts: list[float], psd_length: float
+) -> bool:
+    """
+    Given a segment start, stop, shift and psd length,
+    validate if this segment is sufficiently long to be analyzed
+
+    Args:
+        start: start time of the segment
+        stop: stop time of the segment
+        shifts: list of shifts
+        psd_length: length of the psd data
+    """
+
+    length = stop - start
+    length -= max(shifts)
+    length -= psd_length
+    return length > 0
+
+
 def build_condor_submit(
     ip_address: str,
     model_name: str,
@@ -40,15 +60,18 @@ def build_condor_submit(
     parameters = ""
 
     for fname in background_fnames:
+        start, stop = fname.stem.split("_")[-2:]
         for i in range(num_shifts):
-            _shifts = (
-                "'[" + ", ".join([str(s * (i + 1)) for s in shifts]) + "]'"
-            )
-            parameters += f"{fname},{_shifts}\n"
-
-        if zero_lag:
-            _shifts = "'[" + ", ".join(["0" for s in shifts]) + "]'"
-            parameters += f"{fname},{_shifts}\n"
+            _shifts = [s * (i + 1) for s in shifts]
+            # check if segment is long enough to be analyzed
+            if is_analyzeable_segment(start, stop, _shifts, psd_length):
+                _shifts = map(str, _shifts)
+                parameters += f"{fname},{_shifts}\n"
+                # if segment is analyzeable for a shift > 0,
+                # will also be analyzeable for shift = 0
+                if zero_lag:
+                    _shifts = "'[" + ", ".join(["0" for s in shifts]) + "]'"
+                    parameters += f"{fname},{_shifts}\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)
