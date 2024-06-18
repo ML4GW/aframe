@@ -11,6 +11,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 
 from pycondor.cluster import JobStatus
 from pycondor.job import Job
+from utils.data import is_analyzeable_segment
 
 
 def build_condor_submit(
@@ -40,15 +41,21 @@ def build_condor_submit(
     parameters = ""
 
     for fname in background_fnames:
+        start, duration = map(float, Path(fname).stem.split("-")[-2:])
+        stop = start + duration
         for i in range(num_shifts):
-            _shifts = (
-                "'[" + ", ".join([str(s * (i + 1)) for s in shifts]) + "]'"
-            )
-            parameters += f"{fname},{_shifts}\n"
+            _shifts = [s * (i + 1) for s in shifts]
+            # check if segment is long enough to be analyzed
+            if is_analyzeable_segment(start, stop, _shifts, psd_length):
+                parameters += f"{fname},'{_shifts}'\n"
 
-        if zero_lag:
-            _shifts = "'[" + ", ".join(["0" for s in shifts]) + "]'"
-            parameters += f"{fname},{_shifts}\n"
+        # if its somehow not analyzeable for 0lag then segment
+        # length has been set incorrectly, but put this check here anyway
+        if zero_lag and is_analyzeable_segment(
+            start, stop, [0] * len(shifts), psd_length
+        ):
+            _shifts = [0 for s in shifts]
+            parameters += f"{fname},'{_shifts}'\n"
 
     condor_dir = output_dir / "condor"
     condor_dir.mkdir(parents=True, exist_ok=True)

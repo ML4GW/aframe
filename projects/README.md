@@ -7,7 +7,6 @@ The current projects include
 - [`train`](./train/README.md) - Pytorch lightning code for training neural-networks
 - [`export`](./export/README.md) - Exporting trained networks as accelerated executables
 - [`infer`](./infer/README.md) - Launching triton inference servers and deploying inference clients to analyze timeslides and injections
-- [`utils`](./utils/README.md) - General utilites used by all projects (TODO: move this under `libs`)
 
 
 ## Building Project Containers

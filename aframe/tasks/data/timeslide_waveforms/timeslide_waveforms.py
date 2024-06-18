@@ -7,11 +7,11 @@ import law
 import luigi
 from luigi.util import inherits
 
-import aframe.utils as utils
 from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTest
+from utils import data as data_utils
 
 TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
 
@@ -74,14 +74,19 @@ class DeployTimeslideWaveforms(
         for start, end in self.test_segments:
             for j in range(self.shifts_required):
                 shift = [(j + 1) * shift for shift in self.shifts]
-                # add psd_length to account for the burn in of psd calculation
-                branch_map[i] = (
-                    start + self.psd_length,
-                    end,
-                    shift,
-                    self.psd_segment,
-                )
-                i += 1
+
+                if data_utils.is_analyzeable_segment(
+                    start, end, shift, self.psd_length
+                ):
+                    # add psd_length to account for the
+                    # burn in of psd calculation
+                    branch_map[i] = (
+                        start + self.psd_length,
+                        end,
+                        shift,
+                        self.psd_segment,
+                    )
+                    i += 1
         return branch_map
 
     @workflow_condition.output
@@ -93,7 +98,7 @@ class DeployTimeslideWaveforms(
 
     @property
     def shifts_required(self):
-        return utils.get_num_shifts_from_num_injections(
+        return data_utils.get_num_shifts_from_num_injections(
             self.test_segments,
             self.num_injections,
             self.waveform_duration,
@@ -107,7 +112,7 @@ class DeployTimeslideWaveforms(
         paths = list(
             self.workflow_input()["test_segments"].collection.targets.values()
         )
-        return utils.segments_from_paths(paths)
+        return data_utils.segments_from_paths(paths)
 
     @property
     def psd_segment(self):

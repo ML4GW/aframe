@@ -1,59 +1,8 @@
 import logging
 import math
-import os
 import re
-import shlex
-import subprocess
-import sys
 from pathlib import Path
-from queue import Queue
-from threading import Thread
 from typing import List, Tuple
-
-
-def read_stream(stream, process, q):
-    stream = getattr(process, stream)
-    try:
-        it = iter(stream.readline, b"")
-        while True:
-            try:
-                line = next(it)
-            except StopIteration:
-                break
-            q.put(line.decode())
-    finally:
-        q.put(None)
-
-
-def stream_process(process):
-    q = Queue()
-    args = (process, q)
-    streams = ["stdout", "stderr"]
-    threads = [Thread(target=read_stream, args=(i,) + args) for i in streams]
-    for t in threads:
-        t.start()
-
-    for _ in range(2):
-        for line in iter(q.get, None):
-            sys.stdout.write(line)
-
-
-def stream_command(command: List[str]):
-    process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ
-    )
-    stream_process(process)
-
-    process.wait()
-    if process.returncode:
-        raise RuntimeError(
-            "Command '{}' failed with return code {} "
-            "and stderr:\n{}".format(
-                shlex.join(command),
-                process.returncode,
-                process.stderr.read().decode(),
-            )
-        ) from None
 
 
 def segments_from_paths(paths: List[Path]):
@@ -127,3 +76,23 @@ def get_num_shifts_from_num_injections(
     discriminant = (b**2) - 4 * a * c
     N = (-b + (discriminant**0.5)) / (2 * a)
     return math.ceil(N)
+
+
+def is_analyzeable_segment(
+    start: float, stop: float, shifts: list[float], psd_length: float
+) -> bool:
+    """
+    Given a segment start, stop, shift and psd length,
+    validate if this segment is sufficiently long to be analyzed
+
+    Args:
+        start: start time of the segment
+        stop: stop time of the segment
+        shifts: list of shifts
+        psd_length: length of the psd data
+    """
+
+    length = stop - start
+    length -= max(shifts)
+    length -= psd_length
+    return length > 0

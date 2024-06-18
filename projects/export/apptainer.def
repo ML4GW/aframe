@@ -4,7 +4,7 @@ Stage: build
 
 %files
 . /opt/aframe/projects/export/
-../utils /opt/aframe/projects/utils
+../../libs/utils /opt/aframe/libs/utils
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../ml4gw /opt/aframe/ml4gw

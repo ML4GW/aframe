@@ -26,8 +26,8 @@ fsspec = {version = "^2023.10", extras=["s3"]}
 # local deps
 ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["torch"]}
 aframe = {path = "../../", develop = true}
-utils = {path = "../utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
+utils = {path = "../../libs/utils", develop = true}
 jsonargparse = "^4.27.1"
 
 tensorrt = "8.5.1.7"

@@ -38,7 +38,7 @@ fsspec = {version = "^2024", extras=["s3"]}
 urllib3 = ">=1.25.4,<1.27"
 
 # local deps
-utils = {path = "../utils", develop = true}
+utils = {path = "../../libs/utils", develop = true}
 ml4gw = {path = "../../ml4gw", develop = true}
 aframe = {path = "../..", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
