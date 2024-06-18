@@ -137,14 +137,20 @@ class Sequence:
     def num_pad(self):
         # the number of zeros we need to pad the last batch
         # to make it a full batch
-        return self.step_size - self.remainder
+        return (self.step_size - self.remainder) % self.step_size
 
     @property
-    def num_slice(self):
-        # the number of inference requests we need to slice
-        # off the end of the sequences to remove the dummy data
-        # from the last batch
-        return self.num_pad // self.stride
+    def slice(self) -> slice:
+        """
+        The number of inference requests we need to slice
+        off the end of the sequences to remove
+        the dummy data from the last batch
+        """
+
+        # if num_pad is 0 don't slice anything
+        num_slice = self.num_pad // self.stride
+        end = -num_slice if num_slice else None
+        return slice(end)
 
     def __len__(self):
         # this include excess data at end of sequence that can't
@@ -177,14 +183,23 @@ class Sequence:
                 x = []
                 for ifo, shift in zip(self.ifos, self.shifts):
                     start = shift + i * self.step_size
+
+                    # for all but last batch just
+                    # increase by step size
                     end = start + self.step_size
-                    if last:
+
+                    # if this is the last batch
+                    # and we need to pad it
+                    # just step by the remainder
+                    if last and self.remainder:
                         end = start + self.remainder
+
                     data = f[ifo][start:end]
                     # if this is the last batch
                     # possibly pad it to make it a full batch
                     if last:
                         data = np.pad(data, (0, self.num_pad), "constant")
+
                     x.append(data)
                 x = np.stack(x).astype(np.float32)
                 # if there are any injections for this shift,
@@ -219,10 +234,10 @@ class Sequence:
         # sequences have completed, return them both,
         # slicing off the dummy data from the last batch
         if self.done:
-            background = self._sequences[self.id][: -self.num_slice]
+            background = self._sequences[self.id][self.slice]
             foreground = None
             if self.injection_set is not None:
-                foreground = self._sequences[self.id + 1][: -self.num_slice]
+                foreground = self._sequences[self.id + 1][self.slice]
             return background, foreground
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:

@@ -112,7 +112,6 @@ class Postprocessor:
         # just return an empty event set
         if y is None:
             return EventSet()
-
         y = y[self.offset :]
         y = self.integrate(y)
         y = self.cluster(y)

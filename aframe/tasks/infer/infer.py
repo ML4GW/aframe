@@ -73,7 +73,7 @@ class InferBase(AframeSandboxTask):
     @property
     def num_clients(self):
         # account for two streams per condor job: background and injection
-        return self.streams_per_gpu * self.num_gpus // 2
+        return self.streams_per_gpu * self.num_gpus
 
     @property
     def rate_per_client(self):
