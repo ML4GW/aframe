@@ -62,6 +62,7 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
         logging.info("Container root path is not set.")
         return
 
+    exceptions = {}
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(build_container, project, container_root): project
@@ -76,6 +77,19 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
                 logging.info(
                     f"Project {project} generated an exception: {exc}"
                 )
+                exceptions[project] = exc
+
+    logging.info("Container build summary:")
+    if len(exceptions) > 0:
+        logging.error(
+            f"Failed to build containers for the following projects: "
+            f"{', '.join(exceptions.keys())}\n"
+            f"Corresponding exceptions: {', '.join(exceptions.values())}\n"
+            f"To retry building these containers, run the following: "
+            f"poetry run build-containers {' '.join(exceptions.keys())}"
+        )
+    else:
+        logging.info("All containers built successfully")
 
 
 def main():
