@@ -35,6 +35,12 @@ Stage: final
 /opt/aframe /opt/aframe
 
 %post
+# install git for pip installation
+apt-get update
+apt-get install -y --no-install-recommends git
+apt-get clean
+
+%post
 apt-get update
 apt-get -y install gcc
 cd /opt/aframe/projects/plots
