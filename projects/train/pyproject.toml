@@ -47,6 +47,7 @@ architectures = {path = "../../libs/architectures", develop = true}
 bayesian-optimization = "^1.4.3"
 filelock = "^3.13.1"
 s3fs = "^2024"
+pycbc = "^2.4.0"
 
 [[tool.poetry.source]]
 name = "torch"
