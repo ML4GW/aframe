@@ -34,13 +34,16 @@ def build_container(project_name: str, container_root: Path) -> str:
         return out
 
     # build the container
+    image, cmd = Client.build(
+        image=str(container_path),
+        recipe=str(definition_path),
+        sudo=False,
+        options=["--force"],
+        stream=True,
+    )
     try:
-        Client.build(
-            image=str(container_path),
-            recipe=str(definition_path),
-            sudo=False,
-            options=["--force"],
-        )
+        for line in cmd:
+            logging.info(line)
         return f"Successfully built container for {project_name}"
     except Exception as e:
         return f"Failed to build container for {project_name}: {e}"
@@ -62,7 +65,7 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
         logging.info("Container root path is not set.")
         return
 
-    exceptions = {}
+    failed_projects = []
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(build_container, project, container_root): project
@@ -70,23 +73,18 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
         }
         for future in as_completed(futures):
             project = futures[future]
-            try:
-                result = future.result()
-                logging.info(result)
-            except Exception as exc:
-                logging.info(
-                    f"Project {project} generated an exception: {exc}"
-                )
-                exceptions[project] = exc
+            result = future.result()
+            logging.info(result)
+            if result.startswith("Failed"):
+                failed_projects.append(project)
 
     logging.info("Container build summary:")
-    if len(exceptions) > 0:
+    if len(failed_projects) > 0:
         logging.error(
             f"Failed to build containers for the following projects: "
-            f"{', '.join(exceptions.keys())}\n"
-            f"Corresponding exceptions: {', '.join(exceptions.values())}\n"
+            f"{', '.join(failed_projects)}\n"
             f"To retry building these containers, run the following: "
-            f"poetry run build-containers {' '.join(exceptions.keys())}"
+            f"poetry run build-containers {' '.join(failed_projects)}"
         )
     else:
         logging.info("All containers built successfully")
