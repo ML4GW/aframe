@@ -57,6 +57,31 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
         )
 
 
+class SupervisedFrequencyDomainResNet(ResNet1D, SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        layers: list[int],
+        kernel_size: int = 3,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
+        norm_layer: Optional[NormLayer] = None,
+    ) -> None:
+        super().__init__(
+            num_ifos * 4,
+            layers=layers,
+            classes=1,
+            kernel_size=kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=norm_layer,
+        )
+
+
 class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
     def __init__(
         self,
@@ -90,7 +115,7 @@ class SupervisedTimeDomainWaveNet(WaveNet, SupervisedArchitecture):
         )
 
 
-class SupervisedFrequencyDomainResNet(ResNet2D, SupervisedArchitecture):
+class SupervisedSpectrogramDomainResNet(ResNet2D, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,

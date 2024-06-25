@@ -58,7 +58,7 @@ class FrequencyDomainAframeDataset(SupervisedAframeDataset):
         df = 1 / window_length
         window_scale = torch.sum(window**2) / len(window)
         window /= torch.sqrt(window_scale)
-        window *= torch.sqrt(4 * df)
+        window *= torch.sqrt(torch.tensor(4 * df))
         self.window = window[None][None].to(self.device)
 
     def build_val_batches(self, *args, **kwargs):
@@ -70,11 +70,15 @@ class FrequencyDomainAframeDataset(SupervisedAframeDataset):
         X_bg /= torch.sqrt(psds)
 
         X_inj = X_inj * self.window
-        X_inj = torch.fft.rfft(X_bg, dim=-1) / self.sample_rate
+        X_inj = torch.fft.rfft(X_inj, dim=-1) / self.sample_rate
         X_inj /= torch.sqrt(psds)
 
-        X_bg = torch.cat([X_bg.real, X_bg.imag], dim=-2)
-        X_inj = torch.cat([X_inj.real, X_inj.imag], dim=-2)
+        X_bg = torch.cat(
+            [X_bg.real, X_bg.imag, X_bg.angle(), X_bg.abs()], dim=-2
+        )
+        X_inj = torch.cat(
+            [X_inj.real, X_inj.imag, X_inj.angle(), X_inj.abs()], dim=-2
+        )
 
         return X_bg, X_inj
 
@@ -87,5 +91,5 @@ class FrequencyDomainAframeDataset(SupervisedAframeDataset):
         X /= torch.sqrt(psds)
 
         # split into real and imaginary parts
-        X = torch.cat([X.real, X.imag], dim=1)
+        X = torch.cat([X.real, X.imag, X.angle(), X.abs()], dim=1)
         return X, y
