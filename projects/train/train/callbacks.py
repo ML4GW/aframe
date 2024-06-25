@@ -125,12 +125,13 @@ class AframeTrainReportCallback(Callback):
         # Trace the model
         datamodule = trainer.datamodule
         kernel_size = int(
-            datamodule.hparams.kernel_length * datamodule.sample_rate
+            (datamodule.hparams.kernel_length + datamodule.hparams.fduration)
+            * datamodule.sample_rate
         )
 
         # trace the model on cpu and then move model back to original device
         sample_input = torch.randn(
-            1, datamodule.num_ifos, kernel_size, device="cpu"
+            1, datamodule.num_ifos * 4, kernel_size, device="cpu"
         )
 
         device = pl_module.device
