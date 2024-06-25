@@ -39,11 +39,25 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
 class SaveAugmentedBatch(Callback):
     def on_train_start(self, trainer, pl_module):
         if trainer.global_rank == 0:
+            # find device module is on
             device = pl_module.device
+            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+
+            # build training batch by hand
             X = next(iter(trainer.train_dataloader))
             X = X.to(device)
             X, y = trainer.datamodule.augment(X[0])
-            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+
+            # build val batch by hand
+            [background, _, _], [signals] = next(
+                iter(trainer.datamodule.val_dataloader())
+            )
+            background = background.to(device)
+            signals = signals.to(device)
+            X_bg, X_inj = trainer.datamodule.build_val_batches(
+                background, signals
+            )
+
             if save_dir.startswith("s3://"):
                 s3 = s3fs.S3FileSystem()
                 with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
@@ -56,6 +70,12 @@ class SaveAugmentedBatch(Callback):
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
+
+                with h5py.File(
+                    os.path.join(save_dir, "val_batch.h5"), "w"
+                ) as f:
+                    f["X_bg"] = X_bg.cpu().numpy()
+                    f["X_inj"] = X_inj.cpu().numpy()
 
 
 def report_with_retries(metrics, checkpoint, retries: int = 10):

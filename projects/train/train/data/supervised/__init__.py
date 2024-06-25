@@ -1,3 +1,3 @@
-from .frequency_domain import FrequencyDomainSupervisedAframeDataset
+from .frequency_domain import FrequencyDomainAframeDataset
 from .supervised import SupervisedAframeDataset
 from .time_domain import TimeDomainSupervisedAframeDataset

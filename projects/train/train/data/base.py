@@ -64,7 +64,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         psd_length: float,
         # augmentation args
         waveform_prob: float = 1,
-        snr_thresh: float = 4,
         max_snr: float = 100,
         snr_alpha: float = 3,
         left_pad: float = 0,
@@ -291,7 +290,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         self._logger.info(f"Loading {start - stop} validation signals")
         start, stop = -start, -stop or None
-        waveforms = torch.as_tensor(waveform_set.waveforms[start:stop])
+        waveforms = torch.Tensor(waveform_set.waveforms[start:stop])
         return waveforms
 
     def load_val_background(self, fnames: list[str]):
@@ -433,28 +432,28 @@ class BaseAframeDataset(pl.LightningDataModule):
     @torch.no_grad()
     def build_val_batches(
         self, background: Tensor, signals: Tensor
-    ) -> tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tensor]:
         """
         Unfold a timeseries of background data
         into a batch of kernels, then inject
         multiple views of the provided signals
-        into these timeseries. Whiten all tensors
-        and return both the background and injected
-        batches.
+        into these timeseries.
+
+        Args:
+            background: A tensor of background data
+            signals: A tensor of signals to inject
+
+        Returns:
+            raw strain background kernels, injected kernels, and psds
         """
 
-        # TODO: in the same way we do inference, should we
-        # use a longer PSD length and do the whitening
-        # before we do the windowing to reduce compute?
-        # The downside is this would mean doing true injections
-        # for background data, which would require some fancy
-        # footwork that I don't quite have time for.
+        # unfold the background data into kernels
         sample_size = int(self.sample_length * self.sample_rate)
         stride = int(self.hparams.valid_stride * self.sample_rate)
         background = unfold_windows(background, sample_size, stride=stride)
 
+        # split data into kernel and psd data and estimate psd
         X, psd = self.psd_estimator(background)
-        X_bg = self.whitener(X, psd)
         # sometimes at the end of a segment, there won't be
         # enough background kernels and so we'll have to inject
         # our signals on overlapping data and ditch some at the end
@@ -490,10 +489,10 @@ class BaseAframeDataset(pl.LightningDataModule):
             start = max_start - int(i * step)
             stop = start + kernel_size
             injected = X + signals[:, :, int(start) : int(stop)]
-            injected = self.whitener(injected, psd)
             X_inj.append(injected)
         X_inj = torch.stack(X_inj)
-        return X_bg, X_inj
+
+        return X, X_inj, psd
 
     def val_dataloader(self) -> ZippedDataset:
         """

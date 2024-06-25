@@ -2,4 +2,7 @@ from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
-    pass
+    def augment(self, X):
+        X, y, psds = super().augment(X)
+        X = self.whitener(X, psds)
+        return X, y
