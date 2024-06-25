@@ -17,7 +17,7 @@ train = "train.main:main"
 # core dependencies
 python = ">=3.9,<3.11"
 torchmetrics = "^0.11"
-lightning = "^2.0"
+lightning = "<2.3.0"
 jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
 # plotting/logging dependencies
