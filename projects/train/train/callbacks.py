@@ -125,7 +125,7 @@ class AframeTrainReportCallback(Callback):
         # Trace the model
         datamodule = trainer.datamodule
 
-        sample = next(iter(datamodule.train_dataloader))
+        sample = next(iter(trainer.train_dataloader))
         sample = datamodule.augment(sample[0])
         sample = sample.to("cpu")
         sample_input = torch.randn(1, *sample.shape[1:])
