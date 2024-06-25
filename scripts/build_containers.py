@@ -34,16 +34,19 @@ def build_container(project_name: str, container_root: Path) -> str:
         return out
 
     # build the container
+    image, cmd = Client.build(
+        image=str(container_path),
+        recipe=str(definition_path),
+        sudo=False,
+        options=["--force"],
+        stream=True,
+    )
     try:
-        Client.build(
-            image=str(container_path),
-            recipe=str(definition_path),
-            sudo=False,
-            options=["--force"],
-        )
-        return f"Successfully built container for {project_name}"
+        for line in cmd:
+            logging.info(line)
+        return f"Successfully built container for {project_name}", None
     except Exception as e:
-        return f"Failed to build container for {project_name}: {e}"
+        return f"Failed to build container for {project_name}: {e}", e
     finally:
         os.chdir(cwd)
 
@@ -70,21 +73,16 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
         }
         for future in as_completed(futures):
             project = futures[future]
-            try:
-                result = future.result()
-                logging.info(result)
-            except Exception as exc:
-                logging.info(
-                    f"Project {project} generated an exception: {exc}"
-                )
-                exceptions[project] = exc
+            result, exc = future.result()
+            logging.info(result)
+            if result.startswith("Failed"):
+                exceptions[project] = str(exc)
 
     logging.info("Container build summary:")
     if len(exceptions) > 0:
         logging.error(
             f"Failed to build containers for the following projects: "
             f"{', '.join(exceptions.keys())}\n"
-            f"Corresponding exceptions: {', '.join(exceptions.values())}\n"
             f"To retry building these containers, run the following: "
             f"poetry run build-containers {' '.join(exceptions.keys())}"
         )
