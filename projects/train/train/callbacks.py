@@ -122,17 +122,23 @@ class AframeTrainReportCallback(Callback):
         metrics["epoch"] = trainer.current_epoch
         metrics["step"] = trainer.global_step
 
-        # Trace the model
         datamodule = trainer.datamodule
         device = pl_module.device
+
+        # generate sample input to infer shape,
+        # making sure to augment on the device
+        # where the model lives
         sample = next(iter(trainer.train_dataloader))
         sample = sample.to(device)
+        sample, _ = datamodule.augment(sample[0])
 
-        sample = datamodule.augment(sample[0])
+        # infer the shape and send sample input
+        # to cpu for tracing
         sample_input = torch.randn(1, *sample.shape[1:])
         sample_input = sample_input.to("cpu")
 
-        # trace the model on cpu and then move model back to original device
+        # trace the model on cpu and then
+        # move model back to original device
         trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
         pl_module.model.to(device)
 
