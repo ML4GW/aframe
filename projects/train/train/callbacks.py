@@ -124,14 +124,15 @@ class AframeTrainReportCallback(Callback):
 
         # Trace the model
         datamodule = trainer.datamodule
-
+        device = pl_module.device
         sample = next(iter(trainer.train_dataloader))
-        sample = sample.to("cpu")
+        sample = sample.to(device)
+
         sample = datamodule.augment(sample[0])
         sample_input = torch.randn(1, *sample.shape[1:])
+        sample_input = sample_input.to("cpu")
 
         # trace the model on cpu and then move model back to original device
-        device = pl_module.device
         trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
         pl_module.model.to(device)
 
