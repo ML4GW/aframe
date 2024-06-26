@@ -126,8 +126,8 @@ class AframeTrainReportCallback(Callback):
         datamodule = trainer.datamodule
 
         sample = next(iter(trainer.train_dataloader))
-        sample = datamodule.augment(sample[0])
         sample = sample.to("cpu")
+        sample = datamodule.augment(sample[0])
         sample_input = torch.randn(1, *sample.shape[1:])
 
         # trace the model on cpu and then move model back to original device
