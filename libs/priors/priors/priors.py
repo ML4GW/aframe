@@ -298,3 +298,25 @@ def log_normal_masses(
 
     detector_frame_prior = False
     return prior, detector_frame_prior
+
+
+def custom_ringdown_prior(
+    cosmology: cosmo.Cosmology = COSMOLOGY,
+) -> PriorDict:
+    """
+    Define a Bilby `PriorDict` containing distributions for ringdown parameters.
+
+    Quality, Frequency, and Distance are defined in the source frame.
+
+    Args:
+        cosmology: An `astropy` cosmology, used to determine redshift sampling
+
+    Returns:
+        prior: `PriorDict` containing the specified distributions.
+    """
+    prior = uniform_extrinsic()
+    prior["quality"] = Uniform(8, 20)
+    prior["frequency"] = LogUniform(100, 1000)
+    prior["distance"] = UniformComovingVolume(100, 1000, cosmology=cosmology)
+
+    return prior
