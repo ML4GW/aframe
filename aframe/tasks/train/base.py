@@ -4,11 +4,10 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.config import Defaults
+from aframe.config import Defaults, wandb
 from aframe.parameters import PathParameter
 from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
-from aframe.tasks.train.config import wandb
 
 
 class TrainBaseParameters(law.Task):
