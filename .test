@@ -1,0 +1,7 @@
+AFRAME_BASE=~/aframe # base location for aframe runs
+RUN_LABEL=my_first_run # some descriptive label for this analysis
+export AFRAME_TRAIN_DATA_DIR=$AFRAME_BASE/$RUN_LABEL/data/train
+export AFRAME_TEST_DATA_DIR=$AFRAME_BASE/$RUN_LABEL/data/test
+export AFRAME_TRAIN_RUN_DIR=$AFRAME_BASE/$RUN_LABEL/training
+export AFRAME_CONDOR_DIR=$AFRAME_BASE/$RUN_LABEL/condor
+export AFRAME_RESULTS_DIR=$AFRAME_BASE/$RUN_LABE/results
