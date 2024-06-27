@@ -8,7 +8,6 @@ from bilby.core.prior import (
     Cosine,
     Gaussian,
     LogNormal,
-    LogUniform,
     PowerLaw,
     PriorDict,
     Sine,
@@ -298,32 +297,4 @@ def log_normal_masses(
     )
 
     detector_frame_prior = False
-    return prior, detector_frame_prior
-
-
-def ringdown_prior(
-    cosmology: cosmo.Cosmology = COSMOLOGY,
-) -> (PriorDict, bool):
-    """
-    Define a Bilby `PriorDict` containing distributions for ringdown parameters
-
-    Quality, Frequency, and Distance are defined in the detector frame
-
-    Args:
-        cosmology: An `astropy` cosmology, used to determine distance sampling
-
-    Returns:
-        prior: `
-            PriorDict` containing the specified distributions
-        detector_frame_prior:
-            A boolean indicating if the prior is in the detector frame.
-    """
-    prior = uniform_extrinsic()
-    prior["quality"] = Uniform(8, 20)
-    prior["frequency"] = LogUniform(100, 1000)
-    prior["distance"] = UniformComovingVolume(
-        100, 1000, name="luminosity_distance", cosmology=cosmology
-    )
-
-    detector_frame_prior = True
     return prior, detector_frame_prior
