@@ -1,11 +1,12 @@
 import torch
 
+from ml4gw.spectral import truncate_inverse_power_spectrum
 from ml4gw.transforms.qtransform import SingleQTransform
 from train.data.base import Tensor
 from train.data.supervised.supervised import SupervisedAframeDataset
 
 
-class SpectrogramSupervisedAframeDataset(SupervisedAframeDataset):
+class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
     def __init__(
         self, q: float, spectrogram_shape: list[int, int], *args, **kwargs
     ):
@@ -47,49 +48,79 @@ class SpectrogramSupervisedAframeDataset(SupervisedAframeDataset):
         return X_bg, X_fg
 
 
-class FrequencyDomainAframeDataset(SupervisedAframeDataset):
+class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
+    # TODO: make configurable via CLI
+    @property
+    def taper_window(self):
+        """
+        Window used to taper time domain data before FFT
+        """
+        return torch.hann_window(self.window_size)
+
+    @property
+    def window_length(self):
+        return self.hparams.kernel_length + self.hparams.fduration
+
+    @property
+    def window_size(self):
+        return int(self.window_length * self.sample_rate)
+
+    @property
+    def window_scale(self):
+        """
+        Scale factor to ensure whitened data
+        is unit variance mean zero after
+        applying the taper window
+        """
+        df = 1 / self.window_length
+        window_scale = 1 / torch.sqrt(
+            torch.sum(self.taper_window**2) / len(self.taper_window)
+        )
+        window_scale *= torch.sqrt(torch.tensor(4 * df))
+        return window_scale
+
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
-
-        # build tapering window
-        window_length = self.hparams.kernel_length + self.hparams.fduration
-        window_size = int(window_length * self.sample_rate)
-        window = torch.hann_window(window_size)
-        df = 1 / window_length
-        window_scale = torch.sum(window**2) / len(window)
-        window /= torch.sqrt(window_scale)
-        window *= torch.sqrt(torch.tensor(4 * df))
+        # build tapering window and transfer to device
+        window = self.taper_window * self.window_scale
         self.window = window[None][None].to(self.device)
+
+    def whiten(self, X, psd):
+        psd = truncate_inverse_power_spectrum(
+            psd,
+            self.hparams.fduration,
+            self.sample_rate,
+            self.hparams.highpass,
+        )
+        X = X - X.mean(-1, keepdim=True)
+        X = X * self.window
+        freqs = torch.fft.fftfreq(
+            X.shape[-1], 1 / self.sample_rate, device=self.device
+        )
+        mask = freqs > self.hparams.highpass
+        X = torch.fft.rfft(X, dim=-1) / self.sample_rate
+        X /= torch.sqrt(psd)
+        X = X[..., mask]
+        return X
 
     def build_val_batches(self, *args, **kwargs):
         X_bg, X_inj, psds = super().build_val_batches(*args, **kwargs)
 
-        # fft and whiten in frequeny domain
-        X_bg = X_bg * self.window
-        X_bg = torch.fft.rfft(X_bg, dim=-1) / self.sample_rate
-        X_bg /= torch.sqrt(psds)
+        # fft whiten and highpass in frequency domain
+        X_bg = self.whiten(X_bg, psds)
+        X_inj = self.whiten(X_inj, psds)
 
-        X_inj = X_inj * self.window
-        X_inj = torch.fft.rfft(X_inj, dim=-1) / self.sample_rate
-        X_inj /= torch.sqrt(psds)
-
-        X_bg = torch.cat(
-            [X_bg.real, X_bg.imag, X_bg.angle(), X_bg.abs()], dim=-2
-        )
-        X_inj = torch.cat(
-            [X_inj.real, X_inj.imag, X_inj.angle(), X_inj.abs()], dim=-2
-        )
+        X_bg = torch.cat([X_bg.real, X_bg.imag], dim=-2)
+        X_inj = torch.cat([X_inj.real, X_inj.imag], dim=-2)
 
         return X_bg, X_inj
 
     def augment(self, X):
         X, y, psds = super().augment(X)
 
-        # fft and whiten in frequency domain
-        X *= self.window
-        X = torch.fft.rfft(X, dim=-1) / self.sample_rate
-        X /= torch.sqrt(psds)
+        # fft whiten and highpass in frequency domain
+        X = self.whiten(X, psds)
 
         # split into real and imaginary parts
-        X = torch.cat([X.real, X.imag, X.angle(), X.abs()], dim=1)
+        X = torch.cat([X.real, X.imag], dim=1)
         return X, y
