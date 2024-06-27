@@ -20,7 +20,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
             sample_rate=self.sample_rate,
             q=self.q,
             spectrogram_shape=self.spectrogram_shape,
-        )
+        ).to(self.device)
 
     def augment(self, X):
         X, y = super().augment(X)
