@@ -66,6 +66,13 @@ class SaveAugmentedBatch(Callback):
                             h5file["X"] = X.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
                         s3_file.write(f.getvalue())
+
+                with s3.open(f"{save_dir}/val_batch.h5", "wb") as s3_file:
+                    with io.BytesIO() as f:
+                        with h5py.File(f, "w") as h5file:
+                            h5file["X_bg"] = X_bg.cpu().numpy()
+                            h5file["X_inj"] = X_inj.cpu().numpy()
+                        s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()

@@ -70,7 +70,7 @@ class SupervisedFrequencyDomainResNet(ResNet1D, SupervisedArchitecture):
         norm_layer: Optional[NormLayer] = None,
     ) -> None:
         super().__init__(
-            num_ifos * 4,
+            num_ifos * 2,
             layers=layers,
             classes=1,
             kernel_size=kernel_size,
