@@ -8,7 +8,7 @@ import luigi
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import s3
+from aframe.config import s3, wandb
 from aframe.helm import RayCluster
 
 root = Path(__file__).resolve().parent.parent
@@ -227,6 +227,8 @@ class AframeRayTask(AframeSingularityTask):
         env["AWS_SECRET_ACCESS_KEY"] = s3().aws_secret_access_key
         env["AWS_ENDPOINT_URL"] = s3().get_internal_s3_url()
         env["AWS_EXTERNAL_ENDPOINT_URL"] = s3().endpoint_url
+        env["WANDB_API_KEY"] = wandb().api_key
+        env["WANDB_USERNAME"] = wandb().username
 
         return env
 

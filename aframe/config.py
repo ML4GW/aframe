@@ -50,6 +50,16 @@ class ray_head(luigi.Config):
     )
 
 
+class wandb(luigi.Config):
+    api_key = luigi.Parameter(default=os.getenv("WANDB_API_KEY", ""))
+    entity = luigi.Parameter(default=os.getenv("WANDB_ENTITY", ""))
+    project = luigi.Parameter(default=os.getenv("WANDB_PROJECT", "aframe"))
+    name = luigi.Parameter(default=os.getenv("WANDB_NAME", ""))
+    group = luigi.Parameter(default=os.getenv("WANDB_RUN_GROUP", ""))
+    tags = luigi.Parameter(default=os.getenv("WANDB_TAGS", ""))
+    username = luigi.Parameter(default=os.getenv("WANDB_USERNAME", ""))
+
+
 class s3(luigi.Config):
     endpoint_url = luigi.Parameter(default=os.getenv("AWS_ENDPOINT_URL"))
     aws_access_key_id = luigi.Parameter(default=os.getenv("AWS_ACCESS_KEY_ID"))
