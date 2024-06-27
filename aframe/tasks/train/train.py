@@ -11,7 +11,7 @@ from luigi.contrib.kubernetes import KubernetesJobTask
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask, AframeWrapperTask, logger
-from aframe.config import s3
+from aframe.config import s3, wandb
 from aframe.targets import Bytes, LawS3Target
 from aframe.tasks.train.base import (
     RemoteParameters,
@@ -19,7 +19,6 @@ from aframe.tasks.train.base import (
     TrainBase,
     TrainBaseParameters,
 )
-from aframe.tasks.train.config import wandb
 from aframe.tasks.train.utils import stream_command
 
 
