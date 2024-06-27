@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING
 import luigi
 
 from aframe.base import AframeRayTask
-from aframe.config import ray_head, ray_worker, s3
+from aframe.config import ray_head, ray_worker, s3, wandb
 from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase
-from aframe.tasks.train.config import wandb
 
 if TYPE_CHECKING:
     from aframe.helm import RayCluster
