@@ -305,6 +305,14 @@ class BaseAframeDataset(pl.LightningDataModule):
                 val_background.append(torch.stack(segment))
         return val_background
 
+    def transforms_to_device(self):
+        """
+        Move all `torch.nn.Modules` to the local device
+        """
+        for item in self.__dict__.values():
+            if isinstance(item, torch.nn.Module):
+                item.to(self.device)
+
     def build_transforms(self, sample_rate: float):
         """
         Helper utility in case we ever want to construct
@@ -318,15 +326,16 @@ class BaseAframeDataset(pl.LightningDataModule):
             fftlength,
             fast=self.hparams.highpass is not None,
             average="median",
-        ).to(self.device)
+        )
         self.whitener = Whiten(
             self.hparams.fduration, sample_rate, self.hparams.highpass
-        ).to(self.device)
+        )
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
-        ).to(self.device)
+        )
 
         self.sample_rate = sample_rate
+        self.transforms_to_device()
 
     def setup(self, stage: str) -> None:
         world_size, rank = self.get_world_size_and_rank()
