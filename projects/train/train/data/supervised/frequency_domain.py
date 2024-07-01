@@ -94,7 +94,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         )
         X = X - X.mean(-1, keepdim=True)
         X = X * self.window
-        freqs = torch.fft.fftfreq(
+        freqs = torch.fft.rfftfreq(
             X.shape[-1], 1 / self.sample_rate, device=self.device
         )
         mask = freqs > self.hparams.highpass
