@@ -333,9 +333,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
         )
-
         self.sample_rate = sample_rate
-        self.transforms_to_device()
 
     def setup(self, stage: str) -> None:
         world_size, rank = self.get_world_size_and_rank()
@@ -350,6 +348,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # that require sample rate information
         self._logger.info("Constructing sample rate dependent transforms")
         self.build_transforms(sample_rate)
+        self.transforms_to_device()
 
         # load in our validation background up front and
         # compute which timeslides we'll do on this device
@@ -456,7 +455,6 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         X, psd = self.psd_estimator(background)
         X_bg = self.whitener(X, psd)
-
         # sometimes at the end of a segment, there won't be
         # enough background kernels and so we'll have to inject
         # our signals on overlapping data and ditch some at the end
