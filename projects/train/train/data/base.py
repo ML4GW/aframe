@@ -305,6 +305,14 @@ class BaseAframeDataset(pl.LightningDataModule):
                 val_background.append(torch.stack(segment))
         return val_background
 
+    def transforms_to_device(self):
+        """
+        Move all `torch.nn.Modules` to the local device
+        """
+        for item in self.__dict__.values():
+            if isinstance(item, torch.nn.Module):
+                item.to(self.device)
+
     def build_transforms(self, sample_rate: float):
         """
         Helper utility in case we ever want to construct
@@ -318,14 +326,13 @@ class BaseAframeDataset(pl.LightningDataModule):
             fftlength,
             fast=self.hparams.highpass is not None,
             average="median",
-        ).to(self.device)
+        )
         self.whitener = Whiten(
             self.hparams.fduration, sample_rate, self.hparams.highpass
-        ).to(self.device)
+        )
         self.projector = aug.WaveformProjector(
             self.hparams.ifos, sample_rate, self.hparams.highpass
-        ).to(self.device)
-
+        )
         self.sample_rate = sample_rate
 
     def setup(self, stage: str) -> None:
@@ -341,6 +348,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # that require sample rate information
         self._logger.info("Constructing sample rate dependent transforms")
         self.build_transforms(sample_rate)
+        self.transforms_to_device()
 
         # load in our validation background up front and
         # compute which timeslides we'll do on this device
@@ -447,7 +455,6 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         X, psd = self.psd_estimator(background)
         X_bg = self.whitener(X, psd)
-
         # sometimes at the end of a segment, there won't be
         # enough background kernels and so we'll have to inject
         # our signals on overlapping data and ditch some at the end

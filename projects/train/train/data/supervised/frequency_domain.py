@@ -13,8 +13,8 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         self.q = q
         self.spectrogram_shape = spectrogram_shape
 
-    def setup(self, *args, **kwargs):
-        super().setup(*args, **kwargs)
+    def build_transforms(self, *args, **kwargs):
+        super().build_transforms(*args, **kwargs)
         self.qtransform = SingleQTransform(
             duration=self.hparams.kernel_length,
             sample_rate=self.sample_rate,
