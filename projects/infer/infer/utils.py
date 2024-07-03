@@ -91,6 +91,10 @@ def build_condor_submit(
     log_dir.mkdir(parents=True, exist_ok=True)
     queue = f"{param_names} from {param_file}"
 
+    # clear out log dir due to (likely) pycondor bug
+    # where previously failed jobs
+    # were being interpreted as failed due to old logs
+    shutil.rmtree(log_dir / "log")
     job = Job(
         name="infer-clients",
         executable=shutil.which("infer"),
@@ -116,7 +120,9 @@ def wait(cluster, sleep: int = 1):
             [JobStatus.FAILED, JobStatus.CANCELLED], how="any"
         ):
             for proc in cluster.procs:
-                logging.error(proc.err)
+                status = proc.get_status()
+                if status in [JobStatus.FAILED, JobStatus.CANCELLED]:
+                    logging.error(proc.err)
             cluster.rm()
             raise RuntimeError("Something went wrong!")
 
