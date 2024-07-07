@@ -103,12 +103,13 @@ class InferBase(AframeSandboxTask):
         return self.input()["waveforms"][0].path
 
     def output(self):
-        outputs = [
-            law.LocalFileTarget(self.foreground_output),
-            law.LocalFileTarget(self.background_output),
-        ]
+        outputs = {}
+        outputs["foreground"] = law.LocalFileTarget(self.foreground_output)
+        outputs["background"] = law.LocalFileTarget(self.background_output)
+
         if self.zero_lag:
-            outputs.append(law.LocalFileTarget(self.zero_lag_output))
+            outputs["zero_lag"] = law.LocalFileTarget(self.zero_lag_output)
+
         return outputs
 
 
