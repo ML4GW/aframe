@@ -38,11 +38,9 @@ Stage: final
 # install git for pip installation
 apt-get update
 apt-get install -y --no-install-recommends git
+apt-get -y install gcc
 apt-get clean
 
-%post
-apt-get update
-apt-get -y install gcc
 cd /opt/aframe/projects/plots
 pip install -r requirements.txt --no-deps --no-cache-dir
 pip install -e . --no-deps --no-cache-dir

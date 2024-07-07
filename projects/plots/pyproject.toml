@@ -12,7 +12,7 @@ python = ">=3.9,<3.11"
 bokeh = "^3.0"
 scipy = "^1.7"
 h5py = "^3.5"
-gwpy = "^3.0.2"
+gwpy = "^3.0.8"
 
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
