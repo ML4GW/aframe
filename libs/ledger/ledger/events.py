@@ -56,19 +56,26 @@ class EventSet(Ledger):
         nb = self.nb(threshold)
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
 
-    def apply_vetos(self, vetos: List[Tuple[float, float]], idx: int):
+    def apply_vetos(
+        self, vetos: List[Tuple[float, float]], idx: int, chunk_size=100000
+    ):
         # idx corresponds to the index of the shift
-        # (i.e. which ifo to apply vetoes for)
+        # (i.e., which ifo to apply vetoes for)
         shifts = self.shift[:, idx]
         times = self.detection_time + shifts
 
-        mask = np.logical_and(vetos[:, :1] < times, vetos[:, 1:] > times)
+        # array of False, no vetoes applied yet
+        veto_mask = np.zeros(len(times), dtype=bool)
 
-        # mark a background event as vetoed
-        # if it falls into _any_ of the segments
-        veto_mask = mask.any(axis=0)
+        # process triggers in chunks to avoid memory issues
+        for i in range(0, len(times), chunk_size):
+            # apply vetos for this chunk of times
+            chunk_times = times[i : i + chunk_size]
+            mask = np.logical_and(
+                vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
+            )
+            veto_mask[i : i + chunk_size] = mask.any(axis=0)
 
-        # TODO: have an 'inplace=False' option that returns a new object?
         return self[~veto_mask]
 
 

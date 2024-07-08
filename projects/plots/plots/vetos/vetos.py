@@ -50,7 +50,7 @@ class VetoParser:
         self.vetoes = DataQualityDict.from_veto_definer_file(
             self.veto_definer_file
         )
-        self.vetoes.populate(segments=[[self.start, self.stop]], verbose=False)
+        self.vetoes.populate(segments=[[self.start, self.stop]], verbose=True)
         self.veto_cache = {}
 
     def get_vetoes(self, category: str):

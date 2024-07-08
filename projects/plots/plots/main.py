@@ -12,7 +12,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from plots import compute, tools
 from plots.gwtc3 import catalog_results
-from plots.vetoes import VetoParser, get_catalog_vetoes
+from plots.vetos import VetoParser, get_catalog_vetoes
 from priors.priors import log_normal_masses
 
 from utils.logging import configure_logging
@@ -32,10 +32,10 @@ def normalize_path(path):
     return path
 
 
-VETO_DEFINER_FILE = normalize_path("./vetoes/H1L1-HOFT_C01_O3_CBC.xml")
+VETO_DEFINER_FILE = normalize_path("./vetos/H1L1-HOFT_C01_O3_CBC.xml")
 GATE_PATHS = {
-    "H1": normalize_path("./vetoes/H1-O3_GATES_1238166018-31197600.txt"),
-    "L1": normalize_path("./vetoes/L1-O3_GATES_1238166018-31197600.txt"),
+    "H1": normalize_path("./vetos/H1-O3_GATES_1238166018-31197600.txt"),
+    "L1": normalize_path("./vetos/L1-O3_GATES_1238166018-31197600.txt"),
 }
 
 
@@ -80,7 +80,6 @@ def main(
         verbose:
             If true, log at the debug level
     """
-
     configure_logging(log_file, verbose)
     logging.info("Reading in inference outputs")
     background = EventSet.read(background)
@@ -103,6 +102,7 @@ def main(
     )
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
+    # TODO: make argument
     ifos = ["H1", "L1"]
 
     veto_parser = VetoParser(
