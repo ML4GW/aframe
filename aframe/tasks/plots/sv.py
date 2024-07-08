@@ -15,6 +15,9 @@ class SensitiveVolume(AframeSingularityTask):
     Compute and plot the sensitive volume of an aframe analysis
     """
 
+    ifos = luigi.ListParameter(
+        description="List of interferometers used in analysis"
+    )
     mass_combos = luigi.ListParameter(
         description="Mass combinations for which to calculate sensitive volume"
     )
@@ -57,6 +60,7 @@ class SensitiveVolume(AframeSingularityTask):
             Path(background.path),
             Path(foreground.path),
             Path(rejected),
+            self.ifos,
             mass_combos=self.mass_combos,
             source_prior=source_prior,
             dt=self.dt,
