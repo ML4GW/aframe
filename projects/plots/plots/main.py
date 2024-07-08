@@ -43,6 +43,7 @@ def main(
     background: Path,
     foreground: Path,
     rejected_params: Path,
+    ifos: List[str],
     mass_combos: List[tuple],
     source_prior: Callable,
     output_dir: Path,
@@ -101,9 +102,6 @@ def main(
         background.detection_time.max(),
     )
     logging.info(f"Loading in vetoes from {start} to {stop}")
-
-    # TODO: make argument
-    ifos = ["H1", "L1"]
 
     veto_parser = VetoParser(
         VETO_DEFINER_FILE,
