@@ -57,7 +57,10 @@ class EventSet(Ledger):
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
 
     def apply_vetos(
-        self, vetos: List[Tuple[float, float]], idx: int, chunk_size=100000
+        self,
+        vetos: List[Tuple[float, float]],
+        idx: int,
+        chunk_size: int = 100000,
     ):
         # idx corresponds to the index of the shift
         # (i.e., which ifo to apply vetoes for)
