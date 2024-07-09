@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
@@ -38,19 +37,19 @@ def get_catalog_vetoes(start: float, stop: float, delta: float = 1.0):
     return vetoes
 
 
-@dataclass
 class VetoParser:
-    veto_definer_file: Path
-    gate_paths: Dict[str, Path]
-    start: float
-    stop: float
-    ifos: List[str]
-
-    def __post_init__(self):
-        self.vetoes = DataQualityDict.from_veto_definer_file(
-            self.veto_definer_file
-        )
-        self.vetoes.populate(segments=[[self.start, self.stop]], verbose=True)
+    def __init__(
+        self,
+        veto_definer_file: Path,
+        gate_paths: Dict[str, Path],
+        start: float,
+        stop: float,
+        ifos: List[str],
+    ):
+        self.vetoes = DataQualityDict.from_veto_definer_file(veto_definer_file)
+        self.vetoes.populate(segments=[[start, stop]], verbose=True)
+        self.gate_paths = gate_paths
+        self.ifos = ifos
         self.veto_cache = {}
 
     def get_vetoes(self, category: str):

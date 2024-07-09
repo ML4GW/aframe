@@ -1,12 +1,12 @@
 import jsonargparse
-from plots.main import main as vizapp
+from plots.main import main as calc_sensitive_volume
 
 
 def main(args=None):
     parser = jsonargparse.ArgumentParser()
-    parser.add_function_arguments(vizapp)
+    parser.add_function_arguments(calc_sensitive_volume)
     args = parser.parse_args()
-    vizapp(**vars(args))
+    calc_sensitive_volume(**vars(args))
 
 
 if __name__ == "__main__":
