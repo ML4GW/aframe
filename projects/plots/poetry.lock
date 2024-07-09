@@ -169,6 +169,23 @@ files = [
 ]
 
 [[package]]
+name = "architectures"
+version = "0.1.0"
+description = "Aframe neural network architectures"
+optional = false
+python-versions = ">=3.8,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+h5py = "^3.9.0"
+ml4gw = {path = "../../ml4gw", develop = true}
+
+[package.source]
+type = "directory"
+url = "../../libs/architectures"
+
+[[package]]
 name = "argon2-cffi"
 version = "23.1.0"
 description = "Argon2 for Python"
@@ -4886,4 +4903,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "8cb8a1be63b64fff4d2ad0338985b38b15271ab384a01a6d457a18c604ea42d3"
+content-hash = "c8621379a1752ee6415dc9249ea44508d36349c079c9db20cdd8565558394984"

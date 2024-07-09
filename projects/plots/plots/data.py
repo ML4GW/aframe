@@ -3,7 +3,7 @@ from typing import List
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-
+import bilby
 
 class Data:
     """
@@ -15,9 +15,14 @@ class Data:
         base_dir: Path,
         data_dir: Path,
         mass_combos: List[tuple],
-        source_prior: "bilby.core.prior.PriorDict",
+        source_prior: bilby.core.prior.PriorDict,
         ifos: List[str],
         sample_rate: float,
+        kernel_length: float,
+        psd_length: float,
+        highpass: float,
+        batch_size: int,
+        inference_sampling_rate: float,
         fduration: float,
         valid_frac: float,
     ):
@@ -25,9 +30,15 @@ class Data:
         self.ifos = ifos
         self.source_prior = source_prior
         self.sample_rate = sample_rate
+        self.kernel_length = kernel_length
+        self.psd_length = psd_length
+        self.highpass = highpass
+        self.batch_size = batch_size
+        self.inference_sampling_rate = inference_sampling_rate
         self.fduration = fduration
         self.valid_frac = valid_frac
         self.mass_combos = mass_combos
+
 
         # load results and data from the run we're visualizing
         infer_dir = base_dir / "results" / "infer"
@@ -52,3 +63,8 @@ class Data:
     @property
     def stop(self):
         return self.background.detection_time.max()
+
+    @property
+    def kernel_size(self):
+        return int(self.kernel_length * self.sample_rate)
+

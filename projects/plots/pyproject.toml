@@ -17,6 +17,7 @@ gwpy = "^3.0.8"
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
 utils = {path = "../../libs/utils", develop = true}
+architectures = {path = "../../libs/architectures", develop = true}
 
 aframe = {path = "../../", develop = true}
 python-ligo-lw = "^1.8.3"
