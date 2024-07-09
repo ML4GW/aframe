@@ -94,7 +94,11 @@ def build_condor_submit(
     # clear out log dir due to (likely) pycondor bug
     # where previously failed jobs
     # were being interpreted as failed due to old logs
-    shutil.rmtree(log_dir / "log")
+    try:
+        shutil.rmtree(log_dir / "log")
+    except FileNotFoundError:
+        pass
+
     job = Job(
         name="infer-clients",
         executable=shutil.which("infer"),
