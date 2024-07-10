@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
+import torch
 import bilby
 import numpy as np
 from bokeh.layouts import column, row
@@ -9,6 +10,7 @@ from bokeh.models import Div, MultiChoice, TabPanel, Tabs
 from ledger.injections import InjectionParameterSet
 from plots.data import Data
 from plots.pages.summary import Summary
+from architectures.base import Architecture
 
 if TYPE_CHECKING:
     from astropy.cosmology import Cosmology
@@ -23,28 +25,33 @@ class App:
     def __init__(
         self,
         data: Data,
+        arch: Architecture,
+        whitener: torch.nn.Module,
+        snapshotter: torch.nn.Module,
         # veto_parser: "VetoParser",
     ) -> None:
         self.logger = logging.getLogger("vizapp")
         # self.veto_parser = veto_parser
+        self.model = arch
+        self.whitener = whitener
+        self.snapshotter = snapshotter
+        self.data = data
 
         # initialize all our pages and their constituent plots
         self.pages, tabs = [], []
         for page in [Summary]:
-            page = page(data)
+            page = page(self)
             self.pages.append(page)
 
             title = page.__class__.__name__
             tab = TabPanel(child=page.get_layout(), title=title)
             tabs.append(tab)
 
-        # set up our veto selecter and set up the initially
-        # blank veto mask, use this to update the sources
-        # for all our pages
+       
 
-        # self.veto_selecter = self.get_veto_selecter()
-        # self.veto_selecter.on_change(self.update_vetos)
-        # self.update_vetos(None, None, [])
+        self.veto_selecter = self.get_veto_selecter()
+        self.veto_selecter.on_change(self.update_vetos)
+        self.update_vetos(None, None, [])
 
         # set up a header with a title and the selecter
         title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)

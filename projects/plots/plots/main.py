@@ -65,6 +65,11 @@ def main(
         source_prior,
         ifos,
         sample_rate,
+        kernel_length,
+        psd_length,
+        highpass,
+        batch_size,
+        inference_sampling_rate,
         fduration,
         valid_frac,
     )
@@ -100,6 +105,9 @@ def main(
 
     bkapp = App(
         data,
+        architecture,
+        whitener,
+        snapshotter,
         # veto_parser
     )
 

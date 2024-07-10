@@ -1,18 +1,18 @@
 from plots.data import Data
-
+from plots.pages import Page
 from .sv import SensitiveVolumePlot
 
 
-class Summary:
-    def __init__(self, data: Data):
-        self.data = data
-
-        source_prior, _ = data.source_prior()
+class Summary(Page):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+        source_prior, _ = self.app.data.source_prior()
         self.sv = SensitiveVolumePlot(
-            data.background,
-            data.foreground,
-            data.rejected_params,
-            data.mass_combos,
+            self.app.data.background,
+            self.app.data.foreground,
+            self.app.data.rejected_params,
+            self.app.data.mass_combos,
             source_prior,
         )
 

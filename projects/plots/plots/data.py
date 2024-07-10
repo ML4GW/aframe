@@ -48,6 +48,7 @@ class Data:
             infer_dir / "foreground.hdf5"
         )
         self.rejected_params = InjectionParameterSet.read(rejected)
+        self.response_set = data_dir / "test" / "waveforms.hdf5"
 
         # move injection masses to source frame
         for obj in [self.foreground, self.rejected_params]:

@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 import re
 
 t0_pattern = re.compile(r"[0-9]{10}(\.[0-9])?(?=-)")
@@ -25,3 +26,12 @@ def get_strain_fname(data_dir: Path, time: float):
             "data directory {}".format(time, data_dir)
         )
     return fname, t0, dur
+
+def get_indices(
+    t: np.ndarray, 
+    lower: float, 
+    upper: float
+):
+    mask = (lower <= t) & (t < upper)
+    idx = np.where(mask)[0]
+    return idx[0], idx[-1]
