@@ -33,7 +33,7 @@ def normalize_path(path):
 
 
 INJECTION_FILE = normalize_path(
-    "./gwtc3_data/endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+    "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
 )
 VETO_DEFINER_FILE = normalize_path("./vetos/H1L1-HOFT_C01_O3_CBC.xml")
 GATE_PATHS = {

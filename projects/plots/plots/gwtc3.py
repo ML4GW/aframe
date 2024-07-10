@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import Dict, List, Tuple
+from urllib.request import urlretrieve
 
 import astropy.cosmology as cosmo
 import astropy.units as u
@@ -66,6 +67,15 @@ def get_injection_data(
     detection_criterion: str,
 ):
     injection_params = {}
+
+    if not injection_file.exists():
+        url = (
+            "https://zenodo.org/records/7890437/files/"
+            "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+        )
+        logging.info("Downloading injection file from Zenodo")
+        urlretrieve(url, filename=injection_file)
+
     with h5py.File(injection_file, "r") as f:
         T_obs = f.attrs["analysis_time_s"] / (365.25 * 24 * 3600)  # years
         N_draw = f.attrs["total_generated"]
