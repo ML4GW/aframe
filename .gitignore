@@ -2,3 +2,5 @@
 **/.ipynb_checkpoints
 **/*.log
 **/*.env
+**/id_rsa
+**/*.hdf5

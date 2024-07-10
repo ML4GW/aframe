@@ -5,7 +5,7 @@ from bokeh.palettes import Bright7 as palette  # noqa
 from bokeh.plotting import figure
 from scipy.integrate import quad
 
-SECONDS_PER_MONTH = 3600 * 24 * 30
+SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
 
 
 subscripts = {}
@@ -85,10 +85,10 @@ def make_grid(combos):
         )
 
         kwargs["x_axis_label"] = (
-            r"$$\text{False Alarm Rate " r"[months}^{-1}\text{]}$$"
+            r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
         )
         kwargs["x_axis_label"] = (
-            r"$$\text{False Alarm Rate " r"[months}^{-1}\text{]}$$"
+            r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
         )
         p = get_figure(**kwargs)
         p.outline_line_color = "#ffffff"
@@ -117,7 +117,7 @@ def make_grid(combos):
             # lower plots need space for x-axis label
             kwargs["height"] += 30
             kwargs["x_axis_label"] = (
-                r"$$\text{False Alarm Rate " r"[months}^{-1}\text{]}$$"
+                r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
             )
 
         # share x range between all plots
