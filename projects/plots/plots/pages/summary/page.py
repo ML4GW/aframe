@@ -1,4 +1,4 @@
-from plots.pages import Page
+from plots.pages.page import Page
 
 from .sv import SensitiveVolumePlot
 

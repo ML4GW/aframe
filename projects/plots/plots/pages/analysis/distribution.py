@@ -187,7 +187,7 @@ class DistributionPlot:
         if len(new) > 1:
             logging.debug("too many indices")
             return
-        if new == old:
+        if new == old or not new:
             return
 
         idx = new[0]

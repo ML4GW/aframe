@@ -1,5 +1,6 @@
+import io
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Sequence
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
 import h5py
 import numpy as np
@@ -7,7 +8,6 @@ import torch
 from bokeh.layouts import row
 from bokeh.models import (
     ColumnDataSource,
-    Div,
     HoverTool,
     Legend,
     LinearAxis,
@@ -15,7 +15,9 @@ from bokeh.models import (
 )
 from bokeh.plotting import figure
 from gwpy.plot import Plot
+from gwpy.timeseries import TimeSeries
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
+from PIL import Image
 from plots import palette
 
 from .utils import get_indices, get_strain_fname
@@ -108,6 +110,15 @@ class EventAnalyzer:
     def inference_times(self):
         return self.times[:: self.inference_stride]
 
+    @property
+    def whitened_times(self):
+        start = (
+            self.step_size
+            - self.inference_stride
+            - int(self.sample_rate * self.fduration)
+        )
+        return self.times[start:]
+
     def find_strain(self, time: float, shifts: Sequence[float]):
         # find strain file corresponding to requested time
         fname, t0, duration = get_strain_fname(self.strain_dir, time)
@@ -144,7 +155,7 @@ class EventAnalyzer:
         return integrated[: -self.integration_size + 1]
 
     def infer(self, X: torch.Tensor):
-        ys, batches = [], []
+        ys, strain = [], []
         start = 0
         state = torch.zeros(self.state_shape).to(self.device)
         # pad X up to batch size
@@ -161,16 +172,16 @@ class EventAnalyzer:
             x = X[:, :, start:stop]
             with torch.no_grad():
                 x, state = self.snapshotter(x, state)
-                batch = self.whitener(x)
+                batch, whitened = self.whitener(x)
                 y_hat = self.model(batch)[:, 0].cpu().numpy()
 
-            batches.append(batch.cpu().numpy())
+            strain.append(whitened.cpu().numpy())
             ys.append(y_hat)
             start += self.step_size
 
-        batches = np.concatenate(batches)[slc]
+        whitened = np.concatenate(strain, axis=-1)[..., :-pad]
         ys = np.concatenate(ys)[slc]
-        return ys, batches
+        return ys, whitened
 
     def analyze(self, time, shifts, foreground):
         strain, t0 = self.find_strain(time, shifts)
@@ -179,10 +190,22 @@ class EventAnalyzer:
             strain = waveform.inject(strain, t0)
         strain = strain[None]
         strain = torch.Tensor(strain).to(self.device)
-        outputs, whitened = self.infer(strain)
-        integrated = self.integrate(outputs)
+        nn, whitened = self.infer(strain)
+        integrated = self.integrate(nn)
 
-        return outputs, whitened, integrated
+        return nn, integrated, whitened
+
+    def qscan(self, strain: Dict[str, np.ndarray]):
+        qscans = []
+        for ifo in self.ifos:
+            data = strain[ifo]
+            ts = TimeSeries(data, times=self.whitened_times)
+            ts = ts.crop(-3, 3)
+            qscan = ts.q_transform(
+                logf=True, frange=(32, 1024), whiten=False, outseg=(-1, 1)
+            )
+            qscans.append(qscan)
+        return qscans
 
 
 class InspectorPlot:
@@ -198,7 +221,9 @@ class InspectorPlot:
         self.response_source = ColumnDataSource(
             dict(nn=[], integrated=[], t=[])
         )
-        self.spectrogram = Div(text="", width=400, height=400)
+        self.spectrogram_source = ColumnDataSource(
+            data=dict(image=[], x=[0], y=[0], dw=[], dh=[])
+        )
 
     def get_layout(self, height: int, width: int) -> None:
         self.timeseries_plot = figure(
@@ -262,18 +287,65 @@ class InspectorPlot:
         self.timeseries_plot.add_tools(hover)
         self.timeseries_plot.legend.click_policy = "mute"
 
-        return row(self.timeseries_plot, self.spectrogram)
+        self.spectrogram_plot = figure(
+            height=height,
+            width=width,
+            title="Spectrogram",
+            toolbar_location=None,
+            x_axis_type=None,
+            y_axis_type=None,
+        )
+        self.spectrogram_plot.grid.grid_line_color = None
+        self.spectrogram_plot.outline_line_color = None
+        self.spec_renderer = self.spectrogram_plot.image_rgba(
+            image="image",
+            x="x",
+            y="y",
+            dw="dw",
+            dh="dh",
+            source=self.spectrogram_source,
+        )
+        return row(self.timeseries_plot, self.spectrogram_plot)
 
     def plot(self, qscans, det):
         fig = Plot(
             *qscans,
             figsize=(12, 6),
-            geometry=(1, 2),
+            geometry=(1, len(self.analyzer.ifos)),
             yscale="log",
             method="pcolormesh",
             cmap="viridis",
         )
-        fig.savefig(self.analyzer.qscan_dir / f"qscan-{det}.png")
+        for i, ax in enumerate(fig.axes):
+            from matplotlib import ticker
+
+            # TODO: account for half second somewhere
+            ax.set_epoch(0.5)
+            ax.set_title(self.analyzer.ifos[i])
+            ax.set_xlabel("Time [s]")
+            ax.set_ylabel("Frequency [Hz]")
+            ax.xaxis.set_major_formatter(
+                ticker.FuncFormatter(lambda x, p: f"{x:.1f}")
+            )
+
+            if i == len(self.analyzer.ifos) - 1:
+                fig.colorbar(ax=ax, label="Normalized energy")
+
+        # save image png in memory so that
+        # we can pass it to bokeh to plot
+        out = io.BytesIO()
+        fig.savefig(out, format="png", bbox_inches="tight")
+
+        # open image, flip it right side up,
+        # and format in a way that bokeh can plot
+        image = Image.open(out)
+        img_array = np.array(image)
+        img_array = np.flipud(img_array)
+        img_height, img_width, _ = img_array.shape
+        img_array = img_array.view(dtype=np.uint32).reshape(
+            (img_height, img_width)
+        )
+        return img_array
 
     def update(
         self,
@@ -283,24 +355,22 @@ class InspectorPlot:
         title: str,
     ) -> None:
         foreground = event_type == "foreground"
-        nn, whitened, integrated = self.analyzer.analyze(
+        nn, integrated, whitened = self.analyzer.analyze(
             event_time, shift, foreground
         )
-        # det = integrated.max()
-        # self.plot(qscans, det)
-        # self.spectrogram.text = f"<img src=myapp/{qscan_path}>"
 
-        # TODO: best way to show whitened data?
-        """
+        # update the strain source plot data
+        # with the whitened strain, nn outputs,
+        # and integrated outputs
         strain_source = {
-            ifo: whitened[i] for
-            i, ifo in enumerate(self.analyzer.ifos)
+            ifo: whitened[0][i][-len(self.analyzer.whitened_times) :]
+            for i, ifo in enumerate(self.analyzer.ifos)
         }
-        strain_source["t"] = self.analyzer.times
+        strain_source["t"] = self.analyzer.whitened_times
+
         self.strain_source.data = strain_source
         for r in self.strain_renderers:
             r.data_source.data = strain_source
-        """
 
         self.response_source.data = {
             "nn": nn,
@@ -312,6 +382,7 @@ class InspectorPlot:
                 nn=nn, integrated=integrated, t=self.analyzer.inference_times
             )
 
+        # update axis labels, title and ranges of timeseries plot
         nn_min = nn.min()
         nn_max = nn.max()
         nn_min = 0.95 * nn_min if nn_min > 0 else 1.05 * nn_min
@@ -326,6 +397,20 @@ class InspectorPlot:
         )
 
         self.timeseries_plot.title.text = title
+
+        # qscan whitened strain and plot spectrogram
+        qscans = self.analyzer.qscan(strain_source)
+        img = self.plot(qscans)
+
+        width, height = img.shape[1], img.shape[0]
+        self.spectrogram_plot.x_range = Range1d(0, width)
+        self.spectrogram_plot.y_range = Range1d(0, height)
+        self.spectrogram_plot.height = height
+        self.spectrogram_plot.width = width
+
+        spec_source = dict(image=[img], x=[0], y=[0], dw=[width], dh=[height])
+        self.spectrogram_source.data = spec_source
+        self.spec_renderer.data_source.data = spec_source
 
     def reset(self):
         # TODO: implement this

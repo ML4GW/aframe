@@ -1,7 +1,7 @@
 from bokeh.layouts import column
-from plots.pages import Page
 from plots.pages.analysis.distribution import DistributionPlot
 from plots.pages.analysis.inspector import EventAnalyzer, InspectorPlot
+from plots.pages.page import Page
 
 
 class Analysis(Page):
@@ -37,7 +37,7 @@ class Analysis(Page):
 
     def get_layout(self):
         event_inspector = self.event_inspector.get_layout(
-            height=400, width=600
+            height=559, width=800
         )
         distribution = self.distribution_plot.get_layout(
             height=400, width=1500

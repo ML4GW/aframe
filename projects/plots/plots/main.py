@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, List
 
 import jsonargparse
-import s3fs
 import torch
 from architectures.base import Architecture
 from bokeh.server.server import Server
@@ -12,15 +11,7 @@ from plots.app import App, Data
 from plots.vetos import VetoParser
 
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
-
-
-def open_file(path, mode="rb"):
-    if str(path).startswith("s3://"):
-        fs = s3fs.S3FileSystem()
-        return fs.open(path, mode)
-    else:
-        # For local paths
-        return open(path, mode)
+from utils.s3 import open_file
 
 
 def normalize_path(path):
@@ -102,6 +93,7 @@ def main(
         fduration,
         fftlength=2,
         highpass=highpass,
+        return_whitened=True,
     ).to(device)
     snapshotter = BackgroundSnapshotter(
         psd_length=psd_length,
