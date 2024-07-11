@@ -1,6 +1,7 @@
-from pathlib import Path
-import numpy as np
 import re
+from pathlib import Path
+
+import numpy as np
 
 t0_pattern = re.compile(r"[0-9]{10}(\.[0-9])?(?=-)")
 dur_pattern = re.compile("[0-9]{2,8}(?=.hdf5)")
@@ -27,11 +28,8 @@ def get_strain_fname(data_dir: Path, time: float):
         )
     return fname, t0, dur
 
-def get_indices(
-    t: np.ndarray, 
-    lower: float, 
-    upper: float
-):
+
+def get_indices(t: np.ndarray, lower: float, upper: float):
     mask = (lower <= t) & (t < upper)
     idx = np.where(mask)[0]
     return idx[0], idx[-1]

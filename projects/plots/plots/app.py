@@ -1,19 +1,15 @@
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
-import torch
-import bilby
 import numpy as np
+import torch
+from architectures.base import Architecture
 from bokeh.layouts import column, row
 from bokeh.models import Div, MultiChoice, TabPanel, Tabs
-from ledger.injections import InjectionParameterSet
 from plots.data import Data
-from plots.pages.summary import Summary
-from architectures.base import Architecture
+from plots.pages import Analysis, Summary
 
 if TYPE_CHECKING:
-    from astropy.cosmology import Cosmology
     from plots.vetos import VetoParser
 
 
@@ -28,10 +24,10 @@ class App:
         arch: Architecture,
         whitener: torch.nn.Module,
         snapshotter: torch.nn.Module,
-        # veto_parser: "VetoParser",
+        veto_parser: "VetoParser",
     ) -> None:
         self.logger = logging.getLogger("vizapp")
-        # self.veto_parser = veto_parser
+        self.veto_parser = veto_parser
         self.model = arch
         self.whitener = whitener
         self.snapshotter = snapshotter
@@ -39,27 +35,28 @@ class App:
 
         # initialize all our pages and their constituent plots
         self.pages, tabs = [], []
-        for page in [Summary]:
+        for page in [Summary, Analysis]:
             page = page(self)
             self.pages.append(page)
 
             title = page.__class__.__name__
             tab = TabPanel(child=page.get_layout(), title=title)
             tabs.append(tab)
+            page.update()
 
-       
-
+        """
         self.veto_selecter = self.get_veto_selecter()
         self.veto_selecter.on_change(self.update_vetos)
         self.update_vetos(None, None, [])
+        """
 
         # set up a header with a title and the selecter
         title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)
-        # header = row(title, self.veto_selecter)
+        header = row(title)  # self.veto_selecter)
 
         # generate the final layout
         tabs = Tabs(tabs=tabs)
-        self.layout = column(tabs)
+        self.layout = column(header, tabs)
         self.logger.info("Application ready!")
 
     def get_veto_selecter(self):

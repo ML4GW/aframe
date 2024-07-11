@@ -22,11 +22,14 @@ architectures = {path = "../../libs/architectures", develop = true}
 aframe = {path = "../../", develop = true}
 python-ligo-lw = "^1.8.3"
 lalsuite = "^7.19"
-jsonargparse = "^4.27.4"
+jsonargparse = "^4.30.0"
+omegaconf = "^2.3.0"
 
 
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"
+lightning = "^2.3.3"
+s3fs = "^2024.6.1"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

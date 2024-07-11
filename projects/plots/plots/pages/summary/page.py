@@ -1,12 +1,12 @@
-from plots.data import Data
 from plots.pages import Page
+
 from .sv import SensitiveVolumePlot
 
 
 class Summary(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
         source_prior, _ = self.app.data.source_prior()
         self.sv = SensitiveVolumePlot(
             self.app.data.background,

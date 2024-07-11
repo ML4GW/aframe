@@ -1,16 +1,27 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List
 
 import jsonargparse
-from bokeh.server.server import Server
-
-from .app import App, Data
-from .vetos import VetoParser
-from utils.preprocessing import BatchWhitener, BackgroundSnapshotter
-from architectures.base import Architecture
+import s3fs
 import torch
+from architectures.base import Architecture
+from bokeh.server.server import Server
+from plots.app import App, Data
+from plots.vetos import VetoParser
+
+from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
+
+
+def open_file(path, mode="rb"):
+    if str(path).startswith("s3://"):
+        fs = s3fs.S3FileSystem()
+        return fs.open(path, mode)
+    else:
+        # For local paths
+        return open(path, mode)
+
 
 def normalize_path(path):
     path = Path(path)
@@ -28,17 +39,19 @@ GATE_PATHS = {
 
 def main(
     architecture: Architecture,
-    base_dir: Path,
+    weights: str,
     data_dir: Path,
+    results_dir: Path,
     ifos: List[str],
     mass_combos: List[tuple],
     source_prior: Callable,
-    kernel_length: int,
-    psd_length: int,
+    kernel_length: float,
+    psd_length: float,
     highpass: float,
     batch_size: int,
     sample_rate: float,
     inference_sampling_rate: float,
+    integration_length: float,
     fduration: float,
     valid_frac: float,
     port: int = 5005,
@@ -52,15 +65,20 @@ def main(
         stream=sys.stdout,
     )
 
-
     # load in best model
-    weights = base_dir / "training" / "model.pt"
-    checkpoint = torch.load(weights, map_location=device)
-    architecture.load_state_dict(checkpoint)
+    with open_file(weights, "rb") as f:
+        weights = torch.load(f, map_location="cpu")["state_dict"]
+        weights = {
+            k.strip("model."): v
+            for k, v in weights.items()
+            if k.startswith("model.")
+        }
+        architecture.load_state_dict(weights)
 
+    architecture = architecture.to(device)
     data = Data(
-        base_dir,
         data_dir,
+        results_dir,
         mass_combos,
         source_prior,
         ifos,
@@ -70,30 +88,29 @@ def main(
         highpass,
         batch_size,
         inference_sampling_rate,
+        integration_length,
         fduration,
         valid_frac,
+        device,
     )
 
-
-    # build modules for performing on the fly inference
-    length = kernel_length + fduration + psd_length
     whitener = BatchWhitener(
-        length,
+        kernel_length,
         sample_rate,
         inference_sampling_rate,
         batch_size,
         fduration,
+        fftlength=2,
         highpass=highpass,
-    )
+    ).to(device)
     snapshotter = BackgroundSnapshotter(
         psd_length=psd_length,
         kernel_length=kernel_length,
         fduration=fduration,
         sample_rate=sample_rate,
         inference_sampling_rate=inference_sampling_rate,
-    )
+    ).to(device)
 
-    """
     veto_parser = VetoParser(
         VETO_DEFINER_FILE,
         GATE_PATHS,
@@ -101,15 +118,8 @@ def main(
         data.stop,
         ifos,
     )
-    """
 
-    bkapp = App(
-        data,
-        architecture,
-        whitener,
-        snapshotter,
-        # veto_parser
-    )
+    bkapp = App(data, architecture, whitener, snapshotter, veto_parser)
 
     server = Server({"/": bkapp}, num_procs=1, port=port, address="0.0.0.0")
     server.start()
@@ -117,16 +127,14 @@ def main(
 
 
 def cli(args=None):
-    parser = jsonargparse.ArgumentParser()
+    parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
     parser.add_function_arguments(main)
+    parser.add_argument("--config", action="config")
     args = parser.parse_args()
+    args = parser.instantiate_classes(args)
+    args.pop("config", None)
     main(**vars(args))
 
 
 if __name__ == "__main__":
     cli()
-
-
-
-if __name__ == "__main__":
-    main()

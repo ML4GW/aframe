@@ -11,21 +11,18 @@ from bokeh.models import (
     TapTool,
 )
 from bokeh.plotting import figure
-from vizapp import palette
+from plots import palette
 
 FORE_ATTRS = [
-    "chirp_mass",
     "shift",
     "mass_1",
     "mass_2",
-    "mass_1_source",
-    "mass_2_source",
     "snr",
     "detection_statistic",
     "shift",
-    "time",
+    "injection_time",
 ]
-BACK_ATTRS = ["detection_statistic", "time"]
+BACK_ATTRS = ["detection_statistic", "detection_time"]
 
 
 class DistributionPlot:
@@ -45,7 +42,7 @@ class DistributionPlot:
         self.background_source = ColumnDataSource(
             dict(
                 x=[],
-                time=[],
+                detection_time=[],
                 detection_statistic=[],
                 color=[],
                 label=[],
@@ -55,7 +52,9 @@ class DistributionPlot:
             )
         )
 
-        self.foreground_source = ColumnDataSource(dict(size=[]))
+        self.foreground_source = ColumnDataSource(
+            dict(size=[], detection_statistic=[], snr=[])
+        )
 
     def get_layout(self, height, width):
         self.distribution_plot = figure(
@@ -74,7 +73,7 @@ class DistributionPlot:
         box_select = BoxSelectTool(dimensions="width")
         self.distribution_plot.add_tools(box_select)
         self.distribution_plot.toolbar.active_drag = box_select
-        self.bar_source.selected.on_change("indices", self.update_background)
+        # self.bar_source.selected.on_change("indices", self.update_background)
 
         self.distribution_plot.extra_y_ranges = {"SNR": Range1d(1, 10)}
         axis = LogAxis(
@@ -107,7 +106,7 @@ class DistributionPlot:
         return row(self.distribution_plot, self.background_plot)
 
     def plot_data(self):
-        injection_renderer = self.distribution_plot.circle(
+        injection_renderer = self.distribution_plot.scatter(
             x="detection_statistic",
             y="snr",
             fill_color=self.frgd_color,
@@ -163,7 +162,7 @@ class DistributionPlot:
             source=self.bar_source,
         )
 
-        self.background_plot.circle(
+        self.background_plot.scatter(
             "x",
             "detection_statistic",
             fill_color="color",
@@ -180,48 +179,9 @@ class DistributionPlot:
         )
         tap = TapTool()
         self.background_source.selected.on_change(
-            "indices", self.inspect_glitch
+            "indices", self.inspect_background
         )
         self.background_plot.add_tools(tap)
-
-    def update_background(self, attr, old, new):
-        if len(new) < 2:
-            return
-
-        stats = np.array(self.bar_source.data["center"])
-        min_ = min([stats[i] for i in new])
-        max_ = max([stats[i] for i in new])
-        mask = self.background.detection_statistic >= min_
-        mask &= self.background.detection_statistic <= max_
-
-        self.background_plot.title.text = (
-            f"{mask.sum()} events with detection statistic in the range"
-            f"({min_:0.1f}, {max_:0.1f})"
-        )
-        events = self.background.detection_statistic[mask]
-        h1_times = self.background.time[mask]
-        shifts = self.background.shift[mask][:, 1]
-        l1_times = h1_times + shifts
-
-        t0 = h1_times.min()
-        self.background_plot.xaxis.axis_label = f"Time from {t0:0.3f} [hours]"
-        self.background_plot.legend.visible = True
-
-        x = times - t0
-        x /= 3600
-        self.background_source.data.update(
-            dict(
-                x=times - t0,
-                time=h1_times,
-                detection_statistic=events,
-                color=colors,
-                label=labels,
-                count=counts,
-                shift=shifts,
-                size=8 * (counts**0.8),
-            )
-        )
-        self.background_source.selected.indices = []
 
     def inspect_event(self, attr, old, new):
         if len(new) > 1:
@@ -231,14 +191,14 @@ class DistributionPlot:
             return
 
         idx = new[0]
-        event_time = self.foreground_source.data["time"][idx]
+        event_time = self.foreground_source.data["injection_time"][idx]
         shift = self.foreground_source.data["shift"][idx]
         snr = self.foreground_source.data["snr"][idx]
-        chirp_mass = self.foreground_source.data["chirp_mass"][idx]
+        # chirp_mass = self.foreground_source.data["chirp_mass"][idx]
 
         title = "Injected Event: "
         title += f"SNR = {snr:0.1f}, "
-        title += f"Chirp Mass = {chirp_mass:0.1f}"
+        # title += f"Chirp Mass = {chirp_mass:0.1f}"
 
         self.event_inspector.update(
             event_time,
@@ -255,7 +215,7 @@ class DistributionPlot:
             return
 
         idx = new[0]
-        event_time = self.background_source.data["time"][idx]
+        event_time = self.background_source.data["detection_time"][idx]
         label = self.background_source.data["label"][idx]
         shift = self.background_source.data["shift"][idx]
         if label == "Livingston":
@@ -266,17 +226,15 @@ class DistributionPlot:
         )
 
     def update(self):
-        # apply vetoes to background, update data source, and update title
-        background = self.page.app.background
-        self.foreground = self.page.app.foreground
-        self.background = background[~self.page.app.veto_mask]
+        self.background = self.page.app.data.background
+        self.foreground = self.page.app.data.foreground
 
         title = (
             "{} background events from {:0.2f} "
             "days worth of data; {} injections overlayed"
         ).format(
             len(self.background),
-            background.Tb / 3600 / 24,
+            self.background.Tb / 3600 / 24,
             len(self.foreground),
         )
         background_dict, foreground_dict = self.asdict(
@@ -289,7 +247,9 @@ class DistributionPlot:
         self.distribution_plot.title.text = title
 
         # update bar plot
-        hist, bins = np.histogram(background.detection_statistic, bins=100)
+        hist, bins = np.histogram(
+            self.background.detection_statistic, bins=100
+        )
         hist = np.cumsum(hist[::-1])[::-1]
         self.distribution_plot.y_range.start = 0.1
         self.distribution_plot.y_range.end = 2 * hist.max()
@@ -314,7 +274,7 @@ class DistributionPlot:
         self.background_source.data.update(
             dict(
                 x=[],
-                time=[],
+                detection_time=[],
                 detection_statistic=[],
                 color=[],
                 label=[],

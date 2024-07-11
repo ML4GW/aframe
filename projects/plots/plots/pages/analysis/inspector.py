@@ -4,11 +4,6 @@ from typing import TYPE_CHECKING, List, Sequence
 import h5py
 import numpy as np
 import torch
-from ledger.injections import waveform_class_factory
-from plots.data import Data
-
-from .utils import get_strain_fname, get_indices
-from gwpy.plot import Plot
 from bokeh.layouts import row
 from bokeh.models import (
     ColumnDataSource,
@@ -19,7 +14,11 @@ from bokeh.models import (
     Range1d,
 )
 from bokeh.plotting import figure
+from gwpy.plot import Plot
+from ledger.injections import InterferometerResponseSet, waveform_class_factory
 from plots import palette
+
+from .utils import get_indices, get_strain_fname
 
 if TYPE_CHECKING:
     from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
@@ -29,15 +28,21 @@ class EventAnalyzer:
     def __init__(
         self,
         model: torch.nn.Module,
-        whitener: BatchWhitener,
-        snapshotter: BackgroundSnapshotter,
+        whitener: "BatchWhitener",
+        snapshotter: "BackgroundSnapshotter",
         strain_dir: Path,
         response_set: Path,
+        psd_length: float,
+        kernel_length: float,
         sample_rate: float,
         fduration: float,
+        inference_sampling_rate: float,
+        integration_length: float,
+        batch_size: int,
+        device: str,
         ifos: List[str],
+        padding: int = 3,
     ):
-        
         self.model = model
         self.whitener = whitener
         self.snapshotter = snapshotter
@@ -45,25 +50,72 @@ class EventAnalyzer:
         self.response_set = response_set
         self.ifos = ifos
 
+        self.padding = padding
         self.sample_rate = sample_rate
         self.fduration = fduration
+        self.psd_length = psd_length
+        self.kernel_length = kernel_length
+        self.inference_sampling_rate = inference_sampling_rate
+        self.integration_length = integration_length
+        self.batch_size = batch_size
+        self.device = device
 
     @property
     def waveform_class(self):
-        return waveform_class_factory(self.ifos)
+        return waveform_class_factory(
+            self.ifos, InterferometerResponseSet, "IfoWaveformSet"
+        )
+
+    @property
+    def kernel_size(self):
+        return int(self.kernel_length * self.sample_rate)
+
+    @property
+    def state_shape(self):
+        return (1, len(self.ifos), self.snapshotter.state_size)
+
+    @property
+    def inference_stride(self):
+        return int(self.sample_rate / self.inference_sampling_rate)
+
+    @property
+    def step_size(self):
+        return int(self.batch_size * self.inference_stride)
+
+    @property
+    def integration_size(self):
+        return int(self.integration_length * self.inference_sampling_rate)
+
+    @property
+    def window(self):
+        return np.ones((self.integration_size,)) / self.integration_size
+
+    @property
+    def times(self):
+        """
+        Returns the time values relative to event time
+        """
+        start = (
+            self.psd_length
+            + self.kernel_length
+            + (self.fduration / 2)
+            + self.padding
+        )
+        stop = self.kernel_length + (self.fduration / 2) + self.padding
+        return np.arange(-start, stop, 1 / self.sample_rate)
+
+    @property
+    def inference_times(self):
+        return self.times[:: self.inference_stride]
 
     def find_strain(self, time: float, shifts: Sequence[float]):
         # find strain file corresponding to requested time
         fname, t0, duration = get_strain_fname(self.strain_dir, time)
-        start, stop = None
         # find indices of data needed for inference
         times = np.arange(t0, t0 + duration, 1 / self.sample_rate)
         start, stop = get_indices(
-            times,
-            time - self.length_previous_data,
-            time + self.padding + (self.fduration / 2),
+            times, time + self.times[0], time + self.times[-1]
         )
-        times = times[start:stop]
         strain = []
         with h5py.File(fname, "r") as f:
             for ifo, shift in zip(self.ifos, shifts):
@@ -75,7 +127,7 @@ class EventAnalyzer:
                 data = torch.tensor(f[ifo][start_shifted:stop_shifted])
                 strain.append(data)
 
-        return torch.stack(strain, axis=0), times[0]
+        return torch.stack(strain, axis=0), time + self.times[0]
 
     def find_waveform(self, time: float, shifts: np.ndarray):
         """
@@ -86,29 +138,38 @@ class EventAnalyzer:
             self.response_set, time - 0.1, time + 0.1, shifts
         )
         return waveform
-    
+
     def integrate(self, y):
         integrated = np.convolve(y, self.window, mode="full")
-        return integrated[: -self.window_size + 1]
-        
+        return integrated[: -self.integration_size + 1]
+
     def infer(self, X: torch.Tensor):
         ys, batches = [], []
         start = 0
-        state = torch.zeros(self.state_shape)
-        while start < (X.shape[-1] - self.step_size):
+        state = torch.zeros(self.state_shape).to(self.device)
+        # pad X up to batch size
+        remainder = X.shape[-1] % self.step_size
+        num_slice = None
+        if remainder:
+            pad = self.step_size - remainder
+            X = torch.nn.functional.pad(X, (0, pad))
+            num_slice = pad // self.inference_stride
+        slc = slice(-num_slice)
+
+        while start <= (X.shape[-1] - self.step_size):
             stop = start + self.step_size
             x = X[:, :, start:stop]
             with torch.no_grad():
-                x = torch.Tensor(x)
                 x, state = self.snapshotter(x, state)
-                batch = self.preprocessor(x)
-                y_hat = self.model(batch)[:, 0].numpy()
+                batch = self.whitener(x)
+                y_hat = self.model(batch)[:, 0].cpu().numpy()
 
-            batches.append(batch.numpy())
+            batches.append(batch.cpu().numpy())
             ys.append(y_hat)
             start += self.step_size
-        batches = np.concatenate(batches)
-        ys = np.concatenate(ys)
+
+        batches = np.concatenate(batches)[slc]
+        ys = np.concatenate(ys)[slc]
         return ys, batches
 
     def analyze(self, time, shifts, foreground):
@@ -117,10 +178,9 @@ class EventAnalyzer:
             waveform = self.find_waveform(time, shifts)
             strain = waveform.inject(strain, t0)
         strain = strain[None]
-
+        strain = torch.Tensor(strain).to(self.device)
         outputs, whitened = self.infer(strain)
         integrated = self.integrate(outputs)
-        outputs = outputs[self.integration_size :]
 
         return outputs, whitened, integrated
 
@@ -131,7 +191,9 @@ class InspectorPlot:
         self.analyzer = analyzer
 
     def initialize_sources(self):
-        strain_source = {ifo: [] for ifo in self.analyzer.ifos}.update({"t": []})
+        strain_source = {ifo: [] for ifo in self.analyzer.ifos}
+        strain_source["t"] = []
+
         self.strain_source = ColumnDataSource(strain_source)
         self.response_source = ColumnDataSource(
             dict(nn=[], integrated=[], t=[])
@@ -144,7 +206,7 @@ class InspectorPlot:
             height=height,
             width=width,
             y_range=(-5, 5),
-            x_range=(-3, 3),
+            x_range=(-3, 5),
             x_axis_label="Time [s]",
             y_axis_label="Strain [unitless]",
         )
@@ -221,36 +283,33 @@ class InspectorPlot:
         title: str,
     ) -> None:
         foreground = event_type == "foreground"
-        (
-            nn,
-            integrated,
-            whitened,
-            times,
-            inference_times,
-            # qscans,
-        ) = self.analyzer(event_time, shift, foreground)
+        nn, whitened, integrated = self.analyzer.analyze(
+            event_time, shift, foreground
+        )
         # det = integrated.max()
         # self.plot(qscans, det)
-
         # self.spectrogram.text = f"<img src=myapp/{qscan_path}>"
 
-        h1, l1 = whitened
-        # normalize times with respect to event time
-        times = times - event_time
-        inference_times = inference_times - event_time
-
-        self.strain_source.data = {"H1": h1, "L1": l1, "t": times}
+        # TODO: best way to show whitened data?
+        """
+        strain_source = {
+            ifo: whitened[i] for
+            i, ifo in enumerate(self.analyzer.ifos)
+        }
+        strain_source["t"] = self.analyzer.times
+        self.strain_source.data = strain_source
         for r in self.strain_renderers:
-            r.data_source.data = {"H1": h1, "L1": l1, "t": times}
+            r.data_source.data = strain_source
+        """
 
         self.response_source.data = {
             "nn": nn,
             "integrated": integrated,
-            "t": inference_times,
+            "t": self.analyzer.inference_times,
         }
         for r in self.output_renderers:
             r.data_source.data = dict(
-                nn=nn, integrated=integrated, t=inference_times
+                nn=nn, integrated=integrated, t=self.analyzer.inference_times
             )
 
         nn_min = nn.min()

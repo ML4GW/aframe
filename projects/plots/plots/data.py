@@ -1,9 +1,11 @@
+import logging
 from pathlib import Path
 from typing import List
 
+import bilby
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-import bilby
+
 
 class Data:
     """
@@ -12,8 +14,8 @@ class Data:
 
     def __init__(
         self,
-        base_dir: Path,
         data_dir: Path,
+        results_dir: Path,
         mass_combos: List[tuple],
         source_prior: bilby.core.prior.PriorDict,
         ifos: List[str],
@@ -23,8 +25,10 @@ class Data:
         highpass: float,
         batch_size: int,
         inference_sampling_rate: float,
+        integration_length: float,
         fduration: float,
         valid_frac: float,
+        device: str,
     ):
         # initialize data attributes
         self.ifos = ifos
@@ -35,20 +39,25 @@ class Data:
         self.highpass = highpass
         self.batch_size = batch_size
         self.inference_sampling_rate = inference_sampling_rate
+        self.integration_length = integration_length
         self.fduration = fduration
         self.valid_frac = valid_frac
         self.mass_combos = mass_combos
-
+        self.data_dir = data_dir
+        self.device = device
 
         # load results and data from the run we're visualizing
-        infer_dir = base_dir / "results" / "infer"
-        rejected = data_dir / "test" / "rejected-parameters.hdf5"
+        infer_dir = results_dir / "infer" / "1year"
+        rejected = data_dir / "rejected-parameters.hdf5"
+        self.response_set = data_dir / "waveforms.hdf5"
+
+        logging.info("Reading in data")
         self.background = EventSet.read(infer_dir / "background.hdf5")
         self.foreground = RecoveredInjectionSet.read(
             infer_dir / "foreground.hdf5"
         )
         self.rejected_params = InjectionParameterSet.read(rejected)
-        self.response_set = data_dir / "test" / "waveforms.hdf5"
+        logging.info("Data loaded")
 
         # move injection masses to source frame
         for obj in [self.foreground, self.rejected_params]:
@@ -68,4 +77,3 @@ class Data:
     @property
     def kernel_size(self):
         return int(self.kernel_length * self.sample_rate)
-

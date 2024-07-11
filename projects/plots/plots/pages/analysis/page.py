@@ -1,12 +1,10 @@
 from bokeh.layouts import column
 from plots.pages import Page
 from plots.pages.analysis.distribution import DistributionPlot
-from plots.pages.analysis.inspector import (
-    EventAnalyzer,
-    InspectorPlot,
-)
+from plots.pages.analysis.inspector import EventAnalyzer, InspectorPlot
 
-class AnalysisPage(Page):
+
+class Analysis(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         analyzer = self.get_analyzer()
@@ -20,9 +18,16 @@ class AnalysisPage(Page):
             self.app.model,
             self.app.whitener,
             self.app.snapshotter,
-            self.app.data.data_dir,
+            self.app.data.data_dir / "background",
+            self.app.data.response_set,
+            self.app.data.psd_length,
+            self.app.data.kernel_length,
             self.app.data.sample_rate,
             self.app.data.fduration,
+            self.app.data.inference_sampling_rate,
+            self.app.data.integration_length,
+            self.app.data.batch_size,
+            self.app.data.device,
             self.app.data.ifos,
         )
 
