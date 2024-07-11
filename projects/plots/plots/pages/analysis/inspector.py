@@ -307,10 +307,10 @@ class InspectorPlot:
         )
         return row(self.timeseries_plot, self.spectrogram_plot)
 
-    def plot(self, qscans, det):
+    def plot(self, qscans):
         fig = Plot(
             *qscans,
-            figsize=(12, 6),
+            figsize=(10, 5),
             geometry=(1, len(self.analyzer.ifos)),
             yscale="log",
             method="pcolormesh",
@@ -368,6 +368,20 @@ class InspectorPlot:
         }
         strain_source["t"] = self.analyzer.whitened_times
 
+        # qscan whitened strain and plot spectrogram
+        qscans = self.analyzer.qscan(strain_source)
+        img = self.plot(qscans)
+
+        width, height = img.shape[1], img.shape[0]
+        self.spectrogram_plot.x_range = Range1d(0, width)
+        self.spectrogram_plot.y_range = Range1d(0, height)
+        self.spectrogram_plot.height = height
+        self.spectrogram_plot.width = width
+
+        spec_source = dict(image=[img], x=[0], y=[0], dw=[width], dh=[height])
+        self.spectrogram_source.data = spec_source
+        self.spec_renderer.data_source.data = spec_source
+
         self.strain_source.data = strain_source
         for r in self.strain_renderers:
             r.data_source.data = strain_source
@@ -397,20 +411,6 @@ class InspectorPlot:
         )
 
         self.timeseries_plot.title.text = title
-
-        # qscan whitened strain and plot spectrogram
-        qscans = self.analyzer.qscan(strain_source)
-        img = self.plot(qscans)
-
-        width, height = img.shape[1], img.shape[0]
-        self.spectrogram_plot.x_range = Range1d(0, width)
-        self.spectrogram_plot.y_range = Range1d(0, height)
-        self.spectrogram_plot.height = height
-        self.spectrogram_plot.width = width
-
-        spec_source = dict(image=[img], x=[0], y=[0], dw=[width], dh=[height])
-        self.spectrogram_source.data = spec_source
-        self.spec_renderer.data_source.data = spec_source
 
     def reset(self):
         # TODO: implement this

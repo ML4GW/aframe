@@ -37,7 +37,7 @@ class Analysis(Page):
 
     def get_layout(self):
         event_inspector = self.event_inspector.get_layout(
-            height=559, width=800
+            height=400, width=600
         )
         distribution = self.distribution_plot.get_layout(
             height=400, width=1500
