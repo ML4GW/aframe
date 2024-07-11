@@ -9,8 +9,8 @@ class Summary(Page):
 
         source_prior, _ = self.app.data.source_prior()
         self.sv = SensitiveVolumePlot(
-            self.app.data.background,
-            self.app.data.foreground,
+            self.app.data._background,
+            self.app.data._foreground,
             self.app.data.rejected_params,
             self.app.data.mass_combos,
             source_prior,

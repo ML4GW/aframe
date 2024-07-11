@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Dict, List
 
@@ -47,7 +48,9 @@ class VetoParser:
         ifos: List[str],
     ):
         self.vetoes = DataQualityDict.from_veto_definer_file(veto_definer_file)
+        logging.info("Populating vetoes")
         # self.vetoes.populate(segments=[[start, stop]], verbose=True)
+        logging.info("Vetoes populated")
         self.gate_paths = gate_paths
         self.ifos = ifos
         self.veto_cache = {}

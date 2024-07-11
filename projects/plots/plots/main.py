@@ -1,5 +1,3 @@
-import logging
-import sys
 from pathlib import Path
 from typing import Callable, List
 
@@ -10,6 +8,7 @@ from bokeh.server.server import Server
 from plots.app import App, Data
 from plots.vetos import VetoParser
 
+from utils.logging import configure_logging
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 from utils.s3 import open_file
 
@@ -49,12 +48,7 @@ def main(
     device: str = "cpu",
     verbose: bool = False,
 ) -> None:
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    logging.basicConfig(
-        format=log_format,
-        level=logging.DEBUG if verbose else logging.INFO,
-        stream=sys.stdout,
-    )
+    configure_logging(verbose=verbose)
 
     # load in best model
     with open_file(weights, "rb") as f:

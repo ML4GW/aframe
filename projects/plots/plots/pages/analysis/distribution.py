@@ -44,16 +44,12 @@ class DistributionPlot:
                 x=[],
                 detection_time=[],
                 detection_statistic=[],
-                color=[],
-                label=[],
-                count=[],
-                shift=[],
-                size=[],
+                shifts=[],
             )
         )
 
         self.foreground_source = ColumnDataSource(
-            dict(size=[], detection_statistic=[], snr=[])
+            dict(detection_statistic=[], snr=[])
         )
 
     def get_layout(self, height, width):
@@ -73,7 +69,7 @@ class DistributionPlot:
         box_select = BoxSelectTool(dimensions="width")
         self.distribution_plot.add_tools(box_select)
         self.distribution_plot.toolbar.active_drag = box_select
-        # self.bar_source.selected.on_change("indices", self.update_background)
+        self.bar_source.selected.on_change("indices", self.update_background)
 
         self.distribution_plot.extra_y_ranges = {"SNR": Range1d(1, 10)}
         axis = LogAxis(
@@ -91,15 +87,6 @@ class DistributionPlot:
             y_axis_label="Detection statistic",
             tools="box_zoom,reset",
         )
-
-        hover = HoverTool(
-            tooltips=[
-                ("GPS time", "@{time}{0.000}"),
-                ("Detection statistic", "@{detection_statistic}"),
-                ("Count", "@count"),
-            ]
-        )
-        self.background_plot.add_tools(hover)
         self.background_plot.legend.click_policy = "hide"
 
         self.plot_data()
@@ -162,21 +149,31 @@ class DistributionPlot:
             source=self.bar_source,
         )
 
-        self.background_plot.scatter(
-            "x",
-            "detection_statistic",
-            fill_color="color",
+        renderer = self.background_plot.scatter(
+            x="x",
+            y="detection_statistic",
+            fill_color=self.bckgd_color,
             fill_alpha=0.5,
-            line_color="color",
+            line_color=self.bckgd_color,
             line_alpha=0.7,
-            hover_fill_color="color",
+            hover_fill_color=self.bckgd_color,
             hover_fill_alpha=0.7,
-            hover_line_color="color",
+            hover_line_color=self.bckgd_color,
             hover_line_alpha=0.9,
             size="size",
-            legend_group="label",
             source=self.background_source,
         )
+
+        hover = HoverTool(
+            tooltips=[
+                ("GPS time", "@{x}{0.000}"),
+                ("Detection statistic", "@{detection_statistic}"),
+                ("Shifts", "@shifts"),
+            ],
+            renderers=[renderer],
+        )
+        self.background_plot.add_tools(hover)
+
         tap = TapTool()
         self.background_source.selected.on_change(
             "indices", self.inspect_background
@@ -211,23 +208,59 @@ class DistributionPlot:
         if len(new) > 1:
             logging.debug("too many indices")
             return
-        if new == old:
+        if new == old or not new:
             return
 
         idx = new[0]
-        event_time = self.background_source.data["detection_time"][idx]
-        label = self.background_source.data["label"][idx]
-        shift = self.background_source.data["shift"][idx]
-        if label == "Livingston":
-            event_time -= shift
+        time = self.background_source.data["detection_time"][idx]
+        shifts = self.background_source.data["shifts"][idx]
 
         self.event_inspector.update(
-            event_time, "background", [0.0, shift], "Background Event"
+            time, "background", shifts, "Background Event"
         )
 
+    def update_background(self, attr, old, new):
+        if len(new) < 2:
+            return
+
+        stats = np.array(self.bar_source.data["center"])
+        min_ = min([stats[i] for i in new])
+        max_ = max([stats[i] for i in new])
+        mask = self.page.app.data._background.detection_statistic >= min_
+        mask &= self.page.app.data._background.detection_statistic <= max_
+
+        self.background_plot.title.text = (
+            f"{mask.sum()} events with detection statistic in the range"
+            f"({min_:0.1f}, {max_:0.1f})"
+        )
+        events = self.background.detection_statistic[mask]
+        times = self.background.detection_time[mask]
+        shifts = self.background.shift[mask]
+
+        t0 = times.min()
+        self.background_plot.xaxis.axis_label = f"Time from {t0:0.3f} [hours]"
+        self.background_plot.legend.visible = True
+
+        x = times - t0
+        x /= 3600
+
+        self.background_source.data.update(
+            dict(
+                x=x
+                + shifts.sum(
+                    axis=-1
+                ),  # give unique time to events at same H1 time
+                detection_time=times,
+                detection_statistic=events,
+                shifts=shifts,
+                size=np.ones(len(events)) * 8,
+            )
+        )
+        self.background_source.selected.indices = []
+
     def update(self):
-        self.background = self.page.app.data.background
-        self.foreground = self.page.app.data.foreground
+        self.background = self.page.app.data._background
+        self.foreground = self.page.app.data._foreground
 
         title = (
             "{} background events from {:0.2f} "
@@ -276,10 +309,7 @@ class DistributionPlot:
                 x=[],
                 detection_time=[],
                 detection_statistic=[],
-                color=[],
-                label=[],
-                count=[],
-                shift=[],
+                shifts=[],
                 size=[],
             )
         )

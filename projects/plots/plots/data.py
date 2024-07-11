@@ -52,15 +52,18 @@ class Data:
         self.response_set = data_dir / "waveforms.hdf5"
 
         logging.info("Reading in data")
-        self.background = EventSet.read(infer_dir / "background.hdf5")
-        self.foreground = RecoveredInjectionSet.read(
+        # load in the background and foreground events;
+        # use "_" for background pre veto
+        self._background = EventSet.read(infer_dir / "background.hdf5")
+        self._foreground = RecoveredInjectionSet.read(
             infer_dir / "foreground.hdf5"
         )
+
         self.rejected_params = InjectionParameterSet.read(rejected)
         logging.info("Data loaded")
 
         # move injection masses to source frame
-        for obj in [self.foreground, self.rejected_params]:
+        for obj in [self._foreground, self.rejected_params]:
             for i in range(2):
                 attr = f"mass_{i + 1}"
                 value = getattr(obj, attr)
@@ -68,11 +71,11 @@ class Data:
 
     @property
     def start(self):
-        return self.background.detection_time.min()
+        return self._background.detection_time.min()
 
     @property
     def stop(self):
-        return self.background.detection_time.max()
+        return self._background.detection_time.max()
 
     @property
     def kernel_size(self):

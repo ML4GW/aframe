@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 import h5py
 import numpy as np
@@ -203,4 +203,4 @@ class SensitiveVolumePlot:
         return self.grid
 
     def update(self):
-        pass
+        return
