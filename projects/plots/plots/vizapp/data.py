@@ -99,7 +99,7 @@ class DataManager:
                 segments = vetos[ifo]
                 # apply vetos to background
                 _, mask = self.background.apply_vetos(
-                    segments, i, inplace=False
+                    segments, i, inplace=False, return_mask=True
                 )
 
                 # mark a background event as vetoed
