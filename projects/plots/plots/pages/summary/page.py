@@ -1,23 +1,27 @@
+from typing import TYPE_CHECKING
+
 from plots.pages.page import Page
 
 from .sv import SensitiveVolumePlot
+
+if TYPE_CHECKING:
+    from ledger.events import EventSet, RecoveredInjectionSet
 
 
 class Summary(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        source_prior, _ = self.app.data.source_prior()
         self.sv = SensitiveVolumePlot(
-            self.app.data._background,
-            self.app.data._foreground,
-            self.app.data.rejected_params,
-            self.app.data.mass_combos,
-            source_prior,
+            self.app.data_manager.background,
+            self.app.data_manager.foreground,
+            self.app.data_manager.rejected_params,
+            self.app.mass_combos,
+            self.app.source_prior,
         )
 
     def get_layout(self):
         return self.sv.get_layout()
 
-    def update(self):
-        self.sv.update()
+    def update(self, background: EventSet, foreground: RecoveredInjectionSet):
+        self.sv.update(background, foreground)

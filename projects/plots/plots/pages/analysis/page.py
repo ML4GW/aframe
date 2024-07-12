@@ -10,25 +10,22 @@ class Analysis(Page):
         analyzer = self.get_analyzer()
         self.event_inspector = InspectorPlot(self, analyzer)
         self.distribution_plot = DistributionPlot(self, self.event_inspector)
-
         self.initialize_sources()
 
     def get_analyzer(self):
         return EventAnalyzer(
             self.app.model,
-            self.app.whitener,
-            self.app.snapshotter,
-            self.app.data.data_dir / "background",
-            self.app.data.response_set,
-            self.app.data.psd_length,
-            self.app.data.kernel_length,
-            self.app.data.sample_rate,
-            self.app.data.fduration,
-            self.app.data.inference_sampling_rate,
-            self.app.data.integration_length,
-            self.app.data.batch_size,
-            self.app.data.device,
-            self.app.data.ifos,
+            self.app.data_dir / "background",
+            self.app.data_manager.response_set,
+            self.app.psd_length,
+            self.app.kernel_length,
+            self.app.sample_rate,
+            self.app.fduration,
+            self.app.inference_sampling_rate,
+            self.app.integration_length,
+            self.app.batch_size,
+            self.app.device,
+            self.app.ifos,
         )
 
     def initialize_sources(self) -> None:
@@ -44,5 +41,5 @@ class Analysis(Page):
         )
         return column(distribution, event_inspector)
 
-    def update(self):
-        self.distribution_plot.update()
+    def update(self, background, foreground):
+        self.distribution_plot.update(background, foreground)
