@@ -32,10 +32,10 @@ def normalize_path(path):
     return path
 
 
-VETO_DEFINER_FILE = normalize_path("./vetos/H1L1-HOFT_C01_O3_CBC.xml")
+VETO_DEFINER_FILE = normalize_path("../vetos/H1L1-HOFT_C01_O3_CBC.xml")
 GATE_PATHS = {
-    "H1": normalize_path("./vetos/H1-O3_GATES_1238166018-31197600.txt"),
-    "L1": normalize_path("./vetos/L1-O3_GATES_1238166018-31197600.txt"),
+    "H1": normalize_path("../vetos/H1-O3_GATES_1238166018-31197600.txt"),
+    "L1": normalize_path("../vetos/L1-O3_GATES_1238166018-31197600.txt"),
 }
 
 
