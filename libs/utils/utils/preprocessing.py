@@ -67,6 +67,7 @@ class PsdEstimator(torch.nn.Module):
         length: float,
         sample_rate: float,
         fftlength: float,
+        window: Optional[torch.Tensor] = None,
         overlap: Optional[float] = None,
         average: str = "median",
         fast: bool = True,
@@ -74,7 +75,7 @@ class PsdEstimator(torch.nn.Module):
         super().__init__()
         self.size = int(length * sample_rate)
         self.spectral_density = SpectralDensity(
-            sample_rate, fftlength, overlap, average, fast=fast
+            sample_rate, fftlength, overlap, average, window=window, fast=fast
         )
 
     def forward(self, X: Tensor) -> Tuple[Tensor, Tensor]:

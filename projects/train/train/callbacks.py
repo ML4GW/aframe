@@ -44,11 +44,25 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
 class SaveAugmentedBatch(Callback):
     def on_train_start(self, trainer, pl_module):
         if trainer.global_rank == 0:
+            # find device module is on
             device = pl_module.device
+            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+
+            # build training batch by hand
             X = next(iter(trainer.train_dataloader))
             X = X.to(device)
             X, y = trainer.datamodule.augment(X[0])
-            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+
+            # build val batch by hand
+            [background, _, _], [signals] = next(
+                iter(trainer.datamodule.val_dataloader())
+            )
+            background = background.to(device)
+            signals = signals.to(device)
+            X_bg, X_inj = trainer.datamodule.build_val_batches(
+                background, signals
+            )
+
             if save_dir.startswith("s3://"):
                 s3 = s3fs.S3FileSystem()
                 with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
@@ -57,10 +71,23 @@ class SaveAugmentedBatch(Callback):
                             h5file["X"] = X.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
                         s3_file.write(f.getvalue())
+
+                with s3.open(f"{save_dir}/val_batch.h5", "wb") as s3_file:
+                    with io.BytesIO() as f:
+                        with h5py.File(f, "w") as h5file:
+                            h5file["X_bg"] = X_bg.cpu().numpy()
+                            h5file["X_inj"] = X_inj.cpu().numpy()
+                        s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
+
+                with h5py.File(
+                    os.path.join(save_dir, "val_batch.h5"), "w"
+                ) as f:
+                    f["X_bg"] = X_bg.cpu().numpy()
+                    f["X_inj"] = X_inj.cpu().numpy()
 
 
 def report_with_retries(metrics, checkpoint, retries: int = 10):
@@ -107,18 +134,23 @@ class AframeTrainReportCallback(Callback):
         metrics["epoch"] = trainer.current_epoch
         metrics["step"] = trainer.global_step
 
-        # Trace the model
         datamodule = trainer.datamodule
-        kernel_size = int(
-            datamodule.hparams.kernel_length * datamodule.sample_rate
-        )
-
-        # trace the model on cpu and then move model back to original device
-        sample_input = torch.randn(
-            1, datamodule.num_ifos, kernel_size, device="cpu"
-        )
-
         device = pl_module.device
+
+        # generate sample input to infer shape,
+        # making sure to augment on the device
+        # where the model lives
+        sample = next(iter(trainer.train_dataloader))
+        sample = sample.to(device)
+        sample, _ = datamodule.augment(sample[0])
+
+        # infer the shape and send sample input
+        # to cpu for tracing
+        sample_input = torch.randn(1, *sample.shape[1:])
+        sample_input = sample_input.to("cpu")
+
+        # trace the model on cpu and then
+        # move model back to original device
         trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
         pl_module.model.to(device)
 

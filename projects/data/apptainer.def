@@ -11,6 +11,9 @@ Stage: build
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
+%environment
+    export PATH=/opt/env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 
@@ -39,7 +42,13 @@ micromamba run -p /opt/env \
 # commands in our environment at run time
 micromamba shell init --shell=bash --root-prefix=~/micromamba
 
+
+# set path, and add it to /etc/profile
+# so that it will be set if login shell
+# is invoked
 export PATH=/opt/env/bin:$PATH
+echo export PATH=$PATH >> /etc/profile
+
 
 %runscript
 #!/bin/bash
