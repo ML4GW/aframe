@@ -63,6 +63,7 @@ class EventSet(Ledger):
         idx: int,
         chunk_size: int = 500000,
         inplace: bool = False,
+        return_mask: bool = False,
     ):
         # idx corresponds to the index of the shift
         # (i.e., which ifo to apply vetoes for)
@@ -86,7 +87,9 @@ class EventSet(Ledger):
         else:
             result = copy.deepcopy(self)[~veto_mask]
 
-        return result, veto_mask
+        if return_mask:
+            return result, veto_mask
+        return result
 
 
 @dataclass
