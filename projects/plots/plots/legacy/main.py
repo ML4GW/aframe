@@ -10,8 +10,8 @@ from bokeh.io import save
 from bokeh.layouts import gridplot
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from plots import compute, tools
-from plots.gwtc3 import catalog_results
+from plots.legacy import compute, tools
+from plots.legacy.gwtc3 import catalog_results
 from plots.vetos import VetoParser, get_catalog_vetoes
 from priors.priors import log_normal_masses
 

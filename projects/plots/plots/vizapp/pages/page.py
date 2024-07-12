@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bokeh.layouts import LayoutDOM
     from ledger.events import EventSet, RecoveredInjectionSet
-    from plots.app import App
+    from plots.vizapp.app import App
 
 
 class Page:
@@ -14,7 +14,7 @@ class Page:
         raise NotImplementedError
 
     def update(
-        self, background: EventSet, foreground: RecoveredInjectionSet
+        self, background: "EventSet", foreground: "RecoveredInjectionSet"
     ) -> None:
         return
 

@@ -11,12 +11,14 @@ from bokeh.models import (
     TapTool,
 )
 from bokeh.plotting import figure
-from plots import palette
+from plots.vizapp import palette
 
 FORE_ATTRS = [
     "shift",
     "mass_1",
     "mass_2",
+    "mass_1_source",
+    "mass_2_source",
     "snr",
     "detection_statistic",
     "shift",
@@ -112,7 +114,7 @@ class DistributionPlot:
         # add hover tool for analyzing additional attributes
         hover = HoverTool(
             tooltips=[
-                ("Hanford GPS time", "@{time}{0.000}"),
+                ("Injection time", "@{injection_time}{0.000}"),
                 ("Shifts", "@shift"),
                 ("SNR", "@snr"),
                 ("Detection statistic", "@{detection_statistic}"),
@@ -191,11 +193,11 @@ class DistributionPlot:
         event_time = self.foreground_source.data["injection_time"][idx]
         shift = self.foreground_source.data["shift"][idx]
         snr = self.foreground_source.data["snr"][idx]
-        # chirp_mass = self.foreground_source.data["chirp_mass"][idx]
+        chirp_mass = self.foreground_source.data["chirp_mass"][idx]
 
         title = "Injected Event: "
         title += f"SNR = {snr:0.1f}, "
-        # title += f"Chirp Mass = {chirp_mass:0.1f}"
+        title += f"Chirp Mass = {chirp_mass:0.1f} "
 
         self.event_inspector.update(
             event_time,
@@ -226,8 +228,8 @@ class DistributionPlot:
         stats = np.array(self.bar_source.data["center"])
         min_ = min([stats[i] for i in new])
         max_ = max([stats[i] for i in new])
-        mask = self.page.app.data._background.detection_statistic >= min_
-        mask &= self.page.app.data._background.detection_statistic <= max_
+        mask = self.background.detection_statistic >= min_
+        mask &= self.background.detection_statistic <= max_
 
         self.background_plot.title.text = (
             f"{mask.sum()} events with detection statistic in the range"
@@ -258,9 +260,9 @@ class DistributionPlot:
         )
         self.background_source.selected.indices = []
 
-    def update(self):
-        self.background = self.page.app.data._background
-        self.foreground = self.page.app.data._foreground
+    def update(self, background, foreground):
+        self.background = background
+        self.foreground = foreground
 
         title = (
             "{} background events from {:0.2f} "

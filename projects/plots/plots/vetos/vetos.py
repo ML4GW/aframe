@@ -47,15 +47,16 @@ class VetoParser:
         stop: float,
         ifos: List[str],
     ):
+        self.logger = logging.getLogger("vizapp")
         self.vetoes = DataQualityDict.from_veto_definer_file(veto_definer_file)
-        logging.info("Populating vetoes")
-        # self.vetoes.populate(segments=[[start, stop]], verbose=True)
-        logging.info("Vetoes populated")
+        self.logger.info("Populating vetoes")
+        self.vetoes.populate(segments=[[start, stop]], verbose=True)
+        self.logger.info("Vetoes populated")
         self.gate_paths = gate_paths
         self.ifos = ifos
         self.veto_cache = {}
 
-    def get_vetoes(self, category: str):
+    def get_vetos(self, category: str):
         vetoes = {}
 
         for ifo in self.ifos:

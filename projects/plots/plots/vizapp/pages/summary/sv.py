@@ -15,9 +15,11 @@ from priors.priors import log_normal_masses
 from . import compute, utils
 from .gwtc3 import catalog_results
 
+SECONDS_PER_MONTH = 3600 * 24 * 30
+
 
 def get_prob(prior, ledger):
-    sample = dict(mass_1=ledger.mass_1, mass_2=ledger.mass_2)
+    sample = dict(mass_1=ledger.mass_1_source, mass_2=ledger.mass_2_source)
     return prior.prob(sample, axis=0)
 
 
@@ -42,26 +44,22 @@ class SensitiveVolumePlot:
         self.sigma = sigma
         self.dt = dt
 
-        self._thresholds = None
-
         self.source_probs = get_prob(source_prior, foreground)
         self.source_rejected_probs = get_prob(
             self.source_prior, rejected_params
         )
 
-        self.weights = np.zeros((len(mass_combos), len(self.source_probs)))
         self.v0 = self.calc_v0()
+        self.weights = self.compute_foreground_weights()
         self.svs, self.errs = self.compute_sv()
         self.grid = self.make_plot()
 
     @property
     def thresholds(self):
-        if self._thresholds is not None:
-            return self._thresholds
-        self._thresholds = np.sort(self.background.detection_statistic)[
+        thresholds = np.sort(self.background.detection_statistic)[
             -self.max_events :
         ][::-1]
-        return self._thresholds
+        return thresholds
 
     @property
     def Tb(self):
@@ -92,7 +90,8 @@ class SensitiveVolumePlot:
         v0 /= 10**9
         return v0
 
-    def compute_sv(self):
+    def compute_foreground_weights(self):
+        weights = np.zeros((len(self.mass_combos), len(self.source_probs)))
         for i, combo in enumerate(self.mass_combos):
             logging.info(f"Computing likelihoods under {combo} log normal")
             prior, _ = log_normal_masses(
@@ -122,8 +121,10 @@ class SensitiveVolumePlot:
                 )
                 weight[~mask] = 0
 
-            self.weights[i] = weight
+            weights[i] = weight
+        return weights
 
+    def compute_sv(self):
         logging.info("Computing sensitive volume at thresholds")
         y, err = compute.sensitive_volume(
             self.foreground.detection_statistic, self.weights, self.thresholds
@@ -148,10 +149,11 @@ class SensitiveVolumePlot:
     def make_plot(self):
         plots = utils.make_grid(self.mass_combos)
         for i, (p, color) in enumerate(zip(plots, utils.palette)):
-            p.line(self.fars, self.svs[i], line_width=1.5, line_color=color)
+            fars = self.fars * SECONDS_PER_MONTH
+            p.line(fars, self.svs[i], line_width=1.5, line_color=color)
             utils.plot_err_bands(
                 p,
-                self.fars,
+                fars,
                 self.svs[i],
                 self.errs[i],
                 line_color=color,
@@ -170,7 +172,7 @@ class SensitiveVolumePlot:
                 if i == 0:
                     kwargs["legend_label"] = pipeline
                 p.line(
-                    [self.fars[0], self.fars[-1]],
+                    [fars[0], fars[-1]],
                     [v, v],
                     line_color="#333333",
                     line_dash=data["dash"],
@@ -202,5 +204,13 @@ class SensitiveVolumePlot:
     def get_layout(self):
         return self.grid
 
-    def update(self):
-        return
+    def update(self, background, foreground):
+        # TODO: this currently does nothing;
+        # need to rejigger code to use data sources
+        # so we can just update those
+
+        # update background events
+        self.background = background
+
+        # recompute sv with new background thresholds
+        # self.svs, self.errs = self.compute_sv()

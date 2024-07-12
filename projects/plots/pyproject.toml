@@ -17,19 +17,15 @@ gwpy = "^3.0.8"
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
 utils = {path = "../../libs/utils", develop = true}
-architectures = {path = "../../libs/architectures", develop = true}
 
 aframe = {path = "../../", develop = true}
 python-ligo-lw = "^1.8.3"
 lalsuite = "^7.19"
-jsonargparse = "^4.30.0"
-omegaconf = "^2.3.0"
+jsonargparse = "^4.27.4"
 
 
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"
-lightning = "^2.3.3"
-s3fs = "^2024.6.1"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

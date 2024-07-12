@@ -1,14 +1,20 @@
+from typing import TYPE_CHECKING
+
 from bokeh.layouts import column
-from plots.pages.analysis.distribution import DistributionPlot
-from plots.pages.analysis.inspector import EventAnalyzer, InspectorPlot
-from plots.pages.page import Page
+from plots.vizapp.infer.analyzer import EventAnalyzer
+from plots.vizapp.pages.analysis.distribution import DistributionPlot
+from plots.vizapp.pages.analysis.inspector import InspectorPlot
+from plots.vizapp.pages.page import Page
+
+if TYPE_CHECKING:
+    from ledger.events import EventSet, RecoveredInjectionSet
 
 
 class Analysis(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         analyzer = self.get_analyzer()
-        self.event_inspector = InspectorPlot(self, analyzer)
+        self.event_inspector = InspectorPlot(analyzer)
         self.distribution_plot = DistributionPlot(self, self.event_inspector)
         self.initialize_sources()
 
@@ -24,6 +30,8 @@ class Analysis(Page):
             self.app.inference_sampling_rate,
             self.app.integration_length,
             self.app.batch_size,
+            self.app.highpass,
+            self.app.fftlength,
             self.app.device,
             self.app.ifos,
         )
@@ -41,5 +49,7 @@ class Analysis(Page):
         )
         return column(distribution, event_inspector)
 
-    def update(self, background, foreground):
+    def update(
+        self, background: "EventSet", foreground: "RecoveredInjectionSet"
+    ):
         self.distribution_plot.update(background, foreground)

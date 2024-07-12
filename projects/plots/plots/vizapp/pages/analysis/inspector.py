@@ -13,15 +13,15 @@ from bokeh.models import (
 from bokeh.plotting import figure
 from gwpy.plot import Plot
 from PIL import Image
-from plots import palette
+from plots.vizapp import palette
 
 if TYPE_CHECKING:
     import gwpy
-    from plots.infer.analyzer import EventAnalyzer
+    from plots.vizapp.infer.analyzer import EventAnalyzer
 
 
 class InspectorPlot:
-    def __init__(self, analyzer: EventAnalyzer):
+    def __init__(self, analyzer: "EventAnalyzer"):
         self.analyzer = analyzer
 
     def initialize_sources(self):

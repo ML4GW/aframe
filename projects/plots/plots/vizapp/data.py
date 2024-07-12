@@ -6,8 +6,12 @@ import numpy as np
 from bokeh.models import MultiChoice
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from plots.pages import Page
 from plots.vetos import VetoParser
+
+
+def chirp_mass(m1, m2):
+    """Calculate chirp mass from component masses"""
+    return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
 
 
 def normalize_path(path):
@@ -29,14 +33,15 @@ class DataManager:
     Class for managing data, including applying vetos
     """
 
-    def __init__(self, results_dir: Path, data_dir: Path, pages: list[Page]):
-        self.pages = pages
+    def __init__(self, results_dir: Path, data_dir: Path, ifos: list[str]):
+        self.logger = logging.getLogger("vizapp")
+        self.ifos = ifos
         # load results and data from the run we're visualizing
         infer_dir = results_dir / "infer" / "1year"
         rejected = data_dir / "rejected-parameters.hdf5"
         self.response_set = data_dir / "waveforms.hdf5"
 
-        logging.info(
+        self.logger.info(
             "Reading in background, foreground and rejected parameters"
         )
         self.background = EventSet.read(infer_dir / "background.hdf5")
@@ -44,18 +49,20 @@ class DataManager:
             infer_dir / "foreground.hdf5"
         )
         self.rejected_params = InjectionParameterSet.read(rejected)
-        logging.info("Data loaded")
+        self.logger.info("Data loaded")
 
-        # move injection masses to source frame
-        # TODO: this should be done in the ledger
+        # add source frame masses
+        # TODO: this should be done in the ledger / ts waveforms
         for obj in [self.foreground, self.rejected_params]:
             for i in range(2):
                 attr = f"mass_{i + 1}"
                 value = getattr(obj, attr)
+                attr = f"{attr}_source"
                 setattr(obj, attr, value / (1 + obj.redshift))
+                setattr(obj, "chirp_mass", chirp_mass(obj.mass_1, obj.mass_2))
 
         # create copies of the background and foreground
-        # for applying vetoes
+        # for applying vetos
         self._background = deepcopy(self.background)
         self._foreground = deepcopy(self.foreground)
 
@@ -66,10 +73,16 @@ class DataManager:
             self._background.detection_time.max(),
             self.ifos,
         )
+        self.calculate_veto_masks()
 
     @property
     def veto_options(self):
-        return ["CAT1", "CAT2", "CAT3", "GATES"]
+        return [
+            "GATES",
+            "CAT1",
+            "CAT2",
+            "CAT3",
+        ]
 
     def get_veto_selecter(self):
         return MultiChoice(
@@ -77,31 +90,31 @@ class DataManager:
         )
 
     def calculate_veto_masks(self):
-        self.vetoes = {}
+        self.vetos = {}
         for label in self.veto_options:
-            logging.info(f"Calculating veto mask for {label}")
-            vetos = self.veto_parser.get_vetoes(label)
+            self.logger.info(f"Calculating veto mask for {label}")
+            vetos = self.veto_parser.get_vetos(label)
             veto_mask = False
             for i, ifo in enumerate(self.ifos):
                 segments = vetos[ifo]
-
-                # apply vetoes of background
+                # apply vetos to background
                 _, mask = self.background.apply_vetos(
                     segments, i, inplace=False
                 )
 
                 # mark a background event as vetoed
-                # if it is vetoed in any if
+                # if it is vetoed in any ifo
                 veto_mask |= mask
 
-            self.vetoes[label] = veto_mask
+            self.vetos[label] = veto_mask
 
-        logging.info("Veto masks calculated")
+        self.logger.info("Veto masks calculated")
+
         self.veto_mask = np.zeros_like(mask, dtype=bool)
 
     def update_vetos(self, attr, old, new):
         if not new:
-            # no vetoes selected, so mark all background
+            # no vetos selected, so mark all background
             # events as not-vetoed
             self.veto_mask = np.zeros_like(self.veto_mask, dtype=bool)
         else:
@@ -109,13 +122,12 @@ class DataManager:
             # of the currently selected labels veto it
             mask = False
             for label in new:
-                mask |= self.vetoes[label]
+                mask |= self.vetos[label]
             self.veto_mask = mask
 
         # update vetos in our data object
         background = self._background[~self.veto_mask]
-        foreground = self._foreground[~self.veto_mask]
 
-        # update pages with latest background and foreground
-        for page in self.pages:
-            page.update(background, foreground)
+        # TODO: apply foreground vetos
+        foreground = self._foreground
+        return background, foreground

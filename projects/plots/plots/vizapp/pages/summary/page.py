@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from plots.pages.page import Page
+from plots.vizapp.pages.page import Page
 
 from .sv import SensitiveVolumePlot
 
@@ -23,5 +23,7 @@ class Summary(Page):
     def get_layout(self):
         return self.sv.get_layout()
 
-    def update(self, background: EventSet, foreground: RecoveredInjectionSet):
+    def update(
+        self, background: "EventSet", foreground: "RecoveredInjectionSet"
+    ):
         self.sv.update(background, foreground)

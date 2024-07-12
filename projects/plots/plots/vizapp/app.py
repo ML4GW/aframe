@@ -6,9 +6,10 @@ import torch
 from architectures.base import Architecture
 from bokeh.layouts import column, row
 from bokeh.models import Div, TabPanel, Tabs
-from plots.data import DataManager
-from plots.pages import Analysis, Summary
+from plots.vizapp.data import DataManager
+from plots.vizapp.pages import Analysis, Summary
 
+from utils.logging import configure_logging
 from utils.s3 import open_file
 
 if TYPE_CHECKING:
@@ -38,9 +39,11 @@ class App:
         integration_length: float,
         fduration: float,
         valid_frac: float,
+        fftlength: float,
         device: str = "cpu",
         verbose: bool = False,
     ) -> None:
+        configure_logging(verbose=verbose)
         self.logger = logging.getLogger("vizapp")
 
         # set attributes that will be accessible
@@ -64,16 +67,18 @@ class App:
         self.architecture = architecture
         self.weights = weights
         self.device = device
+        self.fftlength = fftlength
 
         # load in the model weights
         self.model = self.load_model()
 
         # instantiate object for managing
         # data loading and application of vetos
-        self.data_manager = DataManager(results_dir, data_dir)
+        self.data_manager = DataManager(results_dir, data_dir, ifos)
 
         # initialize all our pages and their constituent plots
-        self.pages, tabs = [], []
+        self.pages: list["Page"] = []
+        tabs = []
 
         for page in [Summary, Analysis]:
             page: "Page" = page(self)
@@ -84,7 +89,7 @@ class App:
             tabs.append(tab)
 
         self.veto_selecter = self.data_manager.get_veto_selecter()
-        self.veto_selecter.on_change("value", self.data_manager.update_vetos)
+        self.veto_selecter.on_change("value", self.update)
         self.data_manager.update_vetos(None, None, [])
 
         # set up a header with a title and the selecter
@@ -106,6 +111,14 @@ class App:
             }
             self.architecture.load_state_dict(weights)
         return self.architecture.to(self.device)
+
+    def update(self, attr, old, new):
+        # update the vetos
+        background, foreground = self.data_manager.update_vetos(attr, old, new)
+
+        # update pages with latest background and foreground
+        for page in self.pages:
+            page.update(background, foreground)
 
     def __call__(self, doc):
         doc.add_root(self.layout)
