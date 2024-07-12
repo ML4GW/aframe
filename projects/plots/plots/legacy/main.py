@@ -10,8 +10,8 @@ from bokeh.io import save
 from bokeh.layouts import gridplot
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from plots.legacy import compute, tools
-from plots.legacy.gwtc3 import catalog_results
+from plots import compute, tools
+from plots.gwtc3 import main as gwtc3_pipeline_sv
 from plots.vetos import VetoParser, get_catalog_vetoes
 from priors.priors import log_normal_masses
 
@@ -32,10 +32,13 @@ def normalize_path(path):
     return path
 
 
-VETO_DEFINER_FILE = normalize_path("../vetos/H1L1-HOFT_C01_O3_CBC.xml")
+INJECTION_FILE = normalize_path(
+    "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+)
+VETO_DEFINER_FILE = normalize_path("./vetos/H1L1-HOFT_C01_O3_CBC.xml")
 GATE_PATHS = {
-    "H1": normalize_path("../vetos/H1-O3_GATES_1238166018-31197600.txt"),
-    "L1": normalize_path("../vetos/L1-O3_GATES_1238166018-31197600.txt"),
+    "H1": normalize_path("./vetos/H1-O3_GATES_1238166018-31197600.txt"),
+    "L1": normalize_path("./vetos/L1-O3_GATES_1238166018-31197600.txt"),
 }
 
 
@@ -49,7 +52,7 @@ def main(
     output_dir: Path,
     log_file: Optional[Path] = None,
     dt: Optional[float] = None,
-    max_far: float = 1000,
+    max_far: float = 365,
     sigma: float = 0.1,
     verbose: bool = False,
 ):
@@ -75,7 +78,8 @@ def main(
             between injected and recovered events. Note that your `dt`
             should be greater than 1 / `inference_sampling_rate`.
         max_far:
-            The maximum FAR to compute the sensitive volume out to
+            The maximum FAR to compute the sensitive volume out to in
+            units of years^-1
         sigma:
             The width of the log normal mass distribution to use
         verbose:
@@ -151,7 +155,7 @@ def main(
     v0 = tools.get_astrophysical_volume(zmin, zmax, cosmology, decrange)
     v0 /= 10**9
 
-    Tb = background.Tb / tools.SECONDS_PER_MONTH
+    Tb = background.Tb / tools.SECONDS_PER_YEAR
     max_events = int(max_far * Tb)
     x = np.arange(1, max_events + 1) / Tb
     thresholds = np.sort(background.detection_statistic)[-max_events:][::-1]
@@ -197,9 +201,23 @@ def main(
             g.create_dataset("sv", data=y[i])
             g.create_dataset("err", data=err[i])
 
+    logging.info("Calculating SV vs FAR for GWTC-3 pipelines")
+    gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
+        mass_combos=mass_combos,
+        injection_file=INJECTION_FILE,
+        detection_criterion="far",
+        detection_thresholds=x,
+        output_dir=output_dir,
+    )
+
     plots = tools.make_grid(mass_combos)
-    for i, (p, color) in enumerate(zip(plots, tools.palette)):
-        p.line(x, y[i], line_width=1.5, line_color=color)
+    for i, p in enumerate(plots):
+        color = tools.palette[0]
+        # only include a legend on the top left
+        kwargs = {}
+        if i == 0:
+            kwargs["legend_label"] = "aframe"
+        p.line(x, y[i], line_width=1.5, line_color=color, **kwargs)
         tools.plot_err_bands(
             p,
             x,
@@ -211,41 +229,38 @@ def main(
             fill_alpha=0.4,
         )
 
-        for pipeline, data in catalog_results.items():
-            # convert VT to volume by dividing out years
-            vt = data["vt"][mass_combos[i]]
-            v = vt * 365 / data["Tb"]
+        for pipeline, color in zip(gwtc3_sv.keys(), tools.palette[1:]):
+            m1, m2 = mass_combos[i]
+            mass_key = f"{m1}-{m2}"
+            sv = gwtc3_sv[pipeline][mass_key]
+            err = gwtc3_err[pipeline][mass_key]
 
-            # only include a legend on the top left
-            kwargs = {}
             if i == 0:
                 kwargs["legend_label"] = pipeline
-            p.line(
-                [x[0], x[-1]],
-                [v, v],
-                line_color="#333333",
-                line_dash=data["dash"],
-                line_alpha=0.7,
-                line_width=2,
-                **kwargs,
+            p.line(x, sv, line_width=1.5, line_color=color, **kwargs)
+            tools.plot_err_bands(
+                p,
+                x,
+                sv,
+                err,
+                line_color=color,
+                line_width=0.8,
+                fill_color=color,
+                fill_alpha=0.4,
             )
 
-            # style the legend on the top left plot
-            if i == 0:
-                # style legend position
-                p.legend.location = "top_left"
-                p.legend.margin = 4
-                p.legend.padding = 2
+    # style the legend on the top left plot
+    legend = plots[0].legend
+    legend.ncols = 2
+    # style legend position
+    legend.location = "top_left"
+    legend.margin = 4
+    legend.padding = 2
 
-                # style individual glyphs
-                p.legend.glyph_height = 6
-                p.legend.label_text_font_size = "8pt"
-                p.legend.label_height = 8
-
-                # style title
-                p.legend.title = "GWTC-3 comparisons"
-                p.legend.title_text_font_size = "9pt"
-                p.legend.title_text_font_style = "bold"
+    # style individual glyphs
+    legend.glyph_height = 6
+    legend.label_text_font_size = "8pt"
+    legend.label_height = 8
 
     grid = gridplot(plots, toolbar_location="right", ncols=2)
     save(grid, filename=output_dir / "sensitive_volume.html")
