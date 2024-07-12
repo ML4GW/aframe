@@ -66,9 +66,8 @@ class SupervisedAframeDataset(BaseAframeDataset):
         if self.muter is not None:
             kernels, mute_indices = self.muter(kernels)
 
-        # inject the IFO responses and whiten
+        # inject the IFO responses
         X[mask] += kernels
-        X = self.whitener(X, psds)
 
         # make labels, turning off injection mask where
         # we swapped or muted
@@ -76,4 +75,5 @@ class SupervisedAframeDataset(BaseAframeDataset):
         mask[idx[mute_indices]] = 0
         y = torch.zeros((X.size(0), 1), device=X.device)
         y[mask] += 1
-        return X, y
+
+        return X, y, psds
