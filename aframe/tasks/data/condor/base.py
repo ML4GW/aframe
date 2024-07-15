@@ -100,7 +100,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
                     output,
                     os.path.join(
                         self.htcondor_log_dir.path,
-                        f"{self.name}-$(Cluster).{ext}",
+                        f"{self.name}-$(ProcID).{ext}",
                     ),
                 )
             )
