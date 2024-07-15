@@ -6,6 +6,7 @@ from luigi.util import inherits
 
 from aframe.config import Defaults, wandb
 from aframe.parameters import PathParameter
+from aframe.pipelines.config import paths
 from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
 
@@ -69,12 +70,17 @@ class TrainBase(law.Task):
             data_dir=self.data_dir / "background",
         )
         reqs["train_waveforms"] = TrainingWaveforms.req(
-            self, output_file=self.data_dir / "train_waveforms.hdf5"
+            self,
+            output_dir=self.data_dir,
+            tmp_dir=paths().tmp_dir / "train",
+            condor_directory=paths().condordir / "train_waveforms",
         )
 
         reqs["val_waveforms"] = ValidationWaveforms.req(
             self,
             output_dir=self.data_dir,
+            tmp_dir=paths().tmp_dir / "val",
+            condor_directory=paths().condordir / "val_waveforms",
         )
         return reqs
 

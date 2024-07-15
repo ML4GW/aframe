@@ -1,10 +1,9 @@
 from typing import Optional, Union
 
 import torch
-from torch.distributions.uniform import Uniform
 
 from ml4gw import gw
-from ml4gw.distributions import Cosine, PowerLaw
+from ml4gw.distributions import PowerLaw
 
 
 class ChannelSwapper(torch.nn.Module):
@@ -225,49 +224,3 @@ class WaveformProjector(torch.nn.Module):
                 )
             responses = self.rescaler(responses, psds, snrs)
         return responses
-
-
-class WaveformSampler(torch.nn.Module):
-    """
-    TODO: modify this to sample waveforms from disk, taking
-    an index sampler object so that DDP training can sample
-    different waveforms for each device.
-    """
-
-    def __init__(self, **polarizations: torch.Tensor) -> None:
-        super().__init__()
-        self.dec = Cosine()
-        self.psi = Uniform(0, torch.pi)
-        self.phi = Uniform(-torch.pi, torch.pi)
-
-        self.num_waveforms = None
-        for polar, x in polarizations.items():
-            if self.num_waveforms is None:
-                self.num_waveforms = len(x)
-            if len(x) != self.num_waveforms:
-                raise ValueError(
-                    "Expected all waveform polarizations to have "
-                    "length {}, but {} polarization has length {}".format(
-                        self.num_waveforms, polar, len(x)
-                    )
-                )
-        self.polarizations = polarizations
-
-    def forward(self, X, prob: float):
-        # sample which batch elements of X we're going to inject on
-        rvs = torch.rand(size=X.shape[:1], device=X.device)
-        mask = rvs < prob
-        N = mask.sum().item()
-
-        # sample sky parameters for each injections
-        dec = self.dec.sample((N,)).to(X.device)
-        psi = self.psi.sample((N,)).to(X.device)
-        phi = self.phi.sample((N,)).to(X.device)
-
-        # now sample the actual waveforms we want to inject
-        idx = torch.randperm(self.num_waveforms)[:N]
-        polarizations = {}
-        for polarization, waveforms in self.polarizations.items():
-            waveforms = waveforms[idx]
-            polarizations[polarization] = waveforms.to(dec.device)
-        return dec, psi, phi, polarizations, mask

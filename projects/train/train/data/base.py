@@ -17,6 +17,7 @@ from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
 from train.metrics import get_timeslides
+from train.waveform_sampler import WaveformSampler
 from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
@@ -284,14 +285,14 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def load_val_waveforms(self, f, world_size, rank):
         waveform_set = self.waveform_set_cls.read(f)
-
+        """
         if waveform_set.coalescence_time != self.signal_time:
             raise ValueError(
                 "Training waveforms and validation waveforms have different "
                 f"signal times, got {self.signal_time} and "
                 f"{waveform_set.coalescence_time}, respectively"
             )
-
+        """
         length = len(waveform_set.waveforms)
 
         if not rank:
@@ -379,10 +380,11 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.val_batch_size,
         )
 
-        self._logger.info("Loading waveforms")
-        with h5py.File(f"{self.data_dir}/train_waveforms.hdf5", "r") as f:
-            cross, plus = self.load_train_waveforms(f, world_size, rank)
-            self.waveform_sampler = aug.WaveformSampler(cross=cross, plus=plus)
+        self.signal_time = 3
+        fname = os.path.join(self.data_dir, "chunked_waveforms.hdf5")
+        self.waveform_sampler = WaveformSampler(
+            fname, waveforms_per_chunk=10000, batches_per_chunk=50
+        )
 
         val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
         self.val_waveforms = self.load_val_waveforms(

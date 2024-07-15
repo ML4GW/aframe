@@ -117,7 +117,11 @@ def write_waveforms(
         for k, v in samples.items():
             f.create_dataset(k, data=v)
 
-        f.create_dataset("signals", data=signals)
+        f.create_dataset(
+            "signals",
+            data=signals,
+            chunks=(64, 2, generator.waveform_size),
+        )
 
         # write attributes
         f.attrs.update(

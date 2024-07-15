@@ -11,81 +11,13 @@ from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTrain
-
-
-class WaveformParams(law.Task):
-    """
-    Parameters for waveform generation tasks
-    """
-
-    num_signals = luigi.IntParameter(
-        description="Number of signals to generate"
-    )
-    sample_rate = luigi.FloatParameter(
-        description="Sample rate of the generated signals"
-    )
-    waveform_duration = luigi.FloatParameter(
-        description="Duration of the generated signals"
-    )
-    prior = luigi.Parameter(
-        "Python path to prior to use for waveform generation"
-    )
-    minimum_frequency = luigi.FloatParameter(
-        default=20, description="Minimum frequency of the generated signals"
-    )
-    reference_frequency = luigi.FloatParameter(
-        default=50, description="Reference frequency of the generated signals"
-    )
-    waveform_approximant = luigi.Parameter(
-        default="IMRPhenomPv2",
-        description="Approximant to use for waveform generation",
-    )
-    coalescence_time = luigi.FloatParameter(
-        description="Location of the defining point of the signal "
-        "within the generated waveform"
-    )
-
-
-@inherits(WaveformParams)
-class TrainingWaveforms(AframeDataTask):
-    """
-    Generate waveforms for training
-    """
-
-    output_file = PathParameter()
-
-    def output(self):
-        return s3_or_local(self.output_file)
-
-    def run(self):
-        from data.waveforms.injection import (
-            WaveformGenerator,
-            convert_to_detector_frame,
-            write_waveforms,
-        )
-
-        generator = WaveformGenerator(
-            self.waveform_duration,
-            self.sample_rate,
-            self.minimum_frequency,
-            self.reference_frequency,
-            waveform_approximant=self.waveform_approximant,
-            coalescence_time=self.coalescence_time,
-        )
-        prior = load_prior(self.prior)
-        prior, detector_frame_prior = prior()
-
-        samples = prior.sample(self.num_signals)
-        if not detector_frame_prior:
-            samples = convert_to_detector_frame(samples)
-        signals = generator(samples)
-        with self.output().open("w") as f:
-            write_waveforms(f, signals, samples, generator)
+from aframe.tasks.data.waveforms.base import DeployTask, WaveformParams
 
 
 @inherits(WaveformParams)
 class DeployValidationWaveforms(
     AframeDataTask,
+    DeployTask,
     law.LocalWorkflow,
     StaticMemoryWorkflow,
 ):
@@ -93,14 +25,6 @@ class DeployValidationWaveforms(
     Generate waveforms for validation via rejection sampling
     """
 
-    output_dir = PathParameter(
-        description="Directory where validation waveforms will be saved"
-    )
-    tmp_dir = PathParameter(
-        description="Directory where temporary validation "
-        "waveforms will be saved before being merged",
-        default=os.getenv("AFRAME_TMPDIR", f"/local/{os.getenv('USER')}"),
-    )
     ifos = luigi.ListParameter(
         description="Interferometers for which waveforms will be generated"
     )
@@ -110,11 +34,9 @@ class DeployValidationWaveforms(
     highpass = luigi.FloatParameter(
         description="Frequency of highpass filter in Hz"
     )
-    num_jobs = luigi.IntParameter(
-        default=10,
-        description="Number of parallel jobs "
-        "to split waveform generation amongst",
-    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def workflow_requires(self):
         reqs = super().workflow_requires()
@@ -125,24 +47,10 @@ class DeployValidationWaveforms(
         )
         return reqs
 
-    @property
-    def branch_tmp_dir(self):
-        return self.tmp_dir / f"tmp-{self.branch}"
-
-    def output(self):
-        return law.LocalFileTarget(self.branch_tmp_dir / "val_waveforms.hdf5")
-
     def create_branch_map(self):
-        # split the number of signals into num_jobs branches
-        waveforms_per_branch, remainder = divmod(
-            self.num_signals, self.num_jobs
-        )
-        branches = {
-            i: [waveforms_per_branch, self.psd_segment]
-            for i in range(self.num_jobs)
-        }
-        branches[0][0] += remainder
-        return branches
+        branch_map = super().create_branch_map()
+        branch_map = {k: (v, self.psd_segment) for k, v in branch_map.items()}
+        return branch_map
 
     @property
     def psd_segment(self):
@@ -167,7 +75,7 @@ class DeployValidationWaveforms(
             "IfoWaveformSet",
         )
 
-        os.makedirs(self.branch_tmp_dir, exist_ok=True)
+        os.makedirs(self.tmp_dir, exist_ok=True)
         num_signals, psd_segment = self.branch_data
 
         # read in psd
@@ -243,10 +151,8 @@ class ValidationWaveforms(AframeDataTask):
             WaveformSet,
             "WaveformSet",
         )
-
         with self.output().open("w") as f:
             cls.aggregate(self.waveform_files, f, clean=True)
 
-        # clean up temporary directories
-        for dirname in self.output_dir.glob("tmp-*"):
-            shutil.rmtree(dirname)
+        # clean up temporary directory
+        shutil.rmtree(self.tmp_dir)

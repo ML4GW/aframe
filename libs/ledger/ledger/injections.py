@@ -21,13 +21,15 @@ class IntrinsicParameterSet(Ledger):
     mass_1: np.ndarray = parameter()
     mass_2: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
-    psi: np.ndarray = parameter()
     a_1: np.ndarray = parameter()
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
     phi_12: np.ndarray = parameter()
     phi_jl: np.ndarray = parameter()
+    psi: np.ndarray = parameter()
+    theta_jn: np.ndarray = parameter()
+    phase: np.ndarray = parameter()
 
 
 @dataclass
@@ -92,10 +94,11 @@ class _WaveformGenerator:
     gen: WaveformGenerator
     sample_rate: float
     waveform_duration: float
+    coalescence_time: float
 
     def center(self, waveform):
-        dt = self.waveform_duration / 2
-        return np.roll(waveform, int(dt * self.sample_rate))
+        shift = int(self.coalescence_time * self.sample_rate)
+        return np.roll(waveform, int(shift * self.sample_rate), axis=-1)
 
     def __call__(self, params):
         polarizations = self.gen.time_domain_strain(params)
@@ -109,8 +112,8 @@ class _WaveformGenerator:
 
 @dataclass
 class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
-    cross: np.ndarray = waveform
-    plus: np.ndarray = waveform
+    cross: np.ndarray = waveform()
+    plus: np.ndarray = waveform()
 
     @property
     def waveform_duration(self):
@@ -128,6 +131,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         sample_rate: float,
         waveform_duration: float,
         waveform_approximant: str,
+        coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
         gen = WaveformGenerator(
@@ -142,7 +146,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             },
         )
         waveform_generator = _WaveformGenerator(
-            gen, waveform_duration, sample_rate
+            gen, waveform_duration, sample_rate, coalescence_time
         )
 
         waveform_length = int(sample_rate * waveform_duration)
@@ -169,6 +173,8 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         polarizations.update(d)
         polarizations["sample_rate"] = sample_rate
         polarizations["duration"] = waveform_duration
+        polarizations["num_injections"] = len(params)
+        polarizations["coalescence_time"] = coalescence_time
         return cls(**polarizations)
 
 
@@ -206,8 +212,6 @@ class EventParameterSet(Ledger):
 class SkyLocationParameterSet(Ledger):
     ra: np.ndarray = parameter()
     dec: np.ndarray = parameter()
-    theta_jn: np.ndarray = parameter()
-    phase: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
 
 

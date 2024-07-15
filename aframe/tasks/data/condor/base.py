@@ -26,15 +26,9 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         super().__init__(*args, **kwargs)
         self.htcondor_log_dir.touch()
         self.htcondor_output_directory().touch()
-
-        # update location of where htcondor
-        # job files are stored
-        # TODO: law PR that makes this configuration
-        # easier / more pythonic
         law.config.update(
             {
                 "job": {
-                    "job_file_dir": self.job_file_dir,
                     "job_file_dir_cleanup": "False",
                     "job_file_dir_mkdtemp": "False",
                 }
@@ -83,6 +77,11 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
                 environment += f"{envvar}={value} "
         environment += '"'
         return environment
+
+    def htcondor_create_job_file_factory(self, **kwargs):
+        # set the job file dir to proper location
+        kwargs["dir"] = self.job_file_dir
+        return super().htcondor_create_job_file_factory(**kwargs)
 
     def htcondor_output_directory(self):
         return law.LocalDirectoryTarget(self.condor_directory)
