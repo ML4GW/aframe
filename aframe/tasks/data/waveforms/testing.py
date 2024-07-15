@@ -27,11 +27,6 @@ class TestingWaveformsParams(WaveformParams):
     ifos = luigi.ListParameter(
         description="Interferometers for which waveforms will be generated"
     )
-    num_injections = luigi.IntParameter(
-        description="Total number of injections to generate. Sufficiently "
-        "many timeslides will be performed to generate "
-        "this many injections."
-    )
     output_dir = PathParameter(
         description="Directory where merged waveforms and "
         "rejected parameters will be saved"
@@ -120,9 +115,9 @@ class DeployTestingWaveforms(
 
     @property
     def shifts_required(self):
-        return data_utils.get_num_shifts_from_num_injections(
+        return data_utils.get_num_shifts_from_num_signals(
             self.test_segments,
-            self.num_injections,
+            self.num_signals,
             self.waveform_duration,
             self.spacing,
             self.max_shift,
