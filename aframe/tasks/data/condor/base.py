@@ -16,8 +16,8 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     condor_directory = PathParameter()
     accounting_group_user = luigi.Parameter(default=os.getenv("LIGO_USERNAME"))
     accounting_group = luigi.Parameter(default=os.getenv("LIGO_GROUP"))
-    request_disk = luigi.Parameter(default="1024")
-    request_memory = luigi.Parameter(default="32678")
+    request_disk = luigi.Parameter(default="1024 Kb")
+    request_memory = luigi.Parameter(default="32678 Mb")
     request_cpus = luigi.IntParameter(default=1)
 
     exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
