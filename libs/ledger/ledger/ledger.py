@@ -91,7 +91,7 @@ class Ledger:
     def _get_group(self, f: h5py.File, name: str):
         return f.get(name) or f.create_group(name)
 
-    def write(self, fname: PATH, **hdf5_kwargs) -> None:
+    def write(self, fname: PATH, chunks=None) -> None:
         """
         TODO: implement this with an append mode
         """
@@ -112,7 +112,7 @@ class Ledger:
                     params.create_dataset(key, data=value)
                 elif kind == "waveform":
                     waveforms = self._get_group(f, "waveforms")
-                    waveforms.create_dataset(key, data=value, **hdf5_kwargs)
+                    waveforms.create_dataset(key, data=value, chunks=chunks)
                 elif kind == "metadata":
                     if value is not None:
                         f.attrs[key] = value
