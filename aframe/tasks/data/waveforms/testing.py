@@ -184,7 +184,7 @@ class TestingWaveforms(AframeDataTask):
     condor_directory = PathParameter(
         default=os.path.join(
             os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
-            "timeslide_waveforms",
+            "testing_waveforms",
         )
     )
 
