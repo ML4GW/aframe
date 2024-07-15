@@ -133,6 +133,11 @@ class BaseAframeDataset(pl.LightningDataModule):
     # Re-paramterizing some attributes
     # ================================================ #
 
+    @property
+    def batches_per_epoch(self) -> int:
+        world_size, _ = self.get_world_size_and_rank()
+        return self.hparams.batches_per_epoch // world_size
+
     # TODO: can probably make this CLI configurable at some point
     @property
     def psd_window(self):
@@ -381,9 +386,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
         self.signal_time = 3
-        fname = os.path.join(self.data_dir, "chunked_waveforms.hdf5")
+        fname = os.path.join(self.data_dir, "train_waveforms.hdf5")
         self.waveform_sampler = WaveformSampler(
-            fname, waveforms_per_chunk=10000, batches_per_chunk=50
+            fname,
+            waveforms_per_chunk=200,
+            batches_per_chunk=50,
+            batches_per_epoch=self.batches_per_epoch,
         )
 
         val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
@@ -539,13 +547,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         # chunk_size/batches_per_chunk class args that
         # default to None
         world_size, _ = self.get_world_size_and_rank()
-        batches_per_epoch = self.hparams.batches_per_epoch // world_size
         dataset = Hdf5TimeSeriesDataset(
             self.train_fnames,
             channels=self.hparams.ifos,
             kernel_size=int(self.sample_rate * self.sample_length),
             batch_size=self.hparams.batch_size,
-            batches_per_epoch=batches_per_epoch,
+            batches_per_epoch=self.batches_per_epoch,
             coincident=False,
         )
 

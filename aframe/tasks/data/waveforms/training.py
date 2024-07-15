@@ -94,8 +94,14 @@ class TrainingWaveforms(AframeDataTask):
     def run(self):
         from ledger.injections import IntrinsicWaveformSet
 
+        chunks = (
+            min(64, self.num_signals),
+            int(self.waveform_duration * self.sample_rate),
+        )
         with self.output().open("w") as f:
-            IntrinsicWaveformSet.aggregate(self.waveform_files, f, clean=True)
+            IntrinsicWaveformSet.aggregate(
+                self.waveform_files, f, clean=True, chunks=chunks
+            )
 
         # clean up temporary directory
         shutil.rmtree(self.tmp_dir)

@@ -250,6 +250,7 @@ class Ledger:
         fname: Path,
         dtype: np.dtype = np.float64,
         clean: bool = True,
+        chunks: Optional[tuple] = None,
     ) -> None:
         """
         Aggregate the data from the files of many smaller
@@ -309,7 +310,7 @@ class Ledger:
                             if theirs.ndim > 1:
                                 shape += theirs.shape[1:]
                             dataset = group.create_dataset(
-                                key, shape=shape, dtype=dtype
+                                key, shape=shape, dtype=dtype, chunks=chunks
                             )
                         else:
                             # otherwise grab the target dataset
