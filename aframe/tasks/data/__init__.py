@@ -11,5 +11,4 @@ DATAFIND_ENV_VARS = [
 ]
 from .fetch import Fetch
 from .segments import Query
-from .wave import *
-from .waveforms import TrainingWaveforms, ValidationWaveforms
+from .waveforms import TestingWaveforms, TrainingWaveforms, ValidationWaveforms
