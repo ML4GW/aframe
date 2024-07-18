@@ -294,6 +294,11 @@ class Ledger:
                         value = cls.compare_metadata(key, ours, theirs)
                         target.attrs[key] = value
                     else:
+                        chunks = (
+                            chunks
+                            if attr.metadata["kind"] == "waveform"
+                            else None
+                        )
                         # get either the parameters or waveforms dataset,
                         # or create it if it doesn't already exist
                         group_name = attr.metadata["kind"] + "s"

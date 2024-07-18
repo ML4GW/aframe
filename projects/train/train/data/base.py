@@ -276,18 +276,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         stop = (rank + 1) * per_dev
         return start, stop
 
-    def load_train_waveforms(self, f, world_size, rank):
-        dataset = f["signals"]
-        # Get the signal time here and assume it's the
-        # same for the validation waveforms
-        self.signal_time = f.attrs["coalescence_time"]
-        num_train = len(dataset)
-        if not rank:
-            self._logger.info(f"Training on {num_train} waveforms")
-
-        start, stop = self.get_slice_bounds(num_train, world_size, rank)
-        return self.load_signals(dataset, start, stop)
-
     def load_val_waveforms(self, f, world_size, rank):
         waveform_set = self.waveform_set_cls.read(f)
         """

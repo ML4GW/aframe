@@ -76,4 +76,5 @@ class AframeDataTask(AframeSingularityTask):
 
         # aws env vars
         env["AWS_ENDPOINT_URL"] = os.getenv("AWS_ENDPOINT_URL")
+        env["TMPDIR"] = os.getenv("AFRAME_TMPDIR")
         return env
