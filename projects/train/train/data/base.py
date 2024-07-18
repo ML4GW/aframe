@@ -377,8 +377,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         fname = os.path.join(self.data_dir, "train_waveforms.hdf5")
         self.waveform_sampler = WaveformSampler(
             [fname],
-            waveforms_per_chunk=200,
-            batches_per_chunk=50,
+            waveforms_per_chunk=20000,
+            batches_per_chunk=100,
             batches_per_epoch=self.batches_per_epoch,
         )
 
