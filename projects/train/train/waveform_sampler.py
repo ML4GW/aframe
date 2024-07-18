@@ -1,4 +1,3 @@
-import logging
 import warnings
 from pathlib import Path
 from typing import Iterable
@@ -13,11 +12,14 @@ from ml4gw.distributions import Cosine
 
 class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
     def __init__(
-        self, fnames: Iterable[Path], waveforms_per_chunk: int, num_chunks: int
+        self,
+        fnames: Iterable[Path],
+        batch_size: int,
+        batches_per_epoch: int,
     ):
         self.fnames = fnames
-        self.waveforms_per_chunk = waveforms_per_chunk
-        self.num_chunks = num_chunks
+        self.batch_size = batch_size
+        self.batches_per_epoch = batches_per_epoch
 
         self.sizes = {}
         # determine the number of waveforms up front
@@ -41,7 +43,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         self.probs = np.array([i / self.total for i in self.sizes.values()])
 
     def __len__(self):
-        return self.num_chunks
+        return self.batches_per_epoch
 
     @property
     def total(self):
@@ -51,21 +53,19 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         return np.random.choice(
             self.fnames,
             p=self.probs,
-            size=(self.waveforms_per_chunk,),
+            size=(self.batch_size,),
             replace=True,
         )
 
     def sample_batch(self):
         fnames = self.sample_fnames()
         # allocate batch up front
-        batch = np.empty(
-            (self.waveforms_per_chunk, self.num_pols, self.waveform_size)
-        )
+        batch = np.empty((self.batch_size, self.num_pols, self.waveform_size))
 
         unique_fnames, inv, counts = np.unique(
             fnames, return_inverse=True, return_counts=True
         )
-        for i, (fname, count) in enumerate(zip(unique_fnames, counts)):
+        for i, (fname, _) in enumerate(zip(unique_fnames, counts)):
             size = self.sizes[fname]
 
             batch_idx = np.where(inv == i)[0]
@@ -80,44 +80,50 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
             return torch.tensor(batch)
 
     def __iter__(self):
-        for _ in range(self.num_chunks):
+        for _ in range(self.batches_per_epoch):
             yield self.sample_batch()
 
 
-class WaveformSampler(torch.nn.Module):
+class ChunkedWaveformDataset(torch.utils.data.IterableDataset):
     def __init__(
         self,
-        fname: Path,
-        waveforms_per_chunk: int,
+        chunk_it: Iterable,
+        batch_size: int,
         batches_per_chunk: int,
-        batches_per_epoch: int,
     ) -> None:
+        self.chunk_it = chunk_it
+        self.batch_size = batch_size
+        self.batches_per_chunk = batches_per_chunk
+
+    def __len__(self):
+        return len(self.chunk_it) * self.batches_per_chunk
+
+    def __iter__(self):
+        it = iter(self.chunk_it)
+        [chunk] = next(it)
+
+        num_waveforms, _, _ = chunk.shape
+        while True:
+            # generate batches from the current chunk
+            for _ in range(self.batches_per_chunk):
+                idx = torch.randperm(num_waveforms)[:num_waveforms]
+                yield chunk[idx]
+
+            try:
+                [chunk] = next(it)
+            except StopIteration:
+                break
+            num_waveforms, _, _ = chunk.shape
+
+
+class WaveformSampler(torch.nn.Module):
+    def __init__(self) -> None:
         super().__init__()
         self.dec = Cosine()
         self.psi = Uniform(0, torch.pi)
         self.phi = Uniform(-torch.pi, torch.pi)
 
-        num_chunks = batches_per_epoch // batches_per_chunk
-        chunk_dataset = Hdf5WaveformLoader(
-            fname, waveforms_per_chunk, num_chunks=num_chunks
-        )
-        logging.info(f"Training with {chunk_dataset.total} waveforms")
-        self.chunk_loader = iter(
-            torch.utils.data.DataLoader(
-                chunk_dataset, num_workers=3, batch_size=None
-            )
-        )
-
-        self.chunk = next(self.chunk_loader)
-
-        self.waveforms_per_chunk = waveforms_per_chunk
-        self.batches_per_chunk = batches_per_chunk
-        self.batch_num = 0
-
-    def __len__(self):
-        return len(self.chunk_it) * self.batches_per_chunk
-
-    def forward(self, X, prob):
+    def forward(self, X, prob, waveforms):
         # determine batch size from X and prob
         rvs = torch.rand(size=X.shape[:1], device=X.device)
         mask = rvs < prob
@@ -129,16 +135,10 @@ class WaveformSampler(torch.nn.Module):
         phi = self.phi.sample((N,)).to(X.device)
 
         # now sample the actual waveforms we want to inject
-        idx = torch.randperm(self.waveforms_per_chunk)[:N]
-        waveforms = self.chunk[idx].to(X.device).float()
+        idx = torch.randperm(waveforms.shape[0])[:N]
+        waveforms = waveforms[idx].to(X.device).float()
 
         cross, plus = waveforms[:, 0], waveforms[:, 1]
         polarizations = {"cross": cross, "plus": plus}
-        self.batch_num += 1
-
-        if self.batch_num > self.batches_per_chunk:
-            # move onto next chunk
-            self.chunk = next(self.chunk_loader)
-            self.batch_num = 0
 
         return dec, psi, phi, polarizations, mask

@@ -17,7 +17,11 @@ from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
 from train.metrics import get_timeslides
-from train.waveform_sampler import WaveformSampler
+from train.waveform_sampler import (
+    ChunkedWaveformDataset,
+    Hdf5WaveformLoader,
+    WaveformSampler,
+)
 from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
@@ -179,12 +183,15 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         return int(self.hparams.right_pad * self.sample_rate)
 
-    # TODO: Come up with a more clever scheme for breaking up
-    # our training and validation background data
     @property
     def train_fnames(self) -> Sequence[str]:
         fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
         return sorted(fnames)[:-1]
+
+    @property
+    def train_waveform_fnames(self) -> Sequence[str]:
+        fname = os.path.join(self.data_dir, "train_waveforms.hdf5")
+        return [fname]
 
     @property
     def valid_fnames(self) -> Sequence[str]:
@@ -374,13 +381,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
         self.signal_time = 3
-        fname = os.path.join(self.data_dir, "train_waveforms.hdf5")
-        self.waveform_sampler = WaveformSampler(
-            [fname],
-            waveforms_per_chunk=20000,
-            batches_per_chunk=100,
-            batches_per_epoch=self.batches_per_epoch,
-        )
+
+        self.waveform_sampler = WaveformSampler()
 
         val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
         self.val_waveforms = self.load_val_waveforms(
@@ -408,8 +410,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         if self.trainer.training:
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
-            [X] = batch
-            batch = self.augment(X)
+            [X], waveforms = batch
+            batch = self.augment(X, waveforms)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
             # on the local device, the relevant tensors will be
@@ -552,4 +554,26 @@ class BaseAframeDataset(pl.LightningDataModule):
         dataloader = torch.utils.data.DataLoader(
             dataset, num_workers=num_workers, pin_memory=pin_memory
         )
-        return dataloader
+
+        batches_per_chunk = int(self.batches_per_epoch // 10)
+        chunks_per_epoch = int(self.batches_per_epoch // batches_per_chunk) + 1
+
+        waveform_loader = Hdf5WaveformLoader(
+            self.train_waveform_fnames,
+            batch_size=1000,
+            batches_per_epoch=chunks_per_epoch,
+        )
+        waveform_loader = torch.utils.data.DataLoader(
+            waveform_loader,
+            num_workers=2,
+            pin_memory=pin_memory,
+            persistent_workers=True,
+        )
+
+        waveform_dataset = ChunkedWaveformDataset(
+            waveform_loader,
+            batch_size=self.hparams.batch_size,
+            batches_per_chunk=batches_per_chunk,
+        )
+
+        return ZippedDataset(dataloader, waveform_dataset)

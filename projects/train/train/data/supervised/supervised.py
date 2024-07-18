@@ -39,7 +39,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             self.mute_prob = 0
 
     @torch.no_grad()
-    def augment(self, X):
+    def augment(self, X, waveforms):
         X, psds = self.psd_estimator(X)
         X = self.inverter(X)
         X = self.reverser(X)
@@ -48,7 +48,10 @@ class SupervisedAframeDataset(BaseAframeDataset):
         sample_prob = (
             self.hparams.waveform_prob + self.swap_prob + self.mute_prob
         )
-        *params, polarizations, mask = self.waveform_sampler(X, sample_prob)
+
+        *params, polarizations, mask = self.waveform_sampler(
+            X, sample_prob, waveforms
+        )
 
         N = len(params[0])
         snrs = self.snr_sampler.sample((N,)).to(X.device)

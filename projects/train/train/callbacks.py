@@ -44,9 +44,11 @@ class SaveAugmentedBatch(Callback):
             save_dir = trainer.logger.log_dir or trainer.logger.save_dir
 
             # build training batch by hand
-            X = next(iter(trainer.train_dataloader))
+            [X], waveforms = next(iter(trainer.train_dataloader))
             X = X.to(device)
-            X, y = trainer.datamodule.augment(X[0])
+            waveforms = waveforms.to(device)
+
+            X, y = trainer.datamodule.augment(X, waveforms)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
