@@ -294,7 +294,8 @@ class Ledger:
                         value = cls.compare_metadata(key, ours, theirs)
                         target.attrs[key] = value
                     else:
-                        chunks = (
+                        # only chunk waveforms, not parameters
+                        _chunks = (
                             chunks
                             if attr.metadata["kind"] == "waveform"
                             else None
@@ -315,7 +316,7 @@ class Ledger:
                             if theirs.ndim > 1:
                                 shape += theirs.shape[1:]
                             dataset = group.create_dataset(
-                                key, shape=shape, dtype=dtype, chunks=chunks
+                                key, shape=shape, dtype=dtype, chunks=_chunks
                             )
                         else:
                             # otherwise grab the target dataset
