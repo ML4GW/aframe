@@ -1,5 +1,7 @@
+import logging
 import warnings
 from pathlib import Path
+from typing import Iterable
 
 import h5py
 import numpy as np
@@ -9,50 +11,77 @@ from torch.distributions.uniform import Uniform
 from ml4gw.distributions import Cosine
 
 
-class WaveformChunkLoader(torch.utils.data.IterableDataset):
-    def __init__(self, fname: Path, waveforms_per_chunk: int, num_chunks: int):
-        self.fname = fname
+class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
+    def __init__(
+        self, fnames: Iterable[Path], waveforms_per_chunk: int, num_chunks: int
+    ):
+        self.fnames = fnames
         self.waveforms_per_chunk = waveforms_per_chunk
         self.num_chunks = num_chunks
+
+        self.sizes = {}
         # determine the number of waveforms up front
-        with h5py.File(self.fname, "r") as f:
-            dset = f["waveforms"]["cross"]
-            if dset.chunks is None:
-                warnings.warn(
-                    "File {} contains datasets that were generated "
-                    "without using chunked storage. This can have "
-                    "severe performance impacts at data loading time. "
-                    "If you need faster loading, try re-generating "
-                    "your datset with chunked storage turned on.".format(
-                        fname
-                    ),
-                )
-            self.num_waveforms = dset.shape[0]
-            self.waveform_size = dset.shape[1]
-            self.num_pols = 2
+        for fname in self.fnames:
+            with h5py.File(fname, "r") as f:
+                dset = f["waveforms"]["cross"]
+                if dset.chunks is None:
+                    warnings.warn(
+                        "File {} contains datasets that were generated "
+                        "without using chunked storage. This can have "
+                        "severe performance impacts at data loading time. "
+                        "If you need faster loading, try re-generating "
+                        "your datset with chunked storage turned on.".format(
+                            fnames
+                        ),
+                    )
+                self.sizes[fname] = len(dset)
+
+        self.waveform_size = dset.shape[1]
+        self.num_pols = 2
+        self.probs = np.array([i / self.total for i in self.sizes.values()])
 
     def __len__(self):
         return self.num_chunks
 
-    def __iter__(self):
-        with h5py.File(self.fname, "r") as f:
-            g = f["waveforms"]
-            while True:
-                # allocate batch up front
-                batch = np.empty(
-                    (
-                        self.waveforms_per_chunk,
-                        self.num_pols,
-                        self.waveform_size,
-                    )
-                )
-                indices = np.random.randint(
-                    0, self.num_waveforms, size=self.waveforms_per_chunk
-                )
-                for i, idx in enumerate(indices):
+    @property
+    def total(self):
+        return sum(self.sizes.values())
+
+    def sample_fnames(self) -> np.ndarray:
+        return np.random.choice(
+            self.fnames,
+            p=self.probs,
+            size=(self.waveforms_per_chunk,),
+            replace=True,
+        )
+
+    def sample_batch(self):
+        fnames = self.sample_fnames()
+        # allocate batch up front
+        batch = np.empty(
+            (self.waveforms_per_chunk, self.num_pols, self.waveform_size)
+        )
+
+        unique_fnames, inv, counts = np.unique(
+            fnames, return_inverse=True, return_counts=True
+        )
+        for i, (fname, count) in enumerate(zip(unique_fnames, counts)):
+            size = self.sizes[fname]
+
+            batch_idx = np.where(inv == i)[0]
+
+            idx = np.random.randint(size, size=len(batch_idx))
+
+            with h5py.File(fname, "r") as f:
+                g = f["waveforms"]
+                for b, i in zip(batch_idx, idx):
                     for j, pol in enumerate(["cross", "plus"]):
-                        batch[i, j] = g[pol][idx]
-                yield torch.tensor(batch)
+                        batch[b, j] = g[pol][i]
+            return torch.tensor(batch)
+
+    def __iter__(self):
+        for _ in range(self.num_chunks):
+            yield self.sample_batch()
 
 
 class WaveformSampler(torch.nn.Module):
@@ -69,14 +98,16 @@ class WaveformSampler(torch.nn.Module):
         self.phi = Uniform(-torch.pi, torch.pi)
 
         num_chunks = batches_per_epoch // batches_per_chunk
-        chunk_dataset = WaveformChunkLoader(
+        chunk_dataset = Hdf5WaveformLoader(
             fname, waveforms_per_chunk, num_chunks=num_chunks
         )
+        logging.info(f"Training with {chunk_dataset.total} waveforms")
         self.chunk_loader = iter(
             torch.utils.data.DataLoader(
                 chunk_dataset, num_workers=3, batch_size=None
             )
         )
+
         self.chunk = next(self.chunk_loader)
 
         self.waveforms_per_chunk = waveforms_per_chunk
