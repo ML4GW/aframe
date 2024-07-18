@@ -98,7 +98,7 @@ class _WaveformGenerator:
 
     def center(self, waveform):
         shift = int(self.coalescence_time * self.sample_rate)
-        return np.roll(waveform, int(shift * self.sample_rate), axis=-1)
+        return np.roll(waveform, shift, axis=-1)
 
     def __call__(self, params):
         polarizations = self.gen.time_domain_strain(params)
