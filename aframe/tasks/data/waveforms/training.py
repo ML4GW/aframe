@@ -1,5 +1,4 @@
 import os
-import random
 import shutil
 from pathlib import Path
 
@@ -93,23 +92,13 @@ class TrainingWaveforms(AframeDataTask):
         return list(map(Path, [targets.path for targets in self.targets]))
 
     def run(self):
-        import os
-        import tempfile
-
         from ledger.injections import IntrinsicWaveformSet
-
-        def generate_tmp_path(path):
-            return os.path.join(
-                tempfile.gettempdir(),
-                "luigi-s3-tmp-%09d" % random.randrange(0, 10_000_000_000),
-            )
 
         chunks = (
             min(64, self.num_signals),
             int(self.waveform_duration * self.sample_rate),
         )
 
-        os.environ["TMPDIR"] = os.getenv("AFRAME_TMPDIR")
         with self.output().open("w") as f:
             IntrinsicWaveformSet.aggregate(
                 self.waveform_files, f, clean=False, chunks=chunks
