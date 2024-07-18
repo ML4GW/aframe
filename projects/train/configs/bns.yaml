@@ -11,7 +11,7 @@ model:
   init_args:
     # architecture
     arch:
-      class_path: architectures.supervised.SupervisedFrequencyDomainResNet
+      class_path: architectures.supervised.SupervisedSpectrogramDomainResNet
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
@@ -31,7 +31,7 @@ model:
     # early stop
     patience: 50
 data:
-  class_path: train.data.supervised.FrequencyDomainSupervisedAframeDataset
+  class_path: train.data.supervised.SpectrogramDomainSupervisedAframeDataset
   init_args:
     # loading args
     # data_dir:
