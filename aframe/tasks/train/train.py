@@ -53,9 +53,23 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     dev = luigi.BoolParameter(default=False)
-    use_init_container = luigi.BoolParameter(default=False)
-    git_url = luigi.Parameter(default="git@github.com:ML4GW/aframev2.git")
-    git_ref = luigi.Parameter(default="main")
+    use_init_container = luigi.BoolParameter(
+        default=False,
+        description="Whether to use the git-sync init-container to sync "
+        "a remote aframe git repository into the pod Defaults to False, "
+        "in which case the code added to the container image at build "
+        "time will be used",
+    )
+    git_url = luigi.Parameter(
+        default="git@github.com:ML4GW/aframev2.git",
+        description="The git repository to clone into the pod"
+        "Only relevant if `use_init_container` is True",
+    )
+    git_ref = luigi.Parameter(
+        default="main",
+        description="The git branch or commit to checkout"
+        "Only relevant if `use_init_container` is True",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,6 +99,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return 7200
 
     def get_config(self):
+        # read in training config into a json string
+        # to pass to the remote training job via
+        # the jsonargparse command line
         with open(self.config, "r") as f:
             doc = yaml.safe_load(f)
             json_string = json.dumps(doc)
@@ -131,6 +148,8 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     @property
     def s3_secret(self):
+        # kubernetes config for creating
+        # secret containing credentials for s3 access
         spec = {
             "apiVersion": "v1",
             "kind": "Secret",
@@ -141,6 +160,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return Secret(resource=spec)
 
     def git_secret(self):
+        # kubernetes config for creating
+        # secret containing users ssh
+        # key for git access if using git-sync init containers
         spec = {
             "apiVersion": "v1",
             "kind": "Secret",
@@ -158,6 +180,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
     @property
     def init_containers(self):
+        # kubernetes config for creating
+        # init container to sync a remote git
+        # repository into the pod at run time
         config = [
             {
                 "name": "git-sync",
