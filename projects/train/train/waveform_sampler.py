@@ -69,17 +69,21 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         self.mmap_files = {}
         self.mmap_datasets = {}
 
-        # determine the number of waveforms up front
+        # for each file store the datasets
+        # of interest in a dictionary so we
+        # can access them at will without needing
+        # to reopen the files each time
         for fname in self.fnames:
             f, g = self.open(fname)
             self.mmap_files[fname] = f
+            self.mmap_datasets[fname] = {
+                channel: g[channel] for channel in self.channels
+            }
 
-            for channel in self.channels:
-                dset = g[channel]
-                self.mmap_datasets[fname] = {channel: dset}
-
+            # store sizes of each dataset and warn if not chunked;
             # assumes all dsets have same attributes
             # like size and chunking behavior
+            dset = self.mmap_datasets[fname][self.channels[0]]
             self.sizes[fname] = len(dset)
             if dset.chunks is None:
                 warnings.warn(
