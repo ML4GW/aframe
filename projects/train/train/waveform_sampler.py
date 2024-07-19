@@ -76,7 +76,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
 
             for channel in self.channels:
                 dset = g[channel]
-                self.mmap_datasets[fname][channel] = dset
+                self.mmap_datasets[fname] = {channel: dset}
 
             # assumes all dsets have same attributes
             # like size and chunking behavior
