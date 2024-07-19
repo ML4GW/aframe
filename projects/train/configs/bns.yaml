@@ -37,6 +37,8 @@ data:
     # data_dir:
     # ifos:
     batches_per_epoch: 200
+    chunk_size: 10000
+    chunks_per_epoch: 10
     # preprocessing args
     batch_size: 576
     # kernel_length:
