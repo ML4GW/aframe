@@ -37,7 +37,7 @@ class DataManager:
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
         # load results and data from the run we're visualizing
-        infer_dir = results_dir / "infer" / "1year"
+        infer_dir = results_dir / "infer"
         rejected = data_dir / "rejected-parameters.hdf5"
         self.response_set = data_dir / "waveforms.hdf5"
 
