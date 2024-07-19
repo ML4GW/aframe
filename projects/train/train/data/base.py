@@ -84,6 +84,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
         verbose: bool = False,
+        # waveform dataloader args
+        chunks_per_epoch: int = 1,
+        chunk_size: int = 10000,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -194,6 +197,11 @@ class BaseAframeDataset(pl.LightningDataModule):
         return [fname]
 
     @property
+    def signal_time(self):
+        with h5py.File(self.train_waveform_fnames[0], "r") as f:
+            return f.attrs["coalescence_time"]
+
+    @property
     def valid_fnames(self) -> Sequence[str]:
         fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
         fnames = sorted([Path(fname) for fname in fnames])
@@ -239,7 +247,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
         fs_utils.download_training_data(bucket, self.data_dir)
 
-    def load_signals(self, dataset, start, stop):
+    def slice_waveforms(self, waveforms):
         """
         Loads waveforms with signals placed `signal_time`
         seconds into the timeseries. Loads only as much
@@ -263,15 +271,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         # If signal_start is less than 0, add padding on the left
         left_pad = -1 * min(signal_start, 0)
         # If signal_stop is larger than the dataset, add padding on the right
-        right_pad = max(signal_stop - dataset.shape[-1], 0)
+        right_pad = max(signal_stop - waveforms.shape[-1], 0)
 
-        signals = torch.Tensor(dataset[start:stop])
-        signals = torch.nn.functional.pad(signals, [left_pad, right_pad])
-        signals = signals[..., signal_start:signal_stop]
-        self._logger.info("Waveforms loaded")
+        waveforms = torch.nn.functional.pad(waveforms, [left_pad, right_pad])
+        waveforms = waveforms[..., signal_start:signal_stop]
 
-        cross, plus = signals[:, 0], signals[:, 1]
-        return cross, plus
+        return waveforms
 
     def get_slice_bounds(self, total, world_size, rank) -> tuple[int, int]:
         """
@@ -285,14 +290,14 @@ class BaseAframeDataset(pl.LightningDataModule):
 
     def load_val_waveforms(self, f, world_size, rank):
         waveform_set = self.waveform_set_cls.read(f)
-        """
+
         if waveform_set.coalescence_time != self.signal_time:
             raise ValueError(
                 "Training waveforms and validation waveforms have different "
                 f"signal times, got {self.signal_time} and "
                 f"{waveform_set.coalescence_time}, respectively"
             )
-        """
+
         length = len(waveform_set.waveforms)
 
         if not rank:
@@ -380,8 +385,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.val_batch_size,
         )
 
-        self.signal_time = 3
-
         self.waveform_sampler = WaveformSampler()
 
         val_waveform_file = os.path.join(self.data_dir, "val_waveforms.hdf5")
@@ -398,6 +401,16 @@ class BaseAframeDataset(pl.LightningDataModule):
     def device(self):
         """Return the device of the associated lightning module"""
         return self.trainer.lightning_module.device
+
+    def on_before_batch_transfer(self, batch, _):
+        """
+        Slice loaded waveforms before sending to device
+        """
+        if self.trainer.training:
+            X, waveforms = batch
+            waveforms = self.slice_waveforms(waveforms)
+            batch = X, waveforms
+        return batch
 
     def on_after_batch_transfer(self, batch, _):
         """
@@ -533,9 +546,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
-        # TODO: potentially introduce chunking here via
-        # chunk_size/batches_per_chunk class args that
-        # default to None
         world_size, _ = self.get_world_size_and_rank()
         dataset = Hdf5TimeSeriesDataset(
             self.train_fnames,
@@ -555,14 +565,24 @@ class BaseAframeDataset(pl.LightningDataModule):
             dataset, num_workers=num_workers, pin_memory=pin_memory
         )
 
-        batches_per_chunk = int(self.batches_per_epoch // 10)
-        chunks_per_epoch = int(self.batches_per_epoch // batches_per_chunk) + 1
-
+        batches_per_chunk = (
+            int(
+                self.hparams.batches_per_epoch // self.hparams.chunks_per_epoch
+            )
+            + 1
+        )
         waveform_loader = Hdf5WaveformLoader(
             self.train_waveform_fnames,
-            batch_size=1000,
-            batches_per_epoch=chunks_per_epoch,
+            batch_size=self.hparams.chunk_size,
+            batches_per_epoch=self.hparams.chunks_per_epoch or 1,
         )
+        self._logger.info(
+            f"Training on pool of {waveform_loader.total} waveforms. "
+            f"Sampling {batches_per_chunk} batches per chunk "
+            f"from {self.hparams.chunks_per_epoch} chunks "
+            f"of size {self.hparams.chunk_size} each epoch"
+        )
+
         waveform_loader = torch.utils.data.DataLoader(
             waveform_loader,
             num_workers=2,
