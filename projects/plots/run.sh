@@ -1,1 +1,0 @@
-poetry run python plots/cli.py --base_dir /home/ethan.marx/aframe/o3-production-search/ --data_dir /home/ethan.marx/aframe/o3-production-search/data/ --mass_combos [[35,35],[35,20],[20,20],[20,10]] --ifos [H1,L1] --source_prior priors.priors.end_o3_ratesandpops --sample_rate 2048 --fduration 1 --valid_frac 0.2
