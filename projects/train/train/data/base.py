@@ -247,11 +247,10 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
         fs_utils.download_training_data(bucket, self.data_dir)
 
-    def slice_waveforms(self, waveforms):
+    def slice_waveforms(self, waveforms: torch.Tensor) -> torch.Tensor:
         """
-        Loads waveforms with signals placed `signal_time`
-        seconds into the timeseries. Loads only as much
-        signal as could be required, padding if needed
+        Slice waveforms to the correct length depending on
+        requested left and right padding
         """
         signal_idx = int(self.signal_time * self.sample_rate)
         kernel_size = int(self.hparams.kernel_length * self.sample_rate)
@@ -406,6 +405,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         Slice loaded waveforms before sending to device
         """
+        # TODO: maybe pass indices as argument to
+        # waveform loader to reduce quantity of data
+        # we need to load
         if self.trainer.training:
             X, waveforms = batch
             waveforms = self.slice_waveforms(waveforms)
@@ -546,7 +548,11 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
+        # divide batches per epoch up among all devices
         world_size, _ = self.get_world_size_and_rank()
+        batches_per_epoch = self.hparams.batches_per_epoch // world_size
+
+        # build our strain dataset and dataloader
         dataset = Hdf5TimeSeriesDataset(
             self.train_fnames,
             channels=self.hparams.ifos,
@@ -559,22 +565,27 @@ class BaseAframeDataset(pl.LightningDataModule):
         pin_memory = isinstance(
             self.trainer.accelerator, pl.accelerators.CUDAAccelerator
         )
+        # multiprocess data loading
         local_world_size = len(self.trainer.device_ids)
         num_workers = min(6, int(os.cpu_count() / local_world_size))
         dataloader = torch.utils.data.DataLoader(
             dataset, num_workers=num_workers, pin_memory=pin_memory
         )
 
-        batches_per_chunk = (
-            int(
-                self.hparams.batches_per_epoch // self.hparams.chunks_per_epoch
-            )
-            + 1
-        )
+        # build iterator for waveform loading
+        # that will load chunks of waveforms
+        # to be sampled from
         waveform_loader = Hdf5WaveformLoader(
             self.train_waveform_fnames,
             batch_size=self.hparams.chunk_size,
             batches_per_epoch=self.hparams.chunks_per_epoch or 1,
+            channels=["cross", "plus"],
+            path="waveforms",
+        )
+        # calculate how many batches we'll sample from each chunk
+        # based on requested chunks per epoch and batches per epoch
+        batches_per_chunk = (
+            int(batches_per_epoch // self.hparams.chunks_per_epoch) + 1
         )
         self._logger.info(
             f"Training on pool of {waveform_loader.total} waveforms. "
@@ -583,6 +594,8 @@ class BaseAframeDataset(pl.LightningDataModule):
             f"of size {self.hparams.chunk_size} each epoch"
         )
 
+        # multiprocess waveform chunk loader
+        # so we don't have to wait for waveforms
         waveform_loader = torch.utils.data.DataLoader(
             waveform_loader,
             num_workers=2,
@@ -590,6 +603,8 @@ class BaseAframeDataset(pl.LightningDataModule):
             persistent_workers=True,
         )
 
+        # build a dataset that will sample from
+        # iterator of chunks of waveforms
         waveform_dataset = ChunkedWaveformDataset(
             waveform_loader,
             batch_size=self.hparams.batch_size,
