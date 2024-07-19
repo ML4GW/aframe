@@ -31,7 +31,6 @@ def rejection_sample(
     highpass: float,
     snr_threshold: float,
     psds: torch.Tensor,
-    return_raw: bool = False,
 ) -> Tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
@@ -79,11 +78,18 @@ def rejection_sample(
             params = convert_to_detector_frame(params)
         if num_signals == 1:
             params = {k: params[k] for k in prior.keys() if k in params}
-        waveforms = generator(params)
+
+        # TODO: can encapsulate this in a
+        # WaveformSet.from_parameters method
+        params_list = [dict(zip(params, col)) for col in zip(*params.values())]
         polarizations = {
-            "cross": torch.Tensor(waveforms[:, 0, :]),
-            "plus": torch.Tensor(waveforms[:, 1, :]),
+            "cross": torch.zeros((len(params_list), waveform_size)),
+            "plus": torch.zeros((len(params_list), waveform_size)),
         }
+
+        for i, polars in enumerate(map(generator, params_list)):
+            for key, value in polars.items():
+                polarizations[key][i] = torch.Tensor(value)
 
         projected = compute_observed_strain(
             torch.Tensor(params["dec"]),
@@ -122,10 +128,8 @@ def rejection_sample(
             parameters[key][start:end] = value[mask]
 
         # insert either the projected waveforms or the raw waveforms
-        if not return_raw:
-            signals = projected[mask].numpy()
-        else:
-            signals = waveforms[mask].numpy()
+
+        signals = projected[mask].numpy()
 
         for i, ifo in enumerate(ifos):
             key = ifo.lower()
