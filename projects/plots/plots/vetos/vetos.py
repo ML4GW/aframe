@@ -13,29 +13,29 @@ CATEGORIES = ["CAT1", "CAT2", "CAT3", "GATES"]
 
 
 def gates_to_veto_segments(path: Path):
-    """Naively convert gate files to vetoes segments"""
+    """Naively convert gate files to vetos segments"""
     gates = np.loadtxt(path)
     centers = gates[:, 0]
     windows = gates[:, 1]
     tapers = gates[:, 2] + 0.375
 
-    vetoes = np.array(
+    vetos = np.array(
         [
             [center - window - taper, center + window + taper]
             for center, window, taper in zip(centers, windows, tapers)
         ]
     )
 
-    return vetoes
+    return vetos
 
 
-def get_catalog_vetoes(start: float, stop: float, delta: float = 1.0):
+def get_catalog_vetos(start: float, stop: float, delta: float = 1.0):
     events = datasets.query_events(
         select=[f"gps-time >= {start}", f"gps-time <= {stop}"]
     )
     times = np.array([datasets.event_gps(event) for event in events])
-    vetoes = np.column_stack([times - delta, times + delta])
-    return vetoes
+    vetos = np.column_stack([times - delta, times + delta])
+    return vetos
 
 
 class VetoParser:
@@ -48,31 +48,31 @@ class VetoParser:
         ifos: List[str],
     ):
         self.logger = logging.getLogger("vizapp")
-        self.vetoes = DataQualityDict.from_veto_definer_file(veto_definer_file)
-        self.logger.info("Populating vetoes")
-        self.vetoes.populate(segments=[[start, stop]], verbose=True)
-        self.logger.info("Vetoes populated")
+        self.vetos = DataQualityDict.from_veto_definer_file(veto_definer_file)
+        self.logger.info("Populating vetos")
+        self.vetos.populate(segments=[[start, stop]], verbose=True)
+        self.logger.info("Vetos populated")
         self.gate_paths = gate_paths
         self.ifos = ifos
         self.veto_cache = {}
 
     def get_vetos(self, category: str):
-        vetoes = {}
+        vetos = {}
 
         for ifo in self.ifos:
             if category == "GATES":
-                ifo_vetoes = gates_to_veto_segments(self.gate_paths[ifo])
+                ifo_vetos = gates_to_veto_segments(self.gate_paths[ifo])
             else:
                 cat_number = int(category[-1])
-                ifo_vetoes = DataQualityDict(
+                ifo_vetos = DataQualityDict(
                     {
                         k: v
-                        for k, v in self.vetoes.items()
+                        for k, v in self.vetos.items()
                         if v.ifo == ifo and v.category == cat_number
                     }
                 )
-                ifo_vetoes = ifo_vetoes.union().active
+                ifo_vetos = ifo_vetos.union().active
 
-            vetoes[ifo] = np.array(ifo_vetoes)
+            vetos[ifo] = np.array(ifo_vetos)
 
-        return vetoes
+        return vetos
