@@ -98,7 +98,8 @@ class _WaveformGenerator:
 
     def center(self, waveform):
         shift = int(self.coalescence_time * self.sample_rate)
-        return np.roll(waveform, shift, axis=-1)
+        centered = np.roll(waveform, shift, axis=-1)
+        return centered
 
     def __call__(self, params):
         polarizations = self.gen.time_domain_strain(params)
@@ -146,7 +147,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             },
         )
         waveform_generator = _WaveformGenerator(
-            gen, waveform_duration, sample_rate, coalescence_time
+            gen, sample_rate, waveform_duration, coalescence_time
         )
 
         waveform_length = int(sample_rate * waveform_duration)
