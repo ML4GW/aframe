@@ -112,7 +112,7 @@ def download_training_data(bucket: str, data_dir: str):
         config_kwargs=retry_config,
     )
     sources = s3.glob(f"{bucket}/background/*.hdf5")
-    sources.append(s3.glob(f"{bucket}/training_waveforms/*.hdf5"))
+    sources.extend(s3.glob(f"{bucket}/training_waveforms/*.hdf5"))
     if not sources:
         raise ValueError(f"No data at {bucket} to download")
 
