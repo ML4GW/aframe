@@ -180,36 +180,6 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
 
 
 @dataclass
-class EventParameterSet(Ledger):
-    """
-    Assume GPS times always correspond to un-shifted data
-    """
-
-    injection_time: np.ndarray = parameter()
-    shift: np.ndarray = parameter()  # 2D with shift values along 1th axis
-    snr: np.ndarray = parameter()
-
-    def get_shift(self, shift):
-        mask = self.shift == shift
-        if self.shift.ndim == 2:
-            mask = mask.all(axis=-1)
-        return self[mask]
-
-    def get_times(
-        self, start: Optional[float] = None, end: Optional[float] = None
-    ):
-        if start is None and end is None:
-            raise ValueError("Must specify one of start or end")
-
-        mask = True
-        if start is not None:
-            mask &= self.injection_time >= start
-        if end is not None:
-            mask &= self.injection_time < end
-        return self[mask]
-
-
-@dataclass
 class SkyLocationParameterSet(Ledger):
     ra: np.ndarray = parameter()
     dec: np.ndarray = parameter()
