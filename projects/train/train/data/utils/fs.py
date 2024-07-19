@@ -111,21 +111,22 @@ def download_training_data(bucket: str, data_dir: str):
         endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
         config_kwargs=retry_config,
     )
-    background_fnames = s3.glob(f"{bucket}/background/*.hdf5")
-    if not background_fnames:
-        raise ValueError(f"No background data at {bucket} to download")
+    sources = s3.glob(f"{bucket}/background/*.hdf5")
+    sources.append(s3.glob(f"{bucket}/training_waveforms/*.hdf5"))
+    if not sources:
+        raise ValueError(f"No data at {bucket} to download")
 
     # multiprocess download of training data
-    targets = [
-        data_dir + f.replace(f"{bucket}", "") for f in background_fnames
-    ]
+    targets = [data_dir + f.replace(f"{bucket}", "") for f in sources]
+
     download = partial(_download, s3)
-    paths = ["train_waveforms.hdf5", "val_waveforms.hdf5"]
     with ThreadPoolExecutor() as executor:
-        for path in paths:
-            future = executor.submit(
-                download, f"{bucket}/{path}", f"{data_dir}/{path}"
-            )
-        executor.map(download, background_fnames, targets)
+        future = executor.submit(
+            download,
+            f"{bucket}/val_waveforms.hdf5",
+            f"{data_dir}/val_waveforms.hdf5",
+        )
+
+        executor.map(download, sources, targets)
 
     future.result()
