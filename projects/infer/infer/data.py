@@ -47,6 +47,8 @@ class Sequence:
             rate:
                 Rate at which to send requests in Hz
         """
+        logging.info("Initializing sequence")
+
         self.background_fname = background_fname
         self.inference_sampling_rate = inference_sampling_rate
         self.batch_size = batch_size
