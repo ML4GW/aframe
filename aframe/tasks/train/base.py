@@ -71,8 +71,7 @@ class TrainBase(law.Task):
         )
         reqs["train_waveforms"] = TrainingWaveforms.req(
             self,
-            output_dir=self.data_dir,
-            tmp_dir=paths().tmp_dir / "train",
+            output_dir=self.data_dir / "training_waveforms",
             condor_directory=paths().condordir / "train_waveforms",
         )
 

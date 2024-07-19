@@ -112,6 +112,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
         self.verbose = verbose
 
+        self.train_fnames, self.valid_fnames = self.train_val_split()
+
     # ================================================ #
     # Distribution utilities
     # ================================================ #
@@ -181,28 +183,23 @@ class BaseAframeDataset(pl.LightningDataModule):
     @property
     def right_pad_size(self) -> int:
         """
-        Minimum numer of samples that the defining point of the
+        Minimum number of samples that the defining point of the
         signal will be from the left edge of the _whitened_ kernel
         """
         return int(self.hparams.right_pad * self.sample_rate)
 
     @property
-    def train_fnames(self) -> Sequence[str]:
-        fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
-        return sorted(fnames)[:-1]
-
-    @property
     def train_waveform_fnames(self) -> Sequence[str]:
-        fname = os.path.join(self.data_dir, "train_waveforms.hdf5")
-        return [fname]
+        data_dir = os.path.join(self.data_dir, "training_waveforms")
+        fnames = glob.glob(f"{data_dir}/waveforms*.hdf5")
+        return list(fnames)
 
     @property
     def signal_time(self):
         with h5py.File(self.train_waveform_fnames[0], "r") as f:
             return f.attrs["coalescence_time"]
 
-    @property
-    def valid_fnames(self) -> Sequence[str]:
+    def train_val_split(self) -> tuple[Sequence[str], Sequence[str]]:
         fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
         fnames = sorted([Path(fname) for fname in fnames])
         durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
@@ -212,7 +209,9 @@ class BaseAframeDataset(pl.LightningDataModule):
             fname, duration = fnames.pop(-1), durations.pop(-1)
             valid_duration += duration
             valid_fnames.append(str(fname))
-        return valid_fnames
+
+        train_fnames = list(set(fnames) - set(valid_fnames))
+        return train_fnames, valid_fnames
 
     @property
     def val_batch_size(self):

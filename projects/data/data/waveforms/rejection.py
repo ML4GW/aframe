@@ -3,11 +3,11 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from data.waveforms.injection import (
-    WaveformGenerator,
-    convert_to_detector_frame,
-)
-from ledger.injections import InjectionParameterSet
+from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
+from bilby.gw.source import lal_binary_black_hole
+from bilby.gw.waveform_generator import WaveformGenerator
+from data.waveforms.utils import convert_to_detector_frame
+from ledger.injections import InjectionParameterSet, _WaveformGenerator
 
 from ml4gw.gw import (
     compute_network_snr,
@@ -39,13 +39,20 @@ def rejection_sample(
 
     # instantiate a waveform generator whose
     # call method will generate raw polarizations
-    generator = WaveformGenerator(
-        waveform_duration,
-        sample_rate,
-        minimum_frequency=minimum_frequency,
-        reference_frequency=reference_frequency,
-        waveform_approximant=waveform_approximant,
-        coalescence_time=coalescence_time,
+    _generator = WaveformGenerator(
+        duration=waveform_duration,
+        sampling_frequency=sample_rate,
+        frequency_domain_source_model=lal_binary_black_hole,
+        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
+        waveform_arguments={
+            "waveform_approximant": waveform_approximant,
+            "reference_frequency": reference_frequency,
+            "minimum_frequency": minimum_frequency,
+        },
+    )
+
+    generator = _WaveformGenerator(
+        _generator, sample_rate, waveform_duration, coalescence_time
     )
 
     # create a dictionary to store accepted

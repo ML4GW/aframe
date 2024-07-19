@@ -1,11 +1,9 @@
 import os
-import shutil
-from pathlib import Path
 
 import law
 from luigi.util import inherits
 
-from aframe.parameters import PathParameter, load_prior
+from aframe.parameters import load_prior
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
@@ -13,7 +11,7 @@ from aframe.tasks.data.waveforms.base import DeployTask, WaveformParams
 
 
 @inherits(WaveformParams)
-class DeployTrainingWaveforms(
+class TrainingWaveforms(
     AframeDataTask, DeployTask, law.LocalWorkflow, StaticMemoryWorkflow
 ):
     """
@@ -23,14 +21,17 @@ class DeployTrainingWaveforms(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def output(self):
+        return s3_or_local(self.output_dir / f"waveforms-{self.branch}.hdf5")
+
     def run(self):
-        from data.waveforms.injection import convert_to_detector_frame
+        from data.waveforms.utils import convert_to_detector_frame
         from ledger.injections import (
             IntrinsicParameterSet,
             IntrinsicWaveformSet,
         )
 
-        os.makedirs(self.tmp_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
         num_signals = self.branch_data
         prior = load_prior(self.prior)
         prior, detector_frame_prior = prior()
@@ -56,12 +57,12 @@ class DeployTrainingWaveforms(
         waveforms.write(self.output().path, chunks=chunks)
 
 
+"""
 @inherits(DeployTrainingWaveforms)
 class TrainingWaveforms(AframeDataTask):
-    """
-    Launch condorized generation of validation waveforms via
-    rejection sampling, and merge results into a single file
-    """
+    # Launch condorized generation of validation waveforms via
+    # rejection sampling, and merge results into a single file
+
 
     output_dir = PathParameter(
         description="Directory where merged training waveforms will be saved"
@@ -106,3 +107,4 @@ class TrainingWaveforms(AframeDataTask):
 
         # clean up temporary directory
         shutil.rmtree(self.tmp_dir)
+"""
