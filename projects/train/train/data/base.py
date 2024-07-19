@@ -112,8 +112,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
         self.verbose = verbose
 
-        self.train_fnames, self.valid_fnames = self.train_val_split()
-
     # ================================================ #
     # Distribution utilities
     # ================================================ #
@@ -352,6 +350,7 @@ class BaseAframeDataset(pl.LightningDataModule):
     def setup(self, stage: str) -> None:
         world_size, rank = self.get_world_size_and_rank()
         self._logger = self.get_logger(world_size, rank)
+        self.train_fnames, self.valid_fnames = self.train_val_split()
 
         with h5py.File(self.train_fnames[0], "r") as f:
             sample_rate = 1 / f[self.hparams.ifos[0]].attrs["dx"]
