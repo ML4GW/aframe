@@ -110,11 +110,13 @@ class BatchWhitener(torch.nn.Module):
         fftlength: float,
         augmentor: Optional[Callable] = None,
         highpass: Optional[float] = None,
+        return_whitened: bool = False,
     ) -> None:
         super().__init__()
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
         self.augmentor = augmentor
+        self.return_whitened = return_whitened
 
         # do foreground length calculation in units of samples,
         # then convert back to length to guard for intification
@@ -147,14 +149,17 @@ class BatchWhitener(torch.nn.Module):
             )
 
         x, psd = self.psd_estimator(x)
-        x = self.whitener(x.double(), psd)
+        whitened = self.whitener(x.double(), psd)
 
         # unfold x and then put it into the expected shape.
         # Note that if x has both signal and background
         # batch elements, they will be interleaved along
         # the batch dimension after unfolding
-        x = unfold_windows(x, self.kernel_size, self.stride_size)
+        x = unfold_windows(whitened, self.kernel_size, self.stride_size)
         x = x.reshape(-1, num_channels, self.kernel_size)
         if self.augmentor is not None:
             x = self.augmentor(x)
+
+        if self.return_whitened:
+            return x, whitened
         return x

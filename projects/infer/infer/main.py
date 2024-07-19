@@ -43,7 +43,7 @@ def infer(
     for i, (x, x_inj) in enumerate(tqdm(sequence)):
         sequence_start = i == 0
         sequence_end = i == len(sequence) - 1
-        logging.info(
+        logging.debug(
             f"Submitting inference request {i} for sequence {sequence.id}"
         )
         client.infer(

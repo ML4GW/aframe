@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
@@ -60,7 +61,9 @@ class EventSet(Ledger):
         self,
         vetos: List[Tuple[float, float]],
         idx: int,
-        chunk_size: int = 100000,
+        chunk_size: int = 500000,
+        inplace: bool = False,
+        return_mask: bool = False,
     ):
         # idx corresponds to the index of the shift
         # (i.e., which ifo to apply vetoes for)
@@ -79,7 +82,14 @@ class EventSet(Ledger):
             )
             veto_mask[i : i + chunk_size] = mask.any(axis=0)
 
-        return self[~veto_mask]
+        if inplace:
+            result = self[~veto_mask]
+        else:
+            result = copy.deepcopy(self)[~veto_mask]
+
+        if return_mask:
+            return result, veto_mask
+        return result
 
 
 @dataclass

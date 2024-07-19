@@ -50,7 +50,7 @@ class SensitiveVolume(AframeSingularityTask):
     def run(self):
         from pathlib import Path
 
-        from plots.main import main
+        from plots.legacy.main import main
 
         foreground = self.input()["infer"]["foreground"]
         background = self.input()["infer"]["background"]

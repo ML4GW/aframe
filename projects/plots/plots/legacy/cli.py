@@ -1,5 +1,5 @@
 import jsonargparse
-from plots.main import main as calc_sensitive_volume
+from plots.legacy.main import main as calc_sensitive_volume
 
 
 def main(args=None):
