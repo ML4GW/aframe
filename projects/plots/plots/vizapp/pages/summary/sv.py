@@ -79,8 +79,7 @@ class SensitiveVolumePlot:
         return self.source_prior["redshift"]
 
     def calc_v0(self):
-        zprior = self.source_prior["redshift"]
-        zmin, zmax = zprior.minimum, zprior.maximum
+        zmin, zmax = self.zprior.minimum, self.zprior.maximum
         try:
             decprior = self.source_prior["dec"]
         except KeyError:
