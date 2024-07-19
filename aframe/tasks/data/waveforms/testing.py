@@ -149,15 +149,13 @@ class DeployTestingWaveforms(
         import io
 
         import h5py
-        from data.timeslide_waveforms.timeslide_waveforms import (
-            timeslide_waveforms,
-        )
+        from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)
         start, end, shift, psd_segment = self.branch_data
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
-            timeslide_waveforms(
+            testing_waveforms(
                 start,
                 end,
                 self.ifos,

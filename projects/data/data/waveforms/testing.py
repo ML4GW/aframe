@@ -2,14 +2,14 @@ import logging
 from pathlib import Path
 from typing import Callable, List, Optional
 
-import data.timeslide_waveforms.utils as utils
+import data.waveforms.utils as utils
 import numpy as np
 from data.waveforms.rejection import rejection_sample
 from jsonargparse import ArgumentParser
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 
 
-def timeslide_waveforms(
+def testing_waveforms(
     start: float,
     end: float,
     ifos: List[str],
@@ -30,7 +30,8 @@ def timeslide_waveforms(
     seed: Optional[int] = None,
 ):
     """
-    Generates the waveforms for a single segment.
+    Generates testing waveforms via rejection sampling
+    for a single segment.
 
     Args:
         start:
@@ -105,7 +106,7 @@ def timeslide_waveforms(
     if seed is not None:
         utils.seed_worker(start, end, shifts, seed)
 
-    # calculate the injecitn times, determining
+    # calculate the injection times, determining
     # the number of samples we'll need to generate
     injection_times = utils.calc_segment_injection_times(
         start,
@@ -163,9 +164,9 @@ def timeslide_waveforms(
 
 
 parser = ArgumentParser()
-parser.add_function_arguments(timeslide_waveforms)
+parser.add_function_arguments(testing_waveforms)
 
 
 def main(args):
     args = args.timeslide_waveforms.as_dict()
-    timeslide_waveforms(**args)
+    testing_waveforms(**args)
