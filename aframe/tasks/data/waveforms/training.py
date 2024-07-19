@@ -54,5 +54,5 @@ class TrainingWaveforms(
             self.coalescence_time,
         )
         chunks = (min(64, num_signals), waveforms.get_waveforms().shape[-1])
-        with self.output.open("w") as f:
+        with self.output().open("w") as f:
             waveforms.write(f, chunks=chunks)
