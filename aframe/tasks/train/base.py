@@ -84,7 +84,9 @@ class TrainBase(law.Task):
         return reqs
 
     def configure_wandb(self, args: List[str]) -> None:
-        args.append("--trainer.logger=WandbLogger")
+        # note that we append the wandb logger
+        # so that we always use csv file to store metrics
+        args.append("--trainer.logger+=WandbLogger")
         args.append("--trainer.logger.job_type=train")
 
         for key in ["name", "entity", "project", "group", "tags"]:
