@@ -76,8 +76,9 @@ data:
     valid_livetime: 57600 
 trainer:
   # by default, use a local CSV logger.
-  # Options in train task for using a
-  # wandb logger instead
+  # note that you can use multiple loggers!
+  # Options in train task for appending 
+  # a wandb logger for remote logging.
   logger:
     - class_path: lightning.pytorch.loggers.CSVLogger
       init_args:
