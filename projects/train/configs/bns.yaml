@@ -86,6 +86,7 @@ trainer:
       init_args:
         # save_dir:
         flush_logs_every_n_steps: 10
+        name: "train_logs"
   # uncomment below if you want to profile
   # profiler:
     # class_path: lightning.pytorch.profilers.PyTorchProfiler

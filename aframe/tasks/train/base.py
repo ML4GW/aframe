@@ -88,6 +88,7 @@ class TrainBase(law.Task):
         # so that we always use csv file to store metrics
         args.append("--trainer.logger+=WandbLogger")
         args.append("--trainer.logger.job_type=train")
+        args.append(f"--trainer.logger.save_dir={self.run_dir}")
 
         for key in ["name", "entity", "project", "group", "tags"]:
             value = getattr(wandb(), key)
@@ -132,11 +133,11 @@ class TrainBase(law.Task):
                 "Can't run W&B experiment without specifying an API key. "
                 "Try setting the WANDB_API_KEY environment variable."
             )
-        # wandb logger uses save_dir, csv logger uses log_dir :(
-        elif self.use_wandb:
-            args = self.configure_wandb(args)
 
+        # first, set the save_dir of the CSV logger
         args.append(f"--trainer.logger.save_dir={self.run_dir}")
+        if self.use_wandb:
+            args = self.configure_wandb(args)
 
         return args
 
