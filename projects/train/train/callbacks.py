@@ -21,10 +21,10 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         )
 
         device = pl_module.device
-        batch = next(iter(trainer.train_dataloader)).to(device)
-        sample_input, _ = trainer.datamodule.augment(batch[0])
-
-        trace = torch.jit.trace(module.model.to("cpu"), sample_input.to("cpu"))
+        [X], waveforms = next(iter(trainer.train_dataloader))
+        X = X.to(device)
+        X, y = trainer.datamodule.augment(X, waveforms)
+        trace = torch.jit.trace(module.model.to("cpu"), X.to("cpu"))
 
         save_dir = trainer.logger.log_dir or trainer.logger.save_dir
         if save_dir.startswith("s3://"):

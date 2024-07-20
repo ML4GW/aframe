@@ -156,10 +156,10 @@ class RemoteParameters(law.Task):
         description="Number of GPUs to request for training",
     )
     cpus_per_gpu = luigi.IntParameter(
-        default=8, description="Number of CPUs to request per GPU"
+        default=12, description="Number of CPUs to request per GPU"
     )
     memory_per_cpu = luigi.FloatParameter(
-        default=1.5, description="Amount of memory to request per CPU in GB"
+        default=4, description="Amount of memory to request per CPU in GB"
     )
 
     @property

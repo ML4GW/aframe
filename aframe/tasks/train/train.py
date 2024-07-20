@@ -258,7 +258,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         spec["volumes"] = [
             {
                 "name": "dshm",
-                "emptyDir": {"sizeLimit": "32Gi", "medium": "Memory"},
+                "emptyDir": {"sizeLimit": "128Gi", "medium": "Memory"},
             },
         ]
         if self.use_init_container:
