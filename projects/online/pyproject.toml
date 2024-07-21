@@ -17,6 +17,13 @@ architectures = {path = "../../libs/architectures", develop = true}
 "amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu118"
+secondary = true
+default = false
+
 [tool.poetry.scripts]
 online = "online.cli:cli" 
 

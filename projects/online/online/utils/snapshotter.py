@@ -11,12 +11,14 @@ class OnlineSnapshotter(BackgroundSnapshotter):
     if there is enough data to calculate a PSD
     """
 
-    def __init__(self, *args, update_size: int, **kwargs):
+    def __init__(self, *args, num_channels: int, update_size: int, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_size = update_size
+        self.num_channels = num_channels
         self.contiguous_update_size = 0
         self.register_buffer(
-            "initial_state", torch.zeros((1, self.state_size))
+            "initial_state",
+            torch.zeros((1, self.num_channels, self.state_size)),
         )
 
     @property
@@ -32,5 +34,5 @@ class OnlineSnapshotter(BackgroundSnapshotter):
     def forward(self, update, state):
         X, state = super().forward(update, state)
         if not self.full_psd_present:
-            self.contiguous_update_size += self.update.shape[-1]
+            self.contiguous_update_size += update.shape[-1]
         return X, state

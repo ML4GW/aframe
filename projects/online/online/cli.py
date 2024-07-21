@@ -9,8 +9,29 @@ from utils.logging import configure_logging
 def build_parser():
     # use omegaconf to suppor env var interpolation
     parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
-    parser.add_argument("--verbose", type=str, default=False)
+    parser.add_argument("--verbose", type=bool, default=False)
     parser.add_function_arguments(main)
+    parser.add_argument("--config", action="config")
+
+    parser.link_arguments(
+        "inference_params",
+        "amplfi_architecture.init_args.num_params",
+        compute_fn=lambda x: len(x),
+        apply_on="parse",
+    )
+
+    parser.link_arguments(
+        "amplfi_architecture.init_args.context_dim",
+        "amplfi_architecture.init_args.embedding_net.init_args.context_dim",  # noqa
+        apply_on="parse",
+    )
+
+    parser.link_arguments(
+        "ifos",
+        "amplfi_architecture.init_args.embedding_net.init_args.num_ifos",
+        compute_fn=lambda x: len(x),
+        apply_on="parse",
+    )
     return parser
 
 
@@ -24,6 +45,10 @@ def cli(args=None):
     configure_logging(
         args.outdir / "log" / f"deploy_{log_suffix}.log", args.verbose
     )
+    args.pop("config")
+    args.pop("verbose")
+    args = parser.instantiate_classes(args)
+
     main(**vars(args))
 
 

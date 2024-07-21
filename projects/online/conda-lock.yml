@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 89aef8f8f35f76526340a158f0390dae72861d47e222b3f45bec83359e90896c
+    linux-64: 0ef20b9396a83bdac654f96d3df26c214415fab5384ae20b27ba266de21240ff
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -282,6 +282,23 @@ package:
   hash:
     md5: ac992767d7f8ed2cb27e71e78f0fb2d7
     sha256: 1536a2ca65caaf568bbdfe75aff8e12cb0e0507587b25af3b532a8bd22cb3ddb
+  category: main
+  optional: false
+- name: cfitsio
+  version: 4.4.1
+  manager: conda
+  platform: linux-64
+  dependencies:
+    bzip2: '>=1.0.8,<2.0a0'
+    libcurl: '>=8.8.0,<9.0a0'
+    libgcc-ng: '>=12'
+    libgfortran-ng: ''
+    libgfortran5: '>=12.3.0'
+    libzlib: '>=1.3.1,<2.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-64/cfitsio-4.4.1-hf8ad068_0.conda
+  hash:
+    md5: 1b7a01fd02d11efe0eb5a676842a7b7d
+    sha256: 74ed4d8b327fa775d9c87e476a7221b74fb913aadcef207622596a99683c8faf
   category: main
   optional: false
 - name: charset-normalizer
@@ -728,6 +745,30 @@ package:
   hash:
     md5: 7e1729554e209627636a0f6fabcdd115
     sha256: 2278fa07da6f96e807d402cd55480624d67d2dee202191aaaf278ce5ab23605a
+  category: main
+  optional: false
+- name: healpy
+  version: 1.17.3
+  manager: conda
+  platform: linux-64
+  dependencies:
+    __glibc: '>=2.17,<3.0.a0'
+    astropy: ''
+    cfitsio: '>=4.4.1,<4.4.2.0a0'
+    libgcc-ng: '>=12'
+    libgfortran-ng: ''
+    libgfortran5: '>=12.3.0'
+    libstdcxx-ng: '>=12'
+    libzlib: '>=1.3.1,<2.0a0'
+    matplotlib-base: ''
+    numpy: '>=1.19,<3'
+    python: '>=3.9,<3.10.0a0'
+    python_abi: 3.9.*
+    scipy: <1.14.0
+  url: https://conda.anaconda.org/conda-forge/linux-64/healpy-1.17.3-py39hb7739ce_0.conda
+  hash:
+    md5: d19799a752bb0ae0b4db6439c02ce89b
+    sha256: 16c648f8d92fb894773702ddb097752b4615a45203daa49dab73c27359cfe07d
   category: main
   optional: false
 - name: hpack

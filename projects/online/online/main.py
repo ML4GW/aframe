@@ -14,7 +14,7 @@ from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 
-from amplfi.architectures.flow.base import FlowArchitecture
+from amplfi.architectures.flows.base import FlowArchitecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
 
@@ -25,10 +25,11 @@ UPDATE_SIZE = 1
 def load_model(model: Architecture, weights: Path):
     checkpoint = torch.load(weights, map_location="cpu")
     arch_weights = {
-        k: v for k, v in checkpoint.items() if k.startswith("model.")
+        k[6:]: v
+        for k, v in checkpoint["state_dict"].items()
+        if k.startswith("model.")
     }
     model.load_state_dict(arch_weights)
-    model.to("cuda")
     model.eval()
     return model, checkpoint
 
@@ -36,11 +37,12 @@ def load_model(model: Architecture, weights: Path):
 def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
     model, checkpoint = load_model(model, weights)
     scaler_weights = {
-        k[len("scaler") :]: v
-        for k, v in checkpoint.items()
+        k[len("scaler.") :]: v
+        for k, v in checkpoint["state_dict"].items()
         if k.startswith("scaler.")
     }
-    scaler = ChannelWiseScaler(num_params).load_state_dict(scaler_weights)
+    scaler = ChannelWiseScaler(num_params)
+    scaler.load_state_dict(scaler_weights)
     return model, scaler
 
 
@@ -97,6 +99,7 @@ def process_event(
     pass
 
 
+@torch.no_grad()
 def search(
     gdb: GraceDb,
     pe_whitener: Whiten,
@@ -112,6 +115,7 @@ def search(
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
     outdir: Path,
+    device: str,
 ):
     integrated = None
 
@@ -122,8 +126,7 @@ def search(
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        X = X.to("cuda")
-
+        X = X.to(device)
         # if this frame was not analysis ready
         if not ready:
             if searcher.detecting:
@@ -183,21 +186,22 @@ def search(
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
-        batch, state = snapshotter(X, state)
+        batch, state = snapshotter(X[None], state)
 
         # whiten the batch, and analyze with aframe
         whitened = whitener(batch)
         y = aframe(whitened)[:, 0]
 
         # update our input buffer with latest strain data,
-        input_buffer.update(X)
+        input_buffer.update(X.cpu(), t0)
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
-        integrated = output_buffer.update(y, t0)
+        integrated = output_buffer.update(y.cpu(), t0)
 
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
+        event = None
         if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
 
@@ -219,9 +223,8 @@ def search(
 
 
 def main(
-    aframe_architecture: Architecture,
     aframe_weights: Path,
-    amplfi_architecture: Architecture,
+    amplfi_architecture: FlowArchitecture,
     amplfi_weights: Path,
     background_file: Path,
     outdir: Path,
@@ -234,6 +237,8 @@ def main(
     inference_sampling_rate: float,
     psd_length: float,
     trigger_distance: float,
+    pe_window: float,
+    event_position: float,
     fduration: float,
     integration_window_length: float,
     fftlength: Optional[float] = None,
@@ -242,10 +247,11 @@ def main(
     far_threshold: float = 1,
     server: str = "test",
     ifo_suffix: str = None,
-    input_buffer_length=75,
-    output_buffer_length=8,
+    input_buffer_length: int = 75,
+    output_buffer_length: int = 8,
+    device: str = "cpu",
 ):
-    gdb = gracedb_factory(server)
+    gdb = gracedb_factory(server, outdir)
     num_ifos = len(ifos)
 
     # initialize a buffer for storing recent strain data,
@@ -255,22 +261,28 @@ def main(
         sample_rate=sample_rate,
         buffer_length=input_buffer_length,
         fduration=fduration,
+        pe_window=pe_window,
+        event_position=event_position,
+        device="cpu",
     )
+
     output_buffer = OutputBuffer(
         inference_sampling_rate=inference_sampling_rate,
         integration_window_length=integration_window_length,
         buffer_length=output_buffer_length,
+        device="cpu",
     )
 
     # Load in Aframe and amplfi models
-    logging.info(
-        f"Loading Aframe from weights at path {aframe_weights}\n"
-        f"Loading AMPLFI from weights at path {amplfi_weights}"
-    )
-    aframe, _ = load_model(aframe_architecture, aframe_weights)
+    logging.info(f"Loading Aframe from weights at path {aframe_weights}")
+    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
+    aframe = torch.jit.load(aframe_weights)
+    aframe = aframe.to(device)
     amplfi, scaler = load_amplfi(
         amplfi_architecture, amplfi_weights, len(inference_params)
     )
+    amplfi = amplfi.to(device)
+    scaler = scaler.to(device)
 
     fftlength = fftlength or kernel_length + fduration
 
@@ -282,25 +294,27 @@ def main(
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
-    )
+    ).to(device)
 
     snapshotter = OnlineSnapshotter(
+        update_size=UPDATE_SIZE,
+        num_channels=len(ifos),
         psd_length=psd_length,
         kernel_length=kernel_length,
         fduration=fduration,
         sample_rate=sample_rate,
         inference_sampling_rate=inference_sampling_rate,
-    )
+    ).to(device)
 
     # Amplfi setup. Hard code most of it for now
     spectral_density = SpectralDensity(
         sample_rate=sample_rate,
         fftlength=fftlength,
         average="median",
-    ).to("cuda")
+    ).to(device)
     pe_whitener = Whiten(
         fduration=fduration, sample_rate=sample_rate, highpass=highpass
-    ).to("cuda")
+    ).to(device)
 
     background = EventSet.read(background_file)
 
@@ -340,6 +354,7 @@ def main(
         data_it,
         outdir,
         time_offset,
+        device,
     )
 
 

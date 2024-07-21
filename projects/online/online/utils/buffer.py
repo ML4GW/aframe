@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 
-class InputBuffer:
+class InputBuffer(torch.nn.Module):
     """
     A buffer for storing raw strain data f
     or use in parameter estimation (amplfi) followup
@@ -31,7 +31,10 @@ class InputBuffer:
         fduration: float,
         pe_window: float,
         event_position: float,
+        device: str,
     ):
+        super().__init__()
+        self.device = device
         self.fduration = fduration
         self.num_channels = num_channels
         self.sample_rate = sample_rate
@@ -39,6 +42,10 @@ class InputBuffer:
         self.buffer_size = int(buffer_length * sample_rate)
         self.pe_window = pe_window
         self.event_position = event_position
+
+        self.input_buffer = torch.zeros(
+            (self.num_channels, self.buffer_size), device=device
+        )
         self.reset()
 
     def write(self, write_path, event_time):
@@ -54,7 +61,7 @@ class InputBuffer:
     def reset(self):
         self.t0 = None
         self.input_buffer = torch.zeros(
-            (self.num_channels, self.buffer_size), device="cuda"
+            (self.num_channels, self.buffer_size), device=self.device
         )
 
     def update(self, update, t0):
@@ -78,7 +85,7 @@ class InputBuffer:
         return psd, window
 
 
-class OutputBuffer:
+class OutputBuffer(torch.nn.Module):
     """
     A buffer for storing raw and integrated neural network output
 
@@ -93,22 +100,30 @@ class OutputBuffer:
         inference_sampling_rate: float,
         integration_window_length: float,
         buffer_length: float,
+        device: str,
     ):
+        super().__init__()
+        self.device = device
         self.inference_sampling_rate = inference_sampling_rate
         self.integrator_size = int(
             integration_window_length * inference_sampling_rate
         )
-        self.window = torch.ones((1, 1, self.integrator_size), device="cuda")
+        self.window = torch.ones((1, 1, self.integrator_size), device=device)
         self.window /= self.integrator_size
         self.buffer_length = buffer_length
         self.buffer_size = int(buffer_length * inference_sampling_rate)
-        self.reset_state()
+
+        self.output_buffer = torch.zeros((self.buffer_size,), device=device)
+
+        self.reset()
 
     def reset(self):
         self.t0 = None
-        self.output_buffer = torch.zeros((self.buffer_size,), device="cuda")
+        self.output_buffer = torch.zeros(
+            (self.buffer_size,), device=self.device
+        )
         self.integrated_buffer = torch.zeros(
-            (self.buffer_size,), device="cuda"
+            (self.buffer_size,), device=self.device, requires_grad=False
         )
 
     def write(self, write_path, event_time):
@@ -119,7 +134,10 @@ class OutputBuffer:
             f.attrs.create("event_time", data=event_time)
             f.create_dataset("time", data=time)
             f.create_dataset("output", data=self.output_buffer.cpu())
-            f.create_dataset("integrated", data=self.integrated_buffer.cpu())
+            f.create_dataset(
+                "integrated",
+                data=self.integrated_buffer.detach().cpu().numpy(),
+            )
 
     def integrate(self, x: torch.Tensor):
         x = x.view(1, 1, -1)
@@ -129,8 +147,8 @@ class OutputBuffer:
     def update(self, update: torch.Tensor, t0: float):
         # first append update to the output buffer
         # and remove buffer_size samples from front
-        output_buffer = torch.cat([self.output_buffer, update])
-        self.output_buffer = output_buffer[-self.buffer_size :]
+        self.output_buffer = torch.cat([self.output_buffer, update])
+        self.output_buffer = self.output_buffer[-self.buffer_size :]
 
         # t0 corresponds to the time of the first sample in the update
         # self.t0 corresponds to the earliest time in the buffer
@@ -144,7 +162,7 @@ class OutputBuffer:
             [self.integrated_buffer, integrated]
         )
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
-        return integrated.cpu().numpy()
+        return integrated.detach().cpu().numpy()
 
 
 class Integrator:

@@ -91,9 +91,9 @@ class LocalGraceDb(GraceDb):
         return filename
 
 
-def gracedb_factory(server: GdbServer) -> GraceDb:
+def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:
     if server == "local":
-        return LocalGraceDb()
+        return LocalGraceDb(write_dir=write_dir)
 
     if server in ["playground", "test"]:
         server = f"https://gracedb-{server}.ligo.org/api/"
@@ -101,4 +101,4 @@ def gracedb_factory(server: GdbServer) -> GraceDb:
         server = "https://gracedb.ligo.org/api/"
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
-    return GraceDb(service_url=server)
+    return GraceDb(service_url=server, write_dir=write_dir)
