@@ -4,7 +4,7 @@ Stage: build
 
 %files
 . /opt/aframe/projects/online/
-../utils /opt/aframe/projects/utils
+../../libs/utils /opt/aframe/libs/utils
 ../../libs/architectures /opt/aframe/libs/architectures
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../ml4gw /opt/aframe/ml4gw
