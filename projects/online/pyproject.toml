@@ -14,6 +14,8 @@ utils = {path = "../utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
 
+"amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
