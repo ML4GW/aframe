@@ -6,7 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional
 
-import jsonargparse
+from jsonargparse import ArgumentParser
 
 root = Path(__file__).resolve().parent.parent
 TUNE_CONFIGS = [
@@ -23,8 +23,7 @@ SANDBOX_CONFIGS = [
 ]
 
 ONLINE_CONFIGS = [
-    root / "aframe" / "projecgts" / "online" / "monitor.sh",
-    root / "aframe" / "projects" / "online" / "config.yaml",
+    root / "projects" / "online" / "config.yaml",
 ]
 
 
@@ -112,7 +111,7 @@ def create_online_runfile(path: Path):
     crash_count=0
     until {cmd}; do
         ((crash_count++))
-        echo "Online deployment crashed on $(date) with error code $?, \
+        echo "Online deployment crashed on $(date) with error code $?,
         crash count = $crash_count" >> $log_dir/monitoring.log
         sleep 1
     done
@@ -154,16 +153,8 @@ def create_offline_runfile(
 
 
 def main():
-    parser = jsonargparse.ArgumentParser(
-        description="Initialize a directory with configuration files "
-        "for running aframe offline and online pipelines."
-    )
-
-    # subparsers for each of the different pipeline types
-    subparsers = parser.add_subparsers(dest="pipeline", required=True)
-
     # offline subcommand (sandbox or tune)
-    offline_parser = subparsers.add_parser("offline")
+    offline_parser = ArgumentParser()
     offline_parser.add_argument(
         "--mode",
         choices=["sandbox", "tune"],
@@ -174,13 +165,24 @@ def main():
     offline_parser.add_argument("--s3-bucket")
 
     # online subcommand
-    online_parser = subparsers.add_parser("online")
+    online_parser = ArgumentParser()
     online_parser.add_argument("-d", "--directory", type=Path, required=True)
 
+    # main parser
+    parser = ArgumentParser(
+        description="Initialize a directory with configuration files "
+        "for running aframe offline and online pipelines."
+    )
+    subcommands = parser.add_subcommands()
+    subcommands.add_subcommand("online", online_parser)
+    subcommands.add_subcommand("offline", offline_parser)
+
     args = parser.parse_args()
+    subcommand = args.subcommand
+    args = getattr(args, args.subcommand)
     directory = args.directory.resolve()
 
-    if args.pipeline == "offline":
+    if subcommand == "offline":
         if args.s3_bucket is not None and not args.s3_bucket.startswith(
             "s3://"
         ):
@@ -191,7 +193,7 @@ def main():
         copy_configs(directory, configs, args.mode)
         create_offline_runfile(directory, args.mode, args.s3_bucket)
 
-    elif args.pipeline == "online":
+    elif subcommand == "online":
         copy_configs(directory, ONLINE_CONFIGS, "online")
         create_online_runfile(directory)
 
