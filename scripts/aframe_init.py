@@ -87,22 +87,28 @@ def write_content(content: str, path: Path):
 
 
 def create_online_runfile(path: Path):
-    cmd = "until apptainer run --nv --env "
-    cmd += "'CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES' "
-    cmd += "$AFRAME_CONTAINER_ROOT/online.sif poetry run python online/cli.py "
-    cmd += "--config $config 2>> $log_dir/monitoring.log;"
+    cmd = "apptainer run --nv --env "
+    cmd += "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
+    cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
+    cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
+    cmd += "--env AFRAME_WEIGHTS=$AFRAME_WEIGHTS "
+    cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
+    cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
+    cmd += "--config $config 2>> $log_dir/monitoring.log"
 
     content = f"""
     #!/bin/bash
     # trained model weights
     export AMPLFI_WEIGHTS=
     export AFRAME_WEIGHTS=
+
     # location where low latency data
     # is streamed, typically /dev/shm/kakfka
     export ONLINE_DATADIR=/dev/shm/kafka/
-    # where results will be writen
 
+    # where results will be writen
     export AFRAME_ONLINE_OUTDIR={path}
+
     config={path}/config.yaml
     log_dir={path}/logs
     mkdir -p $log_dir
