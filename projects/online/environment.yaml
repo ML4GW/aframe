@@ -13,6 +13,7 @@ dependencies:
   - scipy
   - h5py
   # general GW/auth deps
+  - healpy
   - gwpy=3.0.8
   - libgcc
   - ligo-gracedb
