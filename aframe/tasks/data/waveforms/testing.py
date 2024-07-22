@@ -38,8 +38,8 @@ class TestingWaveformsParams(WaveformParams):
         description="Spacing between injections in seconds"
     )
     buffer = luigi.FloatParameter(
-        description="Buffer time to add to the start "
-        "and end of the test data segments"
+        description="Buffer time between the first (last)"
+        "waveform and start (end) the test data segment"
     )
     highpass = luigi.FloatParameter(
         description="Frequency of highpass filter in Hz"
