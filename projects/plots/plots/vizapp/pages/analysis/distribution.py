@@ -23,6 +23,7 @@ FORE_ATTRS = [
     "detection_statistic",
     "shift",
     "injection_time",
+    "chirp_mass",
 ]
 BACK_ATTRS = ["detection_statistic", "detection_time"]
 
@@ -47,6 +48,7 @@ class DistributionPlot:
                 detection_time=[],
                 detection_statistic=[],
                 shifts=[],
+                size=[],
             )
         )
 
