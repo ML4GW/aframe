@@ -56,7 +56,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     use_init_container = luigi.BoolParameter(
         default=False,
         description="Whether to use the git-sync init-container to sync "
-        "a remote aframe git repository into the pod Defaults to False, "
+        "a remote aframe git repository into the pod. Defaults to False, "
         "in which case the code added to the container image at build "
         "time will be used",
     )
