@@ -12,6 +12,21 @@ F = TypeVar("F", np.ndarray, float)
 
 @dataclass
 class EventSet(Ledger):
+    """
+    A set of detected events
+
+    Args:
+        detection_statistic:
+            The detection statistic for each event
+        detection_time:
+            The time of each event
+        shift:
+            List of time shifts corresponding
+            to timeslide in which event was found
+        Tb:
+            The total livetime analyzed in detecting these events
+    """
+
     detection_statistic: np.ndarray = parameter()
     detection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()
@@ -19,17 +34,23 @@ class EventSet(Ledger):
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
+        # accumulate background time when merging or appending
         if key == "Tb":
             return ours + theirs
         return Ledger.compare_metadata(key, ours, theirs)
 
-    def get_shift(self, shift):
+    def get_shift(self, shift: np.ndarray) -> "EventSet":
+        # downselect to all events from a given shift
         mask = self.shift == shift
         if self.shift.ndim == 2:
             mask = mask.all(axis=-1)
         return self[mask]
 
     def nb(self, threshold: F) -> F:
+        """
+        The number of events with a detection statistic
+        greater than or equal to `threshold`
+        """
         try:
             len(threshold)
         except TypeError:
@@ -39,6 +60,9 @@ class EventSet(Ledger):
             return (stats >= threshold).sum(0)
 
     def far(self, threshold: F) -> F:
+        """
+        The false alarm rate for a given threshold
+        """
         nb = self.nb(threshold)
         return SECONDS_IN_YEAR * nb / self.Tb
 

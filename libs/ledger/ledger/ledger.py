@@ -91,7 +91,7 @@ class Ledger:
     def _get_group(self, f: h5py.File, name: str):
         return f.get(name) or f.create_group(name)
 
-    def write(self, fname: PATH) -> None:
+    def write(self, fname: PATH, chunks=None) -> None:
         """
         TODO: implement this with an append mode
         """
@@ -99,6 +99,7 @@ class Ledger:
             f.attrs["length"] = len(self)
             for key, attr in self.__dataclass_fields__.items():
                 value = getattr(self, key)
+
                 try:
                     kind = attr.metadata["kind"]
                 except KeyError:
@@ -108,10 +109,10 @@ class Ledger:
 
                 if kind == "parameter":
                     params = self._get_group(f, "parameters")
-                    params[key] = value
+                    params.create_dataset(key, data=value)
                 elif kind == "waveform":
                     waveforms = self._get_group(f, "waveforms")
-                    waveforms[key] = value
+                    waveforms.create_dataset(key, data=value, chunks=chunks)
                 elif kind == "metadata":
                     if value is not None:
                         f.attrs[key] = value
@@ -249,6 +250,7 @@ class Ledger:
         fname: Path,
         dtype: np.dtype = np.float64,
         clean: bool = True,
+        chunks: Optional[tuple] = None,
     ) -> None:
         """
         Aggregate the data from the files of many smaller
@@ -292,6 +294,12 @@ class Ledger:
                         value = cls.compare_metadata(key, ours, theirs)
                         target.attrs[key] = value
                     else:
+                        # only chunk waveforms, not parameters
+                        _chunks = (
+                            chunks
+                            if attr.metadata["kind"] == "waveform"
+                            else None
+                        )
                         # get either the parameters or waveforms dataset,
                         # or create it if it doesn't already exist
                         group_name = attr.metadata["kind"] + "s"
@@ -308,7 +316,7 @@ class Ledger:
                             if theirs.ndim > 1:
                                 shape += theirs.shape[1:]
                             dataset = group.create_dataset(
-                                key, shape=shape, dtype=dtype
+                                key, shape=shape, dtype=dtype, chunks=_chunks
                             )
                         else:
                             # otherwise grab the target dataset

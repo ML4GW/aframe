@@ -16,3 +16,4 @@ class paths(luigi.Config):
     results_dir = PathParameter(default=os.getenv("AFRAME_RESULTS_DIR"))
     test_datadir = PathParameter(default=os.getenv("AFRAME_TEST_DATA_DIR"))
     condordir = PathParameter(default=os.getenv("AFRAME_CONDOR_DIR"))
+    tmp_dir = PathParameter(default=os.getenv("AFRAME_TMPDIR"))

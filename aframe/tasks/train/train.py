@@ -1,6 +1,8 @@
+import base64
 import json
 import shlex
 import sys
+from pathlib import Path
 from typing import Dict
 
 import law
@@ -13,12 +15,7 @@ from luigi.util import inherits
 from aframe.base import AframeSingularityTask, AframeWrapperTask, logger
 from aframe.config import s3, wandb
 from aframe.targets import Bytes, LawS3Target
-from aframe.tasks.train.base import (
-    RemoteParameters,
-    RemoteTrainBase,
-    TrainBase,
-    TrainBaseParameters,
-)
+from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.utils import stream_command
 
 
@@ -56,6 +53,23 @@ class TrainLocal(TrainBase, AframeSingularityTask):
 
 class TrainRemote(KubernetesJobTask, RemoteTrainBase):
     dev = luigi.BoolParameter(default=False)
+    use_init_container = luigi.BoolParameter(
+        default=False,
+        description="Whether to use the git-sync init-container to sync "
+        "a remote aframe git repository into the pod. Defaults to False, "
+        "in which case the code added to the container image at build "
+        "time will be used",
+    )
+    git_url = luigi.Parameter(
+        default="git@github.com:ML4GW/aframev2.git",
+        description="The git repository to clone into the pod"
+        "Only relevant if `use_init_container` is True",
+    )
+    git_ref = luigi.Parameter(
+        default="main",
+        description="The git branch or commit to checkout"
+        "Only relevant if `use_init_container` is True",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,6 +99,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return 7200
 
     def get_config(self):
+        # read in training config into a json string
+        # to pass to the remote training job via
+        # the jsonargparse command line
         with open(self.config, "r") as f:
             doc = yaml.safe_load(f)
             json_string = json.dumps(doc)
@@ -130,7 +147,9 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return 1
 
     @property
-    def secret(self):
+    def s3_secret(self):
+        # kubernetes config for creating
+        # secret containing credentials for s3 access
         spec = {
             "apiVersion": "v1",
             "kind": "Secret",
@@ -140,6 +159,59 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
         return Secret(resource=spec)
 
+    def git_secret(self):
+        # kubernetes config for creating
+        # secret containing users ssh
+        # key for git access if using git-sync init containers
+        spec = {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {"name": "git-creds", "type": "Opaque"},
+        }
+        ssh_key = Path.home() / ".ssh" / "id_rsa"
+        with open(ssh_key, "r") as f:
+            key = f.read()
+
+        ssh_key = base64.b64encode(key.encode("ascii")).decode("ascii")
+
+        spec["data"] = {"ssh": ssh_key}
+
+        return Secret(resource=spec)
+
+    @property
+    def init_containers(self):
+        # kubernetes config for creating
+        # init container to sync a remote git
+        # repository into the pod at run time
+        config = [
+            {
+                "name": "git-sync",
+                "image": "registry.k8s.io/git-sync/git-sync:v4.2.1",
+                "env": [
+                    {"name": "GITSYNC_REPO", "value": self.git_url},
+                    {"name": "GITSYNC_REF", "value": self.git_ref},
+                    {"name": "GITSYNC_ROOT", "value": "/opt"},
+                    {"name": "GITSYNC_LINK", "value": "aframe"},
+                    {"name": "GITSYNC_ONE_TIME", "value": "true"},
+                    {"name": "GITSYNC_SSH_KNOWN_HOSTS", "value": "false"},
+                    {"name": "GITSYNC_SUBMODULES", "value": "recursive"},
+                    {"name": "GITSYNC_ADD_USER", "value": "true"},
+                    {"name": "GITSYNC_SYNC_TIMEOUT", "value": "360s"},
+                ],
+                "volumeMounts": [
+                    {"name": self.name, "mountPath": "/opt"},
+                    {
+                        "name": f"{self.name}-git-secret",
+                        "mountPath": "/etc/git-secret",
+                        "readOnly": True,
+                    },
+                ],
+                "securityContext": {"runAsUser": 65533},
+            }
+        ]
+
+        return config
+
     @property
     def spec_schema(self):
         spec = self.gpu_constraints
@@ -147,7 +219,10 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             {
                 "name": "train",
                 "image": self.remote_image,
-                "volumeMounts": [{"mountPath": "/dev/shm", "name": "dshm"}],
+                "volumeMounts": [
+                    {"mountPath": "/dev/shm", "name": "dshm"},
+                    {"mountPath": "/opt", "name": self.name},
+                ],
                 "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
                 "args": self.get_args(),
@@ -177,29 +252,47 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             }
         ]
 
+        if self.use_init_container:
+            spec["initContainers"] = self.init_containers
+
         spec["volumes"] = [
             {
                 "name": "dshm",
-                "emptyDir": {"sizeLimit": "32Gi", "medium": "Memory"},
-            }
+                "emptyDir": {"sizeLimit": "128Gi", "medium": "Memory"},
+            },
         ]
+        if self.use_init_container:
+            spec["volumes"] += [
+                {"name": self.name, "emptyDir": {}},
+                {
+                    "name": f"{self.name}-git-secret",
+                    "secret": {"secretName": "git-creds"},
+                },
+            ]
         return spec
 
     def run(self):
-        if not self.secret.exists():
-            self.secret.create()
+        if not self.s3_secret.exists():
+            self.s3_secret.create()
+
+        if self.use_init_container and not self.git_secret().exists():
+            self.git_secret().create()
         super().run()
 
     def on_failure(self, exc):
-        self.secret.delete()
+        self.s3_secret.delete()
+        if self.use_init_container:
+            self.git_secret().delete()
         super().on_failure(exc)
 
     def on_success(self):
-        self.secret.delete()
+        self.s3_secret.delete()
+        if self.use_init_container:
+            self.git_secret().delete()
         super().on_success()
 
 
-@inherits(TrainBaseParameters, RemoteParameters)
+@inherits(TrainLocal, TrainRemote)
 class Train(AframeWrapperTask):
     """
     Class that dynamically chooses between

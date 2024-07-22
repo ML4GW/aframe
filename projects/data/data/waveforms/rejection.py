@@ -3,17 +3,13 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from data.waveforms.injection import (
-    WaveformGenerator,
-    convert_to_detector_frame,
-)
-from ledger.injections import InjectionParameterSet
+from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
+from bilby.gw.source import lal_binary_black_hole
+from bilby.gw.waveform_generator import WaveformGenerator
+from data.waveforms.utils import convert_to_detector_frame
+from ledger.injections import InjectionParameterSet, _WaveformGenerator
 
-from ml4gw.gw import (
-    compute_network_snr,
-    compute_observed_strain,
-    get_ifo_geometry,
-)
+from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 ResponseSetFields = Dict[str, Union[np.ndarray, float]]
 
@@ -31,7 +27,6 @@ def rejection_sample(
     highpass: float,
     snr_threshold: float,
     psds: torch.Tensor,
-    return_raw: bool = False,
 ) -> Tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
@@ -39,19 +34,29 @@ def rejection_sample(
 
     # instantiate a waveform generator whose
     # call method will generate raw polarizations
-    generator = WaveformGenerator(
-        waveform_duration,
-        sample_rate,
-        minimum_frequency=minimum_frequency,
-        reference_frequency=reference_frequency,
-        waveform_approximant=waveform_approximant,
-        coalescence_time=coalescence_time,
+    _generator = WaveformGenerator(
+        duration=waveform_duration,
+        sampling_frequency=sample_rate,
+        frequency_domain_source_model=lal_binary_black_hole,
+        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
+        waveform_arguments={
+            "waveform_approximant": waveform_approximant,
+            "reference_frequency": reference_frequency,
+            "minimum_frequency": minimum_frequency,
+        },
+    )
+
+    generator = _WaveformGenerator(
+        _generator, sample_rate, waveform_duration, coalescence_time
     )
 
     # create a dictionary to store accepted
     # parameters, waveforms, and metadata
     zeros = np.zeros((num_signals,))
     parameters = defaultdict(lambda: zeros.copy())
+
+    # ifo snr array will be 2 dimensional
+    parameters["ifo_snrs"] = np.zeros((num_signals, len(ifos)))
 
     # allocate memory for our waveforms up front
     waveform_size = int(sample_rate * waveform_duration)
@@ -72,11 +77,18 @@ def rejection_sample(
             params = convert_to_detector_frame(params)
         if num_signals == 1:
             params = {k: params[k] for k in prior.keys() if k in params}
-        waveforms = generator(params)
+
+        # TODO: can encapsulate this in a
+        # WaveformSet.from_parameters method
+        params_list = [dict(zip(params, col)) for col in zip(*params.values())]
         polarizations = {
-            "cross": torch.Tensor(waveforms[:, 0, :]),
-            "plus": torch.Tensor(waveforms[:, 1, :]),
+            "cross": torch.zeros((len(params_list), waveform_size)),
+            "plus": torch.zeros((len(params_list), waveform_size)),
         }
+
+        for i, polars in enumerate(map(generator, params_list)):
+            for key, value in polars.items():
+                polarizations[key][i] = torch.Tensor(value)
 
         projected = compute_observed_strain(
             torch.Tensor(params["dec"]),
@@ -87,20 +99,29 @@ def rejection_sample(
             sample_rate,
             **polarizations,
         )
-        # TODO: compute individual ifo snr so we can store that data
-        snrs = compute_network_snr(projected, psds, sample_rate, highpass)
+
+        # compute both individual ifo snrs and network snr
+        ifo_snrs = compute_ifo_snr(projected, psds, sample_rate, highpass)
+        snrs = ifo_snrs**2
+        snrs = snrs.sum(axis=-1) ** 0.5
         snrs = snrs.numpy()
 
         # add all snrs: masking will take place in for loop below
         params["snr"] = snrs
+        params["ifo_snrs"] = ifo_snrs.numpy()
+
         num_injections += len(snrs)
         mask = snrs >= snr_threshold
 
         # first record any parameters that were
         # rejected during sampling to a separate object
         rejected = {}
-        for key in InjectionParameterSet.__dataclass_fields__:
-            rejected[key] = params[key][~mask]
+        for key, attr in InjectionParameterSet.__dataclass_fields__.items():
+            if attr.metadata["kind"] == "parameter":
+                rejected[key] = params[key][~mask]
+
+        # add the ifo metadata attribute
+        rejected["ifos"] = ifos
         rejected = InjectionParameterSet(**rejected)
         rejected_params.append(rejected)
 
@@ -115,10 +136,8 @@ def rejection_sample(
             parameters[key][start:end] = value[mask]
 
         # insert either the projected waveforms or the raw waveforms
-        if not return_raw:
-            signals = projected[mask].numpy()
-        else:
-            signals = waveforms[mask].numpy()
+
+        signals = projected[mask].numpy()
 
         for i, ifo in enumerate(ifos):
             key = ifo.lower()
@@ -136,5 +155,5 @@ def rejection_sample(
     parameters["sample_rate"] = sample_rate
     parameters["duration"] = waveform_duration
     parameters["num_injections"] = num_injections
-
+    parameters["ifos"] = ifos
     return parameters, rejected_params

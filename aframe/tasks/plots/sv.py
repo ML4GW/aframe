@@ -6,7 +6,7 @@ import luigi
 
 from aframe.base import AframeSingularityTask
 from aframe.parameters import PathParameter, load_prior
-from aframe.tasks.data.timeslide_waveforms import DeployTimeslideWaveforms
+from aframe.tasks.data.waveforms.testing import DeployTestingWaveforms
 from aframe.tasks.infer import InferLocal
 
 
@@ -39,7 +39,7 @@ class SensitiveVolume(AframeSingularityTask):
 
     def requires(self):
         reqs = {}
-        reqs["ts"] = DeployTimeslideWaveforms.req(self)
+        reqs["ts"] = DeployTestingWaveforms.req(self)
         reqs["infer"] = InferLocal.req(self)
         return reqs
 

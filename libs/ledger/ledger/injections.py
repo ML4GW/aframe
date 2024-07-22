@@ -21,13 +21,15 @@ class IntrinsicParameterSet(Ledger):
     mass_1: np.ndarray = parameter()
     mass_2: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
-    psi: np.ndarray = parameter()
     a_1: np.ndarray = parameter()
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
     phi_12: np.ndarray = parameter()
     phi_jl: np.ndarray = parameter()
+    psi: np.ndarray = parameter()
+    theta_jn: np.ndarray = parameter()
+    phase: np.ndarray = parameter()
 
 
 @dataclass
@@ -92,10 +94,12 @@ class _WaveformGenerator:
     gen: WaveformGenerator
     sample_rate: float
     waveform_duration: float
+    coalescence_time: float
 
     def center(self, waveform):
-        dt = self.waveform_duration / 2
-        return np.roll(waveform, int(dt * self.sample_rate))
+        shift = int(self.coalescence_time * self.sample_rate)
+        centered = np.roll(waveform, shift, axis=-1)
+        return centered
 
     def __call__(self, params):
         polarizations = self.gen.time_domain_strain(params)
@@ -109,8 +113,8 @@ class _WaveformGenerator:
 
 @dataclass
 class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
-    cross: np.ndarray = waveform
-    plus: np.ndarray = waveform
+    cross: np.ndarray = waveform()
+    plus: np.ndarray = waveform()
 
     @property
     def waveform_duration(self):
@@ -128,6 +132,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         sample_rate: float,
         waveform_duration: float,
         waveform_approximant: str,
+        coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
         gen = WaveformGenerator(
@@ -142,7 +147,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             },
         )
         waveform_generator = _WaveformGenerator(
-            gen, waveform_duration, sample_rate
+            gen, sample_rate, waveform_duration, coalescence_time
         )
 
         waveform_length = int(sample_rate * waveform_duration)
@@ -169,51 +174,36 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         polarizations.update(d)
         polarizations["sample_rate"] = sample_rate
         polarizations["duration"] = waveform_duration
+        polarizations["num_injections"] = len(params)
+        polarizations["coalescence_time"] = coalescence_time
         return cls(**polarizations)
-
-
-@dataclass
-class EventParameterSet(Ledger):
-    """
-    Assume GPS times always correspond to un-shifted data
-    """
-
-    injection_time: np.ndarray = parameter()
-    shift: np.ndarray = parameter()  # 2D with shift values along 1th axis
-    snr: np.ndarray = parameter()
-
-    def get_shift(self, shift):
-        mask = self.shift == shift
-        if self.shift.ndim == 2:
-            mask = mask.all(axis=-1)
-        return self[mask]
-
-    def get_times(
-        self, start: Optional[float] = None, end: Optional[float] = None
-    ):
-        if start is None and end is None:
-            raise ValueError("Must specify one of start or end")
-
-        mask = True
-        if start is not None:
-            mask &= self.injection_time >= start
-        if end is not None:
-            mask &= self.injection_time < end
-        return self[mask]
 
 
 @dataclass
 class SkyLocationParameterSet(Ledger):
     ra: np.ndarray = parameter()
     dec: np.ndarray = parameter()
-    theta_jn: np.ndarray = parameter()
-    phase: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
 
 
 @dataclass
 class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
+    ifo_snrs: np.ndarray = parameter()
+    ifos: list[str] = metadata()
+
+    @classmethod
+    def compare_metadata(cls, key, ours, theirs):
+        if key == "ifos":
+            if ours is None:
+                return theirs
+            elif theirs is None:
+                return ours
+            elif ours != theirs:
+                raise ValueError(
+                    "Incompatible ifos {} and {}".format(ours, theirs)
+                )
+        return super().compare_metadata(key, ours, theirs)
 
 
 @dataclass
