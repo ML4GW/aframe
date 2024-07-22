@@ -9,11 +9,7 @@ from bilby.gw.waveform_generator import WaveformGenerator
 from data.waveforms.utils import convert_to_detector_frame
 from ledger.injections import InjectionParameterSet, _WaveformGenerator
 
-from ml4gw.gw import (
-    compute_network_snr,
-    compute_observed_strain,
-    get_ifo_geometry,
-)
+from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 ResponseSetFields = Dict[str, Union[np.ndarray, float]]
 
@@ -100,12 +96,15 @@ def rejection_sample(
             sample_rate,
             **polarizations,
         )
-        # TODO: compute individual ifo snr so we can store that data
-        snrs = compute_network_snr(projected, psds, sample_rate, highpass)
+        ifo_snrs = compute_ifo_snr(projected, psds, sample_rate, highpass)
+        snrs = ifo_snrs**2
+        snrs = snrs.sum(axis=-1) ** 0.5
         snrs = snrs.numpy()
 
         # add all snrs: masking will take place in for loop below
         params["snr"] = snrs
+        params["ifo_snrs"] = ifo_snrs.numpy()
+
         num_injections += len(snrs)
         mask = snrs >= snr_threshold
 
@@ -147,5 +146,5 @@ def rejection_sample(
     parameters["sample_rate"] = sample_rate
     parameters["duration"] = waveform_duration
     parameters["num_injections"] = num_injections
-
+    parameters["ifos"] = ifos
     return parameters, rejected_params

@@ -189,6 +189,17 @@ class SkyLocationParameterSet(Ledger):
 @dataclass
 class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
+    ifo_snrs: np.ndarray = parameter()
+    ifos: list[str] = metadata()
+
+    @classmethod
+    def compare_metadata(cls, key, ours, theirs):
+        if key == "ifos":
+            if ours != theirs:
+                raise ValueError(
+                    "Incompatible ifos {} and {}".format(ours, theirs)
+                )
+        return super().compare_metadata(key, ours, theirs)
 
 
 @dataclass
@@ -401,6 +412,30 @@ def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
     """
     ifos = [ifo.lower() for ifo in ifos]
     fields = [(ifo, waveform()) for ifo in ifos]
+    fields = [(name, field.type, field) for name, field in fields]
+    cls = make_dataclass(cls_name, fields, bases=(base_cls,))
+    return cls
+
+
+def injection_parameter_set_class_factory(
+    ifos: list[str], base_cls, cls_name: str
+):
+    """
+    Factory function for creating ledger
+    dataclasses with arbitrary ifo snr fields
+
+    Args:
+        ifos:
+            List of interferometers for which ifo snr fields
+            will be populated
+        base_cls:
+            Base class the resulting dataclass will inherit from
+        cls_name:
+            Name of resulting dataclass
+
+    """
+    ifos = [ifo.lower() for ifo in ifos]
+    fields = [(ifo, parameter()) for ifo in ifos]
     fields = [(name, field.type, field) for name, field in fields]
     cls = make_dataclass(cls_name, fields, bases=(base_cls,))
     return cls
