@@ -126,14 +126,6 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
                 group = group[path]
         return f, group
 
-    def sample_fnames(self) -> np.ndarray:
-        return np.random.choice(
-            self.fnames,
-            p=self.probs,
-            size=(self.chunks_per_batch,),
-            replace=True,
-        )
-
     def load_chunk(self, fname, start, size):
         end = min(start + size, self.sizes[fname])
         return {
