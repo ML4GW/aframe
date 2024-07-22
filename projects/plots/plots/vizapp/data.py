@@ -33,9 +33,16 @@ class DataManager:
     Class for managing data, including applying vetos
     """
 
-    def __init__(self, results_dir: Path, data_dir: Path, ifos: list[str]):
+    def __init__(
+        self,
+        results_dir: Path,
+        data_dir: Path,
+        ifos: list[str],
+        vetos: bool = True,
+    ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
+        self.vetos = vetos
         # load results and data from the run we're visualizing
         infer_dir = results_dir / "infer"
         rejected = data_dir / "rejected-parameters.hdf5"
@@ -66,14 +73,15 @@ class DataManager:
         self._background = deepcopy(self.background)
         self._foreground = deepcopy(self.foreground)
 
-        self.veto_parser = VetoParser(
-            VETO_DEFINER_FILE,
-            GATE_PATHS,
-            self._background.detection_time.min(),
-            self._background.detection_time.max(),
-            self.ifos,
-        )
-        self.calculate_veto_masks()
+        if vetos:
+            self.veto_parser = VetoParser(
+                VETO_DEFINER_FILE,
+                GATE_PATHS,
+                self._background.detection_time.min(),
+                self._background.detection_time.max(),
+                self.ifos,
+            )
+            self.calculate_veto_masks()
 
     @property
     def veto_options(self):
@@ -113,6 +121,9 @@ class DataManager:
         self.veto_mask = np.zeros_like(mask, dtype=bool)
 
     def update_vetos(self, attr, old, new):
+        if not self.vetos:
+            return self._background, self._foreground
+
         if not new:
             # no vetos selected, so mark all background
             # events as not-vetoed

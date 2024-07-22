@@ -33,7 +33,7 @@ class InspectorPlot:
             dict(nn=[], integrated=[], t=[])
         )
         self.spectrogram_source = ColumnDataSource(
-            data=dict(image=[], x=[0], y=[0], dw=[], dh=[])
+            data=dict(image=[], x=[], y=[], dw=[], dh=[])
         )
 
     def get_layout(self, height: int, width: int) -> None:
