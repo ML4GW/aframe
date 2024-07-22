@@ -31,9 +31,14 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             s3 = s3fs.S3FileSystem()
             with s3.open(f"{save_dir}/model.pt", "wb") as f:
                 torch.jit.save(trace, f)
+
+            s3.copy(self.best_model_path, f"{save_dir}/best.ckpt")
         else:
             with open(os.path.join(save_dir, "model.pt"), "wb") as f:
                 torch.jit.save(trace, f)
+            shutil.copy(
+                self.best_model_path, os.path.join(save_dir, "best.ckpt")
+            )
 
 
 class SaveAugmentedBatch(Callback):

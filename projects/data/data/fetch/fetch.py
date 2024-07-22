@@ -40,7 +40,7 @@ def fetch(
         for channel in channels:
             ifo = channel.split(":")[0]
             data[ifo] = TimeSeries.get(
-                channels,
+                channel,
                 start=start,
                 end=end,
                 verbose=verbose,

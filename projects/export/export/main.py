@@ -3,11 +3,11 @@ import logging
 from typing import Optional
 
 import h5py
-import s3fs
 import torch
 from export.snapshotter import add_streaming_input_preprocessor
 
 import hermes.quiver as qv
+from utils.s3 import open_file
 
 
 def scale_model(model, instances):
@@ -20,15 +20,6 @@ def scale_model(model, instances):
         model.config.scale_instance_group(instances)
     except ValueError:
         model.config.add_instance_group(count=instances)
-
-
-def open_file(path, mode="rb"):
-    if str(path).startswith("s3://"):
-        fs = s3fs.S3FileSystem()
-        return fs.open(path, mode)
-    else:
-        # For local paths
-        return open(path, mode)
 
 
 def export(
