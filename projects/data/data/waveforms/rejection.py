@@ -55,6 +55,9 @@ def rejection_sample(
     zeros = np.zeros((num_signals,))
     parameters = defaultdict(lambda: zeros.copy())
 
+    # ifo snr array will be 2 dimensional
+    parameters["ifo_snrs"] = np.zeros((num_signals, len(ifos)))
+
     # allocate memory for our waveforms up front
     waveform_size = int(sample_rate * waveform_duration)
     for ifo in ifos:
@@ -96,6 +99,8 @@ def rejection_sample(
             sample_rate,
             **polarizations,
         )
+
+        # compute both individual ifo snrs and network snr
         ifo_snrs = compute_ifo_snr(projected, psds, sample_rate, highpass)
         snrs = ifo_snrs**2
         snrs = snrs.sum(axis=-1) ** 0.5
@@ -111,8 +116,12 @@ def rejection_sample(
         # first record any parameters that were
         # rejected during sampling to a separate object
         rejected = {}
-        for key in InjectionParameterSet.__dataclass_fields__:
-            rejected[key] = params[key][~mask]
+        for key, attr in InjectionParameterSet.__dataclass_fields__.items():
+            if attr.metadata["kind"] == "parameter":
+                rejected[key] = params[key][~mask]
+
+        # add the ifo metadata attribute
+        rejected["ifos"] = ifos
         rejected = InjectionParameterSet(**rejected)
         rejected_params.append(rejected)
 

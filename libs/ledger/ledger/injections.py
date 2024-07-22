@@ -195,7 +195,11 @@ class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
         if key == "ifos":
-            if ours != theirs:
+            if ours is None:
+                return theirs
+            elif theirs is None:
+                return ours
+            elif ours != theirs:
                 raise ValueError(
                     "Incompatible ifos {} and {}".format(ours, theirs)
                 )
