@@ -41,6 +41,7 @@ class App:
         valid_frac: float,
         fftlength: float,
         device: str = "cpu",
+        vetos: bool = True,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
@@ -74,7 +75,7 @@ class App:
 
         # instantiate object for managing
         # data loading and application of vetos
-        self.data_manager = DataManager(results_dir, data_dir, ifos)
+        self.data_manager = DataManager(results_dir, data_dir, ifos, vetos)
 
         # initialize all our pages and their constituent plots
         self.pages: list["Page"] = []
@@ -90,7 +91,7 @@ class App:
 
         self.veto_selecter = self.data_manager.get_veto_selecter()
         self.veto_selecter.on_change("value", self.update)
-        self.data_manager.update_vetos(None, None, [])
+        self.update(None, None, [])
 
         # set up a header with a title and the selecter
         title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)
