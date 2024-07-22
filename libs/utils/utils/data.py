@@ -54,9 +54,9 @@ def get_num_shifts_from_Tb(
     return calc_shifts_required(Tb, T, shift)
 
 
-def get_num_shifts_from_num_injections(
+def get_num_shifts_from_num_signals(
     segments,
-    num_injections: int,
+    num_signals: int,
     waveform_duration: float,
     spacing: float,
     shift: float,
@@ -72,7 +72,7 @@ def get_num_shifts_from_num_injections(
     T = sum([stop - start for start, stop in segments])
     a = -shift / 2
     b = T - 2 * buffer - (shift / 2)
-    c = -num_injections * spacing
+    c = -num_signals * spacing
     discriminant = (b**2) - 4 * a * c
     N = (-b + (discriminant**0.5)) / (2 * a)
     return math.ceil(N)

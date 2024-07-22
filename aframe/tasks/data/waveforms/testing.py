@@ -11,44 +11,61 @@ from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTest
+from aframe.tasks.data.waveforms.base import WaveformParams
 from utils import data as data_utils
 
 TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
 
 
-# TODO: add descriptions to all parameters
-class TimeSlideWaveformsParams(law.Task):
-    start = luigi.FloatParameter()
-    end = luigi.FloatParameter()
-    ifos = luigi.ListParameter()
-    num_injections = luigi.IntParameter()
-    output_dir = PathParameter()
-    shifts = luigi.ListParameter()
-    spacing = luigi.FloatParameter()
-    buffer = luigi.FloatParameter()
-    prior = luigi.Parameter()
-    minimum_frequency = luigi.FloatParameter()
-    reference_frequency = luigi.FloatParameter()
-    sample_rate = luigi.FloatParameter()
-    waveform_duration = luigi.FloatParameter()
-    waveform_approximant = luigi.Parameter()
-    coalescence_time = luigi.FloatParameter(
-        description="Location of the defining point of the signal "
-        "within the generated waveform"
+class TestingWaveformsParams(WaveformParams):
+    start = luigi.FloatParameter(
+        description="Start time of the test data segments to query"
     )
-    highpass = luigi.FloatParameter()
-    snr_threshold = luigi.FloatParameter()
-    psd_length = luigi.FloatParameter()
-    seed = luigi.IntParameter()
-    # verbose = luigi.BoolParameter(default=False)
+    end = luigi.FloatParameter(
+        description="End time of the test data segments to query"
+    )
+    ifos = luigi.ListParameter(
+        description="Interferometers for which waveforms will be generated"
+    )
+    output_dir = PathParameter(
+        description="Directory where merged waveforms and "
+        "rejected parameters will be saved"
+    )
+    shifts = luigi.ListParameter(
+        description="List of shift multiple to apply to the test data segments"
+    )
+    spacing = luigi.FloatParameter(
+        description="Spacing between injections in seconds"
+    )
+    buffer = luigi.FloatParameter(
+        description="Buffer time between the first (last)"
+        "waveform and start (end) the test data segment"
+    )
+    highpass = luigi.FloatParameter(
+        description="Frequency of highpass filter in Hz"
+    )
+    snr_threshold = luigi.FloatParameter(
+        description="SNR threshold for rejection sampling"
+    )
+    psd_length = luigi.FloatParameter(
+        description="Length of the PSD segment to use for rejection sampling"
+    )
+    seed = luigi.IntParameter(
+        description="Seed for controlling randomness"
+        " of waveform prior sampling"
+    )
 
 
-@inherits(TimeSlideWaveformsParams)
-class DeployTimeslideWaveforms(
+@inherits(TestingWaveformsParams)
+class DeployTestingWaveforms(
     AframeDataTask,
     law.LocalWorkflow,
     StaticMemoryWorkflow,
 ):
+    """
+    Deploy condor jobs for generating testing waveforms via rejection sampling.
+    """
+
     def workflow_requires(self):
         reqs = {}
         reqs["test_segments"] = FetchTest.req(
@@ -98,9 +115,9 @@ class DeployTimeslideWaveforms(
 
     @property
     def shifts_required(self):
-        return data_utils.get_num_shifts_from_num_injections(
+        return data_utils.get_num_shifts_from_num_signals(
             self.test_segments,
-            self.num_injections,
+            self.num_signals,
             self.waveform_duration,
             self.spacing,
             self.max_shift,
@@ -132,15 +149,13 @@ class DeployTimeslideWaveforms(
         import io
 
         import h5py
-        from data.timeslide_waveforms.timeslide_waveforms import (
-            timeslide_waveforms,
-        )
+        from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)
         start, end, shift, psd_segment = self.branch_data
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
-            timeslide_waveforms(
+            testing_waveforms(
                 start,
                 end,
                 self.ifos,
@@ -162,12 +177,12 @@ class DeployTimeslideWaveforms(
             )
 
 
-@inherits(DeployTimeslideWaveforms)
-class TimeslideWaveforms(AframeDataTask):
+@inherits(DeployTestingWaveforms)
+class TestingWaveforms(AframeDataTask):
     condor_directory = PathParameter(
         default=os.path.join(
             os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
-            "timeslide_waveforms",
+            "testing_waveforms",
         )
     )
 
@@ -183,7 +198,7 @@ class TimeslideWaveforms(AframeDataTask):
         ]
 
     def requires(self):
-        return DeployTimeslideWaveforms.req(
+        return DeployTestingWaveforms.req(
             self,
             request_memory=self.request_memory,
             request_disk=self.request_disk,

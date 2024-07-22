@@ -6,6 +6,7 @@ from luigi.util import inherits
 
 from aframe.config import Defaults, wandb
 from aframe.parameters import PathParameter
+from aframe.pipelines.config import paths
 from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
 
@@ -69,18 +70,25 @@ class TrainBase(law.Task):
             data_dir=self.data_dir / "background",
         )
         reqs["train_waveforms"] = TrainingWaveforms.req(
-            self, output_file=self.data_dir / "train_waveforms.hdf5"
+            self,
+            output_dir=self.data_dir / "training_waveforms",
+            condor_directory=paths().condordir / "train_waveforms",
         )
 
         reqs["val_waveforms"] = ValidationWaveforms.req(
             self,
             output_dir=self.data_dir,
+            tmp_dir=paths().tmp_dir / "val",
+            condor_directory=paths().condordir / "val_waveforms",
         )
         return reqs
 
     def configure_wandb(self, args: List[str]) -> None:
-        args.append("--trainer.logger=WandbLogger")
+        # note that we append the wandb logger
+        # so that we always use csv file to store metrics
+        args.append("--trainer.logger+=WandbLogger")
         args.append("--trainer.logger.job_type=train")
+        args.append(f"--trainer.logger.save_dir={self.run_dir}")
 
         for key in ["name", "entity", "project", "group", "tags"]:
             value = getattr(wandb(), key)
@@ -125,11 +133,11 @@ class TrainBase(law.Task):
                 "Can't run W&B experiment without specifying an API key. "
                 "Try setting the WANDB_API_KEY environment variable."
             )
-        # wandb logger uses save_dir, csv logger uses log_dir :(
-        elif self.use_wandb:
-            args = self.configure_wandb(args)
 
+        # first, set the save_dir of the CSV logger
         args.append(f"--trainer.logger.save_dir={self.run_dir}")
+        if self.use_wandb:
+            args = self.configure_wandb(args)
 
         return args
 
@@ -151,10 +159,10 @@ class RemoteParameters(law.Task):
         description="Number of GPUs to request for training",
     )
     cpus_per_gpu = luigi.IntParameter(
-        default=8, description="Number of CPUs to request per GPU"
+        default=12, description="Number of CPUs to request per GPU"
     )
     memory_per_cpu = luigi.FloatParameter(
-        default=1.5, description="Amount of memory to request per CPU in GB"
+        default=4, description="Amount of memory to request per CPU in GB"
     )
 
     @property

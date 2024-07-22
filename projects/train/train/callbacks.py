@@ -21,12 +21,12 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         )
 
         device = pl_module.device
-        batch = next(iter(trainer.train_dataloader)).to(device)
-        sample_input, _ = trainer.datamodule.augment(batch[0])
+        [X], waveforms = next(iter(trainer.train_dataloader))
+        X = X.to(device)
+        X, y = trainer.datamodule.augment(X, waveforms)
+        trace = torch.jit.trace(module.model.to("cpu"), X.to("cpu"))
 
-        trace = torch.jit.trace(module.model.to("cpu"), sample_input.to("cpu"))
-
-        save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+        save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
             s3 = s3fs.S3FileSystem()
             with s3.open(f"{save_dir}/model.pt", "wb") as f:
@@ -46,12 +46,14 @@ class SaveAugmentedBatch(Callback):
         if trainer.global_rank == 0:
             # find device module is on
             device = pl_module.device
-            save_dir = trainer.logger.log_dir or trainer.logger.save_dir
+            save_dir = trainer.logger.save_dir
 
             # build training batch by hand
-            X = next(iter(trainer.train_dataloader))
+            [X], waveforms = next(iter(trainer.train_dataloader))
+            waveforms = trainer.datamodule.slice_waveforms(waveforms)
             X = X.to(device)
-            X, y = trainer.datamodule.augment(X[0])
+
+            X, y = trainer.datamodule.augment(X, waveforms)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -88,6 +90,20 @@ class SaveAugmentedBatch(Callback):
                 ) as f:
                     f["X_bg"] = X_bg.cpu().numpy()
                     f["X_inj"] = X_inj.cpu().numpy()
+
+            # while we're here let's log the wandb url
+            # associated with the run
+            maybe_wandb_logger = trainer.loggers[-1]
+            if isinstance(maybe_wandb_logger, pl.loggers.WandbLogger):
+                url = maybe_wandb_logger.experiment.url
+                if save_dir.startswith("s3://"):
+                    with s3.open(f"{save_dir}/wandb_url.txt", "wb") as s3_file:
+                        s3_file.write(url.encode())
+                else:
+                    with open(
+                        os.path.join(save_dir, "wandb_url.txt"), "w"
+                    ) as f:
+                        f.write(url)
 
 
 def report_with_retries(metrics, checkpoint, retries: int = 10):

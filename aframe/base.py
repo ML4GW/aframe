@@ -67,6 +67,7 @@ class AframeSandbox(singularity.SingularitySandbox):
         volumes = super()._get_volumes()
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
+        volumes[os.getenv("AFRAME_TMPDIR")] = os.getenv("AFRAME_TMPDIR")
 
         return volumes
 

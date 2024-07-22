@@ -37,6 +37,8 @@ data:
     # data_dir:
     # ifos:
     batches_per_epoch: 200
+    chunk_size: 10000
+    chunks_per_epoch: 10
     # preprocessing args
     batch_size: 576
     # kernel_length:
@@ -76,13 +78,15 @@ data:
     valid_livetime: 57600 
 trainer:
   # by default, use a local CSV logger.
-  # Options in train task for using a
-  # wandb logger instead
+  # note that you can use multiple loggers!
+  # Options in train task for appending 
+  # a wandb logger for remote logging.
   logger:
     - class_path: lightning.pytorch.loggers.CSVLogger
       init_args:
         # save_dir:
         flush_logs_every_n_steps: 10
+        name: "train_logs"
   # uncomment below if you want to profile
   # profiler:
     # class_path: lightning.pytorch.profilers.PyTorchProfiler

@@ -2,7 +2,7 @@ import luigi
 
 from aframe.base import AframeWrapperTask
 from aframe.pipelines.config import paths
-from aframe.tasks import ExportLocal, TimeslideWaveforms, Train
+from aframe.tasks import ExportLocal, TestingWaveforms, Train
 from aframe.tasks.infer import InferLocal
 from aframe.tasks.plots.sv import SensitiveVolume
 from aframe.tasks.train.tune import TuneRemote
@@ -27,7 +27,7 @@ class SandboxInfer(InferLocal):
         reqs["model_repository"] = SandboxExport.req(
             self, repository_directory=paths().results_dir / "model_repo"
         )
-        ts_waveforms = TimeslideWaveforms.req(
+        ts_waveforms = TestingWaveforms.req(
             self,
             output_dir=paths().test_datadir,
         )
@@ -43,7 +43,7 @@ class SandboxSV(SensitiveVolume):
 
     def requires(self):
         reqs = {}
-        reqs["ts"] = TimeslideWaveforms.req(
+        reqs["ts"] = TestingWaveforms.req(
             self,
             output_dir=paths().test_datadir,
         )
