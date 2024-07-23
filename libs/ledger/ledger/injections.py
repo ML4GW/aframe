@@ -36,8 +36,8 @@ class IntrinsicParameterSet(Ledger):
 class InjectionMetadata(Ledger):
     sample_rate: np.ndarray = metadata()
     duration: np.ndarray = metadata()
-    num_injections: int = metadata(default=0)
     coalescence_time: float = metadata()
+    num_injections: int = metadata(default=0)
 
     def __post_init__(self):
         # verify that all waveforms have the appropriate duration
@@ -84,7 +84,7 @@ class InjectionMetadata(Ledger):
             elif theirs is None:
                 return ours
             return ours + theirs
-        return Ledger.compare_metadata(key, ours, theirs)
+        return super().compare_metadata(key, ours, theirs)
 
 
 @dataclass(frozen=True)
@@ -190,19 +190,23 @@ class SkyLocationParameterSet(Ledger):
 class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
     ifo_snrs: np.ndarray = parameter()
-    ifos: list[str] = metadata()
+    ifos: list[str] = metadata(default_factory=list)
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
         if key == "ifos":
-            if ours is None:
+            # cast as list since hdf5 will store as numpy array
+            ours = list(ours)
+            theirs = list(theirs)
+            if not ours:
                 return theirs
-            elif theirs is None:
+            elif not theirs:
                 return ours
             elif ours != theirs:
                 raise ValueError(
                     "Incompatible ifos {} and {}".format(ours, theirs)
                 )
+            return ours
         return super().compare_metadata(key, ours, theirs)
 
 
