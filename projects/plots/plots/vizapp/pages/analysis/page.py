@@ -47,7 +47,9 @@ class Analysis(Page):
         distribution = self.distribution_plot.get_layout(
             height=400, width=1500
         )
-        return column(distribution, event_inspector)
+        return column(
+            distribution, event_inspector, sizing_mode="stretch_both"
+        )
 
     def update(
         self, background: "EventSet", foreground: "RecoveredInjectionSet"

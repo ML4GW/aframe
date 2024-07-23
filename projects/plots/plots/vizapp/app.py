@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, List
 
 import torch
-from architectures.base import Architecture
 from bokeh.layouts import column, row
 from bokeh.models import Div, TabPanel, Tabs
 from plots.vizapp.data import DataManager
@@ -23,7 +22,6 @@ class App:
 
     def __init__(
         self,
-        architecture: Architecture,
         weights: str,
         data_dir: Path,
         results_dir: Path,
@@ -65,7 +63,6 @@ class App:
         self.valid_frac = valid_frac
         self.device = device
         self.verbose = verbose
-        self.architecture = architecture
         self.weights = weights
         self.device = device
         self.fftlength = fftlength
@@ -104,14 +101,8 @@ class App:
 
     def load_model(self):
         with open_file(self.weights, "rb") as f:
-            weights = torch.load(f, map_location="cpu")["state_dict"]
-            weights = {
-                k.strip("model."): v
-                for k, v in weights.items()
-                if k.startswith("model.")
-            }
-            self.architecture.load_state_dict(weights)
-        return self.architecture.to(self.device)
+            model = torch.jit.load(f)
+        return model.to(self.device)
 
     def update(self, attr, old, new):
         # update the vetos

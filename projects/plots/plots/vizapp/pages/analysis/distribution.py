@@ -1,14 +1,20 @@
 import logging
 
 import numpy as np
-from bokeh.layouts import row
+from bokeh.layouts import Spacer, column, row
 from bokeh.models import (
+    BooleanFilter,
     BoxSelectTool,
+    Button,
+    CDSView,
     ColumnDataSource,
     HoverTool,
     LogAxis,
+    PanTool,
     Range1d,
+    RangeSlider,
     TapTool,
+    WheelZoomTool,
 )
 from bokeh.plotting import figure
 from plots.vizapp import palette
@@ -37,8 +43,11 @@ class DistributionPlot:
 
     def asdict(self, background, foreground):
         background = {attr: getattr(background, attr) for attr in BACK_ATTRS}
-        foreground = {attr: getattr(foreground, attr) for attr in FORE_ATTRS}
-        return background, foreground
+        _foreground = {attr: getattr(foreground, attr) for attr in FORE_ATTRS}
+        for ifo in foreground.ifos:
+            attr = f"{ifo}_snr"
+            _foreground[attr] = getattr(foreground, attr)
+        return background, _foreground
 
     def initialize_sources(self):
         self.bar_source = ColumnDataSource(dict(center=[], top=[], width=[]))
@@ -91,13 +100,57 @@ class DistributionPlot:
             y_axis_label="Detection statistic",
             tools="box_zoom,reset",
         )
-        self.background_plot.legend.click_policy = "hide"
 
+        self.distribution_plot.add_tools(PanTool(), WheelZoomTool())
+        self.background_plot.add_tools(PanTool(), WheelZoomTool())
+
+        self.sliders = {}
+        for attr in ["mass_1_source", "mass_2_source", "snr"]:
+            # dummy values for now
+            min_val = 0
+            max_val = 100
+            slider = RangeSlider(
+                start=min_val,
+                end=max_val,
+                value=(min_val, max_val),
+                step=1,
+                title=attr,
+            )
+            self.sliders[attr] = slider
+
+        self.update_button = Button(
+            label="Update Foreground Event Filter",
+            button_type="success",
+            width=300,
+        )
+        self.update_button.on_click(self.update_foreground)
+
+        controls = column(
+            *list(self.sliders.values()),
+            row(self.update_button),
+        )
+        plots = row(
+            self.distribution_plot, Spacer(width=50), self.background_plot
+        )
         self.plot_data()
-        return row(self.distribution_plot, self.background_plot)
+        return column(controls, plots)
+
+    def update_foreground(self):
+        bool_mask = np.ones(
+            len(self.foreground_source.data["snr"]), dtype=bool
+        )
+        for name, slider in self.sliders.items():
+            low, high = slider.value
+            bool_mask &= (self.foreground_source.data[name] >= low) & (
+                self.foreground_source.data[name] <= high
+            )
+        self.foreground_renderer.view = CDSView(
+            filter=BooleanFilter(bool_mask)
+        )
 
     def plot_data(self):
-        injection_renderer = self.distribution_plot.scatter(
+        view = CDSView()
+        self.foreground_renderer = self.distribution_plot.scatter(
             x="detection_statistic",
             y="snr",
             fill_color=self.frgd_color,
@@ -111,22 +164,28 @@ class DistributionPlot:
             nonselection_line_alpha=0.3,
             y_range_name="SNR",
             source=self.foreground_source,
+            view=view,
         )
 
         # add hover tool for analyzing additional attributes
+        tooltips = [
+            ("Injection time", "@{injection_time}{0.000}"),
+            ("Shifts", "@shift"),
+            ("SNR", "@snr"),
+            ("Detection statistic", "@{detection_statistic}"),
+            ("Mass 1", "@{mass_1}"),
+            ("Mass 2", "@{mass_2}"),
+            ("Mass 1 source", "@{mass_1_source}"),
+            ("Mass 2 source", "@{mass_2_source}"),
+            ("Chirp Mass", "@{chirp_mass}"),
+        ]
+
+        for ifo in self.page.app.ifos:
+            tooltips.append((f"{ifo} SNR", f"@{ifo}_snr"))
+
         hover = HoverTool(
-            tooltips=[
-                ("Injection time", "@{injection_time}{0.000}"),
-                ("Shifts", "@shift"),
-                ("SNR", "@snr"),
-                ("Detection statistic", "@{detection_statistic}"),
-                ("Mass 1", "@{mass_1}"),
-                ("Mass 2", "@{mass_2}"),
-                ("Mass 1 source", "@{mass_1_source}"),
-                ("Mass 2 source", "@{mass_2_source}"),
-                ("Chirp Mass", "@{chirp_mass}"),
-            ],
-            renderers=[injection_renderer],
+            tooltips=tooltips,
+            renderers=[self.foreground_renderer],
         )
         self.distribution_plot.add_tools(hover)
 
@@ -243,7 +302,6 @@ class DistributionPlot:
 
         t0 = times.min()
         self.background_plot.xaxis.axis_label = f"Time from {t0:0.3f} [hours]"
-        self.background_plot.legend.visible = True
 
         x = times - t0
         x /= 3600

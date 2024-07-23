@@ -58,15 +58,13 @@ class DataManager:
         self.rejected_params = InjectionParameterSet.read(rejected)
         self.logger.info("Data loaded")
 
-        # add source frame masses
-        # TODO: this should be done in the ledger / ts waveforms
-        for obj in [self.foreground, self.rejected_params]:
-            for i in range(2):
-                attr = f"mass_{i + 1}"
-                value = getattr(obj, attr)
-                attr = f"{attr}_source"
-                setattr(obj, attr, value / (1 + obj.redshift))
-                setattr(obj, "chirp_mass", chirp_mass(obj.mass_1, obj.mass_2))
+        # add single ifo snrs
+        for i, ifo in enumerate(self.foreground.ifos):
+            attr = f"{ifo}_snr"
+            snrs = self.foreground.ifo_snrs[:, i]
+            setattr(self.foreground, attr, snrs)
+
+        # add snr ratio
 
         # create copies of the background and foreground
         # for applying vetos
