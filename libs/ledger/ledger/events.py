@@ -37,7 +37,7 @@ class EventSet(Ledger):
         # accumulate background time when merging or appending
         if key == "Tb":
             return ours + theirs
-        return Ledger.compare_metadata(key, ours, theirs)
+        return super().compare_metadata(key, ours, theirs)
 
     def get_shift(self, shift: np.ndarray) -> "EventSet":
         # downselect to all events from a given shift
@@ -124,7 +124,7 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
             return InterferometerResponseSet.compare_metadata(
                 key, ours, theirs
             )
-        return EventSet.compare_metadata(key, ours, theirs)
+        return super().compare_metadata(key, ours, theirs)
 
     @classmethod
     def recover(cls, events: EventSet, injections: InterferometerResponseSet):

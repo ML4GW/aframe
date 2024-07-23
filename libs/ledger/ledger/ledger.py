@@ -23,8 +23,14 @@ def waveform(default=None):
     return field(metadata={"kind": "waveform"}, default=default)
 
 
-def metadata(default=None):
-    return field(metadata={"kind": "metadata"}, default=default)
+def metadata(default=None, default_factory=None):
+    # can only specify one of default or default_factory
+    kwargs = {}
+    if default_factory is not None:
+        kwargs["default_factory"] = default_factory
+    else:
+        kwargs["default"] = default
+    return field(metadata={"kind": "metadata"}, **kwargs)
 
 
 def _iter_open(files: Iterable[Path], mode: str, clean: bool = True):
@@ -286,7 +292,12 @@ class Ledger:
                         # use the default value in the class,
                         # which will be `None` if not specified explicitly
                         if key not in target.attrs:
-                            ours = getattr(cls, key)
+                            # try to access the metadata default value
+                            try:
+                                ours = getattr(cls, key)
+                            except AttributeError:
+                                # if not specified, use the default factory
+                                ours = attr.default_factory()
                         else:
                             ours = target.attrs[key]
 
