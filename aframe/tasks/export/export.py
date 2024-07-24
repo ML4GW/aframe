@@ -5,28 +5,32 @@ import luigi
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
+from aframe.config import paths
 from aframe.parameters import PathParameter
+from aframe.tasks import Train
 from aframe.tasks.export.target import ModelRepositoryTarget
 
 
 class ExportParams(law.Task):
-    weights = luigi.Parameter(default="")
     fduration = luigi.FloatParameter()
     kernel_length = luigi.FloatParameter()
     inference_sampling_rate = luigi.FloatParameter()
     sample_rate = luigi.FloatParameter()
-    repository_directory = PathParameter()
     batch_file = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter()
     aframe_instances = luigi.IntParameter()
-    preproc_instances = luigi.IntParameter(default=1)
+    preproc_instances = luigi.IntParameter()
     clean = luigi.BoolParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
     q = luigi.OptionalFloatParameter(default=None)
     fftlength = luigi.FloatParameter(default=0)
-    ifos = luigi.ListParameter(default=["H1", "L1"])
+    ifos = luigi.ListParameter()
+    repository_directory = PathParameter(
+        default=paths().results_dir / "model_repo"
+    )
+    train_task = luigi.TaskParameter(default=Train)
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
 
@@ -41,7 +45,7 @@ class ExportLocal(AframeSingularityTask):
         return ModelRepositoryTarget(self.repository_directory)
 
     def requires(self):
-        raise NotImplementedError
+        raise self.train_task.req(self)
 
     @property
     def default_image(self):

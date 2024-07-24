@@ -8,12 +8,11 @@ import utils.data as data_utils
 from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter
-from aframe.tasks import TestingWaveforms
+from aframe.tasks import ExportLocal, TestingWaveforms
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
 
 class InferParameters(law.Task):
-    output_dir = PathParameter(default=paths().results_dir)
     ifos = luigi.ListParameter()
     inference_sampling_rate = luigi.FloatParameter()
     batch_size = luigi.IntParameter()
@@ -27,11 +26,11 @@ class InferParameters(law.Task):
     model_name = luigi.Parameter()
     model_version = luigi.IntParameter()
     streams_per_gpu = luigi.IntParameter()
-    repository_directory = luigi.Parameter(default="")
     rate_per_gpu = luigi.FloatParameter(
         default=100.0, description="Inferences per second per gpu"
     )
     zero_lag = luigi.BoolParameter(default=False)
+    output_dir = PathParameter(default=paths().results_dir)
 
 
 @inherits(InferParameters)
@@ -86,11 +85,11 @@ class InferBase(
 
     def workflow_requires(self):
         reqs = {}
+        reqs["model_repository"] = ExportLocal.req(self)
         testing_waveforms = TestingWaveforms.req(self)
         fetch = testing_waveforms.requires().workflow_requires()[
             "test_segments"
         ]
-
         reqs["data"] = fetch
         reqs["waveforms"] = testing_waveforms
 
