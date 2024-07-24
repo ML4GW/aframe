@@ -9,6 +9,7 @@ Stage: build
 ../../libs/priors /opt/aframe/libs/priors
 ../../ml4gw /opt/aframe/ml4gw
 ../../aframe /opt/aframe/aframe
+../../hermes /opt/aframe/hermes
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %environment

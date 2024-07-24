@@ -15,7 +15,9 @@ cloudpathlib = "^0.18.1"
 kr8s = "^0.10.0"
 law = {git = "https://github.com/riga/law.git", branch = "master"}
 luigi = "^3.0"
+ml4gw-hermes = {path = "hermes", develop = true, extras = ["serve"]}
 numpy = "^1.26.4"
+psutil = "^5.9.8"
 pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
 spython = "^0.3.13"
 utils = {path = "libs/utils", develop = true}
@@ -2706,7 +2708,6 @@ files = [
     {file = "msgpack-1.0.8-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:5fbb160554e319f7b22ecf530a80a3ff496d38e8e07ae763b9e82fadfe96f273"},
     {file = "msgpack-1.0.8-cp39-cp39-win32.whl", hash = "sha256:f9af38a89b6a5c04b7d18c492c8ccf2aee7048aff1ce8437c4683bb5a1df893d"},
     {file = "msgpack-1.0.8-cp39-cp39-win_amd64.whl", hash = "sha256:ed59dd52075f8fc91da6053b12e8c89e37aa043f8986efd89e61fae69dc1b011"},
-    {file = "msgpack-1.0.8-py3-none-any.whl", hash = "sha256:24f727df1e20b9876fa6e95f840a2a2651e34c0ad147676356f4bf5fbb0206ca"},
     {file = "msgpack-1.0.8.tar.gz", hash = "sha256:95c02b0e27e706e48d0e5426d1710ca78e0f0628d6e89d5b5a5b91a5f12274f3"},
 ]
 
@@ -3425,25 +3426,6 @@ files = [
 
 [package.extras]
 tests = ["pytest"]
-
-[[package]]
-name = "PyCondor"
-version = "0.7.0.dev0"
-description = "Python utility for HTCondor"
-optional = false
-python-versions = "*"
-files = []
-develop = true
-
-[package.dependencies]
-click = "*"
-
-[package.extras]
-dev = ["flake8", "numpydoc", "pytest", "pytest-cov", "sphinx", "sphinx-click", "sphinx_rtd_theme", "twine"]
-
-[package.source]
-type = "directory"
-url = "../../pycondor"
 
 [[package]]
 name = "pycparser"
@@ -4279,12 +4261,16 @@ optional = false
 python-versions = ">=3.8"
 files = [
     {file = "setuptools-70.0.0-py3-none-any.whl", hash = "sha256:54faa7f2e8d2d11bcd2c07bed282eef1046b5c080d1c32add737d7b5817b1ad4"},
-    {file = "setuptools-70.0.0.tar.gz", hash = "sha256:f211a66637b8fa059bb28183da127d4e86396c991a942b028c6650d4319c3fd0"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
 testing = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "importlib-metadata", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "mypy (==1.9)", "packaging (>=23.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.1)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-home (>=0.5)", "pytest-mypy", "pytest-perf", "pytest-ruff (>=0.2.1)", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+
+[package.source]
+type = "legacy"
+url = "https://download.pytorch.org/whl/cpu"
+reference = "torch"
 
 [[package]]
 name = "six"
@@ -4969,4 +4955,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "34c6740fd4da925774d8f30fa03f494e777e61d04bb2cac7e4adc89c88874e94"
+content-hash = "c6122480d5397c3057ea843c6856166b14fd0507e1a6decfb0242e5f3ef5970b"

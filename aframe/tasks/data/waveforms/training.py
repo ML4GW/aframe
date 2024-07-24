@@ -1,5 +1,3 @@
-import os
-
 import law
 from luigi.util import inherits
 
@@ -42,7 +40,7 @@ class TrainingWaveforms(
             IntrinsicWaveformSet,
         )
 
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.output_dir.mkdir(exist_ok=True)
         num_signals = self.branch_data
         prior = load_prior(self.prior)
         prior, detector_frame_prior = prior()

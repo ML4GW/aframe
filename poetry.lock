@@ -2510,7 +2510,7 @@ tbb = "==2021.*"
 
 [[package]]
 name = "ml4gw"
-version = "0.5.0"
+version = "0.4.2"
 description = "Tools for training torch models on gravitational wave data"
 optional = false
 python-versions = "^3.8,<3.12"
@@ -2518,7 +2518,6 @@ files = []
 develop = true
 
 [package.dependencies]
-numpy = "<2.0.0"
 torch = "^2.0"
 torchaudio = "^2.0"
 torchtyping = "^0.1"

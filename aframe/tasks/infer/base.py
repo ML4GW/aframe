@@ -104,10 +104,16 @@ class InferBase(
         )
         return num_shifts
 
+    @law.dynamic_workflow_condition
+    def workflow_condition(self) -> bool:
+        return self.workflow_input()["data"].collection.exists()
+
+    @workflow_condition.create_branch_map
     def create_branch_map(self):
         branch_map = {}
         for fname in self.background_fnames:
-            start, duration = map(float, Path(fname).stem.split("-")[-2:])
+            fname = Path(fname.path)
+            start, duration = map(float, fname.stem.split("-")[-2:])
             stop = start + duration
             for i in range(self.num_shifts):
                 _shifts = [s * (i + 1) for s in self.shifts]
@@ -129,6 +135,7 @@ class InferBase(
     def get_ip_address(self) -> str:
         raise NotImplementedError
 
+    @workflow_condition.output
     def output(self):
         outputs = {}
         outputs["foreground"] = law.LocalFileTarget(self.foreground_output)
