@@ -1,7 +1,9 @@
 import os
 import socket
 from pathlib import Path
+from typing import List
 
+import h5py
 import law
 import luigi
 import numpy as np
@@ -107,14 +109,22 @@ class Infer(AframeSingularityTask):
             [Path(targets["foreground"].path) for targets in self.targets]
         )
 
+    @classmethod
+    def get_shifts(files: List[Path]):
+        shifts = []
+        for f in files:
+            with h5py.File(f) as f:
+                shift = f["parameters"]["shift"][0]
+                shifts.append(shift)
+        return shifts
+
     def run(self):
         import shutil
 
-        from infer.utils import get_shifts
         from ledger.events import EventSet, RecoveredInjectionSet
 
         # separate 0lag and background events into different files
-        shifts = get_shifts(self.background_files)
+        shifts = self.get_shifts(self.background_files)
         zero_lag = np.array(
             [all(shift == [0] * len(self.ifos)) for shift in shifts]
         )
