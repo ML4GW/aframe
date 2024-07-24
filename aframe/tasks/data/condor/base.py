@@ -20,7 +20,13 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     request_memory = luigi.Parameter(default="3267 Mb")
     request_cpus = luigi.IntParameter(default=1)
 
-    exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
+    exclude_params_req = {
+        "request_memory",
+        "request_disk",
+        "request_cpus",
+        "condor_directory",
+        "workflow",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

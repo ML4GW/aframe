@@ -94,7 +94,7 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
     # don't pass these parameters between tasks
     # when calling .req() so that individual tasks
     # can speciyfy their own values
-    exclude_params_req = {"condor_directory", "output_dir", "data_dir"}
+    exclude_params_req = {"output_dir", "data_dir"}
 
     @property
     def sandbox(self):

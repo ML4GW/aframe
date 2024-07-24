@@ -201,6 +201,7 @@ class TestingWaveforms(AframeDataTask):
             request_memory=self.request_memory,
             request_disk=self.request_disk,
             request_cpus=self.request_cpus,
+            workflow=self.workflow,
         )
 
     @property

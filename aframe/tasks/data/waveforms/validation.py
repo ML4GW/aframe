@@ -148,7 +148,13 @@ class ValidationWaveforms(AframeDataTask):
         return s3_or_local(self.output_file)
 
     def requires(self):
-        return DeployValidationWaveforms.req(self)
+        return DeployValidationWaveforms.req(
+            self,
+            workflow=self.workflow,
+            request_memory=self.request_memory,
+            request_disk=self.request_disk,
+            request_cpus=self.request_cpus,
+        )
 
     @property
     def targets(self):
