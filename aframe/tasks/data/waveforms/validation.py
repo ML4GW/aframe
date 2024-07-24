@@ -46,6 +46,10 @@ class DeployValidationWaveforms(
         "waveforms will be saved before being merged",
         default=paths().tmp_dir / "val",
     )
+    condor_directory = PathParameter(
+        description="Directory where condor logs will be saved",
+        default=paths().condor_dir / "validation_waveforms",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

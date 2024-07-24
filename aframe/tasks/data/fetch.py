@@ -109,6 +109,7 @@ class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
 # renaming tasks to allow specifying diff params in config files
 class FetchTest(Fetch):
     condor_directory = PathParameter(default=paths().condor_dir / "test")
+    data_dir = PathParameter(default=paths().test_datadir / "background")
     segments_file = PathParameter(
         default=paths().test_datadir / "segments.txt"
     )
@@ -116,7 +117,7 @@ class FetchTest(Fetch):
 
 class FetchTrain(Fetch):
     condor_directory = PathParameter(default=paths().condor_dir / "train")
-
+    data_dir = PathParameter(default=paths().train_datadir / "background")
     segments_file = PathParameter(
         default=paths().train_datadir / "segments.txt"
     )

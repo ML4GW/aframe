@@ -24,7 +24,7 @@ class TrainingWaveforms(
 
     output_dir = PathParameter(
         description="Directory where merged training waveforms will be saved",
-        default=paths().train_datadir / "training",
+        default=paths().train_datadir / "training_waveforms",
     )
 
     def __init__(self, *args, **kwargs):

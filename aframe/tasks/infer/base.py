@@ -115,7 +115,7 @@ class InferBase(
             fname = Path(fname.path)
             start, duration = map(float, fname.stem.split("-")[-2:])
             stop = start + duration
-            for i in range(self.num_shifts):
+            for i in range(self.get_num_shifts()):
                 _shifts = [s * (i + 1) for s in self.shifts]
                 # check if segment is long enough to be analyzed
                 if data_utils.is_analyzeable_segment(

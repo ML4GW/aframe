@@ -45,7 +45,7 @@ class ExportLocal(AframeSingularityTask):
         return ModelRepositoryTarget(self.repository_directory)
 
     def requires(self):
-        raise self.train_task.req(self)
+        return self.train_task.req(self)
 
     @property
     def default_image(self):

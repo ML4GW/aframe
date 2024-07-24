@@ -60,8 +60,8 @@ class TestingWaveformsParams(WaveformParams):
 @inherits(TestingWaveformsParams)
 class DeployTestingWaveforms(
     AframeDataTask,
-    law.LocalWorkflow,
     StaticMemoryWorkflow,
+    law.LocalWorkflow,
 ):
     """
     Deploy condor jobs for generating testing waveforms via rejection sampling.
