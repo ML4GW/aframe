@@ -43,6 +43,8 @@ class InferBase(
     Base class for inference tasks
     """
 
+    condor_directory = PathParameter(default=paths().condor_dir / "infer")
+
     @property
     def default_image(self):
         return "infer.sif"

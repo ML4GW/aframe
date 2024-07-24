@@ -133,7 +133,7 @@ class ValidationWaveforms(AframeDataTask):
     """
 
     condor_directory = PathParameter(
-        default=paths().condordir / "validation_waveforms"
+        default=paths().condor_dir / "validation_waveforms"
     )
 
     def __init__(self, *args, **kwargs):

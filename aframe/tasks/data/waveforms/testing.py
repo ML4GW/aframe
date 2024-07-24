@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 from typing import Dict, Literal
@@ -67,6 +66,10 @@ class DeployTestingWaveforms(
     """
     Deploy condor jobs for generating testing waveforms via rejection sampling.
     """
+
+    condor_directory = PathParameter(
+        default=paths().condor_dir / "testing_waveforms"
+    )
 
     def workflow_requires(self):
         reqs = {}
@@ -181,13 +184,6 @@ class DeployTestingWaveforms(
 
 @inherits(DeployTestingWaveforms)
 class TestingWaveforms(AframeDataTask):
-    condor_directory = PathParameter(
-        default=os.path.join(
-            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
-            "testing_waveforms",
-        )
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = self.output_dir / "waveforms.hdf5"

@@ -91,6 +91,8 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
     one wishes to run the task in.
     """
 
+    exclude_params_req = {"condor_directory", "output_dir", "data_dir"}
+
     @property
     def sandbox(self):
         return None

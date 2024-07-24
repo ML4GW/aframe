@@ -7,8 +7,8 @@ from luigi.util import inherits
 from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter
-from aframe.tasks import Train
 from aframe.tasks.export.target import ModelRepositoryTarget
+from aframe.tasks.train import Train
 
 
 class ExportParams(law.Task):

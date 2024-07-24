@@ -8,7 +8,7 @@ from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.waveforms.testing import DeployTestingWaveforms
-from aframe.tasks.infer import InferLocal
+from aframe.tasks.infer import Infer
 
 
 class SensitiveVolume(AframeSingularityTask):
@@ -42,7 +42,7 @@ class SensitiveVolume(AframeSingularityTask):
     def requires(self):
         reqs = {}
         reqs["ts"] = DeployTestingWaveforms.req(self)
-        reqs["infer"] = InferLocal.req(self)
+        reqs["infer"] = Infer.req(self)
         return reqs
 
     def output(self):
