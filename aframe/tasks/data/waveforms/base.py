@@ -1,9 +1,5 @@
-import os
-
 import law
 import luigi
-
-from aframe.parameters import PathParameter
 
 
 class WaveformParams(law.Task):
@@ -40,31 +36,11 @@ class WaveformParams(law.Task):
 
 
 class DeployTask(law.Task):
-    """
-    Common parameters for training and validation waveform generation
-    that utililze condor parallelization
-    """
-
-    output_dir = PathParameter(
-        description="Directory where merged waveforms will be saved"
-    )
-
-    tmp_dir = PathParameter(
-        description="Directory where temporary "
-        "waveforms will be saved before being merged",
-        default=os.getenv("AFRAME_TMPDIR", f"/local/{os.getenv('USER')}"),
-    )
-
     num_jobs = luigi.IntParameter(
         default=10,
         description="Number of parallel jobs "
         "to split waveform generation amongst",
     )
-
-    def output(self):
-        return law.LocalFileTarget(
-            self.tmp_dir / f"waveforms-{self.branch}.hdf5"
-        )
 
     def create_branch_map(self):
         # split the number of signals into num_jobs branches

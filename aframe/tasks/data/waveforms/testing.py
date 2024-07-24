@@ -7,6 +7,7 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
@@ -26,10 +27,6 @@ class TestingWaveformsParams(WaveformParams):
     )
     ifos = luigi.ListParameter(
         description="Interferometers for which waveforms will be generated"
-    )
-    output_dir = PathParameter(
-        description="Directory where merged waveforms and "
-        "rejected parameters will be saved"
     )
     shifts = luigi.ListParameter(
         description="List of shift multiple to apply to the test data segments"
@@ -53,6 +50,11 @@ class TestingWaveformsParams(WaveformParams):
     seed = luigi.IntParameter(
         description="Seed for controlling randomness"
         " of waveform prior sampling"
+    )
+    output_dir = PathParameter(
+        description="Directory where merged waveforms and "
+        "rejected parameters will be saved",
+        default=paths().test_datadir,
     )
 
 

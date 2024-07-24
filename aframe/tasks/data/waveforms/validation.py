@@ -6,6 +6,7 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
@@ -35,8 +36,24 @@ class DeployValidationWaveforms(
         description="Frequency of highpass filter in Hz"
     )
 
+    output_dir = PathParameter(
+        description="Directory where merged training waveforms will be saved",
+        default=paths().train_datadir,
+    )
+
+    tmp_dir = PathParameter(
+        description="Directory where temporary "
+        "waveforms will be saved before being merged",
+        default=paths().tmp_dir / "val",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def output(self):
+        return law.LocalFileTarget(
+            self.tmp_dir / f"waveforms-{self.branch}.hdf5"
+        )
 
     def workflow_requires(self):
         reqs = super().workflow_requires()
@@ -115,14 +132,8 @@ class ValidationWaveforms(AframeDataTask):
     rejection sampling, and merge results into a single file
     """
 
-    output_dir = PathParameter(
-        description="Directory where merged validation waveforms will be saved"
-    )
     condor_directory = PathParameter(
-        default=os.path.join(
-            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
-            "validation_waveforms",
-        )
+        default=paths().condordir / "validation_waveforms"
     )
 
     def __init__(self, *args, **kwargs):

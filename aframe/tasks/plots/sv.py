@@ -5,6 +5,7 @@ import law
 import luigi
 
 from aframe.base import AframeSingularityTask
+from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.waveforms.testing import DeployTestingWaveforms
 from aframe.tasks.infer import InferLocal
@@ -30,7 +31,8 @@ class SensitiveVolume(AframeSingularityTask):
         "between injected and recovered events",
     )
     output_dir = PathParameter(
-        description="Path to the directory to save the output plots and data"
+        description="Path to the directory to save the output plots and data",
+        default=paths().results_dir / "plots",
     )
 
     @property
