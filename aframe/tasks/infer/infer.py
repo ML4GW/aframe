@@ -84,7 +84,12 @@ class Infer(AframeSingularityTask):
         return output
 
     def requires(self):
-        return DeployInferLocal.req(self)
+        return DeployInferLocal.req(
+            self,
+            request_memory=self.request_memory,
+            request_disk=self.request_disk,
+            request_cpus=self.request_cpus,
+        )
 
     @property
     def targets(self):
@@ -117,16 +122,13 @@ class Infer(AframeSingularityTask):
         zero_lag_files = self.background_files[zero_lag]
         back_files = self.background_files[~zero_lag]
 
-        EventSet.aggregate(
-            back_files, self.background_output, clean=self.clean
-        )
+        EventSet.aggregate(back_files, self.background_output, clean=True)
         RecoveredInjectionSet.aggregate(
-            self.foreground_files, self.foreground_output, clean=self.clean
+            self.foreground_files, self.foreground_output, clean=True
         )
         if len(zero_lag_files) > 0:
             EventSet.aggregate(
-                zero_lag_files, self.zero_lag_output, clean=self.clean
+                zero_lag_files, self.zero_lag_output, clean=True
             )
 
-        if self.clean:
-            shutil.rmtree(self.output_dir / "tmp")
+        shutil.rmtree(self.output_dir / "tmp")
