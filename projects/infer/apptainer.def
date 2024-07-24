@@ -13,7 +13,6 @@ Stage: build
 ../../hermes /opt/aframe/hermes
 ../../ml4gw /opt/aframe/ml4gw
 ../../libs/ledger /opt/aframe/libs/ledger
-../../pycondor /opt/aframe/pycondor
 
 %post
 # installing the local package editably via pip
