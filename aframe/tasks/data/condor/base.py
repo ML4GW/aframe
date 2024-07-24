@@ -75,7 +75,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         for envvar, value in os.environ.items():
             if envvar.startswith("AFRAME_"):
                 environment += f"{envvar}={value} "
-        environment += '"'
+
         return environment
 
     def htcondor_create_job_file_factory(self, **kwargs):
@@ -106,7 +106,10 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             )
 
     def htcondor_job_config(self, config, job_num, branches):
+        # build environment, and close the string
         environment = self.build_environment()
+        environment += '"'
+
         config.custom_content.append(("environment", environment))
         config.custom_content.append(("stream_error", "True"))
         config.custom_content.append(("stream_output", "True"))

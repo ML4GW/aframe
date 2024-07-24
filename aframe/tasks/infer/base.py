@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import law
@@ -29,6 +30,7 @@ class InferParameters(law.Task):
     rate_per_gpu = luigi.FloatParameter(
         default=100.0, description="Inferences per second per gpu"
     )
+    clean = luigi.BoolParameter(default=True)
     zero_lag = luigi.BoolParameter(default=False)
     output_dir = PathParameter(default=paths().results_dir)
 
@@ -63,7 +65,7 @@ class InferBase(
 
     @property
     def tmp_dir(self):
-        return self.output_dir / f"tmp-{self.branch}"
+        return self.output_dir / "tmp" / f"tmp-{self.branch}"
 
     @property
     def foreground_output(self):
@@ -79,11 +81,11 @@ class InferBase(
 
     @property
     def background_fnames(self):
-        return self.input()["data"].collection.targets.values()
+        return self.workflow_input()["data"].collection.targets.values()
 
     @property
     def injection_set_fname(self):
-        return self.input()["waveforms"][0].path
+        return self.workflow_input()["waveforms"][0].path
 
     def workflow_requires(self):
         reqs = {}
@@ -142,6 +144,11 @@ class InferBase(
         outputs["background"] = law.LocalFileTarget(self.background_output)
         return outputs
 
+    def htcondor_job_config(self, config, job_num, branches):
+        config = super().htcondor_job_config(config, job_num, branches)
+        config.custom_content.append(("max_materialize", self.num_clients))
+        return config
+
     def run(self):
         from infer.data import Sequence
         from infer.main import infer
@@ -149,6 +156,8 @@ class InferBase(
 
         from hermes.aeriel.client import InferenceClient
 
+        ip = os.getenv("AFRAME_TRITON_IP")
+        self.tmp_dir.mkdir(exist_ok=True, parents=True)
         fname, shifts = self.branch_data
         sequence = Sequence(
             ifos=self.ifos,
@@ -163,7 +172,7 @@ class InferBase(
         postprocessor = Postprocessor(
             integration_window_length=self.integration_window_length,
             inference_sampling_rate=self.inference_sampling_rate,
-            cluster_window_lengt=self.cluster_window_length,
+            cluster_window_length=self.cluster_window_length,
             psd_length=self.psd_length,
             fduration=self.fduration,
             t0=sequence.t0,
@@ -171,10 +180,14 @@ class InferBase(
         )
 
         client = InferenceClient(
-            address=f"{self.get_ip_address()}:8001",
+            address=f"{ip}:8001",
             model_name=self.model_name,
             model_version=self.model_version,
             callback=sequence,
         )
 
-        infer(client, sequence, postprocessor)
+        with client:
+            background, foreground = infer(client, sequence, postprocessor)
+
+        background.write(self.background_output)
+        foreground.write(self.foreground_output)

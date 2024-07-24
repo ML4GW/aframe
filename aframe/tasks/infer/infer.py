@@ -1,3 +1,4 @@
+import os
 import socket
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import numpy as np
 import psutil
 from luigi.util import inherits
 
+from aframe.base import AframeSingularityTask
 from aframe.tasks.infer.base import InferBase, InferParameters
 from hermes.aeriel.serve import serve
 
@@ -42,17 +44,30 @@ class DeployInferLocal(InferBase):
         Law hook that provides a context manager
         in which the whole workflow is run
         """
+        # set the triton server IP address
+        # as environment variable with AFRAME prefix
+        # so that condor and apptainer will tasks will
+        # automatically map i
+        os.environ["AFRAME_TRITON_IP"] = self.get_ip_address()
         server_log = self.output_dir / "server.log"
+        self.ip = self.get_ip_address()
         return serve(
-            self.model_repo_dir, self.image, log_file=server_log, wait=True
+            self.model_repo_dir,
+            self.triton_image,
+            log_file=server_log,
+            wait=True,
         )
 
 
 @inherits(DeployInferLocal)
-class Infer(law.Task):
+class Infer(AframeSingularityTask):
     """
     Aggregate inference results
     """
+
+    @property
+    def default_image(self):
+        return "infer.sif"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,13 +92,19 @@ class Infer(law.Task):
 
     @property
     def background_files(self):
-        return list(map(Path, [targets[0].path for targets in self.targets]))
+        return np.array(
+            [Path(targets["background"].path) for targets in self.targets]
+        )
 
     @property
     def foreground_files(self):
-        return list(map(Path, [targets[1].path for targets in self.targets]))
+        return np.array(
+            [Path(targets["foreground"].path) for targets in self.targets]
+        )
 
     def run(self):
+        import shutil
+
         from infer.utils import get_shifts
         from ledger.events import EventSet, RecoveredInjectionSet
 
@@ -106,3 +127,6 @@ class Infer(law.Task):
             EventSet.aggregate(
                 zero_lag_files, self.zero_lag_output, clean=self.clean
             )
+
+        if self.clean:
+            shutil.rmtree(self.output_dir / "tmp")
