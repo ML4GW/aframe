@@ -111,7 +111,7 @@ class Infer(AframeSingularityTask):
         )
 
     @classmethod
-    def get_shifts(files: List[Path]):
+    def get_shifts(cls, files: List[Path]):
         shifts = []
         for f in files:
             with h5py.File(f) as f:

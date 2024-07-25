@@ -12,7 +12,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from plots.legacy import compute, tools
 from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
-from plots.vetos import VetoParser, get_catalog_vetoes
+from plots.vetos import VetoParser, get_catalog_vetos
 from priors.priors import log_normal_masses
 
 from utils.logging import configure_logging
@@ -115,7 +115,7 @@ def main(
         ifos,
     )
 
-    catalog_vetos = get_catalog_vetoes(start, stop)
+    catalog_vetos = get_catalog_vetos(start, stop)
     categories = ["CAT1", "CAT2", "CAT3", "GATES", "CATALOG"]
     for cat in categories:
         for i, ifo in enumerate(ifos):
