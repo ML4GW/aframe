@@ -11,18 +11,22 @@ import kr8s
 CHART_REPO = "https://github.com/ML4GW/aframev2/releases/download/"
 
 
-# used to monkey patch kr8s api refresh method;
-# see https://github.com/kr8s-org/kr8s/issues/214
-async def authenticate(self):
-    """
-    Replacement reauthenticate method that
-    uses kubectl to refresh the OIDC token
-    """
+def authenticate():
     subprocess.run(
         ["kubectl", "cluster-info"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+# used to monkey patch kr8s api refresh method;
+# see https://github.com/kr8s-org/kr8s/issues/214
+async def auth(self):
+    """
+    Replacement reauthenticate method that
+    uses kubectl to refresh the OIDC token
+    """
+    authenticate()
     await self._load_kubeconfig()
 
 
@@ -35,9 +39,7 @@ class HelmChart:
         self.base_cmd = base_cmd
 
         api = kr8s.api()
-        api.auth.reauthenticate = authenticate.__get__(
-            api.auth, type(api.auth)
-        )
+        api.auth.reauthenticate = auth.__get__(api.auth, type(api.auth))
         self.api = api
 
     def install(self):
