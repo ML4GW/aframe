@@ -53,11 +53,13 @@ class DeployInferLocal(InferBase):
         os.environ["AFRAME_TRITON_IP"] = self.get_ip_address()
         server_log = self.output_dir / "server.log"
         self.ip = self.get_ip_address()
+        gpus = [int(gpu) for gpu in self.gpus.split(",")]
         return serve(
             self.model_repo_dir,
             self.triton_image,
             log_file=server_log,
             wait=True,
+            gpus=gpus,
         )
 
 
@@ -111,7 +113,7 @@ class Infer(AframeSingularityTask):
         )
 
     @classmethod
-    def get_shifts(files: List[Path]):
+    def get_shifts(cls, files: List[Path]):
         shifts = []
         for f in files:
             with h5py.File(f) as f:

@@ -40,6 +40,8 @@ data:
     # preprocessing args
     batch_size: 384
     batches_per_epoch: 800
+    chunk_size: 10000
+    chunks_per_epoch: 10
     # kernel_length:
     psd_length: 8
     # fduration:

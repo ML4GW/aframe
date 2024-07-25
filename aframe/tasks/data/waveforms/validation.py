@@ -136,10 +136,6 @@ class ValidationWaveforms(AframeDataTask):
     rejection sampling, and merge results into a single file
     """
 
-    condor_directory = PathParameter(
-        default=paths().condor_dir / "validation_waveforms"
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.output_file = self.output_dir / "val_waveforms.hdf5"
