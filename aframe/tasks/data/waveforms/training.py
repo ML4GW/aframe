@@ -43,7 +43,7 @@ class TrainingWaveforms(
         self.output_dir.mkdir(exist_ok=True)
         num_signals = self.branch_data
         prior = load_prior(self.prior)
-        prior, detector_frame_prior = prior()
+        prior, detector_frame_prior = prior(**self.prior_args)
 
         samples = prior.sample(num_signals)
         if not detector_frame_prior:
