@@ -6,10 +6,6 @@ from aframe.tasks.data.base import AframeDataTask
 
 
 class Query(AframeDataTask):
-    """
-    This is a test
-    """
-
     start = luigi.FloatParameter(description="Start time of segments to query")
     end = luigi.FloatParameter(description="End time of segments to query")
     segments_file = PathParameter(

@@ -3,6 +3,8 @@ import os
 import luigi
 from luigi.contrib.s3 import S3Client
 
+from aframe.parameters import PathParameter
+
 project_base = "/opt/aframe/projects"
 
 
@@ -103,3 +105,12 @@ nautilus_urls = {
     "https://s3-central.nrp-nautilus.io": "http://rook-ceph-rgw-centrals3.rook-central",  # noqa: E501
     "https://s3-east.nrp-nautilus.io": "http://rook-ceph-rgw-easts3.rook-east",
 }
+
+
+class paths(luigi.Config):
+    train_datadir = PathParameter(default=os.getenv("AFRAME_TRAIN_DATA_DIR"))
+    train_rundir = PathParameter(default=os.getenv("AFRAME_TRAIN_RUN_DIR"))
+    results_dir = PathParameter(default=os.getenv("AFRAME_RESULTS_DIR"))
+    test_datadir = PathParameter(default=os.getenv("AFRAME_TEST_DATA_DIR"))
+    condor_dir = PathParameter(default=os.getenv("AFRAME_CONDOR_DIR"))
+    tmp_dir = PathParameter(default=os.getenv("AFRAME_TMPDIR"))

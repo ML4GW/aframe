@@ -4,6 +4,7 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.config import paths
 from aframe.parameters import PathParameter
 from aframe.targets import s3_or_local
 from aframe.tasks.data.base import AframeDataTask
@@ -13,13 +14,11 @@ from aframe.tasks.data.segments import Query
 
 @inherits(Query)
 class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
-    data_dir = PathParameter()
     sample_rate = luigi.FloatParameter()
     max_duration = luigi.FloatParameter(default=-1)
     prefix = luigi.Parameter(default="background")
     channels = luigi.ListParameter()
-
-    exclude_params_req = {"condor_directory"}
+    data_dir = PathParameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -107,16 +106,18 @@ class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
 
 # renaming tasks to allow specifying diff params in config files
 class FetchTest(Fetch):
-    condor_directory = PathParameter(
-        default=os.path.join(
-            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "test"
-        )
+    condor_directory = PathParameter(default=paths().condor_dir / "fetch_test")
+    data_dir = PathParameter(default=paths().test_datadir / "background")
+    segments_file = PathParameter(
+        default=paths().test_datadir / "segments.txt"
     )
 
 
 class FetchTrain(Fetch):
     condor_directory = PathParameter(
-        default=os.path.join(
-            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"), "train"
-        )
+        default=paths().condor_dir / "fetch_train"
+    )
+    data_dir = PathParameter(default=paths().train_datadir / "background")
+    segments_file = PathParameter(
+        default=paths().train_datadir / "segments.txt"
     )

@@ -16,7 +16,6 @@ tqdm = "^4.66"
 
 # submodules
 ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["serve", "torch"]}
-pycondor = {path = "../../pycondor", develop = true}
 
 # local deps
 aframe = {path = "../../", develop = true}

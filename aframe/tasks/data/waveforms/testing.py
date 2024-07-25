@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 from typing import Dict, Literal
@@ -7,6 +6,7 @@ import law
 import luigi
 from luigi.util import inherits
 
+from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
 from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
@@ -26,10 +26,6 @@ class TestingWaveformsParams(WaveformParams):
     )
     ifos = luigi.ListParameter(
         description="Interferometers for which waveforms will be generated"
-    )
-    output_dir = PathParameter(
-        description="Directory where merged waveforms and "
-        "rejected parameters will be saved"
     )
     shifts = luigi.ListParameter(
         description="List of shift multiple to apply to the test data segments"
@@ -54,17 +50,26 @@ class TestingWaveformsParams(WaveformParams):
         description="Seed for controlling randomness"
         " of waveform prior sampling"
     )
+    output_dir = PathParameter(
+        description="Directory where merged waveforms and "
+        "rejected parameters will be saved",
+        default=paths().test_datadir,
+    )
 
 
 @inherits(TestingWaveformsParams)
 class DeployTestingWaveforms(
     AframeDataTask,
-    law.LocalWorkflow,
     StaticMemoryWorkflow,
+    law.LocalWorkflow,
 ):
     """
     Deploy condor jobs for generating testing waveforms via rejection sampling.
     """
+
+    condor_directory = PathParameter(
+        default=paths().condor_dir / "testing_waveforms"
+    )
 
     def workflow_requires(self):
         reqs = {}
@@ -179,13 +184,6 @@ class DeployTestingWaveforms(
 
 @inherits(DeployTestingWaveforms)
 class TestingWaveforms(AframeDataTask):
-    condor_directory = PathParameter(
-        default=os.path.join(
-            os.getenv("AFRAME_CONDOR_DIR", "/tmp/aframe/"),
-            "testing_waveforms",
-        )
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.waveform_output = self.output_dir / "waveforms.hdf5"
@@ -203,6 +201,7 @@ class TestingWaveforms(AframeDataTask):
             request_memory=self.request_memory,
             request_disk=self.request_disk,
             request_cpus=self.request_cpus,
+            workflow=self.workflow,
         )
 
     @property

@@ -1,4 +1,3 @@
-import logging
 import os
 
 import jsonargparse
@@ -52,18 +51,6 @@ def main(args=None):
 
     background_path = os.path.join(cfg.outdir, "background.hdf5")
     foreground_path = os.path.join(cfg.outdir, "foreground.hdf5")
-
-    # TODO: relegate this check to luigi task
-    if (
-        os.path.exists(background_path)
-        and os.path.exists(foreground_path)
-        and not cfg.force
-    ):
-        logging.info(
-            "Background and foreground files already exist at "
-            f"{cfg.outdir}, skipping inference."
-        )
-        return
 
     cfg = parser.instantiate_classes(cfg)
     with cfg.client:

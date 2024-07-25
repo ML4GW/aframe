@@ -20,7 +20,13 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
     request_memory = luigi.Parameter(default="3267 Mb")
     request_cpus = luigi.IntParameter(default=1)
 
-    exclude_params_req = {"request_memory", "request_disk", "request_cpus"}
+    exclude_params_req = {
+        "request_memory",
+        "request_disk",
+        "request_cpus",
+        "condor_directory",
+        "workflow",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -75,7 +81,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         for envvar, value in os.environ.items():
             if envvar.startswith("AFRAME_"):
                 environment += f"{envvar}={value} "
-        environment += '"'
+
         return environment
 
     def htcondor_create_job_file_factory(self, **kwargs):
@@ -106,7 +112,10 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             )
 
     def htcondor_job_config(self, config, job_num, branches):
+        # build environment, and close the string
         environment = self.build_environment()
+        environment += '"'
+
         config.custom_content.append(("environment", environment))
         config.custom_content.append(("stream_error", "True"))
         config.custom_content.append(("stream_output", "True"))

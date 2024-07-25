@@ -4,9 +4,8 @@ import law
 import luigi
 from luigi.util import inherits
 
-from aframe.config import Defaults, wandb
+from aframe.config import Defaults, paths, wandb
 from aframe.parameters import PathParameter
-from aframe.pipelines.config import paths
 from aframe.tasks.data import TrainingWaveforms, ValidationWaveforms
 from aframe.tasks.data.fetch import FetchTrain
 
@@ -45,13 +44,15 @@ class TrainBaseParameters(law.Task):
     )
     run_dir = PathParameter(
         description="Directory where the training logger "
-        "will save checkpoints, logs, etc. "
+        "will save checkpoints, logs, etc. ",
+        default=paths().train_rundir,
     )
     data_dir = PathParameter(
         description="Directory where training data is stored."
         "It is expected to contain a `signals.hdf5` file of signals, "
         "and a `/background` sub-directory containing background "
-        "files used for training"
+        "files used for training",
+        default=paths().train_datadir,
     )
     ckpt_path = PathParameter(
         default="",
@@ -64,23 +65,10 @@ class TrainBaseParameters(law.Task):
 class TrainBase(law.Task):
     def requires(self):
         reqs = {}
-        reqs["strain"] = FetchTrain.req(
-            self,
-            segments_file=self.data_dir / "segments.txt",
-            data_dir=self.data_dir / "background",
-        )
-        reqs["train_waveforms"] = TrainingWaveforms.req(
-            self,
-            output_dir=self.data_dir / "training_waveforms",
-            condor_directory=paths().condordir / "train_waveforms",
-        )
+        reqs["strain"] = FetchTrain.req(self)
+        reqs["train_waveforms"] = TrainingWaveforms.req(self)
 
-        reqs["val_waveforms"] = ValidationWaveforms.req(
-            self,
-            output_dir=self.data_dir,
-            tmp_dir=paths().tmp_dir / "val",
-            condor_directory=paths().condordir / "val_waveforms",
-        )
+        reqs["val_waveforms"] = ValidationWaveforms.req(self)
         return reqs
 
     def configure_wandb(self, args: List[str]) -> None:

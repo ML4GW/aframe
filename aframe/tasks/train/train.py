@@ -14,6 +14,7 @@ from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask, AframeWrapperTask, logger
 from aframe.config import s3, wandb
+from aframe.helm import authenticate
 from aframe.targets import Bytes, LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 from aframe.tasks.train.utils import stream_command
@@ -81,6 +82,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             raise ValueError(
                 "data_dir must be an s3 path for remote training tasks"
             )
+        authenticate()
 
     @property
     def default_image(self):
@@ -221,7 +223,6 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
                 "image": self.remote_image,
                 "volumeMounts": [
                     {"mountPath": "/dev/shm", "name": "dshm"},
-                    {"mountPath": "/opt", "name": self.name},
                 ],
                 "imagePullPolicy": "Always",
                 "command": ["python", "-m", "train"],
@@ -254,11 +255,14 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
 
         if self.use_init_container:
             spec["initContainers"] = self.init_containers
+            spec["containers"][0]["volumeMounts"].append(
+                {"mountPath": "/opt", "name": self.name}
+            )
 
         spec["volumes"] = [
             {
                 "name": "dshm",
-                "emptyDir": {"sizeLimit": "128Gi", "medium": "Memory"},
+                "emptyDir": {"sizeLimit": "256Gi", "medium": "Memory"},
             },
         ]
         if self.use_init_container:

@@ -91,6 +91,11 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
     one wishes to run the task in.
     """
 
+    # don't pass these parameters between tasks
+    # when calling .req() so that individual tasks
+    # can speciyfy their own values
+    exclude_params_req = {"output_dir", "data_dir"}
+
     @property
     def sandbox(self):
         return None

@@ -7,10 +7,12 @@ import time
 import h5py
 import s3fs
 import torch
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from ray import train
+
+BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
@@ -115,7 +117,7 @@ def report_with_retries(metrics, checkpoint, retries: int = 10):
         try:
             train.report(metrics=metrics, checkpoint=checkpoint)
             break
-        except ClientError:
+        except BOTO_RETRY_EXCEPTIONS:
             time.sleep(5)
             continue
 
