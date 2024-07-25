@@ -53,11 +53,13 @@ class DeployInferLocal(InferBase):
         os.environ["AFRAME_TRITON_IP"] = self.get_ip_address()
         server_log = self.output_dir / "server.log"
         self.ip = self.get_ip_address()
+        gpus = [int(gpu) for gpu in self.gpus.split(",")]
         return serve(
             self.model_repo_dir,
             self.triton_image,
             log_file=server_log,
             wait=True,
+            gpus=gpus,
         )
 
 
