@@ -5,6 +5,9 @@ from typing import List, Tuple, TypeVar
 import numpy as np
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
+from numpy.polynomial import Polynomial
+from scipy.integrate import quad
+from scipy.stats import gaussian_kde
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)
@@ -136,6 +139,56 @@ class EventSet(Ledger):
             return result, veto_mask
         return result
 
+    def fit_noise_model(self):
+        self.kde = gaussian_kde(self.detection_statistic)
+
+        # Estimate the peak of the distribution
+        samples = np.linspace(
+            min(self.detection_statistic),
+            max(self.detection_statistic),
+            100,
+        )
+        pdf = self.kde(samples)
+
+        # Determine the range of values to use for fitting
+        # a line to a portion of the pdf.
+        # Roughly, we have too few samples to properly
+        # estimate the KDE once the pdf drops below 1/sqrt(N)
+        peak_idx = np.argmax(pdf)
+        threshold_pdf_value = 1 / np.sqrt(len(self.detection_statistic))
+        start = np.argmin(pdf[peak_idx:] > 10 * threshold_pdf_value) + peak_idx
+        stop = np.argmin(pdf[peak_idx:] > threshold_pdf_value) + peak_idx
+
+        # Fit a line to the log pdf of the region
+        fit_samples = samples[start:stop]
+        self.background_fit = Polynomial.fit(
+            fit_samples, np.log(pdf[start:stop]), 1
+        )
+        self.threshold_statistic = samples[start]
+
+    def noise_model(self, statistics: F) -> F:
+        """
+        Calculate the expected background event rate for a given
+        statistic or set of statistics
+        """
+        try:
+            len(statistics)
+        except TypeError:
+            if statistics < self.threshold_statistic:
+                background_density = self.kde(statistics)
+            else:
+                background_density = np.exp(self.background_fit(statistics))
+        else:
+            background_density = np.zeros_like(statistics)
+            mask = statistics < self.threshold_statistic
+
+            background_density[mask] = self.kde(statistics[mask])
+            background_density[~mask] = np.exp(
+                self.background_fit(statistics[~mask])
+            )
+
+        return background_density * len(self.detection_statistic) / self.Tb
+
 
 @dataclass
 class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
@@ -178,3 +231,27 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
 
         obj.Tb = events.Tb
         return obj
+
+    def fit_signal_model(self):
+        self.kde = gaussian_kde(self.detection_statistic)
+
+    def signal_model(self, statistics: F) -> F:
+        """
+        Calculate the expected signal event rate for a given
+        statistic or set of statistics
+        """
+        return self.kde(statistics)
+
+    def _volume_element(cosmology, z):
+        return cosmology.differential_comoving_volume(z).value / (1 + z)
+
+    def get_injected_volume(self):
+        zmin, zmax = self.redshift.min(), self.redshift.max()
+        decmin, decmax = self.dec.min(), self.dec.max()
+
+        cosmo = "cosmo"
+        volume, _ = quad(lambda z: self._volume_element(cosmo, z), zmin, zmax)
+        theta_max = np.pi / 2 - decmin
+        theta_min = np.pi / 2 - decmax
+        omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
+        return volume * omega
