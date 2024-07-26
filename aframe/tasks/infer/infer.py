@@ -1,5 +1,7 @@
 import os
 import socket
+import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import List
 
@@ -12,6 +14,7 @@ from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
 from aframe.tasks.infer.base import InferBase, InferParameters
+from hermes.aeriel.monitor import ServerMonitor
 from hermes.aeriel.serve import serve
 
 
@@ -53,18 +56,45 @@ class DeployInferLocal(InferBase):
         # set the triton server IP address
         # as environment variable with AFRAME prefix
         # so that condor and apptainer will tasks will
-        # automatically map i
-        os.environ["AFRAME_TRITON_IP"] = self.get_ip_address()
+        # automatically map it into the environment
+        ip = self.get_ip_address()
+        os.environ["AFRAME_TRITON_IP"] = ip
         server_log = self.output_dir / "server.log"
-        self.ip = self.get_ip_address()
         gpus = [int(gpu) for gpu in self.gpus.split(",")]
-        return serve(
+
+        serve_context = serve(
             self.model_repo_dir,
             self.triton_image,
             log_file=server_log,
             wait=True,
             gpus=gpus,
         )
+
+        # helper class to combine
+        # the serve and monitor contexts
+        class ServerContext:
+            def __init__(self, obj):
+                self.stack = ExitStack()
+                self.obj = obj
+
+            def __enter__(self):
+                self.stack.enter_context(serve_context)
+                monitor = ServerMonitor(
+                    model_name=self.obj.model_name,
+                    ips="localhost",
+                    filename=self.obj.output_dir
+                    / f"server-stats-{self.obj.batch_size}.csv",
+                    model_version=self.obj.model_version,
+                    name="monitor",
+                    rate=10,
+                )
+                time.sleep(1)
+                self.stack.enter_context(monitor)
+
+            def __exit__(self, *args):
+                self.stack.close()
+
+        return ServerContext(self)
 
 
 @inherits(DeployInferLocal)
