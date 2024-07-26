@@ -93,13 +93,16 @@ class Infer(AframeSingularityTask):
         return output
 
     def requires(self):
-        # deploy the condor inference jobs
+        # deploy the condor inference jobs;
+        # reduce job status poll interval
+        # so that jobs can be submitted faster
         return DeployInferLocal.req(
             self,
             request_memory=self.request_memory,
             request_disk=self.request_disk,
             request_cpus=self.request_cpus,
             workflow=self.workflow,
+            poll_interval=0.2,
         )
 
     @property
