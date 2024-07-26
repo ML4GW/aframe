@@ -113,19 +113,18 @@ class _WaveformGenerator:
     waveform_duration: float
     coalescence_time: float
 
-    def center(self, waveform):
+    def shift_coalescence(self, waveform):
         shift = int(self.coalescence_time * self.sample_rate)
-        centered = np.roll(waveform, shift, axis=-1)
-        return centered
+        return np.roll(waveform, shift, axis=-1)
 
     def __call__(self, params):
         polarizations = self.gen.time_domain_strain(params)
 
-        # could think about stacking then unstacking to
-        # make this more efficient
-        for key in polarizations.keys():
-            polarizations[key] = self.center(polarizations[key])
-        return polarizations
+        stacked = np.stack([v for v in polarizations.values()])
+        stacked = self.shift_coalescence(stacked)
+        unstacked = {k: v for (k, v) in zip(polarizations.keys(), stacked)}
+
+        return unstacked
 
 
 @dataclass
@@ -138,7 +137,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         return self.cross.shape[-1] / self.sample_rate
 
     def get_waveforms(self) -> np.ndarray:
-        return np.stack([self.cross, self.plus])
+        return np.stack([self.cross, self.plus], axis=-2)
 
     @classmethod
     def from_parameters(
