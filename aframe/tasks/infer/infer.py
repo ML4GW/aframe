@@ -44,7 +44,11 @@ class DeployInferLocal(InferBase):
     def workflow_run_context(self):
         """
         Law hook that provides a context manager
-        in which the whole workflow is run
+        in which the whole workflow is run.
+
+        Return the hermes serve context that will
+        spin up a triton and server before the
+        actual condor workflow jobs are submitted
         """
         # set the triton server IP address
         # as environment variable with AFRAME prefix
@@ -66,7 +70,8 @@ class DeployInferLocal(InferBase):
 @inherits(DeployInferLocal)
 class Infer(AframeSingularityTask):
     """
-    Aggregate inference results
+    Law Task that aggregates results from
+    individual condor inference jobs
     """
 
     @property
@@ -88,6 +93,7 @@ class Infer(AframeSingularityTask):
         return output
 
     def requires(self):
+        # deploy the condor inference jobs
         return DeployInferLocal.req(
             self,
             request_memory=self.request_memory,

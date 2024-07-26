@@ -46,6 +46,14 @@ class InferBase(
 
     condor_directory = PathParameter(default=paths().condor_dir / "infer")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # law workflow attribute that sets
+        # the condor concurrency;
+        # multiply by two since there seems to be
+        # some latency in laws job submission
+        self.parallel_jobs = int(self.num_clients * 2)
+
     @property
     def default_image(self):
         return "infer.sif"
@@ -57,6 +65,9 @@ class InferBase(
 
     @property
     def rate_per_client(self):
+        # calculate rate of inference
+        # submissions per client based on the rate per gpu
+        # and the number of gpus in the deployment
         if not self.rate_per_gpu:
             return None
         total_rate = self.num_gpus * self.rate_per_gpu
@@ -99,6 +110,9 @@ class InferBase(
         return reqs
 
     def get_num_shifts(self):
+        # calculate the number of shifts required
+        # to accumulate the requested background,
+        # given the duration of the background segments
         segments = data_utils.segments_from_paths(self.background_fnames)
         num_shifts = data_utils.get_num_shifts_from_Tb(
             segments, self.Tb, max(self.shifts)
@@ -111,18 +125,25 @@ class InferBase(
 
     @workflow_condition.create_branch_map
     def create_branch_map(self):
+        # create the individual fname shift
+        # combinations that represent individual
+        # condor inference jobs to be submitted
         branch_map = {}
+        num_shifts = self.get_num_shifts()
+        counter = 0
         for fname in self.background_fnames:
             fname = Path(fname.path)
             start, duration = map(float, fname.stem.split("-")[-2:])
             stop = start + duration
-            for i in range(self.get_num_shifts()):
+            for i in range(num_shifts):
                 _shifts = [s * (i + 1) for s in self.shifts]
                 # check if segment is long enough to be analyzed
                 if data_utils.is_analyzeable_segment(
                     start, stop, _shifts, self.psd_length
                 ):
-                    branch_map[i] = (fname, _shifts)
+                    # unique identifier for mapping to branch map
+                    branch_map[counter] = (fname, _shifts)
+                    counter += 1
 
             # if its somehow not analyzeable for 0lag then segment
             # length has been set incorrectly, but put this check here anyway
@@ -130,7 +151,9 @@ class InferBase(
                 start, stop, [0] * len(self.shifts), self.psd_length
             ):
                 _shifts = [0 for s in self.shifts]
-                branch_map[i] = (fname, _shifts)
+                branch_map[counter] = (fname, _shifts)
+                counter += 1
+
         return branch_map
 
     def get_ip_address(self) -> str:
@@ -142,11 +165,6 @@ class InferBase(
         outputs["foreground"] = law.LocalFileTarget(self.foreground_output)
         outputs["background"] = law.LocalFileTarget(self.background_output)
         return outputs
-
-    def htcondor_job_config(self, config, job_num, branches):
-        config = super().htcondor_job_config(config, job_num, branches)
-        config.custom_content.append(("max_materialize", self.num_clients))
-        return config
 
     def run(self):
         from infer.data import Sequence
