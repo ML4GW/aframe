@@ -60,15 +60,18 @@ class DeployInferLocal(InferBase):
         ip = self.get_ip_address()
         os.environ["AFRAME_TRITON_IP"] = ip
         server_log = self.output_dir / "server.log"
-        gpus = [int(gpu) for gpu in self.gpus.split(",")]
 
+        # TODO: figure out why serves
+        # `gpus` variable does not expose
+        # proper GPU ids to triton
         serve_context = serve(
             self.model_repo_dir,
             self.triton_image,
             log_file=server_log,
             wait=True,
-            gpus=gpus,
         )
+
+        current_gpus = os.getenv("CUDA_VISIBLE_DEVICES", "")
 
         # helper class to combine
         # the serve and monitor contexts
@@ -78,6 +81,7 @@ class DeployInferLocal(InferBase):
                 self.obj = obj
 
             def __enter__(self):
+                os.environ["CUDA_VISIBLE_DEVICES"] = self.obj.gpus
                 self.stack.enter_context(serve_context)
                 monitor = ServerMonitor(
                     model_name=self.obj.model_name,
@@ -93,6 +97,7 @@ class DeployInferLocal(InferBase):
 
             def __exit__(self, *args):
                 self.stack.close()
+                os.environ["CUDA_VISIBLE_DEVICES"] = current_gpus
 
         return ServerContext(self)
 
