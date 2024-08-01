@@ -1,6 +1,6 @@
 import astropy.cosmology as cosmo
 from bilby.core.prior import PriorDict
-from bilby.gw.prior import UniformSourceFrame
+from bilby.gw.prior import UniformComovingVolume
 from priors.priors import uniform_extrinsic, uniform_spin
 
 # default cosmology
@@ -15,7 +15,7 @@ def prior(
     prior = PriorDict(uniform_extrinsic())
     prior["mass_1"] = mass_1
     prior["mass_2"] = mass_2
-    prior["redshift"] = UniformSourceFrame(
+    prior["redshift"] = UniformComovingVolume(
         name="redshift",
         minimum=0,
         maximum=zmax,
