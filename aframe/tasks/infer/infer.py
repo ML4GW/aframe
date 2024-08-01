@@ -1,5 +1,7 @@
 import os
 import socket
+import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import List
 
@@ -12,6 +14,7 @@ from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
 from aframe.tasks.infer.base import InferBase, InferParameters
+from hermes.aeriel.monitor import ServerMonitor
 from hermes.aeriel.serve import serve
 
 
@@ -44,29 +47,66 @@ class DeployInferLocal(InferBase):
     def workflow_run_context(self):
         """
         Law hook that provides a context manager
-        in which the whole workflow is run
+        in which the whole workflow is run.
+
+        Return the hermes serve context that will
+        spin up a triton and server before the
+        actual condor workflow jobs are submitted
         """
         # set the triton server IP address
         # as environment variable with AFRAME prefix
         # so that condor and apptainer will tasks will
-        # automatically map i
-        os.environ["AFRAME_TRITON_IP"] = self.get_ip_address()
+        # automatically map it into the environment
+        ip = self.get_ip_address()
+        os.environ["AFRAME_TRITON_IP"] = ip
         server_log = self.output_dir / "server.log"
-        self.ip = self.get_ip_address()
-        gpus = [int(gpu) for gpu in self.gpus.split(",")]
-        return serve(
+
+        # TODO: figure out why serves
+        # `gpus` variable does not expose
+        # proper GPU ids to triton
+        serve_context = serve(
             self.model_repo_dir,
             self.triton_image,
             log_file=server_log,
             wait=True,
-            gpus=gpus,
         )
+
+        current_gpus = os.getenv("CUDA_VISIBLE_DEVICES", "")
+
+        # helper class to combine
+        # the serve and monitor contexts
+        class ServerContext:
+            def __init__(self, obj):
+                self.stack = ExitStack()
+                self.obj = obj
+
+            def __enter__(self):
+                os.environ["CUDA_VISIBLE_DEVICES"] = self.obj.gpus
+                self.stack.enter_context(serve_context)
+                monitor = ServerMonitor(
+                    model_name=self.obj.model_name,
+                    ips="localhost",
+                    filename=self.obj.output_dir
+                    / f"server-stats-{self.obj.batch_size}.csv",
+                    model_version=self.obj.model_version,
+                    name="monitor",
+                    rate=10,
+                )
+                time.sleep(1)
+                self.stack.enter_context(monitor)
+
+            def __exit__(self, *args):
+                self.stack.close()
+                os.environ["CUDA_VISIBLE_DEVICES"] = current_gpus
+
+        return ServerContext(self)
 
 
 @inherits(DeployInferLocal)
 class Infer(AframeSingularityTask):
     """
-    Aggregate inference results
+    Law Task that aggregates results from
+    individual condor inference jobs
     """
 
     @property
@@ -88,12 +128,16 @@ class Infer(AframeSingularityTask):
         return output
 
     def requires(self):
+        # deploy the condor inference jobs;
+        # reduce job status poll interval
+        # so that jobs can be submitted faster
         return DeployInferLocal.req(
             self,
             request_memory=self.request_memory,
             request_disk=self.request_disk,
             request_cpus=self.request_cpus,
             workflow=self.workflow,
+            poll_interval=0.2,
         )
 
     @property

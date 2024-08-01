@@ -1,0 +1,21 @@
+port: 5005
+app:
+  init_args:
+    weights: ${oc.env:AFRAME_TRAIN_RUN_DIR}/best.ckpt
+    data_dir: ${oc.env:AFRAME_TEST_DATA_DIR}
+    results_dir: ${oc.env:AFRAME_RESULTS_DIR}
+    fftlength: 2
+    ifos: ["H1", "L1"]
+    mass_combos: [[35, 35], [35, 20], [20, 20], [20, 10]]
+    source_prior: priors.priors.end_o3_ratesandpops
+    kernel_length: 1.5
+    integration_length: 1.0
+    psd_length: 64
+    highpass: 32
+    batch_size: 128
+    sample_rate: 2048
+    inference_sampling_rate: 4
+    fduration: 1
+    valid_frac: 0.2
+    device: "cuda:0"
+    verbose: false
