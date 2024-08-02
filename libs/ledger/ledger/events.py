@@ -69,10 +69,13 @@ class EventSet(Ledger):
 
     def far(self, threshold: F) -> F:
         """
-        The false alarm rate for a given threshold
+        Far in Hz for a given detection statistic threshold, or
+        the minimum FAR that can be resolved
+        given the accumulated background livetime
         """
         nb = self.nb(threshold)
-        return SECONDS_IN_YEAR * nb / self.Tb
+        far = SECONDS_IN_YEAR * nb / self.Tb
+        return max(far, self.min_far)
 
     def significance(self, threshold: F, T: float) -> F:
         """see https://arxiv.org/pdf/1508.02357.pdf, eq. 17
