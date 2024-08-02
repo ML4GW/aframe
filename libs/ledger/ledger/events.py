@@ -75,7 +75,7 @@ class EventSet(Ledger):
         """
         nb = self.nb(threshold)
         far = SECONDS_IN_YEAR * nb / self.Tb
-        return max(far, self.min_far)
+        return np.maximum(far, self.min_far)
 
     def significance(self, threshold: F, T: float) -> F:
         """see https://arxiv.org/pdf/1508.02357.pdf, eq. 17
