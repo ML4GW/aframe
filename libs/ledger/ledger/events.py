@@ -38,6 +38,23 @@ class EventSet(Ledger):
         if key == "Tb":
             return ours + theirs
         return super().compare_metadata(key, ours, theirs)
+    
+    @property
+    def min_far(self):
+        """
+        Lowest FAR in Hz that can be resolved given background
+        livetime analyzed
+        """
+        return 1 / self.Tb * SECONDS_IN_YEAR
+    
+    def far(self, threshold: F) -> F:
+        """
+        Far in Hz for a given detection statistic threshold, or
+        the minimum FAR that can be resolved
+        given the accumulated background livetime
+        """
+        nb = self.nb(threshold)
+        return SECONDS_IN_YEAR * nb / self.Tb
 
     def get_shift(self, shift: np.ndarray) -> "EventSet":
         # downselect to all events from a given shift
@@ -80,6 +97,16 @@ class EventSet(Ledger):
 
         nb = self.nb(threshold)
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
+    
+    def threshold_at_far(self, far: float):
+        """
+        Return the detection statistic threshold
+        that corresponds to a given far in Hz
+        """
+        livetime = self.Tb
+        num_events = livetime * far
+        det_stats = sorted(self.detection_statistic)
+        return det_stats[-int(num_events)]
 
     def apply_vetos(
         self,
