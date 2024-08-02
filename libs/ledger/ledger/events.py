@@ -99,7 +99,7 @@ class EventSet(Ledger):
         """
         livetime = self.Tb
         num_events = livetime * far
-        det_stats = sorted(self.detection_statistic)
+        det_stats = np.sort(self.detection_statistic)
         return det_stats[-int(num_events)]
 
     def apply_vetos(
