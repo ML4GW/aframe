@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 import torch
 from bokeh.layouts import column, row
 from bokeh.models import Div, TabPanel, Tabs
+from plots.vetos import VETO_CATEGORIES
 from plots.vizapp.data import DataManager
 from plots.vizapp.pages import Analysis, Summary
 
@@ -39,7 +40,7 @@ class App:
         valid_frac: float,
         fftlength: float,
         device: str = "cpu",
-        vetos: bool = True,
+        vetos: Optional[VETO_CATEGORIES] = None,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
