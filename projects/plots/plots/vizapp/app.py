@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 import torch
 from bokeh.layouts import column, row
 from bokeh.models import Div, TabPanel, Tabs
+from plots.vetos import VETO_CATEGORIES
 from plots.vizapp.data import DataManager
 from plots.vizapp.pages import Analysis, Summary
 
@@ -13,7 +14,6 @@ from utils.s3 import open_file
 
 if TYPE_CHECKING:
     from plots.pages import Page
-    from plots.vetos import VETO_CATEGORIES
 
 
 class App:
@@ -40,7 +40,7 @@ class App:
         valid_frac: float,
         fftlength: float,
         device: str = "cpu",
-        vetos: Optional["VETO_CATEGORIES"] = None,
+        vetos: Optional[VETO_CATEGORIES] = None,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
