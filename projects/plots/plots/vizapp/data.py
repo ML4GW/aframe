@@ -82,19 +82,8 @@ class DataManager:
             )
             self.calculate_veto_masks()
 
-    @property
-    def veto_options(self):
-        return [
-            "GATES",
-            "CAT1",
-            "CAT2",
-            "CAT3",
-        ]
-
     def get_veto_selecter(self):
-        return MultiChoice(
-            title="Applied Vetos", value=[], options=self.veto_options
-        )
+        return MultiChoice(title="Applied Vetos", value=[], options=self.vetos)
 
     def calculate_veto_masks(self):
         self.vetos = {}
