@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
 import numpy as np
-from ledger.injections import InterferometerResponseSet
+from astropy.cosmology import Planck15
+from ledger.injections import InjectionParameterSet, InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
 from numpy.polynomial import Polynomial
 from scipy.integrate import quad
@@ -189,6 +190,59 @@ class EventSet(Ledger):
 
         return background_density * len(self.detection_statistic) / self.Tb
 
+    # TODO: This doesn't really feel like it goes here.
+    # Is there a better place?
+    def p_astro(
+        self,
+        background: "EventSet",
+        foreground: "RecoveredInjectionSet",
+        rejected_params: InjectionParameterSet,
+        astro_event_rate: float,
+        statistics: F = None,
+        cosmology=Planck15,
+        min_det_stat: float = -np.inf,
+    ) -> F:
+        """
+        Compute p_astro as the ratio of the expected signal rate
+        to the sum of the expected signal rate and the expected
+        background event rate for a given set of detection
+        statistics
+
+        Args:
+            background:
+                EventSet object corresponding to a background model
+            foreground:
+                RecoveredInjectionSet object corresponding to an
+                injection campaign
+            rejected_params:
+                InjectionParameterSet object corresponding to signals
+                that were simulated but rejected due to low SNR
+            astro_event_rate:
+                The rate density of events for the relavent population.
+                Should have the same spatial units as injected_volume
+            cosmology:
+                The cosmology to use when calculating the injected volume
+            min_det_stat:
+                Then minimum detection statistic for which to compute
+                p_astro. Detection statistics below this value will
+                be assigned a p_astro of 0
+        """
+        if statistics is None:
+            statistics = self.detection_statistic
+        p_astro = np.zeros_like(statistics)
+        mask = statistics >= min_det_stat
+        statistics = statistics[mask]
+
+        foreground.fit_signal_model(
+            rejected_params, astro_event_rate, cosmology
+        )
+        foreground_rate = foreground.signal_model(statistics)
+        background.fit_noise_model()
+        background_rate = background.noise_model(statistics)
+
+        p_astro[mask] += foreground_rate / (foreground_rate + background_rate)
+        return p_astro
+
 
 @dataclass
 class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
@@ -232,25 +286,47 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
         obj.Tb = events.Tb
         return obj
 
-    def fit_signal_model(self):
+    def fit_signal_model(
+        self,
+        rejected_params: InjectionParameterSet,
+        astro_event_rate: float,
+        cosmology=Planck15,
+    ):
+        """
+        Args:
+            rejected_params:
+                InjectionParameterSet object corresponding to signals
+                that were simulated but rejected due to low SNR
+            astro_event_rate:
+                The rate density of events for the relavent population.
+                Should have the same spatial units as injected_volume
+            cosmology:
+                The cosmology to use when calculating the injected volume
+        """
+        self.scaling_factor = (
+            astro_event_rate
+            * self.injected_volume(cosmology)
+            * len(self)
+            / (len(self) + len(rejected_params))
+        )
         self.kde = gaussian_kde(self.detection_statistic)
 
-    def signal_model(self, statistics: F) -> F:
-        """
-        Calculate the expected signal event rate for a given
-        statistic or set of statistics
-        """
-        return self.kde(statistics)
+    def signal_model(
+        self,
+        statistics: F,
+    ) -> F:
+        return self.kde(statistics) * self.scaling_factor
 
-    def _volume_element(cosmology, z):
+    def _volume_element(self, cosmology, z):
         return cosmology.differential_comoving_volume(z).value / (1 + z)
 
-    def get_injected_volume(self):
+    def injected_volume(self, cosmology=Planck15):
         zmin, zmax = self.redshift.min(), self.redshift.max()
         decmin, decmax = self.dec.min(), self.dec.max()
 
-        cosmo = "cosmo"
-        volume, _ = quad(lambda z: self._volume_element(cosmo, z), zmin, zmax)
+        volume, _ = quad(
+            lambda z: self._volume_element(cosmology, z), zmin, zmax
+        )
         theta_max = np.pi / 2 - decmin
         theta_min = np.pi / 2 - decmax
         omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
