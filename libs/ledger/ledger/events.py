@@ -3,12 +3,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
 import numpy as np
-from astropy.cosmology import Planck15
-from ledger.injections import InjectionParameterSet, InterferometerResponseSet
+from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
-from numpy.polynomial import Polynomial
-from scipy.integrate import quad
-from scipy.stats import gaussian_kde
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)
@@ -140,107 +136,6 @@ class EventSet(Ledger):
             return result, veto_mask
         return result
 
-    def fit_noise_model(self):
-        self.kde = gaussian_kde(self.detection_statistic)
-
-        # Estimate the peak of the distribution
-        samples = np.linspace(
-            min(self.detection_statistic),
-            max(self.detection_statistic),
-            100,
-        )
-        pdf = self.kde(samples)
-
-        # Determine the range of values to use for fitting
-        # a line to a portion of the pdf.
-        # Roughly, we have too few samples to properly
-        # estimate the KDE once the pdf drops below 1/sqrt(N)
-        peak_idx = np.argmax(pdf)
-        threshold_pdf_value = 1 / np.sqrt(len(self.detection_statistic))
-        start = np.argmin(pdf[peak_idx:] > 10 * threshold_pdf_value) + peak_idx
-        stop = np.argmin(pdf[peak_idx:] > threshold_pdf_value) + peak_idx
-
-        # Fit a line to the log pdf of the region
-        fit_samples = samples[start:stop]
-        self.background_fit = Polynomial.fit(
-            fit_samples, np.log(pdf[start:stop]), 1
-        )
-        self.threshold_statistic = samples[start]
-
-    def noise_model(self, statistics: F) -> F:
-        """
-        Calculate the expected background event rate for a given
-        statistic or set of statistics
-        """
-        try:
-            len(statistics)
-        except TypeError:
-            if statistics < self.threshold_statistic:
-                background_density = self.kde(statistics)
-            else:
-                background_density = np.exp(self.background_fit(statistics))
-        else:
-            background_density = np.zeros_like(statistics)
-            mask = statistics < self.threshold_statistic
-
-            background_density[mask] = self.kde(statistics[mask])
-            background_density[~mask] = np.exp(
-                self.background_fit(statistics[~mask])
-            )
-
-        return (
-            background_density
-            * len(self.detection_statistic)
-            * SECONDS_IN_YEAR
-            / self.Tb
-        )
-
-    # TODO: This doesn't really feel like it goes here.
-    # Is there a better place?
-    def p_astro(
-        self,
-        background: "EventSet",
-        foreground: "RecoveredInjectionSet",
-        statistics: F = None,
-        min_det_stat: float = -np.inf,
-    ) -> F:
-        """
-        Compute p_astro as the ratio of the expected signal rate
-        to the sum of the expected signal rate and the expected
-        background event rate for a given set of detection
-        statistics
-
-        Args:
-            background:
-                EventSet object corresponding to a background model
-            foreground:
-                RecoveredInjectionSet object corresponding to an
-                injection campaign
-            rejected_params:
-                InjectionParameterSet object corresponding to signals
-                that were simulated but rejected due to low SNR
-            astro_event_rate:
-                The rate density of events for the relavent population.
-                Should have the same spatial units as injected_volume
-            cosmology:
-                The cosmology to use when calculating the injected volume
-            min_det_stat:
-                Then minimum detection statistic for which to compute
-                p_astro. Detection statistics below this value will
-                be assigned a p_astro of 0
-        """
-        if statistics is None:
-            statistics = self.detection_statistic
-        p_astro = np.zeros_like(statistics)
-        mask = statistics >= min_det_stat
-        statistics = statistics[mask]
-
-        foreground_rate = foreground.signal_model(statistics)
-        background_rate = background.noise_model(statistics)
-
-        p_astro[mask] += foreground_rate / (foreground_rate + background_rate)
-        return p_astro
-
 
 @dataclass
 class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
@@ -283,49 +178,3 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
 
         obj.Tb = events.Tb
         return obj
-
-    def fit_signal_model(
-        self,
-        rejected_params: InjectionParameterSet,
-        astro_event_rate: float,
-        cosmology=Planck15,
-    ):
-        """
-        Args:
-            rejected_params:
-                InjectionParameterSet object corresponding to signals
-                that were simulated but rejected due to low SNR
-            astro_event_rate:
-                The rate density of events for the relavent population.
-                Should have the same spatial units as injected_volume
-            cosmology:
-                The cosmology to use when calculating the injected volume
-        """
-        self.scaling_factor = (
-            astro_event_rate
-            * self.injected_volume(cosmology)
-            * len(self)
-            / (len(self) + len(rejected_params))
-        )
-        self.kde = gaussian_kde(self.detection_statistic)
-
-    def signal_model(
-        self,
-        statistics: F,
-    ) -> F:
-        return self.kde(statistics) * self.scaling_factor
-
-    def _volume_element(self, cosmology, z):
-        return cosmology.differential_comoving_volume(z).value / (1 + z)
-
-    def injected_volume(self, cosmology=Planck15):
-        zmin, zmax = self.redshift.min(), self.redshift.max()
-        decmin, decmax = self.dec.min(), self.dec.max()
-
-        volume, _ = quad(
-            lambda z: self._volume_element(cosmology, z), zmin, zmax
-        )
-        theta_max = np.pi / 2 - decmin
-        theta_min = np.pi / 2 - decmax
-        omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
-        return volume * omega / 1e9

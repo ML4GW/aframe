@@ -8,10 +8,8 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-astropy = "^5.0"
 bilby = "^2.2.2"
 h5py = "^3.10.0"
-rpds-py = "^0.18"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
