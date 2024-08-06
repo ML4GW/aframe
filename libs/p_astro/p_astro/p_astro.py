@@ -12,7 +12,6 @@ from scipy.stats import gaussian_kde
 
 
 def fit_noise_model(background: EventSet) -> Callable:
-    # perform kde on bulk
     kde = gaussian_kde(background.detection_statistic)
 
     # Estimate the peak of the distribution
@@ -98,7 +97,6 @@ def fit_signal_model(
     return signal_model
 
 
-# some helper function for doing the whole fitting from our ledger objects
 def fit_p_astro(
     background: EventSet,
     foreground: RecoveredInjectionSet,
@@ -106,6 +104,26 @@ def fit_p_astro(
     astro_event_rate: float,
     cosmology: astropy.cosmology.Cosmology = Planck15,
 ) -> Callable:
+    """
+    Compute p_astro as the ratio of the expected signal rate
+    to the sum of the expected signal rate and the expected
+    background event rate for a given set of detection
+    statistics
+    Args:
+        background:
+            EventSet object corresponding to a background model
+        foreground:
+            RecoveredInjectionSet object corresponding to an
+            injection campaign
+        rejected:
+            InjectionParameterSet object corresponding to signals
+            that were simulated but rejected due to low SNR
+        astro_event_rate:
+            The rate density of events for the relevent population.
+            Expected units are events per year per cubic gigaparsec
+        cosmology:
+            The cosmology to use when calculating the injected volume
+    """
     noise_model = fit_noise_model(background=background)
     signal_model = fit_signal_model(
         rejected=rejected,
@@ -115,6 +133,15 @@ def fit_p_astro(
     )
 
     def p_astro(stats: F, min_det_stat: float) -> F:
+        """
+        Args:
+            stats:
+                Detection statistics for which to compute p_astro
+            min_det_stat:
+                Then minimum detection statistic for which to compute
+                p_astro. Detection statistics below this value will
+                be assigned a p_astro of 0
+        """
         p_astro = np.zeros_like(stats)
         mask = stats > min_det_stat
         stats = stats[mask]
