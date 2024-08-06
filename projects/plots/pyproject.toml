@@ -5,7 +5,8 @@ description = "Aframe performance summary plots"
 authors = ["Alec Gunny"]
 
 [tool.poetry.scripts]
-sensitive-volume = "plots.cli:main"
+sensitive-volume = "plots.legacy.cli:main"
+vizapp = "plots.vizapp.main:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"

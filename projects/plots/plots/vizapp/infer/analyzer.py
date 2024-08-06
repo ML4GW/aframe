@@ -200,6 +200,11 @@ class EventAnalyzer:
 
         return nn, integrated, whitened
 
+    def get_fft(self, strain: Dict[str, np.ndarray]):
+        ffts = {ifo: np.fft.rfft(data) for ifo, data in strain.items()}
+        freqs = np.fft.rfftfreq(self.kernel_size, d=1 / self.sample_rate)
+        return freqs, ffts
+
     def qscan(self, strain: Dict[str, np.ndarray]):
         qscans = []
         for ifo in self.ifos:

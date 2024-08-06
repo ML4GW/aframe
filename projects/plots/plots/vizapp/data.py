@@ -83,7 +83,11 @@ class DataManager:
             self.calculate_veto_masks()
 
     def get_veto_selecter(self):
-        return MultiChoice(title="Applied Vetos", value=[], options=self.vetos)
+        if self.vetos is None:
+            vetos = ["N/A"]
+        else:
+            vetos = self.vetos
+        return MultiChoice(title="Applied Vetos", value=[], options=vetos)
 
     def calculate_veto_masks(self):
         self.vetos = {}

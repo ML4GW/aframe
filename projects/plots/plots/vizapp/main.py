@@ -13,7 +13,7 @@ def main(
 
 
 def cli(args=None):
-    parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
+    parser = jsonargparse.ArgumentParser()
     parser.add_argument("--config", action="config")
     parser.add_function_arguments(main)
     args = parser.parse_args()
