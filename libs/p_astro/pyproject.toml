@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "p_astro"
+version = "0.1.0"
+description = "Functions for calculating p_astro of events"
+authors = ["Will Benoit <benoi090@umn.edu>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+astropy = "^5.0"
+
+ledger = {path = "../ledger", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+pytest = "^8.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

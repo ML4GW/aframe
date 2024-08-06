@@ -188,7 +188,12 @@ class EventSet(Ledger):
                 self.background_fit(statistics[~mask])
             )
 
-        return background_density * len(self.detection_statistic) / self.Tb
+        return (
+            background_density
+            * len(self.detection_statistic)
+            * SECONDS_IN_YEAR
+            / self.Tb
+        )
 
     # TODO: This doesn't really feel like it goes here.
     # Is there a better place?
@@ -196,10 +201,7 @@ class EventSet(Ledger):
         self,
         background: "EventSet",
         foreground: "RecoveredInjectionSet",
-        rejected_params: InjectionParameterSet,
-        astro_event_rate: float,
         statistics: F = None,
-        cosmology=Planck15,
         min_det_stat: float = -np.inf,
     ) -> F:
         """
@@ -233,11 +235,7 @@ class EventSet(Ledger):
         mask = statistics >= min_det_stat
         statistics = statistics[mask]
 
-        foreground.fit_signal_model(
-            rejected_params, astro_event_rate, cosmology
-        )
         foreground_rate = foreground.signal_model(statistics)
-        background.fit_noise_model()
         background_rate = background.noise_model(statistics)
 
         p_astro[mask] += foreground_rate / (foreground_rate + background_rate)
@@ -330,4 +328,4 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
         theta_max = np.pi / 2 - decmin
         theta_min = np.pi / 2 - decmax
         omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
-        return volume * omega
+        return volume * omega / 1e9
