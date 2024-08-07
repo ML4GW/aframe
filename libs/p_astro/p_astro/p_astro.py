@@ -67,7 +67,7 @@ def fit_background_model(
     threshold_statistic = samples[stop]
 
     if not np.isclose(
-        kde(threshold_statistic), fit(threshold_statistic), rol=1e-2
+        kde(threshold_statistic), fit(threshold_statistic), rtol=0.01
     ):
         warnings.warn(
             "The KDE and exponential fit have a greater than 1% discrepancy "
