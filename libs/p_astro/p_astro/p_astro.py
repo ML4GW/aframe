@@ -1,4 +1,3 @@
-import warnings
 from typing import Callable, Optional
 
 import astropy
@@ -65,15 +64,6 @@ def fit_background_model(
     fit_samples = samples[start:stop]
     fit = Polynomial.fit(fit_samples, np.log(pdf[start:stop]), 1)
     threshold_statistic = samples[stop]
-
-    if not np.isclose(
-        kde(threshold_statistic), fit(threshold_statistic), rtol=0.01
-    ):
-        warnings.warn(
-            "The KDE and exponential fit have a greater than 1% discrepancy "
-            "at the split point. It is recommended to examine the model to "
-            "determine the cause."
-        )
 
     scale_factor = len(background) * SECONDS_IN_YEAR / background.Tb
 
