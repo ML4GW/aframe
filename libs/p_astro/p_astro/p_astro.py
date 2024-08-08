@@ -14,6 +14,7 @@ from scipy.stats import gaussian_kde
 def fit_background_model(
     background: EventSet,
     split: Optional[float] = None,
+    downsampled_points: Optional[int] = None,
 ) -> Callable:
     """
     Fit a model to the background detection statistic distribution,
@@ -31,6 +32,11 @@ def fit_background_model(
             estimated as the point at which the PDF of the KDE
             drops below 1/sqrt(N), where N is the number of
             background events
+        downsampled_points:
+            The approiximate number of points to downsample the
+            background detection statistic to before estimating
+            the split. This is done to speed up the calculation.
+            If None, the full background is used
 
     Returns:
         A callable that takes a detection statistic and returns the
@@ -38,13 +44,17 @@ def fit_background_model(
     """
     kde = gaussian_kde(background.detection_statistic)
 
+    downsampled_factor = len(background) // downsampled_points
+    downsampled = background.detection_statistic[::downsampled_factor]
+    downsampled_kde = gaussian_kde(downsampled)
+
     # Estimate the peak of the distribution
     samples = np.linspace(
         background.detection_statistic.min(),
         background.detection_statistic.max(),
         100,
     )
-    pdf = kde(samples)
+    pdf = downsampled_kde(samples)
     peak_idx = np.argmax(pdf)
 
     if split is not None:
@@ -56,7 +66,7 @@ def fit_background_model(
         # a line to a portion of the pdf.
         # Roughly, we have too few samples to properly
         # estimate the KDE once the pdf drops below 1/sqrt(N)
-        threshold_pdf_value = 1 / np.sqrt(len(background))
+        threshold_pdf_value = 1 / np.sqrt(len(downsampled))
         start = np.argmin(pdf[peak_idx:] > 10 * threshold_pdf_value) + peak_idx
         stop = np.argmin(pdf[peak_idx:] > threshold_pdf_value) + peak_idx
 
@@ -173,6 +183,8 @@ def fit_p_astro(
     foreground: RecoveredInjectionSet,
     rejected: InjectionParameterSet,
     astro_event_rate: float,
+    split: Optional[float] = None,
+    downsampled_points: Optional[int] = None,
     cosmology: astropy.cosmology.Cosmology = Planck15,
 ) -> Callable:
     """
@@ -193,10 +205,26 @@ def fit_p_astro(
         astro_event_rate:
             The rate density of events for the relevent population.
             Expected units are events per year per cubic gigaparsec
+        split:
+            The detection statistic at which to switch from using
+            a KDE to fit the background to using an exponential
+            fit to the background. If None, the split point is
+            estimated as the point at which the PDF of the KDE
+            drops below 1/sqrt(N), where N is the number of
+            background events
+        downsampled_points:
+            The approiximate number of points to downsample the
+            background detection statistic to before estimating
+            the split. This is done to speed up the calculation.
+            If None, the full background is used
         cosmology:
             The cosmology to use when calculating the injected volume
     """
-    background_model = fit_background_model(background=background)
+    background_model = fit_background_model(
+        background=background,
+        split=split,
+        downsampled_points=downsampled_points,
+    )
     foreground_model = fit_foreground_model(
         foreground=foreground,
         rejected=rejected,
