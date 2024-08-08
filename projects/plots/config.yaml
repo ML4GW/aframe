@@ -1,9 +1,9 @@
 port: 5005
 app:
   init_args:
-    weights: /home/william.benoit/trained_aframe_model/model.pt
-    data_dir: /home/ethan.marx/aframe/o3-production-search/data/test
-    results_dir: /home/ethan.marx/aframe/o3-production-search/results
+    weights: ${oc.env:AFRAME_TRAIN_RUN_DIR}/best.ckpt
+    data_dir: ${oc.env:AFRAME_TEST_DATA_DIR}
+    results_dir: ${oc.env:AFRAME_RESULTS_DIR}
     fftlength: 2
     ifos: ["H1", "L1"]
     mass_combos: [[35, 35], [35, 20], [20, 20], [20, 10]]

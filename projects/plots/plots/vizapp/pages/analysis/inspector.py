@@ -2,7 +2,7 @@ import io
 from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
-from bokeh.layouts import row
+from bokeh.layouts import column, row
 from bokeh.models import (
     ColumnDataSource,
     HoverTool,
@@ -25,7 +25,8 @@ class InspectorPlot:
         self.analyzer = analyzer
 
     def initialize_sources(self):
-        strain_source = fft_source = {ifo: [] for ifo in self.analyzer.ifos}
+        strain_source = {ifo: [] for ifo in self.analyzer.ifos}
+        fft_source = strain_source.copy()
         strain_source["t"] = []
         fft_source["f"] = []
 
@@ -104,8 +105,7 @@ class InspectorPlot:
             title="Click on an event to inspect",
             height=height,
             width=width,
-            y_range=(-5, 5),
-            x_range=(-3, 5),
+            y_axis_type="log",
             x_axis_label="Frequency [Hz]",
             y_axis_label="Strain [unitless]",
         )
@@ -146,7 +146,10 @@ class InspectorPlot:
             dh="dh",
             source=self.spectrogram_source,
         )
-        return row(self.timeseries_plot, self.spectrogram_plot)
+        return column(
+            row(self.timeseries_plot, self.spectrogram_plot),
+            self.frequencyseries_plot,
+        )
 
     def plot(self, qscans: tuple["gwpy.spectrogram.Spectrogram"]):
         fig = Plot(
@@ -207,9 +210,8 @@ class InspectorPlot:
             ifo: whitened[0][i][-len(self.analyzer.whitened_times) :]
             for i, ifo in enumerate(self.analyzer.ifos)
         }
-        strain_source["t"] = self.analyzer.whitened_times
-
         freqs, fft_source = self.analyzer.get_fft(strain_source)
+        strain_source["t"] = self.analyzer.whitened_times
         fft_source["f"] = freqs
 
         # qscan whitened strain and plot spectrogram
@@ -263,6 +265,9 @@ class InspectorPlot:
         # TODO: implement this
         for r in self.strain_renderers:
             r.data_source.data = dict(H1=[], L1=[], t=[])
+
+        for r in self.fft_renderers:
+            r.data_source.data = dict(H1=[], L1=[], f=[])
 
         for r in self.output_renderers:
             r.data_source.data = dict(nn=[], integrated=[], t=[])
