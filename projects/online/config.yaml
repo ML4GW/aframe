@@ -3,7 +3,7 @@ datadir: ${oc.env:ONLINE_DATADIR}
 background_file: ${oc.env:ONLINE_BACKGROUND_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_architecture: 
-  class_path: amplfi.architectures.MaskedAutoregressiveFlow
+  class_path: amplfi.architectures.flows.MaskedAutoregressiveFlow
   init_args:
     hidden_features: 150
     num_transforms: 80
