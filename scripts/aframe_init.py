@@ -102,6 +102,10 @@ def create_online_runfile(path: Path):
     export AMPLFI_WEIGHTS=
     export AFRAME_WEIGHTS=
 
+    # file containing timeslide events detected
+    # by a model with the AFRAME_WEIGHTS above
+    export ONLINE_BACKGROUND_FILE=
+
     # location where low latency data
     # is streamed, typically /dev/shm/kakfka
     export ONLINE_DATADIR=/dev/shm/kafka/

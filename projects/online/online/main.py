@@ -318,6 +318,8 @@ def main(
 
     background = EventSet.read(background_file)
 
+    # Convert FAR to Hz from 1/days
+    far_threshold /= 86400
     searcher = Searcher(
         background, far_threshold, inference_sampling_rate, refractory_period
     )
