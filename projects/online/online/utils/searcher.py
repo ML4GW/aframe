@@ -60,7 +60,8 @@ class Event:
             "Event("
             f"gpstime={self.gpstime:0.3f}, "
             f"detection_statistic={self.detection_statistic:0.2f}, "
-            f"far={self.far:0.3e} Hz"
+            f"far={self.far:0.3e} Hz, "
+            f"ifos={self.ifos}"
             ")"
         )
 
@@ -74,9 +75,10 @@ class Event:
         """
         path = directory / f"event_{int(self.gpstime)}"
         path.mkdir(exist_ok=True, parents=True)
-        filename = path / f"event-{int(self.gpstime)}.json"
+        filename = path / self.filename
 
         event = asdict(self)
+        _, _ = event.pop("datadir"), event.pop("ifo_suffix", None)
         filecontents = str(event)
         filecontents = json.loads(filecontents.replace("'", '"'))
         with open(filename, "w") as f:
@@ -96,9 +98,15 @@ class Searcher:
         far_threshold: float,
         inference_sampling_rate: float,
         refractory_period: float,
+        ifos: List[str],
+        datadir: Path,
+        ifo_suffix: Optional[str] = None,
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
+        self.ifos = ifos
+        self.datadir = datadir
+        self.ifo_suffix = ifo_suffix
 
         # initialize the state of the searcher:
 
@@ -138,7 +146,9 @@ class Searcher:
         )
 
         self.last_detection_time = time.time()
-        return Event(timestamp, value, far)
+        return Event(
+            timestamp, value, far, self.ifos, self.datadir, self.ifo_suffix
+        )
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
         """

@@ -31,10 +31,10 @@ class GraceDb(_GraceDb):
         logging.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / f"event_{int(event.gpstime)}"
         filename = event_dir / event.filename
-        response = self.gdb.createEvent(
+        response = self.createEvent(
             group="CBC",
             pipeline="aframe",
-            filename=filename,
+            filename=str(filename),
             search="AllSky",
         )
 

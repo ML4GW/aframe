@@ -83,6 +83,7 @@ def process_event(
     scaler: ChannelWiseScaler,
     outdir: Path,
 ):
+    event.write(outdir)
     response = gdb.submit(event)
     last_event_time = event.gpstime
     posterior, skymap = run_amplfi(
@@ -321,7 +322,13 @@ def main(
     # Convert FAR to Hz from 1/days
     far_threshold /= 86400
     searcher = Searcher(
-        background, far_threshold, inference_sampling_rate, refractory_period
+        background,
+        far_threshold,
+        inference_sampling_rate,
+        refractory_period,
+        ifos,
+        datadir,
+        ifo_suffix,
     )
 
     time_offset = get_time_offset(
