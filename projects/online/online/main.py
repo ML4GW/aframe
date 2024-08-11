@@ -342,21 +342,21 @@ def main(
     )
 
     search(
-        gdb,
-        pe_whitener,
-        scaler,
-        spectral_density,
-        whitener,
-        snapshotter,
-        searcher,
-        input_buffer,
-        output_buffer,
-        aframe,
-        amplfi,
-        data_it,
-        outdir,
-        time_offset,
-        device,
+        gdb=gdb,
+        pe_whitener=pe_whitener,
+        scaler=scaler,
+        spectral_density=spectral_density,
+        whitener=whitener,
+        snapshotter=snapshotter,
+        searcher=searcher,
+        input_buffer=input_buffer,
+        output_buffer=output_buffer,
+        aframe=aframe,
+        amplfi=amplfi,
+        data_it=data_it,
+        time_offset=time_offset,
+        outdir=outdir,
+        device=device,
     )
 
 
