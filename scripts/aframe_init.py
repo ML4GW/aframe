@@ -87,14 +87,15 @@ def write_content(content: str, path: Path):
 
 
 def create_online_runfile(path: Path):
-    cmd = "apptainer run --nv --env "
-    cmd += "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
+    cmd = "apptainer run --nv "
+    cmd += "--bind $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR "
+    cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
     cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
     cmd += "--env AFRAME_WEIGHTS=$AFRAME_WEIGHTS "
     cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
     cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
-    cmd += "--config $config 2>> $log_dir/monitoring.log"
+    cmd += "--config $config 2>> monitoring.log"
 
     content = f"""
     #!/bin/bash
@@ -110,19 +111,17 @@ def create_online_runfile(path: Path):
     # is streamed, typically /dev/shm/kakfka
     export ONLINE_DATADIR=/dev/shm/kafka/
 
-    # where results will be writen
+    # where results and deployment logs will be writen
     export AFRAME_ONLINE_OUTDIR={path}
 
     config={path}/config.yaml
-    log_dir={path}/logs
-    mkdir -p $log_dir
 
     export CUDA_VISIBLE_DEVICES=
     crash_count=0
     until {cmd}; do
         ((crash_count++))
         echo "Online deployment crashed on $(date) with error code $?,
-        crash count = $crash_count" >> $log_dir/monitoring.log
+        crash count = $crash_count" >> monitoring.log
         sleep 1
     done
     """

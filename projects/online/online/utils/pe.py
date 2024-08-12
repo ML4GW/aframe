@@ -20,22 +20,14 @@ def run_amplfi(
     amplfi,
     std_scaler,
     plot_dir,
+    device,
 ):
     # get pe data from the buffer, whitene
     psd_strain, pe_strain = input_buffer.get_pe_data(event_time)
+    psd_strain = psd_strain.to(device)
+    pe_strain = pe_strain.to(device)
     pe_psd = spectral_density(psd_strain)
     whitened = pe_whitener(pe_strain[None], pe_psd[None])
-    whitened = torch.squeeze(whitened)
-
-    time = np.arange(event_time - 3, event_time + 1, 1 / 2048)
-    plt.figure()
-    plt.plot(time, whitened[0].cpu(), label="H1", alpha=0.7)
-    plt.plot(time, whitened[1].cpu(), label="L1", alpha=0.7)
-    plt.legend()
-    plt.xlabel("GPS time")
-    plt.ylabel("Whitened strain")
-    plt.savefig(plot_dir / f"{whitened:.2f}.png", dpi=250)
-    plt.close()
 
     samples = amplfi.sample(20000, context=whitened)
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
@@ -53,7 +45,7 @@ def run_amplfi(
         )
         - torch.pi
     )
-    dec = (descaled_samples[..., 5] + torch.pi / 2,)
+    dec = descaled_samples[..., 5] + torch.pi / 2
 
     skymap = plot_mollview(
         phi,
@@ -107,4 +99,5 @@ def plot_mollview(
 
     fig = plt.figure()
     hp.mollview(m, fig=fig, title=title, hold=True)
+    plt.close()
     return fig

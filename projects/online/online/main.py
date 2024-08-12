@@ -82,6 +82,7 @@ def process_event(
     amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
     outdir: Path,
+    device: str,
 ):
     event.write(outdir)
     response = gdb.submit(event)
@@ -94,6 +95,7 @@ def process_event(
         amplfi,
         scaler,
         outdir / "whitened_data_plots",
+        device,
     )
     graceid = response.json()["graceid"]
     gdb.submit_pe(posterior, skymap, graceid)
@@ -148,6 +150,7 @@ def search(
                         amplfi,
                         scaler,
                         outdir,
+                        device,
                     )
                     searcher.detecting = False
 
@@ -217,6 +220,7 @@ def search(
                 amplfi,
                 scaler,
                 outdir,
+                device,
             )
             searcher.detecting = False
 
