@@ -1,13 +1,13 @@
 import logging
 from pathlib import Path
 from typing import Dict, List, Tuple
-from urllib.request import urlretrieve
 
 import astropy.cosmology as cosmo
 import astropy.units as u
 import h5py
 import numpy as np
 import scipy.stats as stats
+from astropy.utils.data import download_file
 from tqdm import tqdm
 
 catalog_results = {
@@ -68,13 +68,15 @@ def get_injection_data(
 ):
     injection_params = {}
 
-    if not injection_file.exists():
-        url = (
-            "https://zenodo.org/records/7890437/files/"
-            "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
-        )
-        logging.info("Downloading injection file from Zenodo")
-        urlretrieve(url, filename=injection_file)
+    url = (
+        "https://zenodo.org/records/7890437/files/"
+        "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+    )
+    logging.info(
+        "Downloading injection file from Zenodo, "
+        "or reading from cache if exists"
+    )
+    injection_file = download_file(url, cache=True, pkgname="aframe")
 
     with h5py.File(injection_file, "r") as f:
         T_obs = f.attrs["analysis_time_s"] / (365.25 * 24 * 3600)  # years
