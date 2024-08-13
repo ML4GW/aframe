@@ -76,6 +76,7 @@ def get_injection_data(
         "Downloading injection file from Zenodo, "
         "or reading from cache if exists"
     )
+    # will download to ~/.aframe/cache/ if not already downloaded
     injection_file = download_file(url, cache=True, pkgname="aframe")
 
     with h5py.File(injection_file, "r") as f:
