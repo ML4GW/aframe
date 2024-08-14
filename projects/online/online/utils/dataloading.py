@@ -87,7 +87,6 @@ def reset_t0(datadir, last_t0):
     while True:
         matches = [fname_re.search(i.name) for i in datadir.iterdir()]
         t0s = np.array([int(i.group("start")) for i in matches if _is_gwf(i)])
-        # t0s = t0s[t0s > last_t0]
         if t0s.size > 0:
             t0 = max(t0s)
             logging.info(f"Resetting timestamp to {t0}")
@@ -117,10 +116,7 @@ def data_iterator(
     prefix, length, t0 = get_prefix(datadir / ifo_dir)
     middle = "_".join(prefix.split("_")[1:])
 
-    # give ourselves a little buffer so we don't
-    # try to grab a frame that's been filtered out
-    # t0 += length * 2
-    frame_buffer = np.zeros((2, 0))
+    frame_buffer = np.zeros((len(ifos), 0))
     slc = slice(-int(2 * sample_rate), -int(sample_rate))
     last_ready = True
     while True:
@@ -148,7 +144,7 @@ def data_iterator(
 
                     yield None, t0, False
 
-                    frame_buffer = np.zeros((2, 0))
+                    frame_buffer = np.zeros((len(ifos), 0))
                     last_ready = False
                     t0 = reset_t0(datadir / ifo, t0 - length)
                     break

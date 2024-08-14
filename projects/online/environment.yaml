@@ -7,12 +7,9 @@ dependencies:
   - pip
   - poetry
   - jsonargparse
-  # need these for utils lib
-  # TODO: add constraints for better pinning
-  - bokeh
   - scipy
   - h5py
-  # general GW/auth deps
+  # general GW
   - healpy
   - gwpy=3.0.8
   - libgcc
