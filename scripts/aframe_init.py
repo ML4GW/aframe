@@ -88,6 +88,7 @@ def write_content(content: str, path: Path):
 
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
+    # bind XDG_RUNTIME_DIR for finding scitokens
     cmd += "--bind $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR "
     cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
