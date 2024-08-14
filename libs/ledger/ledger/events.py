@@ -136,16 +136,6 @@ class EventSet(Ledger):
             return result, veto_mask
         return result
 
-    def threshold_at_far(self, far: float):
-        """
-        Return the detection statistic threshold
-        that corresponds to a given far in Hz
-        """
-        livetime = self.Tb
-        num_events = livetime * far
-        det_stats = sorted(self.detection_statistic)
-        return det_stats[-int(num_events)]
-
 
 @dataclass
 class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
