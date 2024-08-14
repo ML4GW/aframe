@@ -1,0 +1,26 @@
+#!/bin/bash
+# trained model weights
+export AMPLFI_WEIGHTS=
+export AFRAME_WEIGHTS=
+
+# file containing timeslide events detected
+# by a model with the AFRAME_WEIGHTS above
+export ONLINE_BACKGROUND_FILE=
+
+# location where low latency data
+# is streamed, typically /dev/shm/kakfka
+export ONLINE_DATADIR=/dev/shm/kafka/
+
+# where results and deployment logs will be writen
+export AFRAME_ONLINE_OUTDIR=
+
+config=/path/to/config.yaml
+
+export CUDA_VISIBLE_DEVICES=
+crash_count=0
+until apptainer run --nv --bind $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES --env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR --env ONLINE_DATADIR=$ONLINE_DATADIR --env AFRAME_WEIGHTS=$AFRAME_WEIGHTS --env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS $AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online --config $config 2>> monitoring.log; do
+    ((crash_count++))
+    echo "Online deployment crashed on $(date) with error code $?,
+    crash count = $crash_count" >> monitoring.log
+    sleep 1
+done

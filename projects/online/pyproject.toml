@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "online"
+version = "0.0.1"
+description = "Deploy aframe models over live data"
+authors = ["Will Benoit <benoi090@umn.edu>", "Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+license = "MIT"
+#readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11" 
+
+# local deps
+utils = {path = "../../libs/utils", develop = true}
+ledger = {path = "../../libs/ledger", develop = true}
+architectures = {path = "../../libs/architectures", develop = true}
+
+"amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
+omegaconf = "^2.3.0"
+numpy = "<2.0.0"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu118"
+secondary = true
+default = false
+
+[tool.poetry.scripts]
+online = "online.cli:cli" 
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

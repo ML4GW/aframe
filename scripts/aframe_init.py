@@ -6,7 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional
 
-import jsonargparse
+from jsonargparse import ArgumentParser
 
 root = Path(__file__).resolve().parent.parent
 TUNE_CONFIGS = [
@@ -22,12 +22,16 @@ SANDBOX_CONFIGS = [
     root / "projects" / "train" / "config.yaml",
 ]
 
+ONLINE_CONFIGS = [
+    root / "projects" / "online" / "config.yaml",
+    root / "projects" / "online" / "crontab",
+]
+
 
 def copy_configs(
     path: Path,
     configs: list[Path],
     pipeline: str,
-    s3_bucket: Optional[Path] = None,
 ):
     """
     Copy the configuration files to the specified directory for editing.
@@ -42,15 +46,12 @@ def copy_configs(
             The list of configuration files to copy.
         pipeline:
             The type of pipeline to initialize. Either 'tune' or 'sandbox'.
-        s3_bucket:
-            The s3 bucket to store the data and
-            training results in. Defaults to None.
     """
 
     path.mkdir(parents=True, exist_ok=True)
     for config in configs:
         dest = path / config.name
-        # update the config file to point to the paths
+        # update the luigi/law config file to point to the paths
         # of other relevant config files in the init dir
         if config.suffix == ".cfg" and config.name != "base.cfg":
             dest = path / f"{pipeline}.cfg"
@@ -76,7 +77,61 @@ def copy_configs(
             shutil.copy(config, dest)
 
 
-def create_runfile(
+def write_content(content: str, path: Path):
+    content = dedent(content).strip("\n")
+    with open(path, "w") as f:
+        f.write(content)
+
+    # make the file executable
+    path.chmod(0o755)
+    return content
+
+
+def create_online_runfile(path: Path):
+    cmd = "apptainer run --nv "
+    # bind XDG_RUNTIME_DIR for finding scitokens
+    cmd += "--bind $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR "
+    cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
+    cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
+    cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
+    cmd += "--env AFRAME_WEIGHTS=$AFRAME_WEIGHTS "
+    cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
+    cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
+    cmd += "--config $config 2>> monitoring.log"
+
+    content = f"""
+    #!/bin/bash
+    # trained model weights
+    export AMPLFI_WEIGHTS=
+    export AFRAME_WEIGHTS=
+
+    # file containing timeslide events detected
+    # by a model with the AFRAME_WEIGHTS above
+    export ONLINE_BACKGROUND_FILE=
+
+    # location where low latency data
+    # is streamed, typically /dev/shm/kakfka
+    export ONLINE_DATADIR=/dev/shm/kafka/
+
+    # where results and deployment logs will be writen
+    export AFRAME_ONLINE_OUTDIR={path}
+
+    config={path}/config.yaml
+
+    export CUDA_VISIBLE_DEVICES=
+    crash_count=0
+    until {cmd}; do
+        ((crash_count++))
+        echo "Online deployment crashed on $(date) with error code $?,
+        crash count = $crash_count" >> monitoring.log
+        sleep 1
+    done
+    """
+    runfile = path / "run.sh"
+    write_content(content, runfile)
+
+
+def create_offline_runfile(
     path: Path, pipeline: str, s3_bucket: Optional[Path] = None
 ):
     # if s3 bucket is provided
@@ -104,60 +159,54 @@ def create_runfile(
     {cmd}
     """
 
-    content = dedent(content).strip("\n")
-    env = path / "run.sh"
-    with open(env, "w") as f:
-        f.write(content)
-
-    # make the file executable
-    env.chmod(0o755)
+    runfile = path / "run.sh"
+    write_content(content, runfile)
 
 
 def main():
-    parser = jsonargparse.ArgumentParser(
-        description="Initialize a directory with configuration files "
-        "for running aframe pipelines."
-    )
-    parser.add_argument(
-        "pipeline",
-        help="The type of pipeline to initialize. "
-        "Either 'tune' or 'sandbox'. Default is sandbox",
+    # offline subcommand (sandbox or tune)
+    offline_parser = ArgumentParser()
+    offline_parser.add_argument(
+        "--mode",
+        choices=["sandbox", "tune"],
         default="sandbox",
+        help="Specify whether this is a sandbox or tune run",
     )
+    offline_parser.add_argument("-d", "--directory", type=Path, required=True)
+    offline_parser.add_argument("--s3-bucket")
 
-    parser.add_argument(
-        "-d",
-        "--directory",
-        help="The directory to initialize the aframe analysis in",
-        type=Path,
-        required=True,
-    )
+    # online subcommand
+    online_parser = ArgumentParser()
+    online_parser.add_argument("-d", "--directory", type=Path, required=True)
 
-    parser.add_argument(
-        "--s3-bucket",
-        help="Location for storing the data and results in s3 "
-        "if training remotely. If not provided, the data and "
-        "results will be stored locally in the --directory argument",
-        required=False,
+    # main parser
+    parser = ArgumentParser(
+        description="Initialize a directory with configuration files "
+        "for running aframe offline and online pipelines."
     )
+    subcommands = parser.add_subcommands()
+    subcommands.add_subcommand("online", online_parser)
+    subcommands.add_subcommand("offline", offline_parser)
 
     args = parser.parse_args()
+    subcommand = args.subcommand
+    args = getattr(args, args.subcommand)
     directory = args.directory.resolve()
-    if args.pipeline not in ["tune", "sandbox"]:
-        raise ValueError(
-            "Invalid pipeline type. Must be either 'tune' or 'sandbox'."
-        )
 
-    if args.s3_bucket is not None and not args.s3_bucket.startswith("s3://"):
-        raise ValueError("S3 bucket must be in the format s3://{bucket-name}/")
+    if subcommand == "offline":
+        if args.s3_bucket is not None and not args.s3_bucket.startswith(
+            "s3://"
+        ):
+            raise ValueError(
+                "S3 bucket must be in the format s3://{bucket-name}/"
+            )
+        configs = TUNE_CONFIGS if args.mode == "tune" else SANDBOX_CONFIGS
+        copy_configs(directory, configs, args.mode)
+        create_offline_runfile(directory, args.mode, args.s3_bucket)
 
-    copy_configs(
-        directory,
-        TUNE_CONFIGS if args.pipeline == "tune" else SANDBOX_CONFIGS,
-        args.pipeline,
-        args.s3_bucket,
-    )
-    create_runfile(directory, args.pipeline, args.s3_bucket)
+    elif subcommand == "online":
+        copy_configs(directory, ONLINE_CONFIGS, "online")
+        create_online_runfile(directory)
 
 
 if __name__ == "__main__":

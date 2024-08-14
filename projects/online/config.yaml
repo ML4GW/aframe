@@ -1,0 +1,42 @@
+outdir: ${oc.env:AFRAME_ONLINE_OUTDIR}
+datadir: ${oc.env:ONLINE_DATADIR}
+background_file: ${oc.env:ONLINE_BACKGROUND_FILE}
+aframe_weights: ${oc.env:AFRAME_WEIGHTS}
+amplfi_architecture: 
+  class_path: amplfi.architectures.flows.MaskedAutoregressiveFlow
+  init_args:
+    hidden_features: 150
+    num_transforms: 80
+    num_blocks: 6
+    context_dim: 8
+    embedding_net: 
+      class_path: amplfi.architectures.embeddings.ResNet
+      init_args:
+        layers: [5, 3, 3]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 8
+amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
+ifos: ["H1", "L1"]
+channel: "GDS-CALIB_STRAIN"
+sample_rate: 2048
+kernel_length: 1.5
+inference_sampling_rate: 512
+inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]
+psd_length: 64
+trigger_distance: -0.75
+fduration: 1
+integration_window_length: 1
+pe_window: 4
+event_position: 3
+fftlength: null
+highpass: 32
+refractory_period: 8
+far_threshold: 1 
+server: "local"
+ifo_suffix: 
+input_buffer_length: 75
+output_buffer_length: 8
+device: "cuda"
+verbose: true

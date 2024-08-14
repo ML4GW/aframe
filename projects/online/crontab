@@ -1,0 +1,4 @@
+# refresh scitokens for gracedb access
+*/30 * * * * kinit aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG -k -t ~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab
+*/30 * * * * htgettoken -v -a vault.ligo.org -i igwn -r aframe-1-scitoken --scopes=gracedb.read --credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu --nooidc >/dev/null 2>&1
+@reboot /bin/bash /home/aframe/dev/o3_mdc/run.sh
