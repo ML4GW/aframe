@@ -24,6 +24,7 @@ SANDBOX_CONFIGS = [
 
 ONLINE_CONFIGS = [
     root / "projects" / "online" / "config.yaml",
+    root / "projects" / "online" / "crontab",
 ]
 
 
