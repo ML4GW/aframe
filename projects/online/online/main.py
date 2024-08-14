@@ -257,12 +257,11 @@ def main(
     device: str = "cpu",
 ):
     gdb = gracedb_factory(server, outdir)
-    num_ifos = len(ifos)
 
     # initialize a buffer for storing recent strain data,
     # and for storing integrated aframe outputs
     input_buffer = InputBuffer(
-        num_channels=num_ifos,
+        ifos=ifos,
         sample_rate=sample_rate,
         buffer_length=input_buffer_length,
         fduration=fduration,

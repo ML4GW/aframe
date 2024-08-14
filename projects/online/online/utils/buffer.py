@@ -25,7 +25,7 @@ class InputBuffer(torch.nn.Module):
 
     def __init__(
         self,
-        num_channels: int,
+        ifos: list[str],
         sample_rate: float,
         buffer_length: float,
         fduration: float,
@@ -36,7 +36,8 @@ class InputBuffer(torch.nn.Module):
         super().__init__()
         self.device = device
         self.fduration = fduration
-        self.num_channels = num_channels
+        self.num_channels = len(ifos)
+        self.ifos = ifos
         self.sample_rate = sample_rate
         self.buffer_length = buffer_length
         self.buffer_size = int(buffer_length * sample_rate)
@@ -55,8 +56,8 @@ class InputBuffer(torch.nn.Module):
         with h5py.File(write_path, "w") as f:
             f.attrs.create("event_time", data=event_time)
             f.create_dataset("time", data=time)
-            f.create_dataset("H1", data=self.input_buffer[0, :].cpu())
-            f.create_dataset("L1", data=self.input_buffer[1, :].cpu())
+            for i, ifo in enumerate(self.ifos):
+                f.create_dataset(ifo, data=self.input_buffer[i, :].cpu())
 
     def reset(self):
         self.t0 = None
