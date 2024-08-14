@@ -163,19 +163,3 @@ class OutputBuffer(torch.nn.Module):
         )
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
         return integrated.detach().cpu().numpy()
-
-
-class Integrator:
-    def __init__(
-        self, integration_window_length: int, inference_sampling_rate: int
-    ):
-        self.integrator_size = int(
-            integration_window_length * inference_sampling_rate
-        )
-        self.window = torch.ones((1, 1, self.integrator_size), device="cuda")
-        self.window /= self.integrator_size
-
-    def __call__(self, x: torch.Tensor):
-        x = x.view(1, 1, -1)
-        y = torch.nn.functional.conv1d(x, self.window, padding="valid")
-        return y[0, 0]
