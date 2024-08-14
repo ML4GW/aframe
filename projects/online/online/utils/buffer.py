@@ -80,10 +80,10 @@ class InputBuffer(torch.nn.Module):
             window_start + (self.pe_window + self.fduration) * self.sample_rate
         )
 
-        psd = self.input_buffer[:, :window_start]
+        psd_data = self.input_buffer[:, :window_start]
         window = self.input_buffer[:, window_start:window_end]
 
-        return psd, window
+        return psd_data, window
 
 
 class OutputBuffer(torch.nn.Module):
