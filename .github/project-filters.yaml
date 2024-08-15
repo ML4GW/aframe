@@ -27,3 +27,10 @@ export:
   - 'projects/export/**'
   - 'ml4gw/**'
   - 'hermes/**'
+
+online:
+  - *workflow
+  - 'projects/online/**'
+  - 'libs/ledger/**'
+  - 'libs/architectures/**'
+  - 'amplfi/amplfi/architectures/**'
