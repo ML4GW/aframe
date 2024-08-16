@@ -129,7 +129,6 @@ def search(
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        X = X.to(device)
         # if this frame was not analysis ready
         if not ready:
             if searcher.detecting:
@@ -187,6 +186,7 @@ def search(
 
         # we have a frame that is analysis ready,
         # so lets analyze it:
+        X = X.to(device)
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
