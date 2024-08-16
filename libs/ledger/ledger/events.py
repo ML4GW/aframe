@@ -31,6 +31,14 @@ class EventSet(Ledger):
     detection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()
     Tb: float = metadata(default=0)
+    sorted_statistic: np.ndarray = parameter()
+
+    def __post_init__(self):
+        if len(self.sorted_statistic) == 0 or not np.all(
+            self.sorted_statistic[:-1] <= self.sorted_statistic[1:]
+        ):
+            self.sorted_statistic = np.sort(self.detection_statistic)
+        super().__post_init__()
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
@@ -99,8 +107,7 @@ class EventSet(Ledger):
         """
         livetime = self.Tb
         num_events = livetime * far
-        det_stats = np.sort(self.detection_statistic)
-        return det_stats[-int(num_events)]
+        return self.sorted_statistic[-int(num_events)]
 
     def apply_vetos(
         self,
