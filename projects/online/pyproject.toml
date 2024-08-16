@@ -18,6 +18,9 @@ architectures = {path = "../../libs/architectures", develop = true}
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.1"
+
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cu118"
