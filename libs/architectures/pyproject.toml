@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-ml4gw = {path = "../../ml4gw", develop = true}
+ml4gw = "^0.5"
 h5py = "^3.9.0"
 
 
