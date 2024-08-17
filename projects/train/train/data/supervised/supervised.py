@@ -1,8 +1,8 @@
 from typing import Optional
 
 import torch
-
 from ml4gw.utils.slicing import sample_kernels
+
 from train import augmentations as aug
 from train.data.base import BaseAframeDataset
 

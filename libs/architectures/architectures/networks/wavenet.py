@@ -3,7 +3,6 @@ from typing import Callable, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-
 from ml4gw.nn.norm import GroupNorm1DGetter, NormLayer
 
 

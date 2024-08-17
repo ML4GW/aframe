@@ -7,6 +7,7 @@ import torch
 from architectures import Architecture
 from ledger.events import EventSet
 from ligo.gracedb.rest import GraceDb
+from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import gracedb_factory
@@ -15,7 +16,6 @@ from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 
 from amplfi.architectures.flows.base import FlowArchitecture
-from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
 
 # seconds of data per update
@@ -129,7 +129,6 @@ def search(
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        X = X.to(device)
         # if this frame was not analysis ready
         if not ready:
             if searcher.detecting:
@@ -187,6 +186,7 @@ def search(
 
         # we have a frame that is analysis ready,
         # so lets analyze it:
+        X = X.to(device)
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows

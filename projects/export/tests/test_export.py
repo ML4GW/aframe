@@ -9,10 +9,10 @@ import pytest
 import torch
 from export.main import export
 from google.protobuf import text_format
+from ml4gw.nn.resnet import ResNet1D
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
 import hermes.quiver as qv
-from ml4gw.nn.resnet import ResNet1D
 
 
 # set up a directory for the entirety of the session

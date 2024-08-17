@@ -1,7 +1,6 @@
 from typing import Optional, Union
 
 import torch
-
 from ml4gw import gw
 from ml4gw.distributions import PowerLaw
 

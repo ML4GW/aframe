@@ -1,7 +1,7 @@
 import torch
-
 from ml4gw.spectral import truncate_inverse_power_spectrum
 from ml4gw.transforms.qtransform import SingleQTransform
+
 from train.data.base import Tensor
 from train.data.supervised.supervised import SupervisedAframeDataset
 
