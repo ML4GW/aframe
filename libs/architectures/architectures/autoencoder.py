@@ -3,9 +3,8 @@ from typing import Optional
 
 import torch
 from architectures import Architecture
-from torchtyping import TensorType
-
 from ml4gw.nn.autoencoder import ConvolutionalAutoencoder, SkipConnection
+from torchtyping import TensorType
 
 # need this for type checking
 batch = channels = time = None

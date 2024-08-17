@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING, Optional
 
+from ml4gw.transforms import SingleQTransform
+
 from hermes.quiver import Platform
 from hermes.quiver.streaming import utils as streaming_utils
-from ml4gw.transforms import SingleQTransform
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 if TYPE_CHECKING:
