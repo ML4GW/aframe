@@ -59,13 +59,7 @@ class EventSet(Ledger):
         The number of events with a detection statistic
         greater than or equal to `threshold`
         """
-        try:
-            len(threshold)
-        except TypeError:
-            return (self.detection_statistic >= threshold).sum()
-        else:
-            stats = self.detection_statistic[:, None]
-            return (stats >= threshold).sum(0)
+        return len(self) - np.searchsorted(self.sorted_statistic, threshold)
 
     @property
     def min_far(self):
