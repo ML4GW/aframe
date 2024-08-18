@@ -1,4 +1,5 @@
 import copy
+import warnings
 from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
@@ -31,14 +32,6 @@ class EventSet(Ledger):
     detection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()
     Tb: float = metadata(default=0)
-    sorted_statistic: np.ndarray = parameter()
-
-    def __post_init__(self):
-        if len(self.sorted_statistic) == 0 or not np.all(
-            self.sorted_statistic[:-1] <= self.sorted_statistic[1:]
-        ):
-            self.sorted_statistic = np.sort(self.detection_statistic)
-        super().__post_init__()
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
@@ -59,7 +52,22 @@ class EventSet(Ledger):
         The number of events with a detection statistic
         greater than or equal to `threshold`
         """
-        return len(self) - np.searchsorted(self.sorted_statistic, threshold)
+        if self._is_sorted_by("detection_statistic"):
+            return len(self) - np.searchsorted(
+                self.detection_statistic, threshold
+            )
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
+        try:
+            len(threshold)
+        except TypeError:
+            return (self.detection_statistic >= threshold).sum()
+        else:
+            stats = self.detection_statistic[:, None]
+            return (stats >= threshold).sum(0)
 
     @property
     def min_far(self):
@@ -101,7 +109,15 @@ class EventSet(Ledger):
         """
         livetime = self.Tb
         num_events = livetime * far
-        return self.sorted_statistic[-int(num_events)]
+        if self._is_sorted_by("detection_statistic"):
+            return self.detection_statistic[-int(num_events)]
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
+        det_stats = np.sort(self.detection_statistic)
+        return det_stats[-int(num_events)]
 
     def apply_vetos(
         self,
