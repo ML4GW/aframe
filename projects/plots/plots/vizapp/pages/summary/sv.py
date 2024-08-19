@@ -57,9 +57,8 @@ class SensitiveVolumePlot:
 
     @property
     def thresholds(self):
-        thresholds = np.sort(self.background.detection_statistic)[
-            -self.max_events :
-        ][::-1]
+        background = self.background.sort_by("detection_statistic")
+        thresholds = background.detection_statistic[-self.max_events :][::-1]
         return thresholds
 
     @property

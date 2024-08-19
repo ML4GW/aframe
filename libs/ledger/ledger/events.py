@@ -1,4 +1,5 @@
 import copy
+import warnings
 from dataclasses import dataclass
 from typing import List, Tuple, TypeVar
 
@@ -51,6 +52,15 @@ class EventSet(Ledger):
         The number of events with a detection statistic
         greater than or equal to `threshold`
         """
+        if self._is_sorted_by("detection_statistic"):
+            return len(self) - np.searchsorted(
+                self.detection_statistic, threshold
+            )
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
         try:
             len(threshold)
         except TypeError:
@@ -99,6 +109,13 @@ class EventSet(Ledger):
         """
         livetime = self.Tb
         num_events = livetime * far
+        if self._is_sorted_by("detection_statistic"):
+            return self.detection_statistic[-int(num_events)]
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
         det_stats = np.sort(self.detection_statistic)
         return det_stats[-int(num_events)]
 
