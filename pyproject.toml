@@ -21,6 +21,7 @@ numpy = "^1.26.4"
 cloudpathlib = "^0.18.1"
 spython = "^0.3.13"
 psutil = "^5.9.8"
+rpds-py = "<0.20"
 
 
 [tool.poetry.group.dev.dependencies]
