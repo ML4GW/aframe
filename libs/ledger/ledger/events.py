@@ -1,13 +1,23 @@
 import copy
 from dataclasses import dataclass
+from multiprocessing import Pool, cpu_count
 from typing import List, Tuple, TypeVar
 
 import numpy as np
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
+from tqdm import tqdm
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)
+
+
+def process_chunk(args):
+    chunk_times, vetos, i = args
+    mask = np.logical_and(
+        vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
+    )
+    return i, mask.any(axis=0)
 
 
 @dataclass
@@ -118,14 +128,23 @@ class EventSet(Ledger):
         # array of False, no vetoes applied yet
         veto_mask = np.zeros(len(times), dtype=bool)
 
-        # process triggers in chunks to avoid memory issues
-        for i in range(0, len(times), chunk_size):
-            # apply vetos for this chunk of times
-            chunk_times = times[i : i + chunk_size]
-            mask = np.logical_and(
-                vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
-            )
-            veto_mask[i : i + chunk_size] = mask.any(axis=0)
+        # split times into chunks;
+        # keep track of the index of the chunk
+        # for mp purposes so we can unpack the results later
+        chunks = [
+            (times[idx : idx + chunk_size], vetos, i)
+            for i, idx in enumerate(range(0, len(times), chunk_size))
+        ]
+
+        num_cpus = min(cpu_count(), len(chunks))
+        with Pool(num_cpus) as pool:
+            results = pool.imap_unordered(process_chunk, chunks)
+
+            # combine results
+            with tqdm(total=len(chunks)) as pbar:
+                for i, result in results:
+                    veto_mask[i * chunk_size : (i + 1) * chunk_size] = result
+                    pbar.update()
 
         if inplace:
             result = self[~veto_mask]
