@@ -202,13 +202,16 @@ class EventAnalyzer:
         return nn, integrated, whitened
 
     def get_fft(self, strain: Dict[str, np.ndarray]):
-        data = list(strain.values())
-        ffts = [np.abs(np.fft.rfft(x)) for x in data]
-        freqs = np.fft.rfftfreq(len(data[0]), d=1 / self.sample_rate)
+        ffts = {}
+        for ifo in self.ifos:
+            data = strain[ifo]
+            ts = TimeSeries(data, times=self.whitened_times)
+            ts = ts.crop(-3, 5)
+            fft = ts.fft().crop(start=self.highpass)
+            freqs = fft.frequencies.value
+            ffts[ifo] = np.abs(fft.value)
 
-        mask = freqs > self.highpass
-        ffts = {ifo: fft[mask] for ifo, fft in zip(self.ifos, ffts)}
-        return freqs[mask], ffts
+        return freqs, ffts
 
     def qscan(self, strain: Dict[str, np.ndarray]):
         qscans = []

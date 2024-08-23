@@ -105,6 +105,7 @@ class InspectorPlot:
             title="Click on an event to inspect",
             height=height,
             width=width,
+            x_axis_type="log",
             y_axis_type="log",
             x_axis_label="Frequency [Hz]",
             y_axis_label="Strain [unitless]",
