@@ -72,22 +72,30 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     --waveform_duration 8 \
     --sample_rate 2048 \
     --prior priors.priors.end_o3_ratesandpops \
-    --minimum_frequency 32 \
+    --minimum_frequency 20 \
     --reference_frequency 50 \
     --waveform_approximant IMRPhenomPv2 \
     --coalescence_time 6 \
     --output_file ~/aframe/data/train/train_waveforms.hdf5
 ```
 
-and validation
+and validation. Note that this uses one of the background files downloaded above.
 
 ```bash
 apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
-    python -m data waveforms \
-    --prior priors.priors.end_o3_ratesandpops \
+    python -m data validation_waveforms \
     --num_signals 2000 \
-    --waveform_duration 8 \
+    --prior priors.priors.end_o3_ratesandpops \
+    --ifos='["H1", "L1"]' \
+    --minimum_frequency 20 \
+    --reference_frequency 50 \
     --sample_rate 2048 \
+    --waveform_duration 8 \
+    --waveform_approximant IMRPhenomPv2 \
+    --coalescence_time 6 \
+    --highpass 32 \
+    --snr_threshold 4 \
+    --psd ~/aframe/data/train/background/background-1240579783-7829.hdf5
     --output_file ~/aframe/data/train/val_waveforms.hdf5
 ```
 
