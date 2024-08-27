@@ -1,4 +1,5 @@
 from collections import defaultdict
+from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
@@ -6,7 +7,7 @@ import torch
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
-from data.waveforms.utils import convert_to_detector_frame
+from data.waveforms.utils import convert_to_detector_frame, load_psds
 from ledger.injections import InjectionParameterSet, _WaveformGenerator
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
@@ -25,7 +26,7 @@ def rejection_sample(
     coalescence_time: float,
     highpass: float,
     snr_threshold: float,
-    psds: torch.Tensor,
+    psd: Union[Path, torch.Tensor],
 ) -> Tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
@@ -99,8 +100,13 @@ def rejection_sample(
             **polarizations,
         )
 
+        # Load/calculate psds if not given explicitly
+        if isinstance(psd, Path):
+            df = 1 / waveform_duration
+            psd = load_psds(psd, ifos, df)
+
         # compute both individual ifo snrs and network snr
-        ifo_snrs = compute_ifo_snr(projected, psds, sample_rate, highpass)
+        ifo_snrs = compute_ifo_snr(projected, psd, sample_rate, highpass)
         snrs = ifo_snrs**2
         snrs = snrs.sum(axis=-1) ** 0.5
         snrs = snrs.numpy()
