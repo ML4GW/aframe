@@ -15,6 +15,36 @@ def training_waveforms(
     waveform_approximant: str,
     coalescence_time: float,
 ):
+    """
+    Generates random training waveforms polarizations from a
+    distribution over waveform parameters
+
+    Args:
+        num_signals:
+            The number of signals to generate
+        sample_rate:
+            Sample rate of timeseries data, specified in Hz
+        waveform_duration:
+            Duration of waveform in seconds
+        prior:
+            A function that returns a Bilby PriorDict when called
+        minimum_frequency:
+            Minimum frequency of the gravitational wave. The part
+            of the gravitational wave at lower frequencies will
+            not be generated. Specified in Hz.
+        reference_frequency:
+            Frequency of the gravitational wave at the state of
+            the merger that other quantities are defined with
+            reference to
+        waveform_approximant:
+            Name of the waveform approximant to use.
+        coalescence_time:
+            Location of the defining point of the signal within
+            the generated waveform
+
+    Returns:
+        An IntrinsicParameterSet generated from the sampled parameters
+    """
     prior, detector_frame_prior = prior()
     samples = prior.sample(num_signals)
     if not detector_frame_prior:

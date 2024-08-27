@@ -36,7 +36,7 @@ As an example, let's build a training dataset using the CLI in the `data` contai
 
 First, let's make a data storage directory, and query science mode segments from [gwosc](gwosc.org)
 ```bash
-mkdir -p ~/aframe/data/train
+mkdir -p ~/aframe/data/train/background
 apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     python -m data query --flags='["H1_DATA", "L1_DATA"]' --start 1240579783 --end 1241443783 --output_file ~/aframe/data/segments.txt
 ```
