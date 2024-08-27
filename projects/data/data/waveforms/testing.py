@@ -168,5 +168,5 @@ parser.add_function_arguments(testing_waveforms)
 
 
 def main(args):
-    args = args.timeslide_waveforms.as_dict()
+    args = args.testing_waveforms.as_dict()
     testing_waveforms(**args)

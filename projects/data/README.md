@@ -67,11 +67,15 @@ Finally, lets generate some waveforms for training
 
 ```bash
 apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
-    python -m data waveforms \
-    --prior priors.priors.end_o3_ratesandpops \
+    python -m data training_waveforms \
     --num_signals 10000 \
     --waveform_duration 8 \
     --sample_rate 2048 \
+    --prior priors.priors.end_o3_ratesandpops \
+    --minimum_frequency 32 \
+    --reference_frequency 50 \
+    --waveform_approximant IMRPhenomPv2 \
+    --coalescence_time 6 \
     --output_file ~/aframe/data/train/train_waveforms.hdf5
 ```
 
