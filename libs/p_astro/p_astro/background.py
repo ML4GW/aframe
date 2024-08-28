@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from ledger.events import SECONDS_IN_YEAR, EventSet
 from numpy.polynomial import Polynomial
@@ -47,17 +49,10 @@ class KdeAndPolynomialBackground(BackgroundModel):
             estimated as the point at which the PDF of the KDE
             drops below 1/sqrt(N), where N is the number of
             background events
-        downsampled_points:
-            The approiximate number of points to downsample the
-            background detection statistic to before estimating
-            the split. This is done to speed up the calculation.
-            If None, the full background is used
-
     """
 
-    def __init__(self, *args, split=None, downsampled_points=None, **kwargs):
+    def __init__(self, *args, split: Optional[float] = None, **kwargs):
         self.split = split
-        self.downsampled_points = downsampled_points
         super().__init__(*args, **kwargs)
 
     @property
@@ -68,19 +63,13 @@ class KdeAndPolynomialBackground(BackgroundModel):
         # fit gaussian kde to the background
         kde = gaussian_kde(self.background.detection_statistic)
 
-        # downsample the background if requested
-        downsampled_points = self.downsampled_points or len(self.background)
-        downsampled_factor = len(self.background) // downsampled_points
-        downsampled = self.background.detection_statistic[::downsampled_factor]
-        downsampled_kde = gaussian_kde(downsampled)
-
         # Estimate the peak of the distribution
         samples = np.linspace(
             self.background.detection_statistic.min(),
             self.background.detection_statistic.max(),
             100,
         )
-        pdf = downsampled_kde(samples)
+        pdf = kde(samples)
         peak_idx = np.argmax(pdf)
 
         if self.split is not None:
@@ -94,7 +83,7 @@ class KdeAndPolynomialBackground(BackgroundModel):
             # a line to a portion of the pdf.
             # Roughly, we have too few samples to properly
             # estimate the KDE once the pdf drops below 1/sqrt(N)
-            threshold_pdf_value = 1 / np.sqrt(len(downsampled))
+            threshold_pdf_value = 1 / np.sqrt(len(samples))
             start = (
                 np.argmin(pdf[peak_idx:] > 10 * threshold_pdf_value) + peak_idx
             )
