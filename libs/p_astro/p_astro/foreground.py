@@ -7,6 +7,25 @@ from scipy.stats import gaussian_kde
 
 
 class ForegroundModel:
+    """
+    Base class for foreground models.
+
+    Subclasses should implement the `fit` and `__call__` methods.
+
+    Args:
+        foreground:
+            RecoveredInjectionSet object corresponding to an
+            injection campaign
+        rejected:
+            InjectionParameterSet object corresponding to signals
+            that were simulated but rejected due to low SNR
+        astro_event_rate:
+            The rate density of events for the relevent population.
+            Expected units are events per year per cubic gigaparsec
+        cosmology:
+            The cosmology to use when calculating the injected volume
+    """
+
     def __init__(
         self,
         foreground: RecoveredInjectionSet,
@@ -60,13 +79,24 @@ class ForegroundModel:
         return volume * omega / 1e9
 
     def fit(self):
+        """
+        Fit the foreground model to the data
+        """
         raise NotImplementedError
 
     def __call__(self, stats):
+        """
+        Defines how to evaluate the foreground model density
+        at the given detection statistic
+        """
         raise NotImplementedError
 
 
 class KdeForeground(ForegroundModel):
+    """
+    Foreground model that uses a KDE to model the detection statistic
+    """
+
     def fit(self):
         self.kde = gaussian_kde(self.foreground.detection_statistic)
 

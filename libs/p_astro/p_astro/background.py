@@ -5,20 +5,56 @@ from scipy.stats import gaussian_kde
 
 
 class BackgroundModel:
+    """
+    Base class for background models.
+
+    Subclasses should implement the `fit` and `__call__` methods.
+
+    Args:
+        background: EventSet
+            `EventSet` object corresponding to background events
+            recovered in a search over timeslides
+    """
+
     def __init__(self, background: EventSet):
         self.background = background
-        # fit should set all attributes
-        # necessary to construct the model
         self.fit()
 
     def fit(self):
+        """
+        Fit the background model to the data
+        """
         raise NotImplementedError
 
     def __call__(self, stats):
+        """
+        Defines how to evaluate the background model density
+        at the given detection statistic
+        """
         raise NotImplementedError
 
 
 class KdeAndPolynomialBackground(BackgroundModel):
+    """
+    Background model that uses a KDE to model the background, and a
+    polynomial to model the tail of the distribution.
+
+    Args:
+        split:
+            The detection statistic at which to switch from using
+            a KDE to fit the background to using an exponential
+            fit to the background. If None, the split point is
+            estimated as the point at which the PDF of the KDE
+            drops below 1/sqrt(N), where N is the number of
+            background events
+        downsampled_points:
+            The approiximate number of points to downsample the
+            background detection statistic to before estimating
+            the split. This is done to speed up the calculation.
+            If None, the full background is used
+
+    """
+
     def __init__(self, *args, split=None, downsampled_points=None, **kwargs):
         self.split = split
         self.downsampled_points = downsampled_points
