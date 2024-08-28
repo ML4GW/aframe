@@ -30,6 +30,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.exclude_params_req |= self.exclude_params_branch
         self.htcondor_log_dir.touch()
         self.htcondor_output_directory().touch()
         law.config.update(
