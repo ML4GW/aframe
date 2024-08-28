@@ -83,7 +83,7 @@ class KdeAndPolynomialBackground(BackgroundModel):
             # a line to a portion of the pdf.
             # Roughly, we have too few samples to properly
             # estimate the KDE once the pdf drops below 1/sqrt(N)
-            threshold_pdf_value = 1 / np.sqrt(len(samples))
+            threshold_pdf_value = 1 / np.sqrt(len(self.background))
             start = (
                 np.argmin(pdf[peak_idx:] > 10 * threshold_pdf_value) + peak_idx
             )
