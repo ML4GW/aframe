@@ -31,7 +31,7 @@ class GraceDb(_GraceDb):
         logging.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / f"event_{int(event.gpstime)}"
         filename = event_dir / event.filename
-        response = self.createEvent(
+        response = self.create_event(
             group="CBC",
             pipeline="aframe",
             filename=str(filename),
@@ -63,20 +63,18 @@ class GraceDb(_GraceDb):
     ):
         corner_fname = self.write_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
-        self.writeLog(
+        self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
 
         mollview_fname = self.write_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
-        self.writeLog(
+        self.write_log(
             graceid,
             "Mollview projection",
             filename=mollview_fname,
             tag_name="sky_loc",
         )
-
-        self.writeLog(graceid, "O3 Replay")
 
 
 class LocalGraceDb(GraceDb):
@@ -84,10 +82,10 @@ class LocalGraceDb(GraceDb):
     Mock GraceDB client that just writes events locally
     """
 
-    def createEvent(self, filename: str, **_):
+    def create_event(self, filename: str, **_):
         return filename
 
-    def writeLog(self, filename: str, **_):
+    def write_log(self, filename: str, **_):
         return filename
 
 
