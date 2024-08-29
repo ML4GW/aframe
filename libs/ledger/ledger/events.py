@@ -62,7 +62,7 @@ class EventSet(Ledger):
         The number of events with a detection statistic
         greater than or equal to `threshold`
         """
-        if self._is_sorted_by("detection_statistic"):
+        if self.is_sorted_by("detection_statistic"):
             return len(self) - np.searchsorted(
                 self.detection_statistic, threshold
             )
@@ -119,7 +119,7 @@ class EventSet(Ledger):
         """
         livetime = self.Tb
         num_events = livetime * far
-        if self._is_sorted_by("detection_statistic"):
+        if self.is_sorted_by("detection_statistic"):
             return self.detection_statistic[-int(num_events)]
         warnings.warn(
             "Detection statistic is not sorted. This function "
