@@ -86,7 +86,7 @@ def process_event(
     pe_whitener: Whiten,
     amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
-    pastro_model: Pastro,
+    pastro_model: "Pastro",
     outdir: Path,
     device: str,
 ):
@@ -133,7 +133,7 @@ def search(
     output_buffer: OutputBuffer,
     aframe: Architecture,
     amplfi: Architecture,
-    pastro_model: Pastro,
+    pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
     outdir: Path,
