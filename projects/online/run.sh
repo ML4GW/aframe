@@ -6,6 +6,8 @@ export AFRAME_WEIGHTS=
 # file containing timeslide events detected
 # by a model with the AFRAME_WEIGHTS above
 export ONLINE_BACKGROUND_FILE=
+export ONLINE_FOREGROUND_FILE=
+export ONLINE_REJECTED_FILE=
 
 # location where low latency data
 # is streamed, typically /dev/shm/kakfka
