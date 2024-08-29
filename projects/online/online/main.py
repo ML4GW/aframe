@@ -350,6 +350,15 @@ def main(
     foreground = RecoveredInjectionSet.read(foreground_path)
     rejected = InjectionParameterSet.read(rejected_path)
 
+    # if event set is not sorted by detection statistic, sort it
+    # which will significantly speed up the far calculation
+    if not background.is_sorted_by("detection_statistic"):
+        logging.info(
+            "Sorting background by detection statistic and writing to disk"
+        )
+        background = background.sort_by("detection_statistic")
+        background.write(background_path)
+
     pastro_model = fit_or_load_pastro(
         outdir / "pastro.pkl",
         background,
