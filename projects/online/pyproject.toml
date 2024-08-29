@@ -12,6 +12,7 @@ python = ">=3.9,<3.11"
 # local deps
 utils = {path = "../../libs/utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
+p_astro = {path = "../../libs/p_astro", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
 
 "amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
