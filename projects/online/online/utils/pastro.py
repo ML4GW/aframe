@@ -1,8 +1,6 @@
-import logging
 import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING
-
 
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground

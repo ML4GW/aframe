@@ -6,11 +6,11 @@ import numpy as np
 import torch
 from amplfi.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
-from ledger.events import EventSet, RecoveredInjectionSet
-from ledger.injections import InjectionParameterSet
 from ligo.gracedb.rest import GraceDb
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
+from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import gracedb_factory
