@@ -10,12 +10,12 @@ import law
 import luigi
 import numpy as np
 import psutil
+from hermes.aeriel.monitor import ServerMonitor
+from hermes.aeriel.serve import serve
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
 from aframe.tasks.infer.base import InferBase, InferParameters
-from hermes.aeriel.monitor import ServerMonitor
-from hermes.aeriel.serve import serve
 
 
 @inherits(InferParameters)

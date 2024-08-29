@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import hermes.quiver as qv
 import s3fs
 
-import hermes.quiver as qv
 from export.main import export
 
 

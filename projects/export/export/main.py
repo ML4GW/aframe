@@ -3,9 +3,9 @@ import logging
 from typing import Optional
 
 import h5py
+import hermes.quiver as qv
 import torch
 
-import hermes.quiver as qv
 from export.snapshotter import add_streaming_input_preprocessor
 from utils.s3 import open_file
 

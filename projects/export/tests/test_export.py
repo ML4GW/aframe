@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 
 import h5py
+import hermes.quiver as qv
 import numpy as np
 import pytest
 import torch
@@ -11,7 +12,6 @@ from google.protobuf import text_format
 from ml4gw.nn.resnet import ResNet1D
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
-import hermes.quiver as qv
 from export.main import export
 
 

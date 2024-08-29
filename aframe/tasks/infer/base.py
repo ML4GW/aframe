@@ -168,6 +168,7 @@ class InferBase(
 
     def run(self):
         from hermes.aeriel.client import InferenceClient
+
         from infer.data import Sequence
         from infer.main import infer
         from infer.postprocess import Postprocessor
