@@ -38,17 +38,17 @@ class TestEventSet:
         times = np.arange(10)
         shifts = np.array([[0, 0]] * 5 + [[0, 1]] * 2 + [[1, 1]] * 3)
         obj = events.EventSet(det_stats, times, shifts, 100)
-        assert obj._is_sorted_by("detection_time")
-        assert not obj._is_sorted_by("detection_statistic")
+        assert obj.is_sorted_by("detection_time")
+        assert not obj.is_sorted_by("detection_statistic")
         with pytest.raises(ValueError):
-            obj._is_sorted_by("shift")
+            obj.is_sorted_by("shift")
         with pytest.warns():
             obj.nb(5)
         with pytest.warns():
             obj.threshold_at_far(0)
 
         obj = obj.sort_by("detection_statistic")
-        assert obj._is_sorted_by("detection_statistic")
+        assert obj.is_sorted_by("detection_statistic")
         with pytest.warns():
             obj = obj.sort_by("detection_statistic")
 

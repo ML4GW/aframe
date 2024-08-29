@@ -98,7 +98,7 @@ class Ledger:
     def _get_group(self, f: h5py.File, name: str):
         return f.get(name) or f.create_group(name)
 
-    def _is_sorted_by(self, attr: str):
+    def is_sorted_by(self, attr: str):
         value = getattr(self, attr)
         if len(value) != len(self) or len(value.shape) > 1:
             raise ValueError(
@@ -109,7 +109,7 @@ class Ledger:
         return (value[:-1] <= value[1:]).all()
 
     def sort_by(self, attr: str):
-        if self._is_sorted_by(attr):
+        if self.is_sorted_by(attr):
             warnings.warn(f"Already sorted by {attr}, object is unchanged")
         idx = np.argsort(getattr(self, attr))
         return self[idx]

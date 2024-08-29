@@ -1,6 +1,8 @@
 outdir: ${oc.env:AFRAME_ONLINE_OUTDIR}
 datadir: ${oc.env:ONLINE_DATADIR}
 background_file: ${oc.env:ONLINE_BACKGROUND_FILE}
+foreground_file: ${oc.env:ONLINE_FOREGROUND_FILE}
+rejected_file: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_architecture: 
   class_path: amplfi.architectures.flows.MaskedAutoregressiveFlow
@@ -21,6 +23,7 @@ amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
 ifos: ["H1", "L1"]
 channel: "GDS-CALIB_STRAIN"
 sample_rate: 2048
+astro_event_rate: 31
 kernel_length: 1.5
 inference_sampling_rate: 512
 inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]

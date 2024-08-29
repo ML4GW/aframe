@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -74,6 +75,25 @@ class GraceDb(_GraceDb):
             "Mollview projection",
             filename=mollview_fname,
             tag_name="sky_loc",
+        )
+
+    def submit_pastro(self, pastro: float, graceid: int):
+        fname = self.write_dir / "aframe.pastro.json"
+        pastro = {
+            "BBH": pastro,
+            "Terrestrial": 1 - pastro,
+            "NSBH": 0,
+            "BNS": 0,
+        }
+
+        with open(fname, "w") as f:
+            json.dump(pastro, f)
+
+        self.write_log(
+            graceid,
+            "Aframe p_astro",
+            filename=fname,
+            tag_name="p_astro",
         )
 
 
