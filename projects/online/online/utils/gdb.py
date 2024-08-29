@@ -76,8 +76,6 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
         )
 
-        self.write_log(graceid, "O3 Replay")
-
 
 class LocalGraceDb(GraceDb):
     """
