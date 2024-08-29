@@ -1,22 +1,27 @@
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
 from architectures import Architecture
-from ledger.events import EventSet
+from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.injections import InjectionParameterSet
 from ligo.gracedb.rest import GraceDb
-from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import gracedb_factory
+from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 
 from amplfi.architectures.flows.base import FlowArchitecture
+from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from utils.preprocessing import BatchWhitener
+
+if TYPE_CHECKING:
+    from pastro.pastro import Pastro
 
 # seconds of data per update
 UPDATE_SIZE = 1
@@ -81,11 +86,17 @@ def process_event(
     pe_whitener: Whiten,
     amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
+    pastro_model: Pastro,
     outdir: Path,
     device: str,
 ):
+    # write event information to disk
+    # and submit it to gracedb
     event.write(outdir)
     response = gdb.submit(event)
+
+    # after event is submitted, run AMPLFI
+    # to produce a posterior and skymap
     last_event_time = event.gpstime
     posterior, skymap = run_amplfi(
         last_event_time,
@@ -97,8 +108,15 @@ def process_event(
         outdir / "whitened_data_plots",
         device,
     )
+
+    # submit the posterior and skymap to gracedb
+    # using the graceid from the event submission
     graceid = response.json()["graceid"]
     gdb.submit_pe(posterior, skymap, graceid)
+
+    # calculate and submit pastro
+    pastro = pastro_model(event.detection_statistic)
+    gdb.submit_pastro(pastro, graceid)
     pass
 
 
@@ -115,6 +133,7 @@ def search(
     output_buffer: OutputBuffer,
     aframe: Architecture,
     amplfi: Architecture,
+    pastro_model: Pastro,
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
     outdir: Path,
@@ -148,6 +167,7 @@ def search(
                         pe_whitener,
                         amplfi,
                         scaler,
+                        pastro_model,
                         outdir,
                         device,
                     )
@@ -219,6 +239,7 @@ def search(
                 pe_whitener,
                 amplfi,
                 scaler,
+                pastro_model,
                 outdir,
                 device,
             )
@@ -231,7 +252,9 @@ def main(
     aframe_weights: Path,
     amplfi_architecture: FlowArchitecture,
     amplfi_weights: Path,
-    background_file: Path,
+    background_path: Path,
+    foreground_path: Path,
+    rejected_path: Path,
     outdir: Path,
     datadir: Path,
     ifos: List[str],
@@ -246,6 +269,7 @@ def main(
     event_position: float,
     fduration: float,
     integration_window_length: float,
+    astro_event_rate: float,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     refractory_period: float = 8,
@@ -310,7 +334,7 @@ def main(
         inference_sampling_rate=inference_sampling_rate,
     ).to(device)
 
-    # Amplfi setup. Hard code most of it for now
+    # Amplfi setup
     spectral_density = SpectralDensity(
         sample_rate=sample_rate,
         fftlength=fftlength,
@@ -320,7 +344,19 @@ def main(
         fduration=fduration, sample_rate=sample_rate, highpass=highpass
     ).to(device)
 
-    background = EventSet.read(background_file)
+    # load in background, foreground, and rejected injections;
+    # use them to fit (or load in a cached) a pastro model
+    background = EventSet.read(background_path)
+    foreground = RecoveredInjectionSet.read(foreground_path)
+    rejected = InjectionParameterSet.read(rejected_path)
+
+    pastro_model = fit_or_load_pastro(
+        outdir / "pastro.pkl",
+        background,
+        foreground,
+        rejected,
+        astro_event_rate=astro_event_rate,
+    )
 
     # Convert FAR to Hz from 1/days
     far_threshold /= 86400
@@ -364,6 +400,7 @@ def main(
         output_buffer=output_buffer,
         aframe=aframe,
         amplfi=amplfi,
+        pastro_model=pastro_model,
         data_it=data_it,
         time_offset=time_offset,
         outdir=outdir,
