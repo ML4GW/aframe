@@ -54,6 +54,7 @@ exclude = '''
 
 
 [tool.isort]
-known_first_party = ["aframe", "train", "utils"]
+known_first_party = ["aframe", "train", "utils", "online", "data", "infer", "plots", "export", "ledger"]
+known_third_party = ["ml4gw", "amplfi"]
 multi_line_output = 3
 include_trailing_comma = true
