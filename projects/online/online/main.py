@@ -325,13 +325,14 @@ def main(
     # Convert FAR to Hz from 1/days
     far_threshold /= 86400
     searcher = Searcher(
-        background,
-        far_threshold,
-        inference_sampling_rate,
-        refractory_period,
-        ifos,
-        datadir,
-        ifo_suffix,
+        background=background,
+        far_threshold=far_threshold,
+        inference_sampling_rate=inference_sampling_rate,
+        refractory_period=refractory_period,
+        ifos=ifos,
+        channel=channel,
+        datadir=datadir,
+        ifo_suffix=ifo_suffix,
     )
 
     time_offset = get_time_offset(
