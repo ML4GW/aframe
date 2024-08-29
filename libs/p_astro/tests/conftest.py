@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 

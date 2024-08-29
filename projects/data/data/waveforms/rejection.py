@@ -7,9 +7,10 @@ import torch
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
+from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
+
 from data.waveforms.utils import convert_to_detector_frame, load_psds
 from ledger.injections import InjectionParameterSet, _WaveformGenerator
-from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 ResponseSetFields = Dict[str, Union[np.ndarray, float]]
 

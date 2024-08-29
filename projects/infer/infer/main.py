@@ -2,11 +2,11 @@ import logging
 import time
 
 import numpy as np
-from infer.data import Sequence
-from infer.postprocess import Postprocessor
 from tqdm import tqdm
 
 from hermes.aeriel.client import InferenceClient
+from infer.data import Sequence
+from infer.postprocess import Postprocessor
 
 
 def infer(

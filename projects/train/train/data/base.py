@@ -8,12 +8,12 @@ from typing import Callable, Optional, Union
 import h5py
 import lightning.pytorch as pl
 import torch
-from ledger.injections import WaveformSet, waveform_class_factory
 from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
 
+from ledger.injections import WaveformSet, waveform_class_factory
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
 from train.metrics import get_timeslides

@@ -8,9 +8,10 @@ from astropy.cosmology import Planck15 as cosmology
 from bilby.core.prior import PriorDict
 from bokeh.io import save
 from bokeh.layouts import gridplot
+from priors.priors import log_normal_masses
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from priors.priors import log_normal_masses
 
 from . import compute, utils
 from .gwtc3 import catalog_results

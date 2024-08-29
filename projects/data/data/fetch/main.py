@@ -1,8 +1,9 @@
 import logging
 import os
 
-from data.fetch.fetch import fetch
 from jsonargparse import ArgumentParser
+
+from data.fetch.fetch import fetch
 
 parser = ArgumentParser()
 parser.add_function_arguments(fetch)

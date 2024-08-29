@@ -80,6 +80,7 @@ class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
 
     def run(self):
         import h5py
+
         from data.fetch.fetch import fetch
 
         start, duration = self.branch_data

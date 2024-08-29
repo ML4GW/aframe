@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Optional
 
 import s3fs
-from export.main import export
 
 import hermes.quiver as qv
+from export.main import export
 
 
 def export_and_launch_triton(

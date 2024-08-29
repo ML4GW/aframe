@@ -1,9 +1,10 @@
 import numpy as np
 from astropy.cosmology import Cosmology, Planck15
-from ledger.events import RecoveredInjectionSet
-from ledger.injections import InjectionParameterSet
 from scipy.integrate import quad
 from scipy.stats import gaussian_kde
+
+from ledger.events import RecoveredInjectionSet
+from ledger.injections import InjectionParameterSet
 
 
 class ForegroundModel:

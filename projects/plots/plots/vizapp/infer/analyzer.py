@@ -5,9 +5,9 @@ import h5py
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
+
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 from plots.vizapp.infer.utils import get_indices, get_strain_fname
-
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 

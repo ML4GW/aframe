@@ -1,5 +1,6 @@
 import jsonargparse
 from bokeh.server.server import Server
+
 from plots.vizapp.app import App
 
 

@@ -1,3 +1,5 @@
+from jsonargparse import ActionConfigFile, ArgumentParser
+
 from data.authenticate import authenticate
 from data.fetch.main import main as fetch
 from data.fetch.main import parser as fetch_parser
@@ -9,8 +11,6 @@ from data.waveforms.training import main as training_waveforms
 from data.waveforms.training import parser as training_parser
 from data.waveforms.validation import main as validation_waveforms
 from data.waveforms.validation import parser as validation_parser
-from jsonargparse import ActionConfigFile, ArgumentParser
-
 from utils.logging import configure_logging
 
 

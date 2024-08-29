@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from bokeh.layouts import column
+
 from plots.vizapp.infer.analyzer import EventAnalyzer
 from plots.vizapp.pages.analysis.distribution import DistributionPlot
 from plots.vizapp.pages.analysis.inspector import InspectorPlot
