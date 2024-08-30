@@ -23,6 +23,7 @@ aframe = {path = "../../", develop = true}
 python-ligo-lw = "^1.8.3"
 lalsuite = "^7.19"
 jsonargparse = "^4.27.4"
+omegaconf = "^2.2"
 
 
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
