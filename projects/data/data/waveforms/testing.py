@@ -2,10 +2,11 @@ import logging
 from pathlib import Path
 from typing import Callable, List, Optional
 
-import data.waveforms.utils as utils
 import numpy as np
-from data.waveforms.rejection import rejection_sample
 from jsonargparse import ArgumentParser
+
+import data.waveforms.utils as utils
+from data.waveforms.rejection import rejection_sample
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 
 

@@ -17,6 +17,7 @@ from bokeh.models import (
     WheelZoomTool,
 )
 from bokeh.plotting import figure
+
 from plots.vizapp import palette
 
 FORE_ATTRS = [

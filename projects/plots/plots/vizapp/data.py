@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 from bokeh.models import MultiChoice
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from plots.vetos import VETO_CATEGORIES, VetoParser

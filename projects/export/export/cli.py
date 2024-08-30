@@ -1,8 +1,8 @@
 import os
 
 import jsonargparse
-from export.main import export
 
+from export.main import export
 from utils.logging import configure_logging
 
 

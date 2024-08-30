@@ -6,9 +6,10 @@ from zlib import adler32
 
 import h5py
 import numpy as np
+from ratelimiter import RateLimiter
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
-from ratelimiter import RateLimiter
 
 
 class Sequence:

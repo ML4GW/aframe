@@ -2,6 +2,7 @@ import pickle
 import tempfile
 
 import numpy as np
+
 from p_astro import Pastro
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground

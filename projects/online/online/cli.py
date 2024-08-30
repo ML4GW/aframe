@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timezone
 
 import jsonargparse
-from online.main import main
 
+from online.main import main
 from utils.logging import configure_logging
 
 

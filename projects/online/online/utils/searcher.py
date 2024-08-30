@@ -9,6 +9,7 @@ from typing import List, Optional
 
 import numpy as np
 from gwpy.time import tconvert
+
 from ledger.events import EventSet
 from online.utils.dataloading import get_prefix
 

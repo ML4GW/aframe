@@ -1,9 +1,10 @@
 from typing import Optional
 
 import numpy as np
-from ledger.events import SECONDS_IN_YEAR, EventSet
 from numpy.polynomial import Polynomial
 from scipy.stats import gaussian_kde
+
+from ledger.events import SECONDS_IN_YEAR, EventSet
 
 
 class BackgroundModel:

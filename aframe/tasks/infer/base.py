@@ -167,11 +167,11 @@ class InferBase(
         return outputs
 
     def run(self):
+        from hermes.aeriel.client import InferenceClient
+
         from infer.data import Sequence
         from infer.main import infer
         from infer.postprocess import Postprocessor
-
-        from hermes.aeriel.client import InferenceClient
 
         ip = os.getenv("AFRAME_TRITON_IP")
         self.tmp_dir.mkdir(exist_ok=True, parents=True)

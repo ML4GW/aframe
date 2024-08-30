@@ -13,10 +13,12 @@ from bokeh.models import (
 from bokeh.plotting import figure
 from gwpy.plot import Plot
 from PIL import Image
+
 from plots.vizapp import palette
 
 if TYPE_CHECKING:
     import gwpy
+
     from plots.vizapp.infer.analyzer import EventAnalyzer
 
 

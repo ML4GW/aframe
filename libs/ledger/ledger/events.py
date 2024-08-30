@@ -5,9 +5,10 @@ from multiprocessing import Pool, cpu_count
 from typing import List, Tuple, TypeVar
 
 import numpy as np
+from tqdm import tqdm
+
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
-from tqdm import tqdm
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)

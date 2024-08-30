@@ -1,7 +1,8 @@
 from typing import Callable
 
-from data.waveforms.utils import convert_to_detector_frame
 from jsonargparse import ArgumentParser
+
+from data.waveforms.utils import convert_to_detector_frame
 from ledger.injections import IntrinsicParameterSet, IntrinsicWaveformSet
 
 

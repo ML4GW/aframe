@@ -1,4 +1,3 @@
-import logging
 import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,21 +13,38 @@ if TYPE_CHECKING:
 
 def fit_or_load_pastro(
     model_path: Path,
-    background: "EventSet",
-    foreground: "RecoveredInjectionSet",
-    rejected: "InjectionParameterSet",
+    background: EventSet,
+    foreground: RecoveredInjectionSet,
+    rejected: InjectionParameterSet,
     astro_event_rate: float,
-):
+) -> Pastro:
+    """
+    Load a pastro model from disk if it exists, otherwise fit a new one.
+
+    Args:
+        model_path:
+            Path to the model file.
+        background:
+            Background event set.
+        foreground:
+            Foreground event set.
+        rejected:
+            Rejected injections.
+        astro_event_rate:
+            Expected rate of astrophysical events
+
+    Returns: Pastro model
+    """
+
     if model_path.exists():
-        logging.info(f"Loading pastro model from {model_path}")
         with open(model_path, "rb") as f:
-            p_astro = pickle.load(f)
+            pastro = pickle.load(f)
     else:
         background_model = KdeAndPolynomialBackground(background)
         foreground_model = KdeForeground(
             foreground, rejected, astro_event_rate
         )
-        p_astro = Pastro(foreground_model, background_model)
+        pastro = Pastro(foreground_model, background_model)
         with open(model_path, "wb") as f:
-            pickle.dump(p_astro, f)
-    return p_astro
+            pickle.dump(pastro, f)
+    return pastro

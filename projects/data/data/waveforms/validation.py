@@ -1,5 +1,6 @@
-from data.waveforms.rejection import rejection_sample
 from jsonargparse import ArgumentParser
+
+from data.waveforms.rejection import rejection_sample
 from ledger.injections import WaveformSet, waveform_class_factory
 
 parser = ArgumentParser()
