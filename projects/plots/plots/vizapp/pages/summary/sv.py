@@ -33,7 +33,7 @@ class SensitiveVolumePlot:
         mass_combos: List[tuple],
         source_prior: PriorDict,
         dt: Optional[float] = None,
-        max_far: float = 100 / SECONDS_PER_MONTH / 100,
+        max_far: float = 100 / SECONDS_PER_MONTH,
         sigma: float = 0.1,
     ):
         self.background = background
