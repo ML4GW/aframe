@@ -126,7 +126,7 @@ def main(
                 if cat == "CATALOG":
                     vetos = catalog_vetos
                 else:
-                    vetos = veto_parser.get_vetoes(cat)[ifo]
+                    vetos = veto_parser.get_vetos(cat)[ifo]
                 back_count = len(background)
                 fore_count = len(foreground)
                 if len(vetos) > 0:
