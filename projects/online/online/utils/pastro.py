@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 def fit_or_load_pastro(
     model_path: Path,
-    background: EventSet,
-    foreground: RecoveredInjectionSet,
-    rejected: InjectionParameterSet,
+    background: "EventSet",
+    foreground: "RecoveredInjectionSet",
+    rejected: "InjectionParameterSet",
     astro_event_rate: float,
 ) -> Pastro:
     """
