@@ -116,7 +116,7 @@ def process_event(
 
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(pastro, graceid)
+    gdb.submit_pastro(float(pastro), graceid)
     pass
 
 
