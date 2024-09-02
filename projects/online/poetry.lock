@@ -545,24 +545,6 @@ test = ["Pillow", "contourpy[test-no-images]", "matplotlib"]
 test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
 
 [[package]]
-name = "cosmology"
-version = "0.1.0"
-description = "Library to ensure cosmology standardization across Aframe"
-optional = false
-python-versions = ">=3.8,<3.11"
-files = []
-develop = true
-
-[package.dependencies]
-astropy = "^5.0"
-rpds-py = "<0.20"
-scipy = "^1.7"
-
-[package.source]
-type = "directory"
-url = "../../libs/cosmology"
-
-[[package]]
 name = "cryptography"
 version = "43.0.0"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -1205,7 +1187,6 @@ files = []
 develop = true
 
 [package.dependencies]
-cosmology = {path = "../cosmology", develop = true}
 h5py = "^3.10.0"
 
 [package.source]
@@ -1802,8 +1783,8 @@ develop = true
 
 [package.dependencies]
 astropy = "^5.0"
-cosmology = {path = "../cosmology", develop = true}
 ledger = {path = "../ledger", develop = true}
+utils = {path = "../utils", develop = true}
 
 [package.source]
 type = "directory"
@@ -2681,6 +2662,7 @@ files = []
 develop = true
 
 [package.dependencies]
+astropy = "^5.0"
 h5py = "^3.6"
 ml4gw = "^0.5"
 s3fs = "^2024"
