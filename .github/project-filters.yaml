@@ -34,7 +34,7 @@ export:
 
 plots:
   - *workflow
-  - 'projects/plot/**'
+  - 'projects/plots/**'
   - 'libs/utils/**'
   - 'libs/ledger/**'
   - 'libs/priors/**'
