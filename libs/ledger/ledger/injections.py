@@ -4,9 +4,6 @@ from typing import Optional
 
 import h5py
 import numpy as np
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
-from bilby.gw.waveform_generator import WaveformGenerator
 from cosmology.cosmology import DEFAULT_COSMOLOGY
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
@@ -53,7 +50,7 @@ class ExtrinsicParameterSet(Ledger):
     dec: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
     psi: np.ndarray = parameter()
-    theta_jn: np.ndarray = parameter()
+    inclination: np.ndarray = parameter()
     phase: np.ndarray = parameter()
 
     @property
@@ -98,6 +95,26 @@ class ExtrinsicParameterSet(Ledger):
     @property
     def spin2z(self):
         return self.a_2 * np.cos(self.tilt_2)
+
+
+class PycbcParameterSet(IntrinsicParameterSet, ExtrinsicParameterSet):
+    def waveform_generation_params(self):
+        # For clarity, explicitly define the parameter dictionary
+        # needed for waveform generation
+        params = {
+            "mass1": self.mass_1,
+            "mass2": self.mass_2,
+            "spin1x": self.spin1x,
+            "spin1y": self.spin1y,
+            "spin1z": self.spin1z,
+            "spin2x": self.spin2x,
+            "spin2y": self.spin2y,
+            "spin2z": self.spin2z,
+            "inclination": self.inclination,
+            "distance": self.luminosity_distance,
+        }
+
+        return [dict(zip(params, values)) for values in zip(*params.values())]
 
 
 @dataclass
@@ -159,27 +176,48 @@ class InjectionMetadata(Ledger):
 class _WaveformGenerator:
     """Thin wrapper so that we can potentially parallelize this"""
 
-    gen: WaveformGenerator
+    waveform_approximant: str
     sample_rate: float
     waveform_duration: float
     coalescence_time: float
+    minimum_frequency: float
+    reference_frequency: float
 
-    def shift_coalescence(self, waveform):
-        shift = int(self.coalescence_time * self.sample_rate)
-        return np.roll(waveform, shift, axis=-1)
+    def shift_coalescence(self, waveform, t_final):
+        shift_time = t_final - (self.waveform_duration - self.coalescence_time)
+        shift_idx = int(shift_time * self.sample_rate)
+        return np.roll(waveform, shift_idx, axis=-1)
+
+    def pad_or_crop(self, waveform):
+        waveform_length = int(self.sample_rate * self.waveform_duration)
+        if waveform.shape[-1] < waveform_length:
+            pad = waveform_length - waveform.shape[-1]
+            waveform = np.pad(waveform, ((0, 0), (pad, 0)))
+        elif waveform.shape[-1] > waveform_length:
+            waveform = waveform[:, -waveform_length:]
+        return waveform
 
     def __call__(self, params):
-        polarizations = self.gen.time_domain_strain(params)
+        hp, hc = self.get_td_waveform(
+            approximant=self.waveform_approximant,
+            f_lower=self.minimum_frequency,
+            f_ref=self.reference_frequency,
+            delta_t=1 / self.sample_rate,
+            **params
+        )
 
-        stacked = np.stack([v for v in polarizations.values()])
-        stacked = self.shift_coalescence(stacked)
-        unstacked = {k: v for (k, v) in zip(polarizations.keys(), stacked)}
+        t_final = max(hp.sample_times.data)
+        stacked = np.stack([hp.data, hc.data])
+        stacked = self.shift_coalescence(stacked, t_final)
+        stacked = self.pad_or_crop(stacked)
+
+        unstacked = {k: v for (k, v) in zip(["plus", "cross"], stacked)}
 
         return unstacked
 
 
 @dataclass
-class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
+class WaveformPolarizationSet(InjectionMetadata, IntrinsicParameterSet):
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
@@ -193,7 +231,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
     @classmethod
     def from_parameters(
         cls,
-        params: IntrinsicParameterSet,
+        params: PycbcParameterSet,
         minimum_frequency: float,
         reference_frequency: float,
         sample_rate: float,
@@ -202,19 +240,13 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
-        gen = WaveformGenerator(
-            duration=waveform_duration,
-            sampling_frequency=sample_rate,
-            frequency_domain_source_model=lal_binary_black_hole,
-            parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-            waveform_arguments={
-                "waveform_approximant": waveform_approximant,
-                "reference_frequency": reference_frequency,
-                "minimum_frequency": minimum_frequency,
-            },
-        )
         waveform_generator = _WaveformGenerator(
-            gen, sample_rate, waveform_duration, coalescence_time
+            waveform_approximant=waveform_approximant,
+            sample_rate=sample_rate,
+            waveform_duration=waveform_duration,
+            coalescence_time=coalescence_time,
+            minimum_frequency=minimum_frequency,
+            reference_frequency=reference_frequency,
         )
 
         waveform_length = int(sample_rate * waveform_duration)
@@ -223,6 +255,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
+        params = params.waveform_generation_params()
         # give flexibility if we want to parallelize or not
         if ex is None:
             for i, polars in enumerate(map(waveform_generator, params)):

@@ -4,9 +4,6 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
-from bilby.gw.waveform_generator import WaveformGenerator
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 from data.waveforms.utils import convert_to_detector_frame, load_psds
@@ -35,20 +32,13 @@ def rejection_sample(
 
     # instantiate a waveform generator whose
     # call method will generate raw polarizations
-    _generator = WaveformGenerator(
-        duration=waveform_duration,
-        sampling_frequency=sample_rate,
-        frequency_domain_source_model=lal_binary_black_hole,
-        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-        waveform_arguments={
-            "waveform_approximant": waveform_approximant,
-            "reference_frequency": reference_frequency,
-            "minimum_frequency": minimum_frequency,
-        },
-    )
-
     generator = _WaveformGenerator(
-        _generator, sample_rate, waveform_duration, coalescence_time
+        waveform_approximant=waveform_approximant,
+        sample_rate=sample_rate,
+        waveform_duration=waveform_duration,
+        coalescence_time=coalescence_time,
+        minimum_frequency=minimum_frequency,
+        reference_frequency=reference_frequency,
     )
 
     # create a dictionary to store accepted

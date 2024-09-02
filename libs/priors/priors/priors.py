@@ -39,7 +39,7 @@ def uniform_extrinsic() -> PriorDict:
     prior = PriorDict()
     prior["dec"] = Cosine()
     prior["ra"] = Uniform(0, 2 * np.pi)
-    prior["theta_jn"] = Sine()
+    prior["inclination"] = Sine()
     prior["phase"] = Uniform(0, 2 * np.pi)
 
     return prior

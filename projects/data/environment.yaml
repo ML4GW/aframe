@@ -17,7 +17,6 @@ dependencies:
   - gwosc
   - lalsuite
   - astropy
-  - bilby>1.4,<2
   - libgcc
   # auth libs
   - krb5
