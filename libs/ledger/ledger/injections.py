@@ -119,6 +119,7 @@ class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
             "spin2z": self.spin2z,
             "inclination": self.inclination,
             "distance": self.luminosity_distance,
+            "coa_phase": self.phase,
         }
         return params
 
