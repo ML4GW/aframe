@@ -32,7 +32,7 @@ export:
   - 'hermes/**'
   - 'libs/utils/**'
 
-plot:
+plots:
   - *workflow
   - 'projects/plot/**'
   - 'libs/utils/**'
