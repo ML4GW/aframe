@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import scipy.stats as stats
 from astropy.utils.data import download_file
+from cosmology.cosmology import DEFAULT_COSMOLOGY
 from tqdm import tqdm
 
 catalog_results = {
@@ -279,7 +280,8 @@ def main(
     sig_lognorm: float = 0.1,
     smax_ns: float = 0.4,
     smax_bh: float = 0.998,
-    cosmology: cosmo.Cosmology = cosmo.FlatwCDM(H0=67.9, Om0=0.3065, w0=-1),
+    # Note: original code used cosmo.FlatwCDM(H0=67.9, Om0=0.3065, w0=-1)
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ):
     known_pipelines = ["cwb", "gstlal", "mbta", "pycbc_bbh", "pycbc_hyperbank"]
     unknown_pipelines = set(pipelines) - set(known_pipelines)

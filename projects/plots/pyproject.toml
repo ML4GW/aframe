@@ -15,6 +15,7 @@ scipy = "^1.7"
 h5py = "^3.5"
 gwpy = "^3.0.8"
 
+cosmology = {path = "../../libs/cosmology", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
 utils = {path = "../../libs/utils", develop = true}

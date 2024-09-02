@@ -4,10 +4,10 @@ from typing import List, Optional
 
 import h5py
 import numpy as np
-from astropy.cosmology import Planck15 as cosmology
 from bilby.core.prior import PriorDict
 from bokeh.io import save
 from bokeh.layouts import gridplot
+from cosmology.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
@@ -86,7 +86,7 @@ class SensitiveVolumePlot:
             decrange = None
         else:
             decrange = (decprior.minimum, decprior.maximum)
-        v0 = utils.get_astrophysical_volume(zmin, zmax, cosmology, decrange)
+        v0 = get_astrophysical_volume(zmin, zmax, DEFAULT_COSMOLOGY, decrange)
         v0 /= 10**9
         return v0
 
@@ -95,7 +95,7 @@ class SensitiveVolumePlot:
         for i, combo in enumerate(self.mass_combos):
             logging.info(f"Computing likelihoods under {combo} log normal")
             prior, _ = log_normal_masses(
-                *combo, sigma=self.sigma, cosmology=cosmology
+                *combo, sigma=self.sigma, cosmology=DEFAULT_COSMOLOGY
             )
             prob = get_prob(prior, self.foreground)
             rejected_prob = get_prob(prior, self.rejected_params)

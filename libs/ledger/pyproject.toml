@@ -12,6 +12,8 @@ bilby = "^2.2.2"
 h5py = "^3.10.0"
 numpy = "^1.26"
 
+cosmology = {path = "../cosmology", develop = true}
+
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
 pytest = "^8.2.0"

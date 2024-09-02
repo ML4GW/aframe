@@ -1,9 +1,6 @@
-from typing import Optional
-
 import numpy as np
 from bokeh.palettes import Bright7 as palette  # noqa
 from bokeh.plotting import figure
-from scipy.integrate import quad
 
 SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
 
@@ -11,27 +8,6 @@ SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
 subscripts = {}
 for i in range(10):
     subscripts[i] = rf"\u{2080 + i}".encode().decode("unicode-escape")
-
-
-def volume_element(cosmology, z):
-    return cosmology.differential_comoving_volume(z).value / (1 + z)
-
-
-def get_astrophysical_volume(
-    zmin: float,
-    zmax: float,
-    cosmology,
-    dec_range: Optional[tuple[float, float]] = None,
-):
-    volume, _ = quad(lambda z: volume_element(cosmology, z), zmin, zmax)
-    if dec_range is not None:
-        decmin, decmax = dec_range
-        theta_max = np.pi / 2 - decmin
-        theta_min = np.pi / 2 - decmax
-    else:
-        theta_min, theta_max = 0, np.pi
-    omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
-    return volume * omega
 
 
 def get_figure(**kwargs):

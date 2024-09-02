@@ -5,9 +5,9 @@ from typing import Callable, List, Optional
 import h5py
 import jsonargparse
 import numpy as np
-from astropy.cosmology import Planck15 as cosmology
 from bokeh.io import save
 from bokeh.layouts import gridplot
+from cosmology.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
@@ -142,7 +142,7 @@ def main(
                 )
 
     logging.info("Computing data likelihood under source prior")
-    source, _ = source_prior(cosmology)
+    source, _ = source_prior(DEFAULT_COSMOLOGY)
     source_probs = get_prob(source, foreground)
     source_rejected_probs = get_prob(source, rejected_params)
 
@@ -156,7 +156,7 @@ def main(
         decrange = None
     else:
         decrange = (decprior.minimum, decprior.maximum)
-    v0 = tools.get_astrophysical_volume(zmin, zmax, cosmology, decrange)
+    v0 = get_astrophysical_volume(zmin, zmax, DEFAULT_COSMOLOGY, decrange)
     v0 /= 10**9
 
     Tb = background.Tb / tools.SECONDS_PER_YEAR
@@ -167,7 +167,9 @@ def main(
     weights = np.zeros((len(mass_combos), len(source_probs)))
     for i, combo in enumerate(mass_combos):
         logging.info(f"Computing likelihoods under {combo} log normal")
-        prior, _ = log_normal_masses(*combo, sigma=sigma, cosmology=cosmology)
+        prior, _ = log_normal_masses(
+            *combo, sigma=sigma, cosmology=DEFAULT_COSMOLOGY
+        )
         prob = get_prob(prior, foreground)
         rejected_prob = get_prob(prior, rejected_params)
 

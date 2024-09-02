@@ -7,6 +7,7 @@ import numpy as np
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.source import lal_binary_black_hole
 from bilby.gw.waveform_generator import WaveformGenerator
+from cosmology.cosmology import DEFAULT_COSMOLOGY
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 
@@ -26,13 +27,31 @@ class IntrinsicParameterSet(Ledger):
 
     mass_1: np.ndarray = parameter()
     mass_2: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
     a_1: np.ndarray = parameter()
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
     phi_12: np.ndarray = parameter()
     phi_jl: np.ndarray = parameter()
+
+    @property
+    def chirp_mass(self):
+        return chirp_mass(self.mass_1, self.mass_2)
+
+    @property
+    def total_mass(self):
+        return self.mass_1 + self.mass_2
+
+    @property
+    def mass_ratio(self):
+        return self.mass_2 / self.mass_1
+
+
+@dataclass
+class ExtrinsicParameterSet(Ledger):
+    ra: np.ndarray = parameter()
+    dec: np.ndarray = parameter()
+    redshift: np.ndarray = parameter()
     psi: np.ndarray = parameter()
     theta_jn: np.ndarray = parameter()
     phase: np.ndarray = parameter()
@@ -46,8 +65,39 @@ class IntrinsicParameterSet(Ledger):
         return self.mass_2 / (1 + self.redshift)
 
     @property
-    def chirp_mass(self):
-        return chirp_mass(self.mass_1, self.mass_2)
+    def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
+        return cosmology.luminosity_distance(self.redshift).value
+
+    # Note: the spin conversions work only because we use uniform spins
+    # Otherwise, there would need to be some rotations to align vectors
+    # with the standard coordinate system
+    @property
+    def spin1x(self):
+        return self.a_1 * np.sin(self.tilt_1) * np.cos(self.phase)
+
+    @property
+    def spin2x(self):
+        return (
+            self.a_2 * np.sin(self.tilt_2) * np.cos(self.phase + self.phi_12)
+        )
+
+    @property
+    def spin1y(self):
+        return self.a_1 * np.sin(self.tilt_1) * np.sin(self.phase)
+
+    @property
+    def spin2y(self):
+        return (
+            self.a_2 * np.sin(self.tilt_2) * np.sin(self.phase + self.phi_12)
+        )
+
+    @property
+    def spin1z(self):
+        return self.a_1 * np.cos(self.tilt_1)
+
+    @property
+    def spin2z(self):
+        return self.a_2 * np.cos(self.tilt_2)
 
 
 @dataclass
@@ -197,14 +247,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
 
 
 @dataclass
-class SkyLocationParameterSet(Ledger):
-    ra: np.ndarray = parameter()
-    dec: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
-
-
-@dataclass
-class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
+class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
     ifo_snrs: np.ndarray = parameter()
     ifos: list[str] = metadata(default_factory=list)

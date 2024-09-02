@@ -1,6 +1,5 @@
-import numpy as np
-from astropy.cosmology import Cosmology, Planck15
-from scipy.integrate import quad
+from astropy.cosmology import Cosmology
+from cosmology.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 from scipy.stats import gaussian_kde
 
 from ledger.events import RecoveredInjectionSet
@@ -32,7 +31,7 @@ class ForegroundModel:
         foreground: RecoveredInjectionSet,
         rejected: InjectionParameterSet,
         astro_event_rate: float,
-        cosmology: Cosmology = Planck15,
+        cosmology: Cosmology = DEFAULT_COSMOLOGY,
     ):
         self.cosmology = cosmology
         self.foreground = foreground
@@ -54,9 +53,6 @@ class ForegroundModel:
             / self.total_injections
         )
 
-    def _volume_element(self, z):
-        return self.cosmology.differential_comoving_volume(z).value / (1 + z)
-
     def get_injected_volume(self) -> float:
         """
         Calculate the volume of the universe in which injections were made.
@@ -73,11 +69,10 @@ class ForegroundModel:
         dec_min = min(self.rejected.dec.min(), self.foreground.dec.min())
         dec_max = max(self.rejected.dec.max(), self.foreground.dec.max())
 
-        volume, _ = quad(lambda z: self._volume_element(z), zmin, zmax)
-        theta_max = np.pi / 2 - dec_min
-        theta_min = np.pi / 2 - dec_max
-        omega = -2 * np.pi * (np.cos(theta_max) - np.cos(theta_min))
-        return volume * omega / 1e9
+        volume = get_astrophysical_volume(
+            zmin, zmax, self.cosmology, dec_range=(dec_min, dec_max)
+        )
+        return volume / 1e9
 
     def fit(self):
         """
