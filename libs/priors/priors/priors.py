@@ -57,8 +57,8 @@ def uniform_spin() -> PriorDict:
     prior["a_2"] = Uniform(0, 0.998)
     prior["tilt_1"] = Sine(unit=rad)
     prior["tilt_2"] = Sine(unit=rad)
-    prior["phi_12"] = Uniform(0, 2 * np.pi)
-    prior["phi_jl"] = Uniform(0, 2 * np.pi)
+    prior["azimuth_1"] = Uniform(0, 2 * np.pi)
+    prior["azimuth_2"] = Uniform(0, 2 * np.pi)
     return prior
 
 

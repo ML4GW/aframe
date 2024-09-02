@@ -34,8 +34,8 @@ class IntrinsicParameterSet(Ledger):
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
-    phi_12: np.ndarray = parameter()
-    phi_jl: np.ndarray = parameter()
+    azimuth_1: np.ndarray = parameter()
+    azimuth_2: np.ndarray = parameter()
 
     @property
     def chirp_mass(self):
@@ -71,28 +71,21 @@ class ExtrinsicParameterSet(Ledger):
     def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
         return cosmology.luminosity_distance(self.redshift).value
 
-    # Note: the spin conversions work only because we use uniform spins
-    # Otherwise, there would need to be some rotations to align vectors
-    # with the standard coordinate system
     @property
     def spin1x(self):
-        return self.a_1 * np.sin(self.tilt_1) * np.cos(self.phase)
+        return self.a_1 * np.sin(self.tilt_1) * np.cos(self.azimuth_1)
 
     @property
     def spin2x(self):
-        return (
-            self.a_2 * np.sin(self.tilt_2) * np.cos(self.phase + self.phi_12)
-        )
+        return self.a_2 * np.sin(self.tilt_2) * np.cos(self.azimuth_2)
 
     @property
     def spin1y(self):
-        return self.a_1 * np.sin(self.tilt_1) * np.sin(self.phase)
+        return self.a_1 * np.sin(self.tilt_1) * np.sin(self.azimuth_1)
 
     @property
     def spin2y(self):
-        return (
-            self.a_2 * np.sin(self.tilt_2) * np.sin(self.phase + self.phi_12)
-        )
+        return self.a_2 * np.sin(self.tilt_2) * np.sin(self.azimuth_2)
 
     @property
     def spin1z(self):
