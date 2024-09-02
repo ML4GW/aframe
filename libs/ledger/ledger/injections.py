@@ -1,10 +1,11 @@
 from concurrent.futures import Executor, as_completed
 from dataclasses import dataclass, make_dataclass
-from typing import Optional
+from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
 from cosmology.cosmology import DEFAULT_COSMOLOGY
+from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 
@@ -12,6 +13,11 @@ from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 def chirp_mass(m1, m2):
     """Calculate chirp mass from component masses"""
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
+
+
+def transpose(d: Dict[str, List]):
+    """Turn a dict of lists into a list of dicts"""
+    return [dict(zip(d, col)) for col in zip(*d.values())]
 
 
 @dataclass
@@ -97,7 +103,8 @@ class ExtrinsicParameterSet(Ledger):
         return self.a_2 * np.cos(self.tilt_2)
 
 
-class PycbcParameterSet(IntrinsicParameterSet, ExtrinsicParameterSet):
+@dataclass
+class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
     def waveform_generation_params(self):
         # For clarity, explicitly define the parameter dictionary
         # needed for waveform generation
@@ -113,8 +120,7 @@ class PycbcParameterSet(IntrinsicParameterSet, ExtrinsicParameterSet):
             "inclination": self.inclination,
             "distance": self.luminosity_distance,
         }
-
-        return [dict(zip(params, values)) for values in zip(*params.values())]
+        return params
 
 
 @dataclass
@@ -198,7 +204,7 @@ class _WaveformGenerator:
         return waveform
 
     def __call__(self, params):
-        hp, hc = self.get_td_waveform(
+        hp, hc = get_td_waveform(
             approximant=self.waveform_approximant,
             f_lower=self.minimum_frequency,
             f_ref=self.reference_frequency,
@@ -217,7 +223,7 @@ class _WaveformGenerator:
 
 
 @dataclass
-class WaveformPolarizationSet(InjectionMetadata, IntrinsicParameterSet):
+class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
@@ -255,14 +261,15 @@ class WaveformPolarizationSet(InjectionMetadata, IntrinsicParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
-        params = params.waveform_generation_params()
+        generation_params = params.waveform_generation_params()
+        param_list = transpose(generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
-            for i, polars in enumerate(map(waveform_generator, params)):
+            for i, polars in enumerate(map(waveform_generator, param_list)):
                 for key, value in polars.items():
                     polarizations[key][i] = value
         else:
-            futures = ex.map(waveform_generator, params)
+            futures = ex.map(waveform_generator, param_list)
             idx_map = {f: i for f, i in zip(futures, len(futures))}
             for f in as_completed(futures):
                 i = idx_map.pop(f)

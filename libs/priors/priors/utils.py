@@ -1,6 +1,3 @@
-from typing import Dict, List
-
-
 def chirp_mass(m1, m2):
     """Calculate chirp mass from component masses"""
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
@@ -41,8 +38,3 @@ def mass_constraints(samples):
     samples["mass_ratio"] = samples["mass_2"] / samples["mass_1"]
     samples["chirp_mass"] = chirp_mass(samples["mass_1"], samples["mass_2"])
     return samples
-
-
-def transpose(d: Dict[str, List]):
-    """Turn a dict of lists into a list of dicts"""
-    return [dict(zip(d, col)) for col in zip(*d.values())]
