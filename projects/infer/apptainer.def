@@ -12,6 +12,7 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 ../../hermes /opt/aframe/hermes
 ../../libs/ledger /opt/aframe/libs/ledger
+../../libs/cosmology /opt/aframe/libs/cosmology
 
 %post
 # installing the local package editably via pip

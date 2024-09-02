@@ -5,27 +5,40 @@ workflow: &workflow
 data:
   - *workflow
   - 'projects/data/**'
-  - 'ml4gw/**'
   - 'libs/ledger/**'
   - 'libs/priors/**'
+  - 'libs/utils/**'
+  - 'libs/cosmology/**'
+  - 'hermes/**'
 
 infer:
   - *workflow
   - 'projects/infer/**'
   - 'hermes/**'
   - 'libs/ledger/**'
+  - 'libs/utils/**'
+  - 'libs/cosmology/**'
   
 train:
   - *workflow
   - 'projects/train/**'
-  - 'ml4gw/**'
   - 'libs/ledger/**'
   - 'libs/architectures/**'
+  - 'libs/utils/**'
 
 export:
   - *workflow
   - 'projects/export/**'
-  - 'ml4gw/**'
+  - 'hermes/**'
+  - 'libs/utils/**'
+
+plot:
+  - *workflow
+  - 'projects/plot/**'
+  - 'libs/utils/**'
+  - 'libs/ledger/**'
+  - 'libs/priors/**'
+  - 'libs/cosmology/**'
   - 'hermes/**'
 
 online:
@@ -33,4 +46,6 @@ online:
   - 'projects/online/**'
   - 'libs/ledger/**'
   - 'libs/architectures/**'
+  - 'libs/utils/**'
+  - 'libs/p_astro/**'
   - 'amplfi/amplfi/architectures/**'
