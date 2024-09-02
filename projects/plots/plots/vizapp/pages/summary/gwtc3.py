@@ -8,8 +8,9 @@ import astropy.units as u
 import h5py
 import numpy as np
 import scipy.stats as stats
-from cosmology.cosmology import DEFAULT_COSMOLOGY
 from tqdm import tqdm
+
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 catalog_results = {
     "GstLAL": {

@@ -8,7 +8,6 @@ data:
   - 'libs/ledger/**'
   - 'libs/priors/**'
   - 'libs/utils/**'
-  - 'libs/cosmology/**'
   - 'hermes/**'
 
 infer:
@@ -17,7 +16,6 @@ infer:
   - 'hermes/**'
   - 'libs/ledger/**'
   - 'libs/utils/**'
-  - 'libs/cosmology/**'
   
 train:
   - *workflow
@@ -38,7 +36,6 @@ plots:
   - 'libs/utils/**'
   - 'libs/ledger/**'
   - 'libs/priors/**'
-  - 'libs/cosmology/**'
   - 'hermes/**'
 
 online:

@@ -7,11 +7,11 @@ import numpy as np
 from bilby.core.prior import PriorDict
 from bokeh.io import save
 from bokeh.layouts import gridplot
-from cosmology.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from priors.priors import log_normal_masses
+from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from . import compute, utils
 from .gwtc3 import catalog_results

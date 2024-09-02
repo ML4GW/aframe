@@ -1,9 +1,9 @@
 from astropy.cosmology import Cosmology
-from cosmology.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 from scipy.stats import gaussian_kde
 
 from ledger.events import RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
+from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 
 class ForegroundModel:

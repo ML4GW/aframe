@@ -4,10 +4,10 @@ from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
-from cosmology.cosmology import DEFAULT_COSMOLOGY
 from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 
 def chirp_mass(m1, m2):

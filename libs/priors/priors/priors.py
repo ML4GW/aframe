@@ -16,13 +16,13 @@ from bilby.core.prior import (
     Uniform,
 )
 from bilby.gw.prior import UniformComovingVolume, UniformSourceFrame
-from cosmology.cosmology import DEFAULT_COSMOLOGY
 
 from priors.utils import (
     mass_condition_powerlaw,
     mass_condition_uniform,
     mass_constraints,
 )
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 # Unit names
 msun = r"$M_{\odot}$"

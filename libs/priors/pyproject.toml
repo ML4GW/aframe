@@ -11,7 +11,7 @@ astropy = "^5.0"
 bilby = "^2.2.2"
 numpy = "^1.26.4"
 
-cosmology = {path = "../cosmology", develop = true}
+utils = {path = "../utils", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3"

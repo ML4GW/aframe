@@ -10,7 +10,7 @@ python = ">=3.9,<3.13"
 astropy = "^5.0"
 numpy = "^1.26"
 
-cosmology = {path = "../cosmology", develop = true}
+utils = {path = "../utils", develop = true}
 ledger = {path = "../ledger", develop = true}
 
 [tool.poetry.group.dev.dependencies]
