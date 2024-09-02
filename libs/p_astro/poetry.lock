@@ -651,6 +651,7 @@ develop = true
 
 [package.dependencies]
 astropy = "^5.0"
+rpds-py = "<0.20"
 scipy = "^1.7"
 
 [package.source]
