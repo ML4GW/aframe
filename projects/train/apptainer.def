@@ -13,6 +13,7 @@ Stage: build
 ../../hermes /opt/aframe/hermes
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../libs/architectures /opt/aframe/libs/architectures
+../../libs/cosmology /opt/aframe/libs/cosmology
 
 %post
 # installing the local package editably via pip
