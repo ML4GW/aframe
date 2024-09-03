@@ -62,9 +62,8 @@ def rejection_sample(
         if num_signals == 1:
             params = {k: params[k] for k in prior.keys() if k in params}
 
-        params = PycbcParameterSet(**params)
         polarization_set = WaveformPolarizationSet.from_parameters(
-            params,
+            PycbcParameterSet(**params),
             minimum_frequency,
             reference_frequency,
             sample_rate,
@@ -73,8 +72,8 @@ def rejection_sample(
             coalescence_time,
         )
         polarizations = {
-            "cross": polarization_set.cross,
-            "plus": polarization_set.plus,
+            "cross": torch.Tensor(polarization_set.cross),
+            "plus": torch.Tensor(polarization_set.plus),
         }
 
         projected = compute_observed_strain(
