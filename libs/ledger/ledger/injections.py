@@ -188,14 +188,16 @@ class _WaveformGenerator:
         shift_idx = int(shift_time * self.sample_rate)
         return np.roll(waveform, shift_idx, axis=-1)
 
-    def pad_or_crop(self, waveform):
+    def align_waveforms(self, waveforms, t_final):
         waveform_length = int(self.sample_rate * self.waveform_duration)
-        if waveform.shape[-1] < waveform_length:
-            pad = waveform_length - waveform.shape[-1]
-            waveform = np.pad(waveform, ((0, 0), (pad, 0)))
-        elif waveform.shape[-1] > waveform_length:
-            waveform = waveform[:, -waveform_length:]
-        return waveform
+        if waveforms.shape[-1] < waveform_length:
+            pad = waveform_length - waveforms.shape[-1]
+            waveforms = np.pad(waveforms, ((0, 0), (pad, 0)))
+            waveforms = self.shift_coalescence(waveforms, t_final)
+        elif waveforms.shape[-1] >= waveform_length:
+            waveforms = self.shift_coalescence(waveforms, t_final)
+            waveforms = waveforms[:, -waveform_length:]
+        return waveforms
 
     def __call__(self, params):
         hp, hc = get_td_waveform(
@@ -208,8 +210,7 @@ class _WaveformGenerator:
 
         t_final = max(hp.sample_times.data)
         stacked = np.stack([hp.data, hc.data])
-        stacked = self.shift_coalescence(stacked, t_final)
-        stacked = self.pad_or_crop(stacked)
+        stacked = self.align_waveforms(stacked, t_final)
 
         unstacked = {k: v for (k, v) in zip(["plus", "cross"], stacked)}
 
