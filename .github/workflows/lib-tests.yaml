@@ -51,16 +51,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-          
-      - uses: Dup4/actions-setup-gcc@v1
-        with:
-        version: latest
+
       # build the libraries environment
       -
         name: build environment
         env:
           test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
+            apt-get update
+            apt-get install -y gcc
+            apt-get clean
             python -m pip install poetry
             cd $test_dir
             poetry install
