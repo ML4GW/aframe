@@ -2,7 +2,7 @@ import io
 from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
-from bokeh.layouts import row
+from bokeh.layouts import column, row
 from bokeh.models import (
     ColumnDataSource,
     HoverTool,
@@ -28,12 +28,15 @@ class InspectorPlot:
 
     def initialize_sources(self):
         strain_source = {ifo: [] for ifo in self.analyzer.ifos}
+        fft_source = strain_source.copy()
         strain_source["t"] = []
+        fft_source["f"] = []
 
         self.strain_source = ColumnDataSource(strain_source)
         self.response_source = ColumnDataSource(
             dict(nn=[], integrated=[], t=[])
         )
+        self.fft_source = ColumnDataSource(fft_source)
         self.spectrogram_source = ColumnDataSource(
             data=dict(image=[], x=[], y=[], dw=[], dh=[])
         )
@@ -100,6 +103,34 @@ class InspectorPlot:
         self.timeseries_plot.add_tools(hover)
         self.timeseries_plot.legend.click_policy = "mute"
 
+        self.frequencyseries_plot = figure(
+            title="Click on an event to inspect",
+            height=height,
+            width=width,
+            x_axis_type="log",
+            y_axis_type="log",
+            x_axis_label="Frequency [Hz]",
+            y_axis_label="Strain [unitless]",
+        )
+        self.frequencyseries_plot.toolbar.autohide = True
+
+        items, self.fft_renderers = [], []
+        for i, ifo in enumerate(self.analyzer.ifos):
+            r = self.frequencyseries_plot.line(
+                x="f",
+                y=ifo,
+                line_color=palette[i],
+                line_alpha=0.6,
+                legend_label=ifo,
+                source=self.fft_source,
+            )
+            self.fft_renderers.append(r)
+            items.append((ifo, [r]))
+
+        legend = Legend(items=items, orientation="horizontal")
+        self.frequencyseries_plot.add_layout(legend, "below")
+        self.frequencyseries_plot.legend.click_policy = "mute"
+
         self.spectrogram_plot = figure(
             height=height,
             width=width,
@@ -118,7 +149,10 @@ class InspectorPlot:
             dh="dh",
             source=self.spectrogram_source,
         )
-        return row(self.timeseries_plot, self.spectrogram_plot)
+        return column(
+            row(self.timeseries_plot, self.spectrogram_plot),
+            self.frequencyseries_plot,
+        )
 
     def plot(self, qscans: tuple["gwpy.spectrogram.Spectrogram"]):
         fig = Plot(
@@ -179,7 +213,9 @@ class InspectorPlot:
             ifo: whitened[0][i][-len(self.analyzer.whitened_times) :]
             for i, ifo in enumerate(self.analyzer.ifos)
         }
+        freqs, fft_source = self.analyzer.get_fft(strain_source)
         strain_source["t"] = self.analyzer.whitened_times
+        fft_source["f"] = freqs
 
         # qscan whitened strain and plot spectrogram
         qscans = self.analyzer.qscan(strain_source)
@@ -198,6 +234,10 @@ class InspectorPlot:
         self.strain_source.data = strain_source
         for r in self.strain_renderers:
             r.data_source.data = strain_source
+
+        self.fft_source.data = fft_source
+        for r in self.fft_renderers:
+            r.data_source.data = fft_source
 
         self.response_source.data = {
             "nn": nn,
@@ -222,14 +262,21 @@ class InspectorPlot:
         self.timeseries_plot.xaxis.axis_label = f"Time from {time:0.3f} [s]"
 
         self.timeseries_plot.title.text = title
+        self.frequencyseries_plot.title.text = title
 
     def reset(self):
         # TODO: implement this
         for r in self.strain_renderers:
             r.data_source.data = dict(H1=[], L1=[], t=[])
 
+        for r in self.fft_renderers:
+            r.data_source.data = dict(H1=[], L1=[], f=[])
+
         for r in self.output_renderers:
             r.data_source.data = dict(nn=[], integrated=[], t=[])
 
         self.timeseries_plot.title.text = "Click on an event to inspect"
         self.timeseries_plot.xaxis.axis_label = "Time [s]"
+
+        self.frequencyseries_plot.title.text = "Click on an event to inspect"
+        self.frequencyseries_plot.xaxis.axis_label = "Frequency [Hz]"
