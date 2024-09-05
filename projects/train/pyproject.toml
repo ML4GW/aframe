@@ -17,7 +17,7 @@ train = "train.main:main"
 # core dependencies
 python = ">=3.9,<3.11"
 torchmetrics = "^0.11"
-lightning = "<2.3.0"
+lightning = "^2.4.0"
 jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
 # plotting/logging dependencies
@@ -47,6 +47,7 @@ architectures = {path = "../../libs/architectures", develop = true}
 bayesian-optimization = "^1.4.3"
 filelock = "^3.13.1"
 s3fs = "^2024"
+lightray = "^0.1.0"
 
 [[tool.poetry.source]]
 name = "torch"

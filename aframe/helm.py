@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 import kr8s
 
-CHART_REPO = "https://github.com/ML4GW/aframev2/releases/download/"
+CHART_REPO = "https://github.com/EthanMarx/lightning-tune/releases/download/"
 
 
 def authenticate():
@@ -75,7 +75,7 @@ class RayCluster(HelmChart):
         self,
         release: str,
         chart_path: Optional[str] = None,
-        chart_version: str = "0.1.0",
+        chart_version: str = "0.1.1",
     ):
         # if no chart path is provided, use the chart
         # in the github repo

@@ -32,6 +32,7 @@ class InferParameters(law.Task):
     )
     zero_lag = luigi.BoolParameter(default="false")
     output_dir = PathParameter(default=paths().results_dir)
+    train_task = luigi.TaskParameter()
 
 
 @inherits(InferParameters)
