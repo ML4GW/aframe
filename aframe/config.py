@@ -10,7 +10,7 @@ project_base = "/opt/aframe/projects"
 
 
 class ssh(luigi.Config):
-    ssh_file = luigi.Parameter(default=Path.home() / ".ssh" / "id_rsa")
+    ssh_file = luigi.PathParameter(default=Path.home() / ".ssh" / "id_rsa")
 
 
 class ray_worker(luigi.Config):
