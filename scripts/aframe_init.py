@@ -13,7 +13,7 @@ TUNE_CONFIGS = [
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "tune.cfg",
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "base.cfg",
     root / "projects" / "train" / "config.yaml",
-    root / "projects" / "train" / "train" / "tune" / "search_space.py",
+    root / "projects" / "train" / "configs" / "search_space.py",
 ]
 
 SANDBOX_CONFIGS = [

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import luigi
 
 from aframe.base import AframeRayTask
-from aframe.config import ray_head, ray_worker, s3, wandb
+from aframe.config import ray_head, ray_worker, s3, ssh, wandb
 from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase
 
@@ -62,6 +62,10 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return ip
 
     def configure_cluster(self, cluster: "RayCluster"):
+        # get ssh key for git-sync init container
+        with open(ssh().ssh_file, "r") as f:
+            ssh_key = f.read()
+
         secret = s3().get_s3_credentials()
         values = {
             # image parameters
@@ -81,6 +85,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             "head.cpu": ray_head().cpus,
             "head.memory": ray_head().memory,
             "dev": str(self.dev).lower(),
+            "gitRepo.sshKey": ssh_key,
         }
         cluster.build_command(values)
         return cluster
@@ -90,21 +95,44 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return LawS3Target(str(path))
 
     def run(self):
-        from train.tune.cli import main
+        from lightray.tune import run
+        from ray.tune.schedulers import ASHAScheduler
+
+        from train.callbacks import AframeTrainReportCallback
+        from train.cli import AframeCLI
 
         args = self.get_args()
-        args.append(f"--tune.name={self.name}")
-        args.append(f"--tune.address={self.get_ip()}")
-        args.append(f"--tune.space={self.search_space}")
-        args.append(f"--tune.workers_per_trial={self.workers_per_trial}")
-        args.append(f"--tune.gpus_per_worker={self.gpus_per_worker}")
-        args.append(f"--tune.cpus_per_gpu={ray_worker().cpus_per_gpu}")
-        args.append(f"--tune.num_samples={self.num_samples}")
-        args.append(f"--tune.min_epochs={self.min_epochs}")
-        args.append(f"--tune.max_epochs={self.max_epochs}")
-        args.append(f"--tune.reduction_factor={self.reduction_factor}")
-        args.append(f"--tune.storage_dir={self.run_dir}")
 
-        weights = main(args)
+        scheduler = ASHAScheduler(
+            max_t=self.max_epochs,
+            grace_period=self.min_epochs,
+            reduction_factor=self.reduction_factor,
+        )
+
+        metric = "valid_auroc"
+        objective = "max"
+        prefix = "s3://" if self.run_dir.startswith("s3://") else ""
+        results = run(
+            cli_cls=AframeCLI,
+            name=self.name,
+            scheduler=scheduler,
+            metric=metric,
+            objective=objective,
+            search_space=self.search_space,
+            num_samples=self.num_samples,
+            workers_per_trial=self.workers_per_trial,
+            gpus_per_worker=self.gpus_per_worker,
+            cpus_per_gpu=ray_worker().cpus_per_gpu,
+            storage_dir=self.run_dir,
+            callbacks=[AframeTrainReportCallback()],
+            args=args,
+        )
+        # return path to best model weights from best trial
+        best = results.get_best_result(
+            metric=metric, mode=objective, scope="all"
+        )
+        best = best.get_best_checkpoint(metric=metric, mode=objective)
+        weights = os.path.join(prefix, best.path, "model.pt")
+
         # copy the best weights to the output location
         s3().client.copy(weights, self.output().path)

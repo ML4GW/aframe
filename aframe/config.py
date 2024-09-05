@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import luigi
 from luigi.contrib.s3 import S3Client
@@ -6,6 +7,10 @@ from luigi.contrib.s3 import S3Client
 from aframe.parameters import PathParameter
 
 project_base = "/opt/aframe/projects"
+
+
+class ssh(luigi.Config):
+    ssh_file = luigi.PathParameter(default=Path.home() / ".ssh" / "id_rsa")
 
 
 class ray_worker(luigi.Config):

@@ -17,23 +17,17 @@ class SandboxSV(SensitiveVolume):
     def requires(self):
         reqs = {}
         reqs["ts"] = TestingWaveforms.req(self)
-        reqs["infer"] = SandboxInfer.req(
-            self,
-            train_task=self.train_task,
-        )
+        reqs["infer"] = SandboxInfer.req(self)
         return reqs
 
 
 class _Sandbox(AframeWrapperTask):
-    train_task = None
+    train_task = luigi.TaskParameter()
 
     def requires(self):
         # simply call SV plot task, which will
         # call all necessary downstream tasks!
-        return SandboxSV.req(
-            self,
-            train_task=self.train_task,
-        )
+        return SandboxSV.req(self, train_task=self.train_task)
 
 
 class Sandbox(_Sandbox):
