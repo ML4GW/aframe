@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 import kr8s
 
-CHART_REPO = "https://github.com/EthanMarx/lightning-tune/releases/download/"
+CHART_REPO = "https://github.com/EthanMarx/lightray/releases/download/"
 
 
 def authenticate():

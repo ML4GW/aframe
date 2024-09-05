@@ -246,10 +246,7 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster = None
             return
 
-        cluster = RayCluster(
-            self.name,
-            chart_path=str(root / "lightning-tune" / "charts" / "raycluster"),
-        )
+        cluster = RayCluster(self.name)
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
         cluster.install()
