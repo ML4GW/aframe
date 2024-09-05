@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import luigi
 
 from aframe.base import AframeRayTask
-from aframe.config import ray_head, ray_worker, s3, wandb
+from aframe.config import ray_head, ray_worker, s3, ssh, wandb
 from aframe.targets import LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase
 
@@ -62,7 +62,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return ip
 
     def configure_cluster(self, cluster: "RayCluster"):
-        with open("/home/ethan.marx/.ssh/id_rsa") as f:
+        # get ssh key for git-sync init container
+        with open(ssh().ssh_file, "r") as f:
             ssh_key = f.read()
 
         secret = s3().get_s3_credentials()
@@ -94,8 +95,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return LawS3Target(str(path))
 
     def run(self):
+        from lightray.tune import run
         from ray.tune.schedulers import ASHAScheduler
-        from raylightning.tune import run
 
         from train.callbacks import AframeTrainReportCallback
         from train.cli import AframeCLI
