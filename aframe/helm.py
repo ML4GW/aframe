@@ -75,7 +75,7 @@ class RayCluster(HelmChart):
         self,
         release: str,
         chart_path: Optional[str] = None,
-        chart_version: str = "0.1.1",
+        chart_version: str = "0.1.3",
     ):
         # if no chart path is provided, use the chart
         # in the github repo
