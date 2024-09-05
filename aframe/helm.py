@@ -81,7 +81,7 @@ class RayCluster(HelmChart):
         # in the github repo
         if chart_path is None:
             chart_path = f"{CHART_REPO}/ray-cluster-{chart_version}"
-            chart_path += "/ray-cluster-{chart_version}.tgz"
+            chart_path += f"/ray-cluster-{chart_version}.tgz"
         super().__init__(chart_path, release)
 
     def get_ip(self):
