@@ -9,7 +9,6 @@ from typing import Dict, List, Optional
 import kr8s
 
 CHART_REPO = "https://github.com/EthanMarx/lightray/releases/download/"
-logger = logging.getLogger("luigi-interface")
 
 
 def authenticate():

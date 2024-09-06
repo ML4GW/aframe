@@ -126,7 +126,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             storage_dir=self.run_dir,
             callbacks=[TraceModel],
             address=self.get_ip(),
-            temp_dir="/local/ethan.marx/",
             args=args,
         )
         # return path to best model weights from best trial
