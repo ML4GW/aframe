@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 import kr8s
 
 CHART_REPO = "https://github.com/EthanMarx/lightray/releases/download/"
+logger = logging.getLogger("luigi-interface")
 
 
 def authenticate():
@@ -114,6 +115,8 @@ class RayCluster(HelmChart):
         # can subclass to define "readiness"
         ready = False
         while not ready:
+            logger.info(workers)
+            logger.info(head)
             ready = any([p.ready() for p in workers])
             ready = ready and head.ready()
             time.sleep(2)

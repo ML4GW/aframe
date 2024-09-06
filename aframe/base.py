@@ -250,8 +250,10 @@ class AframeRayTask(AframeSingularityTask):
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
         cluster.install()
+        logger.info("Waiting for ray cluster to be ready")
         cluster.wait()
         self.ip = cluster.get_ip()
+        logger.info(self.ip)
 
     def sandbox_post_run(self):
         """
