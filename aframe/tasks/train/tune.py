@@ -59,7 +59,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         """
         ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
         ip += ":10001"
-        return ip
+        return f"ray://{ip}"
 
     def configure_cluster(self, cluster: "RayCluster"):
         # get ssh key for git-sync init container
@@ -98,7 +98,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         from lightray.tune import run
         from ray.tune.schedulers import ASHAScheduler
 
-        from train.callbacks import AframeTrainReportCallback
+        from train.callbacks import TraceModel
         from train.cli import AframeCLI
 
         args = self.get_args()
@@ -109,14 +109,14 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             reduction_factor=self.reduction_factor,
         )
 
-        metric = "valid_auroc"
+        metric_name = "valid_auroc"
         objective = "max"
-        prefix = "s3://" if self.run_dir.startswith("s3://") else ""
+        prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
         results = run(
             cli_cls=AframeCLI,
             name=self.name,
             scheduler=scheduler,
-            metric=metric,
+            metric_name=metric_name,
             objective=objective,
             search_space=self.search_space,
             num_samples=self.num_samples,
@@ -124,14 +124,15 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             gpus_per_worker=self.gpus_per_worker,
             cpus_per_gpu=ray_worker().cpus_per_gpu,
             storage_dir=self.run_dir,
-            callbacks=[AframeTrainReportCallback()],
+            callbacks=[TraceModel],
+            address=self.get_ip(),
             args=args,
         )
         # return path to best model weights from best trial
         best = results.get_best_result(
-            metric=metric, mode=objective, scope="all"
+            metric=metric_name, mode=objective, scope="all"
         )
-        best = best.get_best_checkpoint(metric=metric, mode=objective)
+        best = best.get_best_checkpoint(metric=metric_name, mode=objective)
         weights = os.path.join(prefix, best.path, "model.pt")
 
         # copy the best weights to the output location
