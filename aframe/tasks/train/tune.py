@@ -108,7 +108,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             grace_period=self.min_epochs,
             reduction_factor=self.reduction_factor,
         )
-
         metric_name = "valid_auroc"
         objective = "max"
         prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
