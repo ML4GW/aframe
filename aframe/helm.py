@@ -115,8 +115,6 @@ class RayCluster(HelmChart):
         # can subclass to define "readiness"
         ready = False
         while not ready:
-            logger.info(workers)
-            logger.info(head)
             ready = any([p.ready() for p in workers])
             ready = ready and head.ready()
             time.sleep(2)

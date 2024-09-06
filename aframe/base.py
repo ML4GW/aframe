@@ -68,6 +68,13 @@ class AframeSandbox(singularity.SingularitySandbox):
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
 
+        # bind users /local directory for
+        # storing large tmp files,
+        # e.g. for local storage before
+        # being dumped to s3 by luigi
+        tmpdir = f"/local/{os.getenv('USER')}"
+        volumes[tmpdir] = tmpdir
+
         return volumes
 
 
@@ -250,10 +257,8 @@ class AframeRayTask(AframeSingularityTask):
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
         cluster.install()
-        logger.info("Waiting for ray cluster to be ready")
         cluster.wait()
         self.ip = cluster.get_ip()
-        logger.info(self.ip)
 
     def sandbox_post_run(self):
         """
