@@ -1,7 +1,6 @@
 import io
 import os
 import shutil
-import time
 
 import h5py
 import s3fs
@@ -9,7 +8,6 @@ import torch
 from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
-from ray import train
 from ray.train.lightning import RayTrainReportCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
@@ -108,20 +106,6 @@ class SaveAugmentedBatch(Callback):
                         f.write(url)
 
 
-def report_with_retries(metrics, checkpoint, retries: int = 10):
-    """
-    Call `train.report`, which will persist checkpoints to s3,
-    retrying after any possible errors
-    """
-    for _ in range(retries):
-        try:
-            train.report(metrics=metrics, checkpoint=checkpoint)
-            break
-        except BOTO_RETRY_EXCEPTIONS:
-            time.sleep(5)
-            continue
-
-
 class TraceModel(RayTrainReportCallback):
     """
     Callback to trace model at the end of each Ray Tune trial epoch
@@ -135,24 +119,18 @@ class TraceModel(RayTrainReportCallback):
         tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
         os.makedirs(tmpdir, exist_ok=True)
 
-        datamodule = trainer.datamodule
         device = pl_module.device
 
         # generate sample input to infer shape,
         # making sure to augment on the device
         # where the model lives
-        sample, _ = next(iter(trainer.train_dataloader))
-        sample = sample.to(device)
-        sample, _ = datamodule.augment(sample[0])
-
-        # infer the shape and send sample input
-        # to cpu for tracing
-        sample_input = torch.randn(1, *sample.shape[1:])
-        sample_input = sample_input.to("cpu")
+        [X], waveforms = next(iter(trainer.train_dataloader))
+        X = X.to(device)
+        X, _ = trainer.datamodule.augment(X, waveforms)
+        trace = torch.jit.trace(pl_module.model.to("cpu"), X.to("cpu"))
 
         # trace the model on cpu and then
         # move model back to original device
-        trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
         pl_module.model.to(device)
 
         # Save trace checkpoint to local
