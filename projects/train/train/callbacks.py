@@ -141,7 +141,7 @@ class TraceModel(RayTrainReportCallback):
         # generate sample input to infer shape,
         # making sure to augment on the device
         # where the model lives
-        sample = next(iter(trainer.train_dataloader))
+        sample, _ = next(iter(trainer.train_dataloader))
         sample = sample.to(device)
         sample, _ = datamodule.augment(sample[0])
 
