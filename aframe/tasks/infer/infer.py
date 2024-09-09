@@ -179,13 +179,13 @@ class Infer(AframeSingularityTask):
         zero_lag_files = self.background_files[zero_lag]
         back_files = self.background_files[~zero_lag]
 
-        EventSet.aggregate(back_files, self.background_output, clean=True)
+        EventSet.aggregate(back_files, self.background_output, clean=False)
         RecoveredInjectionSet.aggregate(
-            self.foreground_files, self.foreground_output, clean=True
+            self.foreground_files, self.foreground_output, clean=False
         )
         if len(zero_lag_files) > 0:
             EventSet.aggregate(
-                zero_lag_files, self.zero_lag_output, clean=True
+                zero_lag_files, self.zero_lag_output, clean=False
             )
 
         # Sort background events for later use.

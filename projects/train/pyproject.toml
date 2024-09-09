@@ -11,7 +11,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.scripts]
-train = "train.main:main"
+train = "train.cli:main"
 
 [tool.poetry.dependencies]
 # core dependencies

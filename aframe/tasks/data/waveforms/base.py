@@ -26,7 +26,7 @@ class WaveformParams(law.Task):
         default=50, description="Reference frequency of the generated signals"
     )
     waveform_approximant = luigi.Parameter(
-        default="IMRPhenomPv2",
+        default="IMRPhenomXPHM",
         description="Approximant to use for waveform generation",
     )
     coalescence_time = luigi.FloatParameter(
