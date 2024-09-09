@@ -74,7 +74,7 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     --prior priors.priors.end_o3_ratesandpops \
     --minimum_frequency 20 \
     --reference_frequency 50 \
-    --waveform_approximant IMRPhenomPv2 \
+    --waveform_approximant IMRPhenomXPHM \
     --coalescence_time 6 \
     --output_file ~/aframe/data/train/train_waveforms.hdf5
 ```
@@ -91,7 +91,7 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
     --reference_frequency 50 \
     --sample_rate 2048 \
     --waveform_duration 8 \
-    --waveform_approximant IMRPhenomPv2 \
+    --waveform_approximant IMRPhenomXPHM \
     --coalescence_time 6 \
     --highpass 32 \
     --snr_threshold 4 \

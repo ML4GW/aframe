@@ -4,13 +4,13 @@ import shutil
 import time
 
 import h5py
-import ray
 import s3fs
 import torch
 from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from ray import train
+from ray.train.lightning import RayTrainReportCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
@@ -122,7 +122,7 @@ def report_with_retries(metrics, checkpoint, retries: int = 10):
             continue
 
 
-class TraceModel(ray.train.lightning.RayTrainReportCallback):
+class TraceModel(RayTrainReportCallback):
     """
     Callback to trace model at the end of each Ray Tune trial epoch
 
