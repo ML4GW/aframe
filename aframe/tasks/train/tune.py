@@ -41,6 +41,17 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     gpus_per_worker = luigi.IntParameter(
         default=1, description="Number of gpus to allocate to each ray worker"
     )
+    git_url = luigi.Parameter(
+        default="git@github.com:ML4GW/aframev2.git",
+        description="Git repository url to clone and"
+        " mount into the kubernetes pod. "
+        "Only used if `dev` is set to True",
+    )
+    git_ref = luigi.Parameter(
+        default="main",
+        description="Git branch or commit to checkout. "
+        "Only used if `dev` is set to True",
+    )
 
     # image used locally to connect to the ray cluster
     @property
@@ -86,6 +97,8 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             "head.memory": ray_head().memory,
             "dev": str(self.dev).lower(),
             "gitRepo.sshKey": ssh_key,
+            "gitRepo.url": self.git_url,
+            "gitRepo.ref": self.git_ref,
         }
         cluster.build_command(values)
         return cluster
@@ -108,7 +121,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
             grace_period=self.min_epochs,
             reduction_factor=self.reduction_factor,
         )
-
         metric_name = "valid_auroc"
         objective = "max"
         prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
