@@ -13,6 +13,7 @@ export-and-launch-triton = "export.remote:main"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 
+ml4gw = "^0.5"
 
 # nautilus/remote file access
 # dependencies for s3 support. Should probably put these
@@ -20,13 +21,12 @@ python = ">=3.9,<3.11"
 # to restrict its version because the whl downloads during
 # the solve were insanely slow
 boto3 = "^1.30"
-fsspec = {version = "^2023.10", extras=["s3"]}
+fsspec = {version = "^2024", extras=["s3"]}
 
 
 # local deps
 ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["torch"]}
 aframe = {path = "../../", develop = true}
-ml4gw = "^0.5"
 utils = {path = "../../libs/utils", develop = true}
 jsonargparse = "^4.27.1"
 
@@ -42,7 +42,7 @@ url = "https://download.pytorch.org/whl/cpu"
 
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.2.1"
+pytest = "^8.3.0"
 
 
 [build-system]
