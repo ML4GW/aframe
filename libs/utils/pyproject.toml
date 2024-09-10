@@ -15,7 +15,7 @@ s3fs = "^2024"
 ml4gw = "^0.5"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.2.1"
+pytest = "^8.3.0"
 
 [build-system]
 requires = ["poetry-core"]
