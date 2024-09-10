@@ -5,9 +5,6 @@ DATAFIND_ENV_VARS = [
     "NDSSERVER",
     "LIGO_USERNAME",
     "DEFAULT_SEGMENT_SERVER",
-    "AWS_ENDPOINT_URL",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_ACCESS_KEY_ID",
 ]
 from .fetch import Fetch
 from .segments import Query

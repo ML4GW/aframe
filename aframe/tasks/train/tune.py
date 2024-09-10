@@ -5,7 +5,7 @@ import luigi
 
 from aframe.base import AframeRayTask
 from aframe.config import ray_head, ray_worker, s3, ssh, wandb
-from aframe.targets import LawS3Target
+from aframe.targets import Bytes, LawS3Target
 from aframe.tasks.train.base import RemoteTrainBase
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
     def output(self):
         path = self.run_dir / "best.pt"
-        return LawS3Target(str(path))
+        return LawS3Target(str(path), format=Bytes)
 
     def run(self):
         from lightray.tune import run
