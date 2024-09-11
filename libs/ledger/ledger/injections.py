@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
+from bilby.gw.conversion import bilby_to_lalsimulation_spins
 from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
@@ -34,8 +35,8 @@ class IntrinsicParameterSet(Ledger):
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
-    azimuth_1: np.ndarray = parameter()
-    azimuth_2: np.ndarray = parameter()
+    phi_12: np.ndarray = parameter()
+    phi_jl: np.ndarray = parameter()
 
     @property
     def chirp_mass(self):
@@ -56,7 +57,7 @@ class ExtrinsicParameterSet(Ledger):
     dec: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
     psi: np.ndarray = parameter()
-    inclination: np.ndarray = parameter()
+    theta_jn: np.ndarray = parameter()
     phase: np.ndarray = parameter()
 
     @property
@@ -71,36 +72,46 @@ class ExtrinsicParameterSet(Ledger):
     def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
         return cosmology.luminosity_distance(self.redshift).value
 
-    @property
-    def spin1x(self):
-        return self.a_1 * np.sin(self.tilt_1) * np.cos(self.azimuth_1)
-
-    @property
-    def spin2x(self):
-        return self.a_2 * np.sin(self.tilt_2) * np.cos(self.azimuth_2)
-
-    @property
-    def spin1y(self):
-        return self.a_1 * np.sin(self.tilt_1) * np.sin(self.azimuth_1)
-
-    @property
-    def spin2y(self):
-        return self.a_2 * np.sin(self.tilt_2) * np.sin(self.azimuth_2)
-
-    @property
-    def spin1z(self):
-        return self.a_1 * np.cos(self.tilt_1)
-
-    @property
-    def spin2z(self):
-        return self.a_2 * np.cos(self.tilt_2)
-
 
 @dataclass
 class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
-    def waveform_generation_params(self):
+    def convert_to_lal_params(self, reference_frequency: float):
+        self.inclination = np.zeros(len(self))
+        self.spin1x = np.zeros(len(self))
+        self.spin1y = np.zeros(len(self))
+        self.spin1z = np.zeros(len(self))
+        self.spin2x = np.zeros(len(self))
+        self.spin2y = np.zeros(len(self))
+        self.spin2z = np.zeros(len(self))
+
+        for i in range(len(self)):
+            (
+                self.inclination[i],
+                self.spin1x[i],
+                self.spin1y[i],
+                self.spin1z[i],
+                self.spin2x[i],
+                self.spin2y[i],
+                self.spin2z[i],
+            ) = bilby_to_lalsimulation_spins(
+                a_1=self.a_1[i],
+                a_2=self.a_2[i],
+                tilt_1=self.tilt_1[i],
+                tilt_2=self.tilt_2[i],
+                phi_12=self.phi_12[i],
+                phi_jl=self.phi_jl[i],
+                mass_1=self.mass_1[i],
+                mass_2=self.mass_2[i],
+                theta_jn=self.theta_jn[i],
+                phase=self.phase[i],
+                reference_frequency=reference_frequency,
+            )
+
+    def waveform_generation_params(self, reference_frequency: float):
         # For clarity, explicitly define the parameter dictionary
         # needed for waveform generation
+        self.convert_to_lal_params(reference_frequency)
+
         params = {
             "mass1": self.mass_1,
             "mass2": self.mass_2,
@@ -256,7 +267,9 @@ class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
-        generation_params = params.waveform_generation_params()
+        generation_params = params.waveform_generation_params(
+            reference_frequency
+        )
         param_list = transpose(generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
