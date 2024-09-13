@@ -46,7 +46,7 @@ class DataManager:
         self.ifos = ifos
         self.vetos = vetos
         # load results and data from the run we're visualizing
-        infer_dir = results_dir / "infer"
+        infer_dir = results_dir
         rejected = data_dir / "rejected-parameters.hdf5"
         self.response_set = data_dir / "waveforms.hdf5"
 
