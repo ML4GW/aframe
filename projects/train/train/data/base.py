@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Callable, Optional, Union
@@ -89,6 +90,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         chunk_size: int = 10000,
     ) -> None:
         super().__init__()
+        self.init_logging(verbose)
         self.save_hyperparameters()
         self.num_ifos = len(ifos)
 
@@ -116,6 +118,14 @@ class BaseAframeDataset(pl.LightningDataModule):
     # Distribution utilities
     # ================================================ #
 
+    def init_logging(self, verbose: bool):
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        logging.basicConfig(
+            format=log_format,
+            level=logging.DEBUG if verbose else logging.INFO,
+            stream=sys.stdout,
+        )
+
     def get_world_size_and_rank(self) -> tuple[int, int]:
         """
         Name says it all, but generalizes to the case
@@ -133,7 +143,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         if world_size > 1:
             logger_name += f"{rank}"
         logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
         return logger
 
     # ================================================ #
@@ -566,6 +575,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # multiprocess data loading
         local_world_size = len(self.trainer.device_ids)
         num_workers = min(6, int(os.cpu_count() / local_world_size))
+        self._logger.debug(
+            f"Using {num_workers} workers for strain data loading"
+        )
         dataloader = torch.utils.data.DataLoader(
             dataset, num_workers=num_workers, pin_memory=pin_memory
         )
