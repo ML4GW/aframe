@@ -22,6 +22,10 @@ SANDBOX_CONFIGS = [
     root / "projects" / "train" / "config.yaml",
 ]
 
+REVIEW_CONFIGS = [
+    root / "aframe" / "pipelines" / "sandbox" / "configs" / "review.cfg"
+]
+
 ONLINE_CONFIGS = [
     root / "projects" / "online" / "config.yaml",
     root / "projects" / "online" / "crontab",
@@ -48,12 +52,14 @@ def copy_configs(
             The type of pipeline to initialize. Either 'tune' or 'sandbox'.
     """
 
-    path.mkdir(parents=True, exist_ok=True)
     for config in configs:
         dest = path / config.name
         # update the luigi/law config file to point to the paths
         # of other relevant config files in the init dir
-        if config.suffix == ".cfg" and config.name != "base.cfg":
+        if config.suffix == ".cfg" and config.name not in [
+            "base.cfg",
+            "review.cfg",
+        ]:
             dest = path / f"{pipeline}.cfg"
             cfg = configparser.ConfigParser()
             cfg.read(config)
@@ -139,6 +145,10 @@ def create_offline_runfile(
     base = path if s3_bucket is None else s3_bucket
 
     config = path / f"{pipeline}.cfg"
+    # For running the review check, we're overloading the sandbox pipeline,
+    # so reset the name
+    if pipeline == "review":
+        pipeline = "sandbox"
     # make the below one string
     cmd = f"LAW_CONFIG_FILE={config} poetry run --directory {root} "
     cmd += f"law run aframe.pipelines.sandbox.{pipeline.capitalize()} "
@@ -168,16 +178,18 @@ def main():
     offline_parser = ArgumentParser()
     offline_parser.add_argument(
         "--mode",
-        choices=["sandbox", "tune"],
+        choices=["sandbox", "tune", "review"],
         default="sandbox",
-        help="Specify whether this is a sandbox or tune run",
+        help="Specify the type run to initialize",
     )
     offline_parser.add_argument("-d", "--directory", type=Path, required=True)
     offline_parser.add_argument("--s3-bucket")
+    offline_parser.add_argument("--weights-dir", type=Path)
 
     # online subcommand
     online_parser = ArgumentParser()
     online_parser.add_argument("-d", "--directory", type=Path, required=True)
+    online_parser.add_argument("--weights-dir", type=Path)
 
     # main parser
     parser = ArgumentParser(
@@ -192,6 +204,12 @@ def main():
     subcommand = args.subcommand
     args = getattr(args, args.subcommand)
     directory = args.directory.resolve()
+    weights_dir = args.weights_dir.resolve() if args.weights_dir else None
+
+    # Create the run directory and move in weights if specified
+    directory.mkdir(parents=True, exist_ok=True)
+    if weights_dir:
+        shutil.copytree(weights_dir, directory / "training")
 
     if subcommand == "offline":
         if args.s3_bucket is not None and not args.s3_bucket.startswith(
@@ -200,7 +218,14 @@ def main():
             raise ValueError(
                 "S3 bucket must be in the format s3://{bucket-name}/"
             )
-        configs = TUNE_CONFIGS if args.mode == "tune" else SANDBOX_CONFIGS
+        if args.mode == "sandbox":
+            configs = SANDBOX_CONFIGS
+        elif args.mode == "tune":
+            configs = TUNE_CONFIGS
+        elif args.mode == "review":
+            configs = REVIEW_CONFIGS
+        else:
+            raise ValueError("Mode must be 'sandbox', 'tune', or 'review'")
         copy_configs(directory, configs, args.mode)
         create_offline_runfile(directory, args.mode, args.s3_bucket)
 
