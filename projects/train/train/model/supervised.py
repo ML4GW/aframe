@@ -26,6 +26,10 @@ class SupervisedAframeS4(SupervisedAframe):
     def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
         super().__init__(arch, *args, **kwargs)
 
+    def forward(self, X):
+        X = X.transpose(-1, -2)
+        return self.model(X)
+
     def configure_optimizers(self):
         """
         S4 requires a specific optimizer setup.
