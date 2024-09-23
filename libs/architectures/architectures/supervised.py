@@ -1,8 +1,8 @@
 from typing import Literal, Optional
 
 from architectures import Architecture
-from architectures.networks import WaveNet, Xylophone
 from jaxtyping import Float
+from architectures.networks import S4Model, WaveNet, Xylophone
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from torch import Tensor
@@ -127,4 +127,23 @@ class SupervisedSpectrogramDomainResNet(ResNet2D, SupervisedArchitecture):
             width_per_group=width_per_group,
             stride_type=stride_type,
             norm_layer=norm_layer,
+        )
+
+
+class SupervisedS4Model(S4Model, SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        d_model: int = 128,
+        n_layers: int = 4,
+        dropout: float = 0.1,
+        prenorm: bool = True,
+    ) -> None:
+        super().__init__(
+            d_input=num_ifos,
+            d_output=1,
+            d_model=d_model,
+            n_layers=n_layers,
+            dropout=dropout,
+            prenorm=prenorm,
         )

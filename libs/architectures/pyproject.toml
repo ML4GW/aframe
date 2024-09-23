@@ -7,6 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
+einops = "^0.8"
 ml4gw = "^0.5"
 h5py = "^3.9.0"
 numpy = "^1.26"
@@ -16,7 +17,6 @@ numpy = "^1.26"
 name = "torch"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
-
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"
