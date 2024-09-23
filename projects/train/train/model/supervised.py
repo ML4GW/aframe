@@ -79,7 +79,7 @@ class SupervisedAframeS4(SupervisedAframe):
 
         # Create a lr scheduler
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, self.trainer.max_epochs
+            optimizer, self.trainer.estimated_stepping_batches
         )
         scheduler_config = dict(scheduler=scheduler, interval="step")
 
