@@ -58,6 +58,8 @@ jobs:
         env:
           test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
+            wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
+            chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
             apt-get update
             apt-get install -y gcc
             python -m pip install poetry
