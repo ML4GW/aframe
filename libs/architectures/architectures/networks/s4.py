@@ -1,4 +1,7 @@
 """
+Copied from https://github.com/chreissel/s4/blob/main/models/s4/s4d.py
+and https://github.com/chreissel/s4/blob/main/src/models/nn/dropout.py
+
 Minimal version of S4D with extra options and features stripped out,
 for pedagogical purposes.
 """
@@ -164,9 +167,11 @@ class S4Model(nn.Module):
         d_input,
         d_output=10,
         d_model=256,
+        d_state=64,
         n_layers=4,
         dropout=0.2,
         prenorm=False,
+        **kernel_args,
     ):
         super().__init__()
 
@@ -179,14 +184,16 @@ class S4Model(nn.Module):
         self.s4_layers = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.dropouts = nn.ModuleList()
+        if "lr" in kernel_args.keys():
+            kernel_args["lr"] = min(0.001, kernel_args["lr"])
         for _ in range(n_layers):
             self.s4_layers.append(
                 S4D(
-                    d_model,
+                    d_model=d_model,
+                    d_state=d_state,
                     dropout=dropout,
                     transposed=True,
-                    # lr=min(0.001, args.lr),
-                    lr=0.001,
+                    **kernel_args,
                 )
             )
             self.norms.append(nn.LayerNorm(d_model))
