@@ -44,6 +44,7 @@ class TrainingWaveforms(
             waveform_duration=self.waveform_duration,
             sample_rate=self.sample_rate,
             prior=prior,
+            prior_args=self.prior_args,
             minimum_frequency=self.minimum_frequency,
             reference_frequency=self.reference_frequency,
             waveform_approximant=self.waveform_approximant,
