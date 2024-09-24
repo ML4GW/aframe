@@ -139,6 +139,7 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
         n_layers: int = 4,
         dropout: float = 0.1,
         prenorm: bool = True,
+        **kernel_args,
     ) -> None:
         super().__init__(
             d_input=num_ifos,
@@ -147,4 +148,5 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
             n_layers=n_layers,
             dropout=dropout,
             prenorm=prenorm,
+            **kernel_args,
         )
