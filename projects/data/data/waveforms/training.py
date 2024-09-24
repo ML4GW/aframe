@@ -11,6 +11,7 @@ def training_waveforms(
     sample_rate: int,
     waveform_duration: float,
     prior: Callable,
+    prior_args: dict,
     minimum_frequency: float,
     reference_frequency: float,
     waveform_approximant: str,
@@ -46,7 +47,7 @@ def training_waveforms(
     Returns:
         An IntrinsicParameterSet generated from the sampled parameters
     """
-    prior, detector_frame_prior = prior()
+    prior, detector_frame_prior = prior(**prior_args)
     samples = prior.sample(num_signals)
     if not detector_frame_prior:
         samples = convert_to_detector_frame(samples)
