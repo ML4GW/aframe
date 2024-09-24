@@ -86,6 +86,7 @@ class DeployValidationWaveforms(
         import io
 
         import h5py
+
         from data.waveforms.rejection import rejection_sample
         from data.waveforms.utils import load_psds
         from ledger.injections import WaveformSet, waveform_class_factory

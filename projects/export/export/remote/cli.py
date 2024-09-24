@@ -1,8 +1,8 @@
 import os
 
 import jsonargparse
-from export.remote.main import export_and_launch_triton
 
+from export.remote.main import export_and_launch_triton
 from utils.logging import configure_logging
 
 

@@ -1,4 +1,5 @@
 import pytest
+
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 
 

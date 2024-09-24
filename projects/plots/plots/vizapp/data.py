@@ -1,12 +1,14 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from bokeh.models import MultiChoice
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from plots.vetos import VetoParser
+from plots.vetos import VETO_CATEGORIES, VetoParser
 
 
 def chirp_mass(m1, m2):
@@ -38,7 +40,7 @@ class DataManager:
         results_dir: Path,
         data_dir: Path,
         ifos: list[str],
-        vetos: bool = True,
+        vetos: Optional[VETO_CATEGORIES] = None,
     ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
@@ -81,19 +83,12 @@ class DataManager:
             )
             self.calculate_veto_masks()
 
-    @property
-    def veto_options(self):
-        return [
-            "GATES",
-            "CAT1",
-            "CAT2",
-            "CAT3",
-        ]
-
     def get_veto_selecter(self):
-        return MultiChoice(
-            title="Applied Vetos", value=[], options=self.veto_options
-        )
+        if self.vetos is None:
+            vetos = ["N/A"]
+        else:
+            vetos = self.vetos
+        return MultiChoice(title="Applied Vetos", value=[], options=vetos)
 
     def calculate_veto_masks(self):
         self.vetos = {}

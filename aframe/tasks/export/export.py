@@ -8,7 +8,6 @@ from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter
 from aframe.tasks.export.target import ModelRepositoryTarget
-from aframe.tasks.train import Train
 
 
 class ExportParams(law.Task):
@@ -30,7 +29,7 @@ class ExportParams(law.Task):
     repository_directory = PathParameter(
         default=paths().results_dir / "model_repo"
     )
-    train_task = luigi.TaskParameter(default=Train)
+    train_task = luigi.TaskParameter()
     # TODO: resolve enum platform parsing error
     # platform = luigi.Parameter(default="TENSORRT")
 

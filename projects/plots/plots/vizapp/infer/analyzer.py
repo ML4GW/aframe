@@ -5,9 +5,9 @@ import h5py
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
+
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 from plots.vizapp.infer.utils import get_indices, get_strain_fname
-
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 
@@ -62,6 +62,7 @@ class EventAnalyzer:
         self.fduration = fduration
         self.psd_length = psd_length
         self.kernel_length = kernel_length
+        self.highpass = highpass
         self.inference_sampling_rate = inference_sampling_rate
         self.integration_length = integration_length
         self.batch_size = batch_size
@@ -199,6 +200,18 @@ class EventAnalyzer:
         integrated = self.integrate(nn)
 
         return nn, integrated, whitened
+
+    def get_fft(self, strain: Dict[str, np.ndarray]):
+        ffts = {}
+        for ifo in self.ifos:
+            data = strain[ifo]
+            ts = TimeSeries(data, times=self.whitened_times)
+            ts = ts.crop(-3, 5)
+            fft = ts.fft().crop(start=self.highpass)
+            freqs = fft.frequencies.value
+            ffts[ifo] = np.abs(fft.value)
+
+        return freqs, ffts
 
     def qscan(self, strain: Dict[str, np.ndarray]):
         qscans = []

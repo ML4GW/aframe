@@ -8,11 +8,18 @@ import luigi
 from law.contrib import singularity
 from law.contrib.singularity.config import config_defaults
 
-from aframe.config import s3, wandb
+from aframe.config import wandb
 from aframe.helm import RayCluster
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
+
+S3_ENV_VARS = [
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_ENDPOINT_URL",
+    "AWS_EXTERNAL_ENDPOINT_URL",
+]
 
 
 class AframeParameters(law.Task):
@@ -68,7 +75,26 @@ class AframeSandbox(singularity.SingularitySandbox):
         if self.task and getattr(self.task, "dev", False):
             volumes[str(root)] = "/opt/aframe"
 
+        # bind users /local directory for
+        # storing large tmp files,
+        # e.g. for local storage before
+        # being dumped to s3 by luigi
+        tmpdir = f"/local/{os.getenv('USER')}"
+        volumes[tmpdir] = tmpdir
+
+        # bind aws directory that contains s3 credentials
+        aws_dir = os.path.expanduser("~/.aws/")
+        volumes[aws_dir] = aws_dir
         return volumes
+
+    def _get_env(self):
+        # bind aws env vars
+        env = super()._get_env()
+        for envvar in S3_ENV_VARS:
+            value = os.getenv(envvar)
+            if value is not None:
+                env[envvar] = value
+        return env
 
 
 # update the law config to let it know about
@@ -228,10 +254,6 @@ class AframeRayTask(AframeSingularityTask):
         # that gets run in the container.
         env = super().sandbox_env(_)
         env["AFRAME_RAY_CLUSTER_IP"] = self.ip
-        env["AWS_ACCESS_KEY_ID"] = s3().aws_access_key_id
-        env["AWS_SECRET_ACCESS_KEY"] = s3().aws_secret_access_key
-        env["AWS_ENDPOINT_URL"] = s3().get_internal_s3_url()
-        env["AWS_EXTERNAL_ENDPOINT_URL"] = s3().endpoint_url
         env["WANDB_API_KEY"] = wandb().api_key
         env["WANDB_USERNAME"] = wandb().username
 
@@ -246,11 +268,7 @@ class AframeRayTask(AframeSingularityTask):
             self.cluster = None
             return
 
-        # TODO: add support for specifying chart parth by hand?
-        cluster = RayCluster(
-            self.name,
-            chart_path=str(root / "charts" / "raycluster"),
-        )
+        cluster = RayCluster(self.name)
         cluster = self.configure_cluster(cluster)
         self.cluster = cluster
         cluster.install()

@@ -8,6 +8,7 @@ from astropy.cosmology import Planck15 as cosmology
 from bilby.core.prior import PriorDict
 from bokeh.io import save
 from bokeh.layouts import gridplot
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from priors.priors import log_normal_masses
@@ -57,9 +58,8 @@ class SensitiveVolumePlot:
 
     @property
     def thresholds(self):
-        thresholds = np.sort(self.background.detection_statistic)[
-            -self.max_events :
-        ][::-1]
+        background = self.background.sort_by("detection_statistic")
+        thresholds = background.detection_statistic[-self.max_events :][::-1]
         return thresholds
 
     @property

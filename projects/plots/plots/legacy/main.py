@@ -8,13 +8,13 @@ import numpy as np
 from astropy.cosmology import Planck15 as cosmology
 from bokeh.io import save
 from bokeh.layouts import gridplot
+
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from plots.legacy import compute, tools
 from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
-from plots.vetos import VetoParser, get_catalog_vetos
+from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
 from priors.priors import log_normal_masses
-
 from utils.logging import configure_logging
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -55,6 +55,7 @@ def main(
     max_far: float = 365,
     sigma: float = 0.1,
     verbose: bool = False,
+    vetos: Optional[List[VETO_CATEGORIES]] = None,
 ):
     """
     Compute and plot the sensitive volume of an aframe analysis
@@ -107,35 +108,38 @@ def main(
     )
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
-    veto_parser = VetoParser(
-        VETO_DEFINER_FILE,
-        GATE_PATHS,
-        start,
-        stop,
-        ifos,
-    )
+    # optionally apply vetos
+    # if user passed list of veto categories
+    if vetos is not None:
+        veto_parser = VetoParser(
+            VETO_DEFINER_FILE,
+            GATE_PATHS,
+            start,
+            stop,
+            ifos,
+        )
 
-    catalog_vetos = get_catalog_vetos(start, stop)
-    categories = ["CAT1", "CAT2", "CAT3", "GATES", "CATALOG"]
-    for cat in categories:
-        for i, ifo in enumerate(ifos):
-            if cat == "CATALOG":
-                vetos = catalog_vetos
-            else:
-                vetos = veto_parser.get_vetoes(cat)[ifo]
-            back_count = len(background)
-            fore_count = len(foreground)
-            if len(vetos) > 0:
-                background = background.apply_vetos(vetos, i)
-                foreground = foreground.apply_vetos(vetos, i)
-            logging.info(
-                f"\t{back_count - len(background)} {cat} "
-                f"background events removed for ifo {ifo}"
-            )
-            logging.info(
-                f"\t{fore_count - len(foreground)} {cat} "
-                f"foreground events removed for ifo {ifo}"
-            )
+        catalog_vetos = get_catalog_vetos(start, stop)
+
+        for cat in vetos:
+            for i, ifo in enumerate(ifos):
+                if cat == "CATALOG":
+                    vetos = catalog_vetos
+                else:
+                    vetos = veto_parser.get_vetos(cat)[ifo]
+                back_count = len(background)
+                fore_count = len(foreground)
+                if len(vetos) > 0:
+                    background = background.apply_vetos(vetos, i)
+                    foreground = foreground.apply_vetos(vetos, i)
+                logging.info(
+                    f"\t{back_count - len(background)} {cat} "
+                    f"background events removed for ifo {ifo}"
+                )
+                logging.info(
+                    f"\t{fore_count - len(foreground)} {cat} "
+                    f"foreground events removed for ifo {ifo}"
+                )
 
     logging.info("Computing data likelihood under source prior")
     source, _ = source_prior(cosmology)

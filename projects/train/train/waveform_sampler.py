@@ -7,9 +7,8 @@ from typing import Iterable, Optional
 import h5py
 import numpy as np
 import torch
-from torch.distributions.uniform import Uniform
-
 from ml4gw.distributions import Cosine
+from torch.distributions.uniform import Uniform
 
 
 # TODO: move to ml4gw

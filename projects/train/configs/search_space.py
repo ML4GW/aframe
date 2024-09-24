@@ -1,3 +1,6 @@
+"""
+Example of a search space for hyperparameter tuning
+"""
 from ray import tune
 
 space = {

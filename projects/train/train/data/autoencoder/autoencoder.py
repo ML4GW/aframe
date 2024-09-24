@@ -1,6 +1,6 @@
 import torch
-
 from ml4gw.utils.slicing import sample_kernels
+
 from train.data.base import BaseAframeDataset
 
 Tensor = torch.Tensor

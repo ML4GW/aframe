@@ -1,4 +1,5 @@
 import os
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional, Union
@@ -96,6 +97,22 @@ class Ledger:
 
     def _get_group(self, f: h5py.File, name: str):
         return f.get(name) or f.create_group(name)
+
+    def is_sorted_by(self, attr: str):
+        value = getattr(self, attr)
+        if len(value) != len(self) or len(value.shape) > 1:
+            raise ValueError(
+                "Sorting key should be a 1D array with length equal "
+                f"to the length of the object. {attr} has shape "
+                f"{value.shape}, and so does not meet these conditions"
+            )
+        return (value[:-1] <= value[1:]).all()
+
+    def sort_by(self, attr: str):
+        if self.is_sorted_by(attr):
+            warnings.warn(f"Already sorted by {attr}, object is unchanged")
+        idx = np.argsort(getattr(self, attr))
+        return self[idx]
 
     def write(self, fname: PATH, chunks=None) -> None:
         """

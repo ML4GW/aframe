@@ -16,6 +16,12 @@ class WaveformParams(law.Task):
     waveform_duration = luigi.FloatParameter(
         description="Duration of the generated signals"
     )
+    prior = luigi.Parameter(
+        "Python path to prior to use for waveform generation"
+    )
+    prior_args = luigi.Parameter(
+        default={}, description="Optional arguments for prior functions"
+    )
     minimum_frequency = luigi.FloatParameter(
         default=20, description="Minimum frequency of the generated signals"
     )
@@ -23,21 +29,13 @@ class WaveformParams(law.Task):
         default=50, description="Reference frequency of the generated signals"
     )
     waveform_approximant = luigi.Parameter(
-        default="IMRPhenomPv2",
+        default="IMRPhenomXPHM",
         description="Approximant to use for waveform generation",
     )
     coalescence_time = luigi.FloatParameter(
         description="Location of the defining point of the signal "
         "within the generated waveform"
     )
-    prior = luigi.Parameter(
-        "Python path to prior to use for waveform generation"
-    )
-    prior_args = luigi.DictParameter(
-        default={}, 
-        description="Optional arguments to pass to the prior callable"
-    )
-    
 
 
 class DeployTask(law.Task):

@@ -11,13 +11,13 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.scripts]
-train = "train.main:main"
+train = "train.cli:main"
 
 [tool.poetry.dependencies]
 # core dependencies
 python = ">=3.9,<3.11"
 torchmetrics = "^0.11"
-lightning = "<2.3.0"
+lightning = "2.2.1"
 jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
 # plotting/logging dependencies
@@ -39,7 +39,7 @@ urllib3 = ">=1.25.4,<1.27"
 
 # local deps
 utils = {path = "../../libs/utils", develop = true}
-ml4gw = {path = "../../ml4gw", develop = true}
+ml4gw = "^0.5"
 aframe = {path = "../..", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
@@ -47,12 +47,12 @@ architectures = {path = "../../libs/architectures", develop = true}
 bayesian-optimization = "^1.4.3"
 filelock = "^3.13.1"
 s3fs = "^2024"
+lightray = "^0.1.5"
 
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cu118"
-secondary = true
-default = false
+priority = "explicit"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3"

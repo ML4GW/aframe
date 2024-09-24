@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 import kr8s
 
-CHART_REPO = "https://github.com/ML4GW/aframev2/releases/download/"
+CHART_REPO = "https://github.com/EthanMarx/lightray/releases/download/"
 
 
 def authenticate():
@@ -75,13 +75,13 @@ class RayCluster(HelmChart):
         self,
         release: str,
         chart_path: Optional[str] = None,
-        chart_version: str = "0.1.0",
+        chart_version: str = "0.1.3",
     ):
         # if no chart path is provided, use the chart
         # in the github repo
         if chart_path is None:
             chart_path = f"{CHART_REPO}/ray-cluster-{chart_version}"
-            chart_path += "/ray-cluster-{chart_version}.tgz"
+            chart_path += f"/ray-cluster-{chart_version}.tgz"
         super().__init__(chart_path, release)
 
     def get_ip(self):

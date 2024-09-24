@@ -1,11 +1,11 @@
 import os
 
 import jsonargparse
+from hermes.aeriel.client import InferenceClient
+
 from infer.data import Sequence
 from infer.main import infer
 from infer.postprocess import Postprocessor
-
-from hermes.aeriel.client import InferenceClient
 from utils.logging import configure_logging
 
 

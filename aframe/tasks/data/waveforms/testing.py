@@ -154,6 +154,7 @@ class DeployTestingWaveforms(
         import io
 
         import h5py
+
         from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+
 from ledger import ledger
 
 
@@ -166,3 +167,18 @@ class TestInjectionSet:
         assert (obj[2:4].waves == all_waves[2:4]).all()
 
         self._test_read_write(obj, tmp_dir)
+
+    def test_sort(self, parameter_set):
+        ids = np.array([1, 2, 3])
+        age = np.array([3, 2, 1])
+        obj = parameter_set(ids, age)
+
+        assert obj.is_sorted_by("ids")
+        assert not obj.is_sorted_by("age")
+
+        obj = obj.sort_by("age")
+
+        assert (obj.age == np.array([1, 2, 3])).all()
+        assert (obj.ids == np.array([3, 2, 1])).all()
+        assert obj.is_sorted_by("age")
+        assert not obj.is_sorted_by("ids")

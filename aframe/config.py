@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import luigi
 from luigi.contrib.s3 import S3Client
@@ -6,6 +7,10 @@ from luigi.contrib.s3 import S3Client
 from aframe.parameters import PathParameter
 
 project_base = "/opt/aframe/projects"
+
+
+class ssh(luigi.Config):
+    ssh_file = luigi.PathParameter(default=Path.home() / ".ssh" / "id_rsa")
 
 
 class ray_worker(luigi.Config):
@@ -108,7 +113,9 @@ nautilus_urls = {
 
 
 class paths(luigi.Config):
-    train_datadir = PathParameter(default=os.getenv("AFRAME_TRAIN_DATA_DIR", ""))
+    train_datadir = PathParameter(
+        default=os.getenv("AFRAME_TRAIN_DATA_DIR", "")
+    )
     train_rundir = PathParameter(default=os.getenv("AFRAME_TRAIN_RUN_DIR", ""))
     results_dir = PathParameter(default=os.getenv("AFRAME_RESULTS_DIR", ""))
     test_datadir = PathParameter(default=os.getenv("AFRAME_TEST_DATA_DIR", ""))

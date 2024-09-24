@@ -71,7 +71,7 @@ These images are containerized environments for running `Aframe` tasks in isolat
 The default `Aframe` experiment is the [`sandbox`](./aframe/pipelines/sandbox/) pipeline found under `aframe/pipelines/sandbox`. You can intialize a run directory with default configuration files using the `aframe-init` command line utility
 
 ```bash
-poetry run aframe-init sandbox --directory ~/aframe/runs/my-first-run/
+poetry run aframe-init offline --directory ~/aframe/runs/my-first-run/
 ```
 
 This will create configuration files and a bash executable to launch the pipeline. Feel free to edit the configuration files! Launch the pipeline via

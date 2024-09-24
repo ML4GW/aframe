@@ -1,7 +1,6 @@
 from typing import Callable, Optional, Tuple
 
 import torch
-
 from ml4gw.transforms import SpectralDensity, Whiten
 from ml4gw.utils.slicing import unfold_windows
 

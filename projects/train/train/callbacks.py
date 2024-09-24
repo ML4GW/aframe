@@ -1,8 +1,6 @@
 import io
 import os
 import shutil
-import tempfile
-import time
 
 import h5py
 import s3fs
@@ -10,7 +8,7 @@ import torch
 from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
-from ray import train
+from ray.train.lightning import RayTrainReportCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
@@ -108,85 +106,34 @@ class SaveAugmentedBatch(Callback):
                         f.write(url)
 
 
-def report_with_retries(metrics, checkpoint, retries: int = 10):
+class TraceModel(RayTrainReportCallback):
     """
-    Call `train.report`, which will persist checkpoints to s3,
-    retrying after any possible errors
-    """
-    for _ in range(retries):
-        try:
-            train.report(metrics=metrics, checkpoint=checkpoint)
-            break
-        except BOTO_RETRY_EXCEPTIONS:
-            time.sleep(5)
-            continue
+    Callback to trace model at the end of each Ray Tune trial epoch
 
-
-class AframeTrainReportCallback(Callback):
+    Inherit from `RayTrainReportCallback` to get access to the
+    trial information that is set in its __init__
     """
-    Equivalent of the RayTrainReportCallback
-    (https://docs.ray.io/en/latest/train/api/doc/ray.train.lightning.RayTrainReportCallback.html)
-    except saves trace instead of model weights
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.trial_name = train.get_context().get_trial_name()
-        self.local_rank = train.get_context().get_local_rank()
-        self.tmpdir_prefix = os.path.join(
-            tempfile.gettempdir(), self.trial_name
-        )
-        if os.path.isdir(self.tmpdir_prefix) and self.local_rank == 0:
-            shutil.rmtree(self.tmpdir_prefix)
 
     def on_train_epoch_end(self, trainer, pl_module) -> None:
         # Creates a checkpoint dir with fixed name
         tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
         os.makedirs(tmpdir, exist_ok=True)
 
-        # Fetch metrics
-        metrics = trainer.callback_metrics
-        metrics = {k: v.item() for k, v in metrics.items()}
-
-        # (Optional) Add customized metrics
-        metrics["epoch"] = trainer.current_epoch
-        metrics["step"] = trainer.global_step
-
-        datamodule = trainer.datamodule
         device = pl_module.device
 
         # generate sample input to infer shape,
         # making sure to augment on the device
         # where the model lives
-        sample = next(iter(trainer.train_dataloader))
-        sample = sample.to(device)
-        sample, _ = datamodule.augment(sample[0])
-
-        # infer the shape and send sample input
-        # to cpu for tracing
-        sample_input = torch.randn(1, *sample.shape[1:])
-        sample_input = sample_input.to("cpu")
+        [X], waveforms = next(iter(trainer.train_dataloader))
+        X = X.to(device)
+        X, _ = trainer.datamodule.augment(X, waveforms)
+        trace = torch.jit.trace(pl_module.model.to("cpu"), X.to("cpu"))
 
         # trace the model on cpu and then
         # move model back to original device
-        trace = torch.jit.trace(pl_module.model.to("cpu"), sample_input)
         pl_module.model.to(device)
 
         # Save trace checkpoint to local
         ckpt_path = os.path.join(tmpdir, "model.pt")
         with open(ckpt_path, "wb") as f:
             torch.jit.save(trace, f)
-
-        # save lightning checkpoint to local
-        ckpt_path = os.path.join(tmpdir, "checkpoint.ckpt")
-        trainer.save_checkpoint(ckpt_path, weights_only=False)
-
-        # Report to train session
-        checkpoint = train.Checkpoint.from_directory(tmpdir)
-        report_with_retries(metrics, checkpoint)
-
-        # Add a barrier to ensure all workers finished reporting here
-        torch.distributed.barrier()
-
-        if self.local_rank == 0:
-            shutil.rmtree(tmpdir)

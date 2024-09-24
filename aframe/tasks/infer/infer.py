@@ -10,12 +10,12 @@ import law
 import luigi
 import numpy as np
 import psutil
+from hermes.aeriel.monitor import ServerMonitor
+from hermes.aeriel.serve import serve
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
 from aframe.tasks.infer.base import InferBase, InferParameters
-from hermes.aeriel.monitor import ServerMonitor
-from hermes.aeriel.serve import serve
 
 
 @inherits(InferParameters)
@@ -179,13 +179,19 @@ class Infer(AframeSingularityTask):
         zero_lag_files = self.background_files[zero_lag]
         back_files = self.background_files[~zero_lag]
 
-        EventSet.aggregate(back_files, self.background_output, clean=True)
+        EventSet.aggregate(back_files, self.background_output, clean=False)
         RecoveredInjectionSet.aggregate(
-            self.foreground_files, self.foreground_output, clean=True
+            self.foreground_files, self.foreground_output, clean=False
         )
         if len(zero_lag_files) > 0:
             EventSet.aggregate(
-                zero_lag_files, self.zero_lag_output, clean=True
+                zero_lag_files, self.zero_lag_output, clean=False
             )
+
+        # Sort background events for later use.
+        # TODO: any benefit to sorting foreground for SV calculation?
+        background = EventSet.read(self.background_output)
+        background = background.sort_by("detection_statistic")
+        background.write(self.background_output)
 
         shutil.rmtree(self.output_dir / "tmp")

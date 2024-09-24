@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import numpy as np
 from gwosc import datasets
@@ -9,7 +9,7 @@ from gwpy.segments import DataQualityDict
 # TODO: gating should really be applied directly to the strain
 
 
-CATEGORIES = ["CAT1", "CAT2", "CAT3", "GATES"]
+VETO_CATEGORIES = Literal["CAT1", "CAT2", "CAT3", "GATES", "CATALOG"]
 
 
 def gates_to_veto_segments(path: Path):

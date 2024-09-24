@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ledger import events, injections
 
 
@@ -32,6 +33,27 @@ class TestEventSet:
         assert (obj2.detection_statistic == det_stats).all()
         assert (obj2.detection_time == times).all()
         assert (obj2.shift == shifts).all()
+
+    def test_sorting(self):
+        det_stats = np.arange(10)[::-1]
+        times = np.arange(10)
+        shifts = np.array([[0, 0]] * 5 + [[0, 1]] * 2 + [[1, 1]] * 3)
+        obj = events.EventSet(det_stats, times, shifts, 100)
+        assert obj.is_sorted_by("detection_time")
+        assert not obj.is_sorted_by("detection_statistic")
+        with pytest.raises(ValueError):
+            obj.is_sorted_by("shift")
+        with pytest.warns():
+            obj.nb(5)
+        with pytest.warns():
+            obj.threshold_at_far(0)
+
+        obj = obj.sort_by("detection_statistic")
+        assert obj.is_sorted_by("detection_statistic")
+        with pytest.warns():
+            obj = obj.sort_by("detection_statistic")
+
+        assert (np.arange(10) == obj.detection_statistic).all()
 
     def test_nb(self):
         det_stats = np.arange(10)

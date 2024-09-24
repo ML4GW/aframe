@@ -23,3 +23,8 @@ architectures:
 ledger:
   - *workflow
   - 'libs/ledger/**'
+
+p_astro:
+  - *workflow
+  - 'libs/p_astro/**'
+  - 'libs/ledger/**'

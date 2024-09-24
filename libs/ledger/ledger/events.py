@@ -1,13 +1,25 @@
 import copy
+import warnings
 from dataclasses import dataclass
+from multiprocessing import Pool, cpu_count
 from typing import List, Tuple, TypeVar
 
 import numpy as np
+from tqdm import tqdm
+
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
 
 SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)
+
+
+def process_chunk(args):
+    chunk_times, vetos, i = args
+    mask = np.logical_and(
+        vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
+    )
+    return i, mask.any(axis=0)
 
 
 @dataclass
@@ -51,6 +63,15 @@ class EventSet(Ledger):
         The number of events with a detection statistic
         greater than or equal to `threshold`
         """
+        if self.is_sorted_by("detection_statistic"):
+            return len(self) - np.searchsorted(
+                self.detection_statistic, threshold
+            )
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
         try:
             len(threshold)
         except TypeError:
@@ -59,12 +80,23 @@ class EventSet(Ledger):
             stats = self.detection_statistic[:, None]
             return (stats >= threshold).sum(0)
 
+    @property
+    def min_far(self):
+        """
+        Lowest FAR in Hz that can be resolved given background
+        livetime analyzed
+        """
+        return 1 / self.Tb * SECONDS_IN_YEAR
+
     def far(self, threshold: F) -> F:
         """
-        The false alarm rate for a given threshold
+        Far in Hz for a given detection statistic threshold, or
+        the minimum FAR that can be resolved
+        given the accumulated background livetime
         """
         nb = self.nb(threshold)
-        return SECONDS_IN_YEAR * nb / self.Tb
+        far = SECONDS_IN_YEAR * nb / self.Tb
+        return np.maximum(far, self.min_far)
 
     def significance(self, threshold: F, T: float) -> F:
         """see https://arxiv.org/pdf/1508.02357.pdf, eq. 17
@@ -80,6 +112,23 @@ class EventSet(Ledger):
 
         nb = self.nb(threshold)
         return 1 - np.exp(-T * (1 + nb) / self.Tb)
+
+    def threshold_at_far(self, far: float):
+        """
+        Return the detection statistic threshold
+        that corresponds to a given far in Hz
+        """
+        livetime = self.Tb
+        num_events = livetime * far
+        if self.is_sorted_by("detection_statistic"):
+            return self.detection_statistic[-int(num_events)]
+        warnings.warn(
+            "Detection statistic is not sorted. This function "
+            "may take a long time for large datasets. To sort, "
+            "use the sort_by() function of this object."
+        )
+        det_stats = np.sort(self.detection_statistic)
+        return det_stats[-int(num_events)]
 
     def apply_vetos(
         self,
@@ -97,14 +146,23 @@ class EventSet(Ledger):
         # array of False, no vetoes applied yet
         veto_mask = np.zeros(len(times), dtype=bool)
 
-        # process triggers in chunks to avoid memory issues
-        for i in range(0, len(times), chunk_size):
-            # apply vetos for this chunk of times
-            chunk_times = times[i : i + chunk_size]
-            mask = np.logical_and(
-                vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
-            )
-            veto_mask[i : i + chunk_size] = mask.any(axis=0)
+        # split times into chunks;
+        # keep track of the index of the chunk
+        # for mp purposes so we can unpack the results later
+        chunks = [
+            (times[idx : idx + chunk_size], vetos, i)
+            for i, idx in enumerate(range(0, len(times), chunk_size))
+        ]
+
+        num_cpus = min(cpu_count(), len(chunks))
+        with Pool(num_cpus) as pool:
+            results = pool.imap_unordered(process_chunk, chunks)
+
+            # combine results
+            with tqdm(total=len(chunks)) as pbar:
+                for i, result in results:
+                    veto_mask[i * chunk_size : (i + 1) * chunk_size] = result
+                    pbar.update()
 
         if inplace:
             result = self[~veto_mask]

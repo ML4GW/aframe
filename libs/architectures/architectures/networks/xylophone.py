@@ -2,7 +2,6 @@ from collections import namedtuple
 from typing import Optional
 
 import torch
-
 from ml4gw.nn.resnet.resnet_1d import GroupNorm1DGetter, NormLayer, convN
 
 

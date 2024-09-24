@@ -1,7 +1,8 @@
 import logging
 
-from data.segments.segments import DataQualityDict
 from jsonargparse import ArgumentParser
+
+from data.segments.segments import DataQualityDict
 
 parser = ArgumentParser()
 parser.add_method_arguments(DataQualityDict, "query_segments")

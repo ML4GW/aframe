@@ -46,8 +46,9 @@ class SensitiveVolume(AframeSingularityTask):
         return reqs
 
     def output(self):
-        path = os.path.join(self.output_dir, "sensitive_volume.h5")
-        return law.LocalFileTarget(path)
+        data = os.path.join(self.output_dir, "sensitive_volume.h5")
+        plot = os.path.join(self.output_dir, "sensitive_volume.html")
+        return [law.LocalFileTarget(data), law.LocalFileTarget(plot)]
 
     def run(self):
         from pathlib import Path
