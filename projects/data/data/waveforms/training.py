@@ -15,7 +15,6 @@ def training_waveforms(
     reference_frequency: float,
     waveform_approximant: str,
     coalescence_time: float,
-    prior_args: dict,
 ):
     """
     Generates random training waveforms polarizations from a
@@ -47,7 +46,7 @@ def training_waveforms(
     Returns:
         An IntrinsicParameterSet generated from the sampled parameters
     """
-    prior, detector_frame_prior = prior(**prior_args)
+    prior, detector_frame_prior = prior()
     samples = prior.sample(num_signals)
     if not detector_frame_prior:
         samples = convert_to_detector_frame(samples)

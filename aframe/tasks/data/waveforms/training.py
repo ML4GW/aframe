@@ -48,7 +48,6 @@ class TrainingWaveforms(
             reference_frequency=self.reference_frequency,
             waveform_approximant=self.waveform_approximant,
             coalescence_time=self.coalescence_time,
-            prior_args=self.prior_args,
         )
         chunks = (min(64, num_signals), waveforms.get_waveforms().shape[-1])
         with self.output().open("w") as f:
