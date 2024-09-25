@@ -23,6 +23,7 @@ def fetch(
     nproc: int = 3,
     verbose: bool = True,
     allow_tape: bool = True,
+    cache: bool = True,
 ) -> TimeSeriesDict:
     """
     Simple wrapper to annotate and simplify
@@ -56,6 +57,7 @@ def fetch(
             end=end,
             verbose=verbose,
             nproc=nproc,
+            cache=cache,
         )
         data.update(open_data_ts_dict)
 
