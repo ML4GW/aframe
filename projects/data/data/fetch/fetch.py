@@ -56,6 +56,7 @@ def fetch(
             end=end,
             verbose=verbose,
             nproc=nproc,
+            cache=True,
         )
         data.update(open_data_ts_dict)
 
