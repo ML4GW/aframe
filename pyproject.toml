@@ -9,7 +9,7 @@ authors = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9,<3.13"
 luigi = "^3.0"
 utils = {path = "./libs/utils", develop = true} 
 ml4gw-hermes = {path = "./hermes", develop = true, extras = ["serve"]}
@@ -21,8 +21,6 @@ numpy = "^1.26.4"
 cloudpathlib = "^0.18.1"
 spython = "^0.3.13"
 psutil = "^5.9.8"
-rpds-py = "<0.20"
-
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

@@ -6,7 +6,7 @@ authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.8,<3.13"
 h5py = "^3.6"
 s3fs = "^2024"
 
