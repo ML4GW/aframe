@@ -2,13 +2,10 @@ from typing import Literal, Optional
 
 from architectures import Architecture
 from architectures.networks import WaveNet, Xylophone
+from jaxtyping import Float
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from torch import Tensor
-from torchtyping import TensorType
-
-# need this for type checking
-batch = channels = None
 
 
 class SupervisedArchitecture(Architecture):
@@ -19,15 +16,9 @@ class SupervisedArchitecture(Architecture):
     corresponding to a detection statistic.
     """
 
-    # TODO: torchtyping doesn't support ellipsis at the
-    # end, but I want to use that here because we could
-    # have either one or two dimensions at the end
-    # depending on whether we're in the time or time-frequency
-    # domain. Moving ml4gw to jaxtyping should be able to
-    # handle this.
     def forward(
-        self, X: Tensor  # Type["batch", "channels", ...]
-    ) -> TensorType["batch", 1]:
+        self, X: Float[Tensor, "batch channels ..."]
+    ) -> Float[Tensor, " batch"]:
         raise NotImplementedError
 
 
