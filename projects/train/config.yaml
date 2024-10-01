@@ -29,7 +29,7 @@ model:
     learning_rate: 0.000585
     pct_lr_ramp: 0.115
     # early stop
-    patience: 50
+    patience: null
 data:
   class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
   init_args:
@@ -39,7 +39,7 @@ data:
 
     # preprocessing args
     batch_size: 384
-    batches_per_epoch: 800
+    batches_per_epoch: 3700
     chunk_size: 10000
     chunks_per_epoch: 10
     # kernel_length:
