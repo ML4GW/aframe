@@ -58,7 +58,7 @@ jobs:
         env:
           test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
-            python -m pip install "poetry==1.7.1"
+            python -m pip install poetry
             cd $test_dir
             poetry install
         shell: bash

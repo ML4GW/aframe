@@ -6,8 +6,9 @@ authors = ["Will Benoit <benoi090@umn.edu>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.13"
+python = ">=3.9,<3.13"
 astropy = "^5.0"
+numpy = "^1.26"
 
 ledger = {path = "../ledger", develop = true}
 

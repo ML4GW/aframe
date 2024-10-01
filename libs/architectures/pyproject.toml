@@ -6,9 +6,10 @@ authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.13"
+python = ">=3.9,<3.13"
 ml4gw = "^0.5"
 h5py = "^3.9.0"
+numpy = "^1.26"
 
 
 [[tool.poetry.source]]
