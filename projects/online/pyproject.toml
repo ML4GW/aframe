@@ -7,7 +7,7 @@ license = "MIT"
 #readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11" 
+python = ">=3.9,<3.13" 
 
 # local deps
 utils = {path = "../../libs/utils", develop = true}
@@ -27,8 +27,7 @@ pytest = "^8.2.1"
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cu118"
-secondary = true
-default = false
+priority = "explicit"
 
 [tool.poetry.scripts]
 online = "online.cli:cli" 
