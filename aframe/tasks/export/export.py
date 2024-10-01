@@ -30,8 +30,10 @@ class ExportParams(law.Task):
         default=paths().results_dir / "model_repo"
     )
     train_task = luigi.TaskParameter()
-    # TODO: resolve enum platform parsing error
-    # platform = luigi.Parameter(default="TENSORRT")
+    platform = luigi.Parameter(
+        default="TENSORRT",
+        description="Platform to use for exporting model for inference",
+    )
 
 
 @inherits(ExportParams)
@@ -55,7 +57,12 @@ class ExportLocal(AframeSingularityTask):
         return len(self.ifos)
 
     def run(self):
+        from hermes.quiver import Platform
+
         from export.main import export
+
+        # Convert string to Platform enum
+        platform = Platform(self.platform)
 
         if not self.fftlength:
             self.fftlength = None
@@ -83,7 +90,6 @@ class ExportLocal(AframeSingularityTask):
             self.streams_per_gpu,
             self.aframe_instances,
             self.preproc_instances,
-            # self.platform,
+            platform,
             clean=self.clean,
-            # verbose=self.verbose,
         )
