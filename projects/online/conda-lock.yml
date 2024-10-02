@@ -9,11 +9,11 @@
 # To update a single package to the latest version compatible with the version constraints in the source:
 #     conda-lock lock  --lockfile conda-lock.yml --update PACKAGE
 # To re-solve the entire environment, e.g. after changing a version constraint in the source file:
-#     conda-lock -f projects/online/environment.yaml --lockfile conda-lock.yml
+#     conda-lock -f projects/online/environment.yaml -f environment.yaml --lockfile conda-lock.yml
 version: 1
 metadata:
   content_hash:
-    linux-64: bf75d3d6e20463c0636e0d2c3a36dc0b363c02f98e14c22d1da48dd338a42ff2
+    linux-64: 3c690b9e4ad909f7016979881da306897fddd330eeda4025cfc9fd027e93374e
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -21,6 +21,7 @@ metadata:
   - linux-64
   sources:
   - projects/online/environment.yaml
+  - environment.yaml
 package:
 - name: _libgcc_mutex
   version: '0.1'
@@ -424,22 +425,6 @@ package:
     sha256: 63a83e62e0939bc1ab32de4ec736f6403084198c4639638b354a352113809c92
   category: main
   optional: false
-- name: dateparser
-  version: 1.2.0
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.7'
-    python-dateutil: ''
-    pytz: ''
-    regex: '!=2019.02.19,!=2021.8.27'
-    tzlocal: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/dateparser-1.2.0-pyhd8ed1ab_0.conda
-  hash:
-    md5: 7bdfb7b95b01e58834a478699215e371
-    sha256: 7f2d7288283df6ce2745f3f9f77ce3edb436d5ff12e5779dd5c2670610f2dfb7
-  category: main
-  optional: false
 - name: dbus
   version: 1.13.6
   manager: conda
@@ -488,20 +473,6 @@ package:
   hash:
     md5: 1541834779ec03de593eb3c35f393632
     sha256: da4fcb232504392344a2ddae6863cbbbbf2a876ddd6d00c8f1dfcdefc29f7f2a
-  category: main
-  optional: false
-- name: dqsegdb2
-  version: 1.2.1
-  manager: conda
-  platform: linux-64
-  dependencies:
-    igwn-auth-utils: '>=1.0.0'
-    ligo-segments: '>=1.0.0'
-    python: '>=3.6'
-  url: https://conda.anaconda.org/conda-forge/noarch/dqsegdb2-1.2.1-pyhd8ed1ab_0.conda
-  hash:
-    md5: a82cee43e83f7154aaa178cd5594282f
-    sha256: 0e6b3d8d29d2259c5b0126674ee3082aee2b5e39b6eec58a21683467e3ed9ad1
   category: main
   optional: false
 - name: dulwich
@@ -628,59 +599,6 @@ package:
   hash:
     md5: fec079ba39c9cca093bf4c00001825de
     sha256: 132a918b676dd1f533d7c6f95e567abf7081a6ea3251c3280de35ef600e0da87
-  category: main
-  optional: false
-- name: gwdatafind
-  version: 1.2.0
-  manager: conda
-  platform: linux-64
-  dependencies:
-    igwn-auth-utils: '>=0.3.1'
-    ligo-segments: ''
-    python: '>=3.6'
-  url: https://conda.anaconda.org/conda-forge/noarch/gwdatafind-1.2.0-pyhd8ed1ab_0.conda
-  hash:
-    md5: 68d311579c4f14c41e79bfcd6f90ac70
-    sha256: e58ad6145f6d8d7e5ebbb5f26eb1376dd186047a0d93e971a5d5a24804c3dd9f
-  category: main
-  optional: false
-- name: gwosc
-  version: 0.7.1
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.5'
-    requests: '>=1.0.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/gwosc-0.7.1-pyhd8ed1ab_0.conda
-  hash:
-    md5: 51c40e7e5e090a517e6bcceda2ae7d37
-    sha256: 662ecaf6ac1419364c04b4fbec101170661286928db6242b5273ede223971a18
-  category: main
-  optional: false
-- name: gwpy
-  version: 3.0.8
-  manager: conda
-  platform: linux-64
-  dependencies:
-    astropy: '>=4.3.0'
-    dateparser: '>=1.1.4'
-    dqsegdb2: ''
-    gwdatafind: '>=1.1.0'
-    gwosc: '>=0.5.3'
-    h5py: '>=3.0.0'
-    ligo-segments: '>=1.0.0'
-    ligotimegps: '>=1.2.1'
-    matplotlib-base: '>=3.3.0'
-    numpy: '>=1.19'
-    python: '>=3.8'
-    python-dateutil: ''
-    requests: ''
-    scipy: '>=1.5.0'
-    tqdm: '>=4.10.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/gwpy-3.0.8-pyhd8ed1ab_0.conda
-  hash:
-    md5: b89e4b1ceaa46c8db66f69d01b03be7f
-    sha256: f959183d581b11b6d6b1c0fccde4e425442670ddcc08f1a9b7652b189cd53926
   category: main
   optional: false
 - name: h2
@@ -1688,19 +1606,6 @@ package:
     sha256: 10c9a3cd1b9a012bd90dc819ff2a6bfaf13108ce1532b844f46d4abc4b4cb543
   category: main
   optional: false
-- name: ligotimegps
-  version: 2.0.1
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.4'
-    six: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/ligotimegps-2.0.1-py_0.tar.bz2
-  hash:
-    md5: 7e3675f4ff9e413dbfe1b91b75937bbb
-    sha256: eaff10fc53c0155fe6e7cae881d2eff4a482370a988849383ad6de0c99eb3686
-  category: main
-  optional: false
 - name: lscsoft-glue
   version: 4.0.0
   manager: conda
@@ -2379,18 +2284,6 @@ package:
     sha256: 019e2f8bca1d1f1365fbb9965cd95bb395c92c89ddd03165db82f5ae89a20812
   category: main
   optional: false
-- name: pytz
-  version: '2024.2'
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_0.conda
-  hash:
-    md5: 260009d03c9d5c0f111904d851f053dc
-    sha256: 81c16d9183bb4a6780366ce874e567ee5fc903722f85b2f8d1d9479ef1dafcc9
-  category: main
-  optional: false
 - name: pyyaml
   version: 6.0.2
   manager: conda
@@ -2463,21 +2356,6 @@ package:
   hash:
     md5: 0fc8b52192a8898627c3efae1003e9f6
     sha256: be8d6d9e86b1a3fef5424127ff81782f8ca63d3058980859609f6f1ecdd34cb3
-  category: main
-  optional: false
-- name: regex
-  version: 2024.9.11
-  manager: conda
-  platform: linux-64
-  dependencies:
-    __glibc: '>=2.17,<3.0.a0'
-    libgcc: '>=13'
-    python: '>=3.9,<3.10.0a0'
-    python_abi: 3.9.*
-  url: https://conda.anaconda.org/conda-forge/linux-64/regex-2024.9.11-py39h8cd3c5a_0.conda
-  hash:
-    md5: 965e4167d4ab42d07c93b6d36bdf3b3f
-    sha256: 9ec266ea9eb1d3d7400691368411a2f7be396f70aca9fe39d5b77bd27824b112
   category: main
   optional: false
 - name: requests
@@ -2724,19 +2602,6 @@ package:
   hash:
     md5: 8bfdead4e0fff0383ae4c9c50d0531bd
     sha256: 7d21c95f61319dba9209ca17d1935e6128af4235a67ee4e57a00908a1450081e
-  category: main
-  optional: false
-- name: tzlocal
-  version: '5.2'
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.9,<3.10.0a0'
-    python_abi: 3.9.*
-  url: https://conda.anaconda.org/conda-forge/linux-64/tzlocal-5.2-py39hf3d152e_1.conda
-  hash:
-    md5: cb5dcd6ada16b57ea32cab6002745c6f
-    sha256: f2b77df30eb9f779b6023a954de62488cc699203a8084de1c18535a45b3edf4f
   category: main
   optional: false
 - name: unicodedata2

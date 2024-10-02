@@ -17,6 +17,7 @@ architectures = {path = "../../libs/architectures", develop = true}
 "amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
 
 
+gwpy = "^3.0.8"
 ml4gw = "^0.5"
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"
