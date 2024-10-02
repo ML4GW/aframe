@@ -82,7 +82,6 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             raise ValueError(
                 "data_dir must be an s3 path for remote training tasks"
             )
-        authenticate()
 
     @property
     def default_image(self):
@@ -276,6 +275,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return spec
 
     def run(self):
+        authenticate()
         if not self.s3_secret.exists():
             self.s3_secret.create()
 
@@ -284,12 +284,14 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         super().run()
 
     def on_failure(self, exc):
+        authenticate()
         self.s3_secret.delete()
         if self.use_init_container:
             self.git_secret().delete()
         super().on_failure(exc)
 
     def on_success(self):
+        authenticate()
         self.s3_secret.delete()
         if self.use_init_container:
             self.git_secret().delete()
