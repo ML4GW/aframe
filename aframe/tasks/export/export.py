@@ -43,7 +43,7 @@ class ExportLocal(AframeSingularityTask):
         self.repository_directory.mkdir(exist_ok=True, parents=True)
 
     def output(self):
-        return ModelRepositoryTarget(self.repository_directory)
+        return ModelRepositoryTarget(self.repository_directory, self.platform)
 
     def requires(self):
         return self.train_task.req(self)
@@ -61,8 +61,8 @@ class ExportLocal(AframeSingularityTask):
 
         from export.main import export
 
-        # Convert string to Platform enum
-        platform = Platform(self.platform)
+        # convert string to Platform enum
+        platform = Platform[self.platform]
 
         if not self.fftlength:
             self.fftlength = None
