@@ -15,13 +15,13 @@ PATH = Union[str, bytes, os.PathLike]
 # so that they can be easily extended by just annotating your
 # new argument with the appropriate type of field
 def parameter(default=None):
-    default = default or np.array([])
-    return field(metadata={"kind": "parameter"}, default=default)
+    default = default or (lambda: np.array([]))
+    return field(metadata={"kind": "parameter"}, default_factory=default)
 
 
 def waveform(default=None):
-    default = default or np.array([])
-    return field(metadata={"kind": "waveform"}, default=default)
+    default = default or (lambda: np.array([]))
+    return field(metadata={"kind": "waveform"}, default_factory=default)
 
 
 def metadata(default=None, default_factory=None):

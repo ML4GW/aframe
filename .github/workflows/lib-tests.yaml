@@ -44,7 +44,7 @@ jobs:
       packages: read
     container:
       # container with python and git
-      image: cicirello/pyaction:4.8
+      image: cicirello/pyaction:4.32
       volumes:
         - ${{ github.workspace }}:/github/workspace
     steps:

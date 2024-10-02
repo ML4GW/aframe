@@ -11,7 +11,7 @@ export-model = "export.main:export"
 export-and-launch-triton = "export.remote:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9,<3.13"
 
 ml4gw = "^0.5"
 
@@ -39,6 +39,7 @@ urllib3 = ">=1.25.4,<1.27"
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 
 [tool.poetry.group.dev.dependencies]

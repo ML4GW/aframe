@@ -11,9 +11,6 @@ Stage: build
 ../../hermes /opt/aframe/hermes
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
-%environment
-    export PATH=/opt/env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 

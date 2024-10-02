@@ -3,12 +3,10 @@ from typing import Optional
 
 import torch
 from architectures import Architecture
+from jaxtyping import Float
 from ml4gw.nn.autoencoder import ConvolutionalAutoencoder, SkipConnection
-from torchtyping import TensorType
 
-# need this for type checking
-batch = channels = time = None
-Tensor = TensorType["batch", "channels", "time"]
+Tensor = Float[torch.Tensor, "batch channels time"]
 Module = Callable[..., torch.nn.Module]
 
 

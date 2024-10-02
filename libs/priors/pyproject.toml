@@ -6,7 +6,7 @@ authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9,<3.13"
 astropy = "^5.0"
 bilby = "^2.2.2"
 numpy = "^1.26.4"

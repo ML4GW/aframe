@@ -3,6 +3,7 @@ from typing import Optional, Union
 import torch
 from ml4gw import gw
 from ml4gw.distributions import PowerLaw
+from ml4gw.types import BatchTensor
 
 
 class ChannelSwapper(torch.nn.Module):
@@ -82,7 +83,7 @@ class SnrRescaler(torch.nn.Module):
         self,
         responses: gw.WaveformTensor,
         psds: torch.Tensor,
-        target_snrs: Union[gw.ScalarTensor, float, None],
+        target_snrs: Union[BatchTensor, float, None],
     ) -> gw.WaveformTensor:
         # we can either specify one PSD for all batch
         # elements, or a PSD for each batch element

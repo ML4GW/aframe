@@ -7,10 +7,10 @@ license = "MIT"
 #readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.13"
 bilby = "^2.2.2"
 h5py = "^3.10.0"
-rpds-py = "<0.20"
+numpy = "^1.26"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
