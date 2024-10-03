@@ -7,7 +7,6 @@ Stage: build
 ../../libs/utils /opt/aframe/libs/utils
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
-../../hermes /opt/aframe/hermes
 
 %post
 # installing the local package editably via pip
