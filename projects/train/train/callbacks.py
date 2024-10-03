@@ -8,9 +8,24 @@ import torch
 from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
+from lightning.pytorch.loggers import WandbLogger
 from ray.train.lightning import RayTrainReportCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
+
+
+class WandbSaveConfig(pl.cli.SaveConfigCallback):
+    """
+    Override of `lightning.pytorch.cli.SaveConfigCallback` for use with WandB
+    to ensure all the hyperparameters are logged to the WandB dashboard.
+    """
+
+    def save_config(self, trainer, _, stage):
+        if stage == "fit" and isinstance(trainer.logger, WandbLogger):
+            # pop off unecessary trainer args
+            config = self.config.as_dict()
+            config.pop("trainer")
+            trainer.logger.experiment.config.update(config.as_dict())
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
