@@ -7,6 +7,7 @@ for pedagogical purposes.
 """
 
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -103,7 +104,14 @@ class S4DKernel(nn.Module):
 
 class S4D(nn.Module):
     def __init__(
-        self, d_model, d_state=64, dropout=0.0, transposed=True, **kernel_args
+        self,
+        d_model,
+        d_state=64,
+        dropout=0.0,
+        transposed=True,
+        dt_min=0.001,
+        dt_max=0.1,
+        lr=None,
     ):
         super().__init__()
 
@@ -115,7 +123,9 @@ class S4D(nn.Module):
         self.D = nn.Parameter(torch.randn(self.h))
 
         # SSM Kernel
-        self.kernel = S4DKernel(self.h, N=self.n, **kernel_args)
+        self.kernel = S4DKernel(
+            self.h, N=self.n, dt_min=dt_min, dt_max=dt_max, lr=lr
+        )
 
         # Pointwise
         self.activation = nn.GELU()
@@ -164,14 +174,16 @@ class S4D(nn.Module):
 class S4Model(nn.Module):
     def __init__(
         self,
-        d_input,
-        d_output=10,
-        d_model=256,
-        d_state=64,
-        n_layers=4,
-        dropout=0.2,
-        prenorm=False,
-        **kernel_args,
+        d_input: int,
+        d_output: int = 10,
+        d_model: int = 256,
+        d_state: int = 64,
+        n_layers: int = 4,
+        dropout: float = 0.2,
+        prenorm: bool = False,
+        dt_min: float = 0.001,
+        dt_max: float = 0.1,
+        lr: Optional[float] = None,
     ):
         super().__init__()
 
@@ -184,8 +196,8 @@ class S4Model(nn.Module):
         self.s4_layers = nn.ModuleList()
         self.norms = nn.ModuleList()
         self.dropouts = nn.ModuleList()
-        if "lr" in kernel_args.keys():
-            kernel_args["lr"] = min(0.001, kernel_args["lr"])
+        if lr is not None:
+            lr = min(0.001, lr)
         for _ in range(n_layers):
             self.s4_layers.append(
                 S4D(
@@ -193,7 +205,9 @@ class S4Model(nn.Module):
                     d_state=d_state,
                     dropout=dropout,
                     transposed=True,
-                    **kernel_args,
+                    dt_min=dt_min,
+                    dt_max=dt_max,
+                    lr=lr,
                 )
             )
             self.norms.append(nn.LayerNorm(d_model))
