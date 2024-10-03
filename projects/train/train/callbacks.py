@@ -26,7 +26,7 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
                 # pop off unecessary trainer args
                 config = self.config.as_dict()
                 config.pop("trainer")
-                trainer.logger.experiment.config.update(self.config.as_dict())
+                trainer.logger.experiment.config.update(config.as_dict())
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
