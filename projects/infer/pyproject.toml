@@ -10,12 +10,11 @@ infer = "infer.cli:main"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 ratelimiter = "^1.2"
-ray = "^2.6"
 jsonargparse = "^4.24"
 tqdm = "^4.66"
 
 # submodules
-ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["serve", "torch"]}
+ml4gw-hermes = {version=">=0.2.0", extras = ["serve", "torch"]}
 
 # local deps
 aframe = {path = "../../", develop = true}
