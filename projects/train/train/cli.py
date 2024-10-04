@@ -3,12 +3,20 @@ import os
 import torch
 from lightning.pytorch.cli import LightningCLI
 
+from train.callbacks import WandbSaveConfig
 from train.data import BaseAframeDataset
 from train.model import AframeBase
 from utils.logging import configure_logging
 
 
 class AframeCLI(LightningCLI):
+    def __init__(self, *args, **kwargs):
+        # hack into init to hardcode
+        # parser_mode to omegaconf for all subclasses
+
+        kwargs["save_config_callback"] = WandbSaveConfig
+        super().__init__(*args, **kwargs)
+
     def add_arguments_to_parser(self, parser):
         parser.link_arguments(
             "data.num_ifos",

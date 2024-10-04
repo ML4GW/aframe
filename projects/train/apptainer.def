@@ -10,7 +10,6 @@ Stage: build
 ../../libs/utils /opt/aframe/libs/utils
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
-../../hermes /opt/aframe/hermes
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../libs/architectures /opt/aframe/libs/architectures
 
