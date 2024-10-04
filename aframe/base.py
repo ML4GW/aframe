@@ -21,6 +21,15 @@ S3_ENV_VARS = [
     "AWS_EXTERNAL_ENDPOINT_URL",
 ]
 
+# env vars that correspond to directories
+# that should be mounted so that users
+# can point to one anothers directories
+AFRAME_DATA_DIRS = [
+    "AFRAME_TRAIN_DATA_DIR",
+    "AFRAME_TEST_DATA_DIR",
+    "AFRAME_TRAIN_RUN_DIR",
+]
+
 
 class AframeParameters(law.Task):
     dev = luigi.BoolParameter(
@@ -85,6 +94,14 @@ class AframeSandbox(singularity.SingularitySandbox):
         # bind aws directory that contains s3 credentials
         aws_dir = os.path.expanduser("~/.aws/")
         volumes[aws_dir] = aws_dir
+
+        # bind AFRAME env var data directories
+        # so users can point to other users directories
+        # set any environment variables
+        for path in AFRAME_DATA_DIRS:
+            value = os.getenv(path)
+            if value is not None:
+                volumes[value] = value
         return volumes
 
     def _get_env(self):
