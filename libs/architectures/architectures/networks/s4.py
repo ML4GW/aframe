@@ -218,8 +218,9 @@ class S4Model(nn.Module):
 
     def forward(self, x):
         """
-        Input x is shape (B, L, d_input)
+        Input x is shape (B, d_input, L)
         """
+        x = x.transpose(-1, -2)
         x = self.encoder(x)  # (B, L, d_input) -> (B, L, d_model)
 
         x = x.transpose(-1, -2)  # (B, L, d_model) -> (B, d_model, L)
