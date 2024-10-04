@@ -1,8 +1,8 @@
 from typing import Literal, Optional
 
 from architectures import Architecture
-from jaxtyping import Float
 from architectures.networks import S4Model, WaveNet, Xylophone
+from jaxtyping import Float
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from torch import Tensor
