@@ -61,6 +61,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # data loading args
         data_dir: str,
         ifos: Sequence[str],
+        sample_rate: float,
         valid_frac: float,
         batches_per_epoch: int,
         # preprocessing args
@@ -91,8 +92,8 @@ class BaseAframeDataset(pl.LightningDataModule):
     ) -> None:
         super().__init__()
         self.init_logging(verbose)
-        self.save_hyperparameters()
         self.num_ifos = len(ifos)
+        self.save_hyperparameters()
 
         # Set up some of our data augmentation modules
         self.inverter = SignalInverter(0.5)
@@ -177,7 +178,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
         Length of the time-domain whitening filter in samples
         """
-        return int(self.hparams.fduration * self.sample_rate)
+        return int(self.hparams.fduration * self.hparams.sample_rate)
 
     @property
     def left_pad_size(self) -> int:
@@ -185,7 +186,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         Minimum numer of samples that the defining point of the
         signal will be from the left edge of the _whitened_ kernel.
         """
-        return int(self.hparams.left_pad * self.sample_rate)
+        return int(self.hparams.left_pad * self.hparams.sample_rate)
 
     @property
     def right_pad_size(self) -> int:
@@ -193,7 +194,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         Minimum number of samples that the defining point of the
         signal will be from the left edge of the _whitened_ kernel
         """
-        return int(self.hparams.right_pad * self.sample_rate)
+        return int(self.hparams.right_pad * self.hparams.sample_rate)
 
     @property
     def train_waveform_fnames(self) -> Sequence[str]:
@@ -258,8 +259,10 @@ class BaseAframeDataset(pl.LightningDataModule):
         Slice waveforms to the correct length depending on
         requested left and right padding
         """
-        signal_idx = int(self.signal_time * self.sample_rate)
-        kernel_size = int(self.hparams.kernel_length * self.sample_rate)
+        signal_idx = int(self.signal_time * self.hparams.sample_rate)
+        kernel_size = int(
+            self.hparams.kernel_length * self.hparams.sample_rate
+        )
 
         if kernel_size < self.left_pad_size + self.right_pad_size:
             raise ValueError(
@@ -333,7 +336,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             if isinstance(item, torch.nn.Module):
                 item.to(self.device)
 
-    def build_transforms(self, sample_rate: float):
+    def build_transforms(self):
         """
         Helper utility in case we ever want to construct
         this dataset on its own.
@@ -342,19 +345,20 @@ class BaseAframeDataset(pl.LightningDataModule):
         fftlength = self.hparams.fftlength or window_length
         self.psd_estimator = PsdEstimator(
             window_length,
-            sample_rate,
+            self.hparams.sample_rate,
             fftlength,
             window=self.psd_window,
             fast=self.hparams.highpass is not None,
             average="median",
         )
         self.whitener = Whiten(
-            self.hparams.fduration, sample_rate, self.hparams.highpass
+            self.hparams.fduration,
+            self.hparams.sample_rate,
+            self.hparams.highpass,
         )
         self.projector = aug.WaveformProjector(
-            self.hparams.ifos, sample_rate, self.hparams.highpass
+            self.hparams.ifos, self.hparams.sample_rate, self.hparams.highpass
         )
-        self.sample_rate = sample_rate
 
     def setup(self, stage: str) -> None:
         world_size, rank = self.get_world_size_and_rank()
@@ -363,8 +367,13 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         with h5py.File(self.train_fnames[0], "r") as f:
             sample_rate = 1 / f[self.hparams.ifos[0]].attrs["dx"]
+            if not sample_rate == self.hparams.sample_rate:
+                raise ValueError(
+                    f"Specified sample rate is {self.hparams.sample_rate} "
+                    f"but background data is sampled at {sample_rate}"
+                )
 
-        self._logger.info(f"Inferred sample rate {sample_rate}")
+        self._logger.info(f"Validated sample rate {sample_rate}")
 
         # now define some of the augmentation transforms
         # that require sample rate information
@@ -385,7 +394,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.timeslides, self.valid_loader_length = get_timeslides(
             val_background,
             self.hparams.valid_livetime,
-            self.sample_rate,
+            self.hparams.sample_rate,
             self.sample_length,
             self.hparams.valid_stride,
             self.val_batch_size,
@@ -481,8 +490,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         """
 
         # unfold the background data into kernels
-        sample_size = int(self.sample_length * self.sample_rate)
-        stride = int(self.hparams.valid_stride * self.sample_rate)
+        sample_size = int(self.sample_length * self.hparams.sample_rate)
+        stride = int(self.hparams.valid_stride * self.hparams.sample_rate)
         background = unfold_windows(background, sample_size, stride=stride)
 
         # split data into kernel and psd data and estimate psd
@@ -501,7 +510,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # the background, each showing a different, overlapping
         # portion of the signal
         kernel_size = X.size(-1)
-        signal_idx = int(self.signal_time * self.sample_rate)
+        signal_idx = int(self.signal_time * self.hparams.sample_rate)
         max_start = int(
             signal_idx - self.left_pad_size - self.filter_size // 2
         )
@@ -563,7 +572,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         dataset = Hdf5TimeSeriesDataset(
             self.train_fnames,
             channels=self.hparams.ifos,
-            kernel_size=int(self.sample_rate * self.sample_length),
+            kernel_size=int(self.hparams.sample_rate * self.sample_length),
             batch_size=self.hparams.batch_size,
             batches_per_epoch=self.batches_per_epoch,
             coincident=False,

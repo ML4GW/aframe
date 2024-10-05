@@ -44,7 +44,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
             args.append("--trainer.strategy=ddp")
         cmd = [sys.executable, "-m", "train"] + args
         cmd_str = shlex.join(cmd)
-        logger.debug(f"Executing command {cmd_str}")
+        logger.info(f"Executing command {cmd_str}")
         stream_command(cmd)
 
     def output(self):

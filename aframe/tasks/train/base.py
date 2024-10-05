@@ -30,6 +30,9 @@ class TrainBaseParameters(law.Task):
         description="Length of the kernel in seconds "
         "the neural-network will analyze"
     )
+    sample_rate = luigi.FloatParameter(
+        description="Sample rate of the data in Hz"
+    )
     highpass = luigi.FloatParameter(
         description="Highpass frequency in Hz to apply during whitening"
     )
@@ -97,6 +100,7 @@ class TrainBase(law.Task):
         # (e.g. model architecture config, training hyperparams,
         # logging, profiling, etc.) should be specified in the
         # train projects config.yaml file.
+        args.append("--data.sample_rate=" + str(self.sample_rate))
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.fftlength=" + str(self.fftlength))

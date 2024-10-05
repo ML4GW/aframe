@@ -17,11 +17,26 @@ class AframeCLI(LightningCLI):
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
+        # link data arguments to model;
+        # some models require information about
+        # sequence length before hand, so we need
+        # to link sample rate and kernel length
         parser.link_arguments(
             "data.num_ifos",
             "model.init_args.arch.init_args.num_ifos",
             apply_on="instantiate",
         )
+        parser.link_arguments(
+            "data.init_args.kernel_length",
+            "model.init_args.arch.init_args.kernel_length",
+            apply_on="parse",
+        )
+        parser.link_arguments(
+            "data.init_args.sample_rate",
+            "model.init_args.arch.init_args.sample_rate",
+            apply_on="parse",
+        )
+
         parser.link_arguments(
             "data.init_args.valid_stride",
             "model.init_args.metric.init_args.stride",
