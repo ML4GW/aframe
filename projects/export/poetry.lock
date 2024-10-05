@@ -2478,16 +2478,16 @@ test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "tensorrt"
-version = "8.5.1.7"
+version = "8.5.2.2"
 description = "A high performance deep learning inference library"
 optional = false
 python-versions = "*"
 files = [
-    {file = "tensorrt-8.5.1.7-cp310-none-manylinux_2_17_x86_64.whl", hash = "sha256:f21c1ace958fbef1b8427ed182f5ef5710f2affa10f9c5adbd320a01ee8072c3"},
-    {file = "tensorrt-8.5.1.7-cp36-none-manylinux_2_17_x86_64.whl", hash = "sha256:188f398a22eae3c9ae91698455f3ae336aefd152be716b04c20f4eee24a31745"},
-    {file = "tensorrt-8.5.1.7-cp37-none-manylinux_2_17_x86_64.whl", hash = "sha256:584aadd90a1fe449c44950307c159cc00295890d3804854b3fdf996c4d86bc13"},
-    {file = "tensorrt-8.5.1.7-cp38-none-manylinux_2_17_x86_64.whl", hash = "sha256:83486b65f2580983f5231f8f6721a8b6eb7a265889920a39f80a983313c5e37d"},
-    {file = "tensorrt-8.5.1.7-cp39-none-manylinux_2_17_x86_64.whl", hash = "sha256:c707f6a8e91279047f1a515779ee80961821641e5a264fa54b7dd20072235fcd"},
+    {file = "tensorrt-8.5.2.2-cp310-none-manylinux_2_17_x86_64.whl", hash = "sha256:ea36754388ac2e995c36bccff97c60690256da3d090f03672e0cadbac12226cc"},
+    {file = "tensorrt-8.5.2.2-cp36-none-manylinux_2_17_x86_64.whl", hash = "sha256:d55ee06a173257d58b896a335553a6c3ce25b66b5650ee5ad9d0a6ce5ceb91ac"},
+    {file = "tensorrt-8.5.2.2-cp37-none-manylinux_2_17_x86_64.whl", hash = "sha256:8393c66569bd3c62e351a21edee91b50d7f1b9d0d73d7c886d735613e2630ace"},
+    {file = "tensorrt-8.5.2.2-cp38-none-manylinux_2_17_x86_64.whl", hash = "sha256:24d9468d031d6bd07bcd267428991bfadfa7c717779fce6ef14e2ea99cf52cd4"},
+    {file = "tensorrt-8.5.2.2-cp39-none-manylinux_2_17_x86_64.whl", hash = "sha256:cf681245eaa7807c7ff067963b3d57f1dc78b5bdc66e26d3a1186725e1904f1a"},
 ]
 
 [package.dependencies]
@@ -2718,7 +2718,7 @@ develop = true
 
 [package.dependencies]
 h5py = "^3.6"
-ml4gw = "^0.5"
+ml4gw = ">=0.5.1"
 s3fs = "^2024"
 
 [package.source]
@@ -2981,4 +2981,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "2f248f613f530f238abcb1a41c35bc4d6a26d6eebfef56f1dcd2b61b7147130e"
+content-hash = "37b41fe65fb82486c500d22333a109bcf87ae647e78a01c08e42e76b82694310"
