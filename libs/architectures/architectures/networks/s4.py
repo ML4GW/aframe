@@ -139,9 +139,7 @@ class S4D(nn.Module):
             nn.GLU(dim=-2),
         )
 
-    def forward(
-        self, u, **kwargs
-    ):  # absorbs return_output and transformer src mask
+    def forward(self, u):
         """Input and output shape (B, H, L)"""
         if not self.transposed:
             u = u.transpose(-1, -2)
@@ -165,10 +163,7 @@ class S4D(nn.Module):
             y = y.transpose(-1, -2)
         # Return a dummy state to satisfy this repo's interface,
         # but this can be modified
-        return (
-            y,
-            None,
-        )
+        return y, None
 
 
 class S4Model(nn.Module):
