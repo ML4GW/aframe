@@ -8,7 +8,6 @@ Stage: build
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../libs/priors /opt/aframe/libs/priors
 ../../aframe /opt/aframe/aframe
-../../hermes /opt/aframe/hermes
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
