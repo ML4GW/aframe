@@ -378,7 +378,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # now define some of the augmentation transforms
         # that require sample rate information
         self._logger.info("Constructing sample rate dependent transforms")
-        self.build_transforms(sample_rate)
+        self.build_transforms()
         self.transforms_to_device()
 
         # load in our validation background up front and
