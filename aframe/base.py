@@ -97,7 +97,6 @@ class AframeSandbox(singularity.SingularitySandbox):
 
         # bind AFRAME env var data directories
         # so users can point to other users directories
-        # set any environment variables
         for path in AFRAME_DATA_DIRS:
             value = os.getenv(path)
             if value is not None:

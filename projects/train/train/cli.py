@@ -12,8 +12,7 @@ from utils.logging import configure_logging
 class AframeCLI(LightningCLI):
     def __init__(self, *args, **kwargs):
         # hack into init to hardcode
-        # parser_mode to omegaconf for all subclasses
-
+        # the WandbSaveConfig callback
         kwargs["save_config_callback"] = WandbSaveConfig
         super().__init__(*args, **kwargs)
 
