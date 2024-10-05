@@ -32,7 +32,7 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
             # pop off unecessary trainer args
             config = self.config.as_dict()
             config.pop("trainer")
-            wandb_logger.experiment.config = config
+            wandb_logger.experiment.config.update(config)
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
