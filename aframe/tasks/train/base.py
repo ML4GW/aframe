@@ -36,8 +36,9 @@ class TrainBaseParameters(law.Task):
     highpass = luigi.FloatParameter(
         description="Highpass frequency in Hz to apply during whitening"
     )
-    fftlength = luigi.FloatParameter(
-        description="Duration in seconds of data used for FFT calculation"
+    fftlength = luigi.OptionalFloatParameter(
+        description="Duration in seconds of data used for FFT calculation",
+        default="",
     )
     q = luigi.OptionalFloatParameter(
         default=None, description="Value of Q used for Q-transform"
@@ -100,10 +101,11 @@ class TrainBase(law.Task):
         # (e.g. model architecture config, training hyperparams,
         # logging, profiling, etc.) should be specified in the
         # train projects config.yaml file.
+        fftlength = self.fftlength or "null"
         args.append("--data.sample_rate=" + str(self.sample_rate))
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
-        args.append("--data.fftlength=" + str(self.fftlength))
+        args.append("--data.fftlength=" + str(fftlength))
         args.append("--data.highpass=" + str(self.highpass))
         if self.q is not None:
             args.append("--data.q=" + str(self.q))

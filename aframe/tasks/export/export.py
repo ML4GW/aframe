@@ -23,8 +23,8 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    q = luigi.OptionalFloatParameter(default=None)
-    fftlength = luigi.FloatParameter(default=0)
+    q = luigi.OptionalFloatParameter(default="")
+    fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
     repository_directory = PathParameter(
         default=paths().results_dir / "model_repo"
@@ -63,9 +63,6 @@ class ExportLocal(AframeSingularityTask):
 
         # convert string to Platform enum
         platform = Platform[self.platform]
-
-        if not self.fftlength:
-            self.fftlength = None
 
         # Assuming a convention for batch file/model file
         # names and locations
