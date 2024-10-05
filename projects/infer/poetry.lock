@@ -4946,7 +4946,7 @@ develop = true
 
 [package.dependencies]
 h5py = "^3.6"
-ml4gw = "^0.5"
+ml4gw = ">=0.5.1"
 s3fs = "^2024"
 
 [package.source]
