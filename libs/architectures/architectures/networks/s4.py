@@ -50,9 +50,18 @@ class DropoutNd(nn.Module):
 class S4DKernel(nn.Module):
     """Generate convolution kernel from diagonal SSM parameters."""
 
-    def __init__(self, d_model, N=64, dt_min=0.001, dt_max=0.1, lr=None):
+    def __init__(
+        self,
+        d_model: int,
+        length: int,
+        N: int = 64,
+        dt_min: float = 0.001,
+        dt_max: float = 0.1,
+        lr: float = None,
+    ):
         super().__init__()
-        # Generate dt
+
+        # generate dt
         H = d_model
         log_dt = torch.rand(H) * (
             math.log(dt_max) - math.log(dt_min)
@@ -67,7 +76,10 @@ class S4DKernel(nn.Module):
         self.register("log_A_real", log_A_real, lr)
         self.register("A_imag", A_imag, lr)
 
-    def forward(self, L):
+        Ls = torch.arange(length)
+        self.register_buffer("length", Ls)
+
+    def forward(self):
         """
         returns: (..., c, L) where c is number of channels (default 1)
         """
@@ -79,7 +91,7 @@ class S4DKernel(nn.Module):
 
         # Vandermonde multiplication
         dtA = A * dt.unsqueeze(-1)  # (H N)
-        K = dtA.unsqueeze(-1) * torch.arange(L, device=A.device)  # (H N L)
+        K = dtA.unsqueeze(-1) * self.length  # (H N L)
         C = C * (torch.exp(dtA) - 1.0) / A
         K = 2 * torch.einsum("hn, hnl -> hl", C, torch.exp(K)).real
 
@@ -105,37 +117,39 @@ class S4DKernel(nn.Module):
 class S4D(nn.Module):
     def __init__(
         self,
-        d_model,
-        d_state=64,
-        dropout=0.0,
-        transposed=True,
-        dt_min=0.001,
-        dt_max=0.1,
-        lr=None,
+        d_model: int,
+        length: int,
+        d_state: int = 64,
+        dropout: float = 0.0,
+        transposed: bool = True,
+        dt_min: float = 0.001,
+        dt_max: float = 0.1,
+        lr: Optional[float] = None,
     ):
         super().__init__()
-
-        self.h = d_model
-        self.n = d_state
-        self.d_output = self.h
         self.transposed = transposed
-
-        self.D = nn.Parameter(torch.randn(self.h))
+        self.D = nn.Parameter(torch.randn(d_model))
+        self.length = length
 
         # SSM Kernel
         self.kernel = S4DKernel(
-            self.h, N=self.n, dt_min=dt_min, dt_max=dt_max, lr=lr
+            d_model,
+            length=length,
+            N=d_state,
+            dt_min=dt_min,
+            dt_max=dt_max,
+            lr=lr,
         )
 
         # Pointwise
         self.activation = nn.GELU()
-        # dropout_fn = nn.Dropout2d  # NOTE: bugged in PyTorch 1.11
-        dropout_fn = DropoutNd
-        self.dropout = dropout_fn(dropout) if dropout > 0.0 else nn.Identity()
+        # TODO: investigate torch dropout implementation
+        self.dropout = torch.nn.Dropout1d(dropout)
+        # self.dropout = DropoutNd(dropout) if dropout > 0.0 else nn.Identity()
 
         # position-wise output transform to mix features
         self.output_linear = nn.Sequential(
-            nn.Conv1d(self.h, 2 * self.h, kernel_size=1),
+            nn.Conv1d(d_model, 2 * d_model, kernel_size=1),
             nn.GLU(dim=-2),
         )
 
@@ -143,15 +157,16 @@ class S4D(nn.Module):
         """Input and output shape (B, H, L)"""
         if not self.transposed:
             u = u.transpose(-1, -2)
-        L = u.size(-1)
 
         # Compute SSM Kernel
-        k = self.kernel(L=L)  # (H L)
+        k = self.kernel()  # (H L)
 
         # Convolution
-        k_f = torch.fft.rfft(k, n=2 * L)  # (H L)
-        u_f = torch.fft.rfft(u, n=2 * L)  # (B H L)
-        y = torch.fft.irfft(u_f * k_f, n=2 * L)[..., :L]  # (B H L)
+        k_f = torch.fft.rfft(k, n=2 * self.length)  # (H L)
+        u_f = torch.fft.rfft(u, n=2 * self.length)  # (B H L)
+        y = torch.fft.irfft(u_f * k_f, n=2 * self.length)[
+            ..., : self.length
+        ]  # (B H L)
 
         # Compute D term in state space equation
         # Essentially a skip connection
@@ -170,6 +185,7 @@ class S4Model(nn.Module):
     def __init__(
         self,
         d_input: int,
+        length: int,
         d_output: int = 10,
         d_model: int = 256,
         d_state: int = 64,
@@ -196,6 +212,7 @@ class S4Model(nn.Module):
         for _ in range(n_layers):
             self.s4_layers.append(
                 S4D(
+                    length=length,
                     d_model=d_model,
                     d_state=d_state,
                     dropout=dropout,

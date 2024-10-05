@@ -134,6 +134,7 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        length: int,
         d_output: int = 1,
         d_model: int = 128,
         n_layers: int = 4,
@@ -144,6 +145,7 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
         lr: Optional[float] = None,
     ) -> None:
         super().__init__(
+            length=length,
             d_input=num_ifos,
             d_output=d_output,
             d_model=d_model,
