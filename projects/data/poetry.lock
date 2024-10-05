@@ -15,11 +15,11 @@ cloudpathlib = "^0.18.1"
 kr8s = "^0.10.0"
 law = {git = "https://github.com/riga/law.git", branch = "master"}
 luigi = "^3.0"
-ml4gw-hermes = {path = "hermes", develop = true, extras = ["serve"]}
+ml4gw-hermes = ">=0.2.0"
 numpy = "^1.26.4"
 psutil = "^5.9.8"
 pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
-spython = "^0.3.13"
+spython = "^0.2"
 utils = {path = "libs/utils", develop = true}
 
 [package.source]
@@ -1819,13 +1819,14 @@ name = "ledger"
 version = "0.1.0"
 description = "Objects for storing and manipulating aframe data"
 optional = false
-python-versions = ">=3.8,<3.13"
+python-versions = ">=3.9,<3.13"
 files = []
 develop = true
 
 [package.dependencies]
 bilby = "^2.2.2"
 h5py = "^3.10.0"
+numpy = "^1.26"
 
 [package.source]
 type = "directory"
@@ -2015,28 +2016,28 @@ torchaudio = ">=2.0,<3.0"
 
 [[package]]
 name = "ml4gw-hermes"
-version = "0.0.1"
+version = "0.2.0"
 description = "Inference-as-a-Service deployment made simple"
 optional = false
-python-versions = ">=3.9,<3.13"
-files = []
-develop = true
+python-versions = "<3.13,>=3.9"
+files = [
+    {file = "ml4gw_hermes-0.2.0-py3-none-any.whl", hash = "sha256:30e32135e44d7babed8f4636268a11c47b811a6250b3bc9dc8c066d929d1a388"},
+    {file = "ml4gw_hermes-0.2.0.tar.gz", hash = "sha256:e254f2b3dff8676e75d35c0eb0e7f41d76feb3a74614ab154493ac2f344294c5"},
+]
 
 [package.dependencies]
-protobuf = "^3.17"
-requests = "^2.26.0"
-tblib = "^1.7"
-tritonclient = {version = "^2.22", extras = ["all"]}
+numpy = ">=1.22,<2.0"
+protobuf = ">=3.17,<4.0"
+requests = ">=2.26.0,<3.0.0"
+spython = ">=0.2,<0.3"
+tblib = ">=1.7,<2.0"
+tritonclient = {version = ">=2.22,<3.0", extras = ["all"]}
 
 [package.extras]
 gcs = ["google-cloud-storage (>=1.38,<2.0)"]
 tensorflow = ["tensorflow (<2.17)", "tf-keras (>=2.16,<2.17)"]
 tensorrt = ["nvidia-tensorrt (>=8.0,<9.0)"]
 torch = ["onnx (>=1.15.0,<2.0.0)", "torch (>=2.0,<3.0)", "urllib3 (>=1.26,<2.0)"]
-
-[package.source]
-type = "directory"
-url = "../../hermes"
 
 [[package]]
 name = "mpmath"
@@ -2603,6 +2604,7 @@ develop = true
 [package.dependencies]
 astropy = "^5.0"
 bilby = "^2.2.2"
+numpy = "^1.26.4"
 
 [package.source]
 type = "directory"
@@ -3116,6 +3118,17 @@ doc = ["jupyterlite-pyodide-kernel", "jupyterlite-sphinx (>=0.12.0)", "jupytext"
 test = ["array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "mpmath", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
 [[package]]
+name = "semver"
+version = "3.0.2"
+description = "Python helper for Semantic Versioning (https://semver.org)"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "semver-3.0.2-py3-none-any.whl", hash = "sha256:b1ea4686fe70b981f85359eda33199d60c53964284e0cfb4977d243e37cf4bf4"},
+    {file = "semver-3.0.2.tar.gz", hash = "sha256:6253adb39c70f6e51afed2fa7152bcd414c411286088fb4b9effb133885ab4cc"},
+]
+
+[[package]]
 name = "setuptools"
 version = "75.1.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
@@ -3159,14 +3172,16 @@ files = [
 
 [[package]]
 name = "spython"
-version = "0.3.14"
+version = "0.2.14"
 description = "Command line python tool for working with singularity."
 optional = false
 python-versions = "*"
 files = [
-    {file = "spython-0.3.14-py3-none-any.whl", hash = "sha256:72968583e498bc2a51f9acd0ed6bc0d7d1f7ccd491feaba5e2f7d944bc51da3a"},
-    {file = "spython-0.3.14.tar.gz", hash = "sha256:8ad53ef034395cfa2d8a710cc1c3638e4475e5bbc6a2842d317db8013c2e4188"},
+    {file = "spython-0.2.14.tar.gz", hash = "sha256:49e22fbbdebe456b27ca17d30061489db8e0f95e62be3623267a23b85e3ce0f0"},
 ]
+
+[package.dependencies]
+semver = ">=2.8.1"
 
 [[package]]
 name = "sympy"
@@ -3508,7 +3523,7 @@ develop = true
 
 [package.dependencies]
 h5py = "^3.6"
-ml4gw = "^0.5"
+ml4gw = ">=0.5.1"
 s3fs = "^2024"
 
 [package.source]
