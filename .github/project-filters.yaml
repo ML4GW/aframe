@@ -5,32 +5,39 @@ workflow: &workflow
 data:
   - *workflow
   - 'projects/data/**'
-  - 'ml4gw/**'
   - 'libs/ledger/**'
   - 'libs/priors/**'
-
-infer:
-  - *workflow
-  - 'projects/infer/**'
-  - 'hermes/**'
-  - 'libs/ledger/**'
-  
-train:
-  - *workflow
-  - 'projects/train/**'
-  - 'ml4gw/**'
-  - 'libs/ledger/**'
-  - 'libs/architectures/**'
+  - 'libs/utils/**'
 
 export:
   - *workflow
   - 'projects/export/**'
-  - 'ml4gw/**'
-  - 'hermes/**'
+  - 'libs/utils/**'
 
+infer:
+  - *workflow
+  - 'projects/infer/**'
+  - 'libs/ledger/**'
+  - 'libs/utils/**'
+  
 online:
   - *workflow
   - 'projects/online/**'
+  - 'libs/architectures/**'
+  - 'libs/ledger/**'
+  - 'libs/p_astro/**'
+  - 'libs/utils/**'
+  - 'amplfi/amplfi/architectures/**'
+
+plots:
+  - *workflow
+  - 'projects/plots/**'
+  - 'libs/ledger/**'
+  - 'libs/prior/**'
+  - 'libs/utils/**'
+    
+train:
+  - *workflow
+  - 'projects/train/**'
   - 'libs/ledger/**'
   - 'libs/architectures/**'
-  - 'amplfi/amplfi/architectures/**'

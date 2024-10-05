@@ -18,7 +18,6 @@ workflow: &workflow
 architectures:
   - *workflow
   - 'libs/architectures/**'
-  - 'ml4gw/**'
 
 ledger:
   - *workflow
@@ -28,3 +27,11 @@ p_astro:
   - *workflow
   - 'libs/p_astro/**'
   - 'libs/ledger/**'
+
+priors:
+  - *workflow
+  - 'libs/priors/**'
+
+utils:
+  - *workflow
+  - 'libs/utils/**'
