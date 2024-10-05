@@ -56,8 +56,10 @@ jobs:
           - project: 'workflow' # Fixed the exclusion key
     steps:
     -
-      name: delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache 
+      name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: false
     -
       name: Checkout repository
       uses: actions/checkout@v4
