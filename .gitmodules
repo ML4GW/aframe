@@ -1,6 +1,3 @@
-[submodule "hermes"]
-	path = hermes
-	url = git@github.com:ML4GW/hermes.git
 [submodule "amplfi"]
 	path = amplfi
 	url = git@github.com:ML4GW/amplfi.git

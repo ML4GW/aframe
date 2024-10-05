@@ -8,10 +8,9 @@ Stage: build
 # accidentally get created in this repo
 . /opt/aframe/projects/infer
 ../../libs/utils /opt/aframe/libs/utils
+../../libs/ledger /opt/aframe/libs/ledger
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
-../../hermes /opt/aframe/hermes
-../../libs/ledger /opt/aframe/libs/ledger
 
 %post
 # installing the local package editably via pip
@@ -24,6 +23,7 @@ Stage: build
 # we'll hard pin it to the value we need.
 # TODO: there's got to be a better solution here
 python -m pip install poetry==1.7.1
+pip install poetry-plugin-export
 cd /opt/aframe/projects/infer
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt

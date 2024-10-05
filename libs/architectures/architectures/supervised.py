@@ -26,6 +26,8 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         layers: list[int],
         kernel_size: int = 3,
         zero_init_residual: bool = False,
@@ -51,6 +53,8 @@ class SupervisedFrequencyDomainResNet(ResNet1D, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         layers: list[int],
         kernel_size: int = 3,
         zero_init_residual: bool = False,
@@ -76,6 +80,8 @@ class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         norm_layer: Optional[NormLayer] = None,
     ):
         super().__init__(
@@ -89,6 +95,8 @@ class SupervisedTimeDomainWaveNet(WaveNet, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         res_channels: int,
         layers_per_block: int,
         num_blocks: int,
@@ -109,6 +117,8 @@ class SupervisedSpectrogramDomainResNet(ResNet2D, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         layers: list[int],
         kernel_size: int = 3,
         zero_init_residual: bool = False,
@@ -134,6 +144,8 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
         d_output: int = 1,
         d_model: int = 128,
         n_layers: int = 4,
@@ -143,7 +155,9 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
         dt_max: float = 0.1,
         lr: Optional[float] = None,
     ) -> None:
+        length = int(kernel_length * sample_rate)
         super().__init__(
+            length=length,
             d_input=num_ifos,
             d_output=d_output,
             d_model=d_model,

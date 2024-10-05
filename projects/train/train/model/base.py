@@ -6,11 +6,7 @@ import ray
 import torch
 from architectures import Architecture
 
-from train.callbacks import (
-    ModelCheckpoint,
-    SaveAugmentedBatch,
-    WandbSaveConfig,
-)
+from train.callbacks import ModelCheckpoint, SaveAugmentedBatch
 from train.metrics import TimeSlideAUROC
 
 Tensor = torch.Tensor
@@ -55,8 +51,6 @@ class AframeBase(pl.LightningModule):
         self.metric = metric
         self.verbose = verbose
         self._logger = self.get_logger()
-        self.save_hyperparameters(ignore=["arch", "metric"])
-
         self.save_hyperparameters(ignore=["arch", "metric"])
 
     def get_logger(self):
@@ -193,7 +187,7 @@ class AframeBase(pl.LightningModule):
         # and inference tasks
         # checkpoint for saving multiple best models
         callbacks = []
-        callbacks.append(SaveAugmentedBatch(), WandbSaveConfig())
+        callbacks.append(SaveAugmentedBatch())
 
         # if using ray tune don't append lightning
         # model checkpoint since we'll be using ray's

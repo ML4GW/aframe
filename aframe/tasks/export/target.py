@@ -2,16 +2,22 @@ import os
 
 import luigi
 
+conventions = {
+    "TENSORRT": "model.plan",
+    "TORCHSCRIPT": "model.pt",
+}
+
 
 class ModelRepositoryTarget(luigi.Target):
     """
     Target for checking the existence of an aframe model repository
     """
 
-    def __init__(self, path, version: int = -1):
+    def __init__(self, path, platform: str, version: int = -1):
         super().__init__()
         self.path = path
         self.version = version
+        self.platform = platform
 
     def get_versions(self):
         versions = []
@@ -45,7 +51,10 @@ class ModelRepositoryTarget(luigi.Target):
 
         # define the structure of the model repo
         structure = {
-            "aframe": ["config.pbtxt", (version, ["model.plan"])],
+            "aframe": [
+                "config.pbtxt",
+                (version, [conventions[self.platform]]),
+            ],
             "aframe-stream": ["config.pbtxt", (version, ["model.empty"])],
             "preprocessor": ["config.pbtxt", (version, ["model.pt"])],
             "snapshotter": ["config.pbtxt", (version, ["model.onnx"])],

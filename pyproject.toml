@@ -12,14 +12,14 @@ authors = [
 python = ">=3.9,<3.13"
 luigi = "^3.0"
 utils = {path = "./libs/utils", develop = true} 
-ml4gw-hermes = {path = "./hermes", develop = true, extras = ["serve"]}
+ml4gw-hermes = ">=0.2.0" 
 law = {git = "https://github.com/riga/law.git", branch = "master" }
 kr8s = "^0.10.0"
 pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
+spython = "^0.2"
 boto3 = "^1.34.4"
 numpy = "^1.26.4"
 cloudpathlib = "^0.18.1"
-spython = "^0.3.13"
 psutil = "^5.9.8"
 
 [tool.poetry.group.dev.dependencies]
@@ -53,6 +53,6 @@ exclude = '''
 
 [tool.isort]
 known_first_party = ["aframe", "train", "utils", "online", "data", "infer", "plots", "export", "ledger", "p_astro", "priors"]
-known_third_party = ["amplfi", "hermes"]
+known_third_party = ["amplfi"]
 multi_line_output = 3
 include_trailing_comma = true

@@ -1,6 +1,7 @@
 import io
 import os
 import shutil
+from typing import Optional
 
 import h5py
 import s3fs
@@ -20,12 +21,18 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
     to ensure all the hyperparameters are logged to the WandB dashboard.
     """
 
-    def save_config(self, trainer, _, stage):
-        if stage == "fit" and isinstance(trainer.logger, WandbLogger):
+    def get_wandb_logger(self, trainer) -> Optional[WandbLogger]:
+        for logger in trainer.loggers:
+            if isinstance(logger, WandbLogger):
+                return logger
+
+    def save_config(self, trainer, _, stage) -> None:
+        wandb_logger = self.get_wandb_logger(trainer)
+        if stage == "fit" and wandb_logger is not None:
             # pop off unecessary trainer args
             config = self.config.as_dict()
             config.pop("trainer")
-            trainer.logger.experiment.config.update(config.as_dict())
+            wandb_logger.experiment.config.update(config)
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):

@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Export aframe for IaaS inference"
 authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
-#readme = "README.md"
 
 [tool.poetry.scripts]
 export-model = "export.main:export"
@@ -25,13 +24,13 @@ fsspec = {version = "^2024", extras=["s3"]}
 
 
 # local deps
-ml4gw-hermes = {path = "../../hermes", develop = true, extras = ["torch"]}
+ml4gw-hermes = {version = ">=0.2.0", extras = ["torch"]}
 aframe = {path = "../../", develop = true}
 utils = {path = "../../libs/utils", develop = true}
 jsonargparse = "^4.27.1"
 
 nvidia-cudnn-cu11 = "8.9.6.50"
-tensorrt = "8.5.1.7"
+tensorrt = "8.5.2.2"
 # workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
 urllib3 = ">=1.25.4,<1.27"
 

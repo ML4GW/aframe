@@ -23,15 +23,17 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    q = luigi.OptionalFloatParameter(default=None)
-    fftlength = luigi.FloatParameter(default=0)
+    q = luigi.OptionalFloatParameter(default="")
+    fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
     repository_directory = PathParameter(
         default=paths().results_dir / "model_repo"
     )
     train_task = luigi.TaskParameter()
-    # TODO: resolve enum platform parsing error
-    # platform = luigi.Parameter(default="TENSORRT")
+    platform = luigi.Parameter(
+        default="TENSORRT",
+        description="Platform to use for exporting model for inference",
+    )
 
 
 @inherits(ExportParams)
@@ -41,7 +43,7 @@ class ExportLocal(AframeSingularityTask):
         self.repository_directory.mkdir(exist_ok=True, parents=True)
 
     def output(self):
-        return ModelRepositoryTarget(self.repository_directory)
+        return ModelRepositoryTarget(self.repository_directory, self.platform)
 
     def requires(self):
         return self.train_task.req(self)
@@ -55,10 +57,12 @@ class ExportLocal(AframeSingularityTask):
         return len(self.ifos)
 
     def run(self):
+        from hermes.quiver import Platform
+
         from export.main import export
 
-        if not self.fftlength:
-            self.fftlength = None
+        # convert string to Platform enum
+        platform = Platform[self.platform]
 
         # Assuming a convention for batch file/model file
         # names and locations
@@ -83,7 +87,6 @@ class ExportLocal(AframeSingularityTask):
             self.streams_per_gpu,
             self.aframe_instances,
             self.preproc_instances,
-            # self.platform,
+            platform,
             clean=self.clean,
-            # verbose=self.verbose,
         )
