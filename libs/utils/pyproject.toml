@@ -6,8 +6,9 @@ authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.13"
+python = ">=3.9,<3.13"
 h5py = "^3.6"
+numpy = "^1.26.4"
 s3fs = "^2024"
 
 # make preprocessing modules here for use in
