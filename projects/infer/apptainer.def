@@ -39,6 +39,7 @@ Stage: final
 # install git for pip installation
 apt-get update
 apt-get install -y --no-install-recommends git
+apt-get install gcc
 apt-get clean
 
 # install pytest so we can run unittests
