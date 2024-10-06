@@ -22,9 +22,7 @@ from priors.utils import (
     mass_condition_uniform,
     mass_constraints,
 )
-
-# default cosmology
-COSMOLOGY = cosmo.Planck15
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 # Unit names
 msun = r"$M_{\odot}$"
@@ -64,7 +62,7 @@ def uniform_spin() -> PriorDict:
     return prior
 
 
-def nonspin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
+def nonspin_bbh(cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY) -> PriorDict:
     """
     Define a Bilby `PriorDict` that describes a reasonable population
     of non-spinning binary black holes
@@ -100,7 +98,7 @@ def nonspin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
     return prior, detector_frame_prior
 
 
-def spin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
+def spin_bbh(cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY) -> PriorDict:
     """
     Define a Bilby `PriorDict` that describes a reasonable population
     of spin-aligned binary black holes
@@ -137,7 +135,7 @@ def spin_bbh(cosmology: cosmo.Cosmology = COSMOLOGY) -> PriorDict:
 
 
 def end_o3_ratesandpops(
-    cosmology: cosmo.Cosmology = COSMOLOGY,
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ) -> ConditionalPriorDict:
     """
     Define a Bilby `PriorDict` that matches the distributions used
@@ -176,7 +174,7 @@ def end_o3_ratesandpops(
 
 
 def end_o3_ratesandpops_bns(
-    cosmology: cosmo.Cosmology = COSMOLOGY,
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ) -> ConditionalPriorDict:
     """
     Define a Bilby `PriorDict` that matches the BNS distribution used
@@ -219,7 +217,7 @@ def gaussian_masses(
     m1: float,
     m2: float,
     sigma: float = 2,
-    cosmology: cosmo.Cosmology = COSMOLOGY,
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ):
     """
     Construct a gaussian bilby prior for masses.
@@ -261,7 +259,7 @@ def log_normal_masses(
     m1: float,
     m2: float,
     sigma: float = 2,
-    cosmology: cosmo.Cosmology = COSMOLOGY,
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ):
     """
     Construct a log normal bilby prior for masses.
@@ -303,7 +301,7 @@ def log_normal_masses(
 
 
 def ringdown_prior(
-    cosmology: cosmo.Cosmology = COSMOLOGY,
+    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ) -> (PriorDict, bool):
     """
     Define a Bilby `PriorDict` containing distributions for ringdown parameters
