@@ -11,6 +11,7 @@ astropy = "^5.0"
 numpy = "^1.26"
 
 ledger = {path = "../ledger", develop = true}
+utils = {path = "../utils", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
