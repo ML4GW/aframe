@@ -1,19 +1,24 @@
 from concurrent.futures import Executor, as_completed
 from dataclasses import dataclass, make_dataclass
-from typing import Optional
+from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
-from bilby.gw.waveform_generator import WaveformGenerator
+from bilby.gw.conversion import bilby_to_lalsimulation_spins
+from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 
 def chirp_mass(m1, m2):
     """Calculate chirp mass from component masses"""
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
+
+
+def transpose(d: Dict[str, List]):
+    """Turn a dict of lists into a list of dicts"""
+    return [dict(zip(d, col)) for col in zip(*d.values())]
 
 
 @dataclass
@@ -26,13 +31,31 @@ class IntrinsicParameterSet(Ledger):
 
     mass_1: np.ndarray = parameter()
     mass_2: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
     a_1: np.ndarray = parameter()
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
     phi_12: np.ndarray = parameter()
     phi_jl: np.ndarray = parameter()
+
+    @property
+    def chirp_mass(self):
+        return chirp_mass(self.mass_1, self.mass_2)
+
+    @property
+    def total_mass(self):
+        return self.mass_1 + self.mass_2
+
+    @property
+    def mass_ratio(self):
+        return self.mass_2 / self.mass_1
+
+
+@dataclass
+class ExtrinsicParameterSet(Ledger):
+    ra: np.ndarray = parameter()
+    dec: np.ndarray = parameter()
+    redshift: np.ndarray = parameter()
     psi: np.ndarray = parameter()
     theta_jn: np.ndarray = parameter()
     phase: np.ndarray = parameter()
@@ -46,8 +69,63 @@ class IntrinsicParameterSet(Ledger):
         return self.mass_2 / (1 + self.redshift)
 
     @property
-    def chirp_mass(self):
-        return chirp_mass(self.mass_1, self.mass_2)
+    def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
+        return cosmology.luminosity_distance(self.redshift).value
+
+
+@dataclass
+class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
+    def convert_to_lal_params(self, reference_frequency: float):
+        self.inclination = np.zeros(len(self))
+        self.spin1x = np.zeros(len(self))
+        self.spin1y = np.zeros(len(self))
+        self.spin1z = np.zeros(len(self))
+        self.spin2x = np.zeros(len(self))
+        self.spin2y = np.zeros(len(self))
+        self.spin2z = np.zeros(len(self))
+
+        for i in range(len(self)):
+            (
+                self.inclination[i],
+                self.spin1x[i],
+                self.spin1y[i],
+                self.spin1z[i],
+                self.spin2x[i],
+                self.spin2y[i],
+                self.spin2z[i],
+            ) = bilby_to_lalsimulation_spins(
+                a_1=self.a_1[i],
+                a_2=self.a_2[i],
+                tilt_1=self.tilt_1[i],
+                tilt_2=self.tilt_2[i],
+                phi_12=self.phi_12[i],
+                phi_jl=self.phi_jl[i],
+                mass_1=self.mass_1[i],
+                mass_2=self.mass_2[i],
+                theta_jn=self.theta_jn[i],
+                phase=self.phase[i],
+                reference_frequency=reference_frequency,
+            )
+
+    def waveform_generation_params(self, reference_frequency: float):
+        # For clarity, explicitly define the parameter dictionary
+        # needed for waveform generation
+        self.convert_to_lal_params(reference_frequency)
+
+        params = {
+            "mass1": self.mass_1,
+            "mass2": self.mass_2,
+            "spin1x": self.spin1x,
+            "spin1y": self.spin1y,
+            "spin1z": self.spin1z,
+            "spin2x": self.spin2x,
+            "spin2y": self.spin2y,
+            "spin2z": self.spin2z,
+            "inclination": self.inclination,
+            "distance": self.luminosity_distance,
+            "coa_phase": self.phase,
+        }
+        return params
 
 
 @dataclass
@@ -109,27 +187,49 @@ class InjectionMetadata(Ledger):
 class _WaveformGenerator:
     """Thin wrapper so that we can potentially parallelize this"""
 
-    gen: WaveformGenerator
+    waveform_approximant: str
     sample_rate: float
     waveform_duration: float
     coalescence_time: float
+    minimum_frequency: float
+    reference_frequency: float
 
-    def shift_coalescence(self, waveform):
-        shift = int(self.coalescence_time * self.sample_rate)
-        return np.roll(waveform, shift, axis=-1)
+    def shift_coalescence(self, waveform, t_final):
+        shift_time = t_final - (self.waveform_duration - self.coalescence_time)
+        shift_idx = int(shift_time * self.sample_rate)
+        return np.roll(waveform, shift_idx, axis=-1)
+
+    def align_waveforms(self, waveforms, t_final):
+        waveform_length = int(self.sample_rate * self.waveform_duration)
+        if waveforms.shape[-1] < waveform_length:
+            pad = waveform_length - waveforms.shape[-1]
+            waveforms = np.pad(waveforms, ((0, 0), (pad, 0)))
+            waveforms = self.shift_coalescence(waveforms, t_final)
+        elif waveforms.shape[-1] >= waveform_length:
+            waveforms = self.shift_coalescence(waveforms, t_final)
+            waveforms = waveforms[:, -waveform_length:]
+        return waveforms
 
     def __call__(self, params):
-        polarizations = self.gen.time_domain_strain(params)
+        hp, hc = get_td_waveform(
+            approximant=self.waveform_approximant,
+            f_lower=self.minimum_frequency,
+            f_ref=self.reference_frequency,
+            delta_t=1 / self.sample_rate,
+            **params
+        )
 
-        stacked = np.stack([v for v in polarizations.values()])
-        stacked = self.shift_coalescence(stacked)
-        unstacked = {k: v for (k, v) in zip(polarizations.keys(), stacked)}
+        t_final = max(hp.sample_times.data)
+        stacked = np.stack([hp.data, hc.data])
+        stacked = self.align_waveforms(stacked, t_final)
+
+        unstacked = {k: v for (k, v) in zip(["plus", "cross"], stacked)}
 
         return unstacked
 
 
 @dataclass
-class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
+class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
@@ -143,7 +243,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
     @classmethod
     def from_parameters(
         cls,
-        params: IntrinsicParameterSet,
+        params: PycbcParameterSet,
         minimum_frequency: float,
         reference_frequency: float,
         sample_rate: float,
@@ -152,19 +252,13 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
-        gen = WaveformGenerator(
-            duration=waveform_duration,
-            sampling_frequency=sample_rate,
-            frequency_domain_source_model=lal_binary_black_hole,
-            parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-            waveform_arguments={
-                "waveform_approximant": waveform_approximant,
-                "reference_frequency": reference_frequency,
-                "minimum_frequency": minimum_frequency,
-            },
-        )
         waveform_generator = _WaveformGenerator(
-            gen, sample_rate, waveform_duration, coalescence_time
+            waveform_approximant=waveform_approximant,
+            sample_rate=sample_rate,
+            waveform_duration=waveform_duration,
+            coalescence_time=coalescence_time,
+            minimum_frequency=minimum_frequency,
+            reference_frequency=reference_frequency,
         )
 
         waveform_length = int(sample_rate * waveform_duration)
@@ -173,13 +267,17 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
+        generation_params = params.waveform_generation_params(
+            reference_frequency
+        )
+        param_list = transpose(generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
-            for i, polars in enumerate(map(waveform_generator, params)):
+            for i, polars in enumerate(map(waveform_generator, param_list)):
                 for key, value in polars.items():
                     polarizations[key][i] = value
         else:
-            futures = ex.map(waveform_generator, params)
+            futures = ex.map(waveform_generator, param_list)
             idx_map = {f: i for f, i in zip(futures, len(futures))}
             for f in as_completed(futures):
                 i = idx_map.pop(f)
@@ -197,14 +295,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
 
 
 @dataclass
-class SkyLocationParameterSet(Ledger):
-    ra: np.ndarray = parameter()
-    dec: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
-
-
-@dataclass
-class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
+class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
     ifo_snrs: np.ndarray = parameter()
     ifos: list[str] = metadata(default_factory=list)
