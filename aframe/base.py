@@ -10,6 +10,7 @@ from law.contrib.singularity.config import config_defaults
 
 from aframe.config import wandb
 from aframe.helm import RayCluster
+from utils.logging import configure_logging
 
 root = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("luigi-interface")
@@ -46,6 +47,17 @@ class AframeParameters(law.Task):
         significant=False,
         description="Comma separated list of gpu ids to be exposed "
         "via the `CUDA_VISIBLE_DEVICES` environment variable.",
+    )
+    log_file = luigi.OptionalParameter(
+        default="",
+        significant=False,
+        description="Path to log file to write logs to. "
+        "If not provided, logs will be written to stdout.",
+    )
+    verbose = luigi.BoolParameter(
+        default=False,
+        significant=False,
+        description="If `True`, log at `DEBUG` verbosity, ",
     )
 
 
@@ -136,6 +148,10 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
     # when calling .req() so that individual tasks
     # can speciyfy their own values
     exclude_params_req = {"output_dir", "data_dir"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        configure_logging(self.log_file, self.verbose)
 
     @property
     def sandbox(self):
