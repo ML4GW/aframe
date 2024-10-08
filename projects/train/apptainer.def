@@ -38,7 +38,7 @@ Stage: final
 %post
 apt-get update
 apt-get install -y --no-install-recommends git
-apt-get install -y gcc
+apt-get install -y build-essential
 apt-get clean
 
 # install pytest so we can run unit tests
