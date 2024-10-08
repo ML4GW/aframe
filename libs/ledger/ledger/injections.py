@@ -327,7 +327,7 @@ class _WaveformGenerator:
             waveforms = waveforms[:, -waveform_length:]
         return waveforms
 
-    def __call__(self, params: Dict[float]):
+    def __call__(self, params: Dict[str, float]):
         hp, hc = get_td_waveform(
             approximant=self.waveform_approximant,
             f_lower=self.minimum_frequency,
