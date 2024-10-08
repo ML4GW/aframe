@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import h5py
 import numpy as np
 from astropy.cosmology import z_at_value
+from astropy.units import Mpc
 from lalsimulation import (
     SimInspiralTransformPrecessingNewInitialConditions,
     SimInspiralTransformPrecessingWvf2PE,
@@ -84,28 +85,36 @@ class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
     def convert_to_lal_param_set(self, reference_frequency: float):
         mass_1_si = self.mass_1 * MSUN
         mass_2_si = self.mass_2 * MSUN
+        inclination = np.zeros(len(self))
+        spin1x = np.zeros(len(self))
+        spin1y = np.zeros(len(self))
+        spin1z = np.zeros(len(self))
+        spin2x = np.zeros(len(self))
+        spin2y = np.zeros(len(self))
+        spin2z = np.zeros(len(self))
 
-        (
-            inclination,
-            spin1x,
-            spin1y,
-            spin1z,
-            spin2x,
-            spin2y,
-            spin2z,
-        ) = np.vectorize(SimInspiralTransformPrecessingNewInitialConditions)(
-            self.theta_jn,
-            self.phi_jl,
-            self.tilt_1,
-            self.tilt_2,
-            self.phi_12,
-            self.a_1,
-            self.a_2,
-            mass_1_si,
-            mass_2_si,
-            reference_frequency,
-            self.phase,
-        )
+        for i in range(len(self)):
+            (
+                inclination[i],
+                spin1x[i],
+                spin1y[i],
+                spin1z[i],
+                spin2x[i],
+                spin2y[i],
+                spin2z[i],
+            ) = SimInspiralTransformPrecessingNewInitialConditions(
+                self.theta_jn[i],
+                self.phi_jl[i],
+                self.tilt_1[i],
+                self.tilt_2[i],
+                self.phi_12[i],
+                self.a_1[i],
+                self.a_2[i],
+                mass_1_si[i],
+                mass_2_si[i],
+                reference_frequency,
+                self.phase[i],
+            )
 
         return LALParameterSet(
             mass1=self.mass_1,
@@ -146,8 +155,8 @@ class LALParameterSet(Ledger):
     @property
     def redshift(self, cosmology=DEFAULT_COSMOLOGY):
         return z_at_value(
-            cosmology.luminosity_distance, self.luminosity_distance
-        )
+            cosmology.luminosity_distance, self.luminosity_distance * Mpc
+        ).value
 
     def generation_params(self):
         params = {
@@ -166,27 +175,41 @@ class LALParameterSet(Ledger):
         return params
 
     def convert_to_bilby_param_set(self, reference_frequency: float):
-        (
-            theta_jn,
-            phi_jl,
-            tilt_1,
-            tilt_2,
-            phi_12,
-            a_1,
-            a_2,
-        ) = np.vectorize(SimInspiralTransformPrecessingWvf2PE)(
-            self.inclination,
-            self.spin1x,
-            self.spin1y,
-            self.spin1z,
-            self.spin2x,
-            self.spin2y,
-            self.spin2z,
-            self.mass1,
-            self.mass2,
-            reference_frequency,
-            self.phase,
-        )
+        theta_jn = np.zeros(len(self))
+        phi_jl = np.zeros(len(self))
+        tilt_1 = np.zeros(len(self))
+        tilt_2 = np.zeros(len(self))
+        phi_12 = np.zeros(len(self))
+        a_1 = np.zeros(len(self))
+        a_2 = np.zeros(len(self))
+
+        for i in range(len(self)):
+            (
+                theta_jn[i],
+                phi_jl[i],
+                tilt_1[i],
+                tilt_2[i],
+                phi_12[i],
+                a_1[i],
+                a_2[i],
+            ) = SimInspiralTransformPrecessingWvf2PE(
+                self.inclination[i],
+                self.spin1x[i],
+                self.spin1y[i],
+                self.spin1z[i],
+                self.spin2x[i],
+                self.spin2y[i],
+                self.spin2z[i],
+                self.mass1[i],
+                self.mass2[i],
+                reference_frequency,
+                self.phase[i],
+            )
+
+        # When the spin magnitude is 0, the conversion function sets
+        # the tilts to pi/2. To me, 0 is a more sensible value
+        tilt_1[a_1 == 0] = 0
+        tilt_2[a_2 == 0] = 0
 
         return BilbyParameterSet(
             mass_1=self.mass1,
