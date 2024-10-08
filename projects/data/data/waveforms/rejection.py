@@ -8,8 +8,8 @@ from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 from data.waveforms.utils import convert_to_detector_frame, load_psds
 from ledger.injections import (
+    BilbyParameterSet,
     InjectionParameterSet,
-    PycbcParameterSet,
     WaveformPolarizationSet,
 )
 
@@ -63,7 +63,7 @@ def rejection_sample(
             params = {k: params[k] for k in prior.keys() if k in params}
 
         polarization_set = WaveformPolarizationSet.from_parameters(
-            PycbcParameterSet(**params),
+            BilbyParameterSet(**params),
             minimum_frequency,
             reference_frequency,
             sample_rate,

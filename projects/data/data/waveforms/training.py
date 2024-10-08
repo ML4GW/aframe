@@ -3,7 +3,7 @@ from typing import Callable
 from jsonargparse import ArgumentParser
 
 from data.waveforms.utils import convert_to_detector_frame
-from ledger.injections import PycbcParameterSet, WaveformPolarizationSet
+from ledger.injections import BilbyParameterSet, WaveformPolarizationSet
 
 
 def training_waveforms(
@@ -51,7 +51,7 @@ def training_waveforms(
     if not detector_frame_prior:
         samples = convert_to_detector_frame(samples)
 
-    params = PycbcParameterSet(**samples)
+    params = BilbyParameterSet(**samples)
     waveforms = WaveformPolarizationSet.from_parameters(
         params,
         minimum_frequency,

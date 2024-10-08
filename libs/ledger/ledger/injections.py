@@ -4,11 +4,17 @@ from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
-from bilby.gw.conversion import bilby_to_lalsimulation_spins
+from astropy.cosmology import z_at_value
+from lalsimulation import (
+    SimInspiralTransformPrecessingNewInitialConditions,
+    SimInspiralTransformPrecessingWvf2PE,
+)
 from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 from utils.cosmology import DEFAULT_COSMOLOGY
+
+MSUN = 1.988409902147041637325262574352366540e30
 
 
 def chirp_mass(m1, m2):
@@ -74,47 +80,79 @@ class ExtrinsicParameterSet(Ledger):
 
 
 @dataclass
-class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
-    def convert_to_lal_params(self, reference_frequency: float):
-        self.inclination = np.zeros(len(self))
-        self.spin1x = np.zeros(len(self))
-        self.spin1y = np.zeros(len(self))
-        self.spin1z = np.zeros(len(self))
-        self.spin2x = np.zeros(len(self))
-        self.spin2y = np.zeros(len(self))
-        self.spin2z = np.zeros(len(self))
+class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
+    def convert_to_lal_param_set(self, reference_frequency: float):
+        mass_1_si = self.mass_1 * MSUN
+        mass_2_si = self.mass_2 * MSUN
 
-        for i in range(len(self)):
-            (
-                self.inclination[i],
-                self.spin1x[i],
-                self.spin1y[i],
-                self.spin1z[i],
-                self.spin2x[i],
-                self.spin2y[i],
-                self.spin2z[i],
-            ) = bilby_to_lalsimulation_spins(
-                a_1=self.a_1[i],
-                a_2=self.a_2[i],
-                tilt_1=self.tilt_1[i],
-                tilt_2=self.tilt_2[i],
-                phi_12=self.phi_12[i],
-                phi_jl=self.phi_jl[i],
-                mass_1=self.mass_1[i],
-                mass_2=self.mass_2[i],
-                theta_jn=self.theta_jn[i],
-                phase=self.phase[i],
-                reference_frequency=reference_frequency,
-            )
+        (
+            inclination,
+            spin1x,
+            spin1y,
+            spin1z,
+            spin2x,
+            spin2y,
+            spin2z,
+        ) = np.vectorize(SimInspiralTransformPrecessingNewInitialConditions)(
+            self.theta_jn,
+            self.phi_jl,
+            self.tilt_1,
+            self.tilt_2,
+            self.phi_12,
+            self.a_1,
+            self.a_2,
+            mass_1_si,
+            mass_2_si,
+            reference_frequency,
+            self.phase,
+        )
 
-    def waveform_generation_params(self, reference_frequency: float):
-        # For clarity, explicitly define the parameter dictionary
-        # needed for waveform generation
-        self.convert_to_lal_params(reference_frequency)
+        return LALParameterSet(
+            mass1=self.mass_1,
+            mass2=self.mass_2,
+            spin1x=spin1x,
+            spin1y=spin1y,
+            spin1z=spin1z,
+            spin2x=spin2x,
+            spin2y=spin2y,
+            spin2z=spin2z,
+            inclination=inclination,
+            luminosity_distance=self.luminosity_distance,
+            phase=self.phase,
+            ra=self.ra,
+            dec=self.dec,
+            psi=self.psi,
+        )
 
+
+@dataclass
+class LALParameterSet(Ledger):
+    # No underscores in masses because of format PyCBC expects
+    mass1: np.ndarray = parameter()
+    mass2: np.ndarray = parameter()
+    spin1x: np.ndarray = parameter()
+    spin1y: np.ndarray = parameter()
+    spin1z: np.ndarray = parameter()
+    spin2x: np.ndarray = parameter()
+    spin2y: np.ndarray = parameter()
+    spin2z: np.ndarray = parameter()
+    inclination: np.ndarray = parameter()
+    luminosity_distance: np.ndarray = parameter()
+    phase: np.ndarray = parameter()
+    ra: np.ndarray = parameter()
+    dec: np.ndarray = parameter()
+    psi: np.ndarray = parameter()
+
+    @property
+    def redshift(self, cosmology=DEFAULT_COSMOLOGY):
+        return z_at_value(
+            cosmology.luminosity_distance, self.luminosity_distance
+        )
+
+    def generation_params(self):
         params = {
-            "mass1": self.mass_1,
-            "mass2": self.mass_2,
+            "mass1": self.mass1,
+            "mass2": self.mass2,
             "spin1x": self.spin1x,
             "spin1y": self.spin1y,
             "spin1z": self.spin1z,
@@ -126,6 +164,46 @@ class PycbcParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
             "coa_phase": self.phase,
         }
         return params
+
+    def convert_to_bilby_param_set(self, reference_frequency: float):
+        (
+            theta_jn,
+            phi_jl,
+            tilt_1,
+            tilt_2,
+            phi_12,
+            a_1,
+            a_2,
+        ) = np.vectorize(SimInspiralTransformPrecessingWvf2PE)(
+            self.inclination,
+            self.spin1x,
+            self.spin1y,
+            self.spin1z,
+            self.spin2x,
+            self.spin2y,
+            self.spin2z,
+            self.mass1,
+            self.mass2,
+            reference_frequency,
+            self.phase,
+        )
+
+        return BilbyParameterSet(
+            mass_1=self.mass1,
+            mass_2=self.mass2,
+            a_1=a_1,
+            a_2=a_2,
+            tilt_1=tilt_1,
+            tilt_2=tilt_2,
+            phi_12=phi_12,
+            phi_jl=phi_jl,
+            ra=self.ra,
+            dec=self.dec,
+            redshift=self.redshift,
+            psi=self.psi,
+            theta_jn=theta_jn,
+            phase=self.phase,
+        )
 
 
 @dataclass
@@ -268,7 +346,7 @@ class _WaveformGenerator:
 
 
 @dataclass
-class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
+class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
@@ -282,7 +360,7 @@ class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
     @classmethod
     def from_parameters(
         cls,
-        params: PycbcParameterSet,
+        params: BilbyParameterSet,
         minimum_frequency: float,
         reference_frequency: float,
         sample_rate: float,
@@ -306,9 +384,8 @@ class WaveformPolarizationSet(InjectionMetadata, PycbcParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
-        generation_params = params.waveform_generation_params(
-            reference_frequency
-        )
+        lal_params = params.convert_to_lal_param_set(reference_frequency)
+        generation_params = lal_params.generation_params()
         param_list = transpose(generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
