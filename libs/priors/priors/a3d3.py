@@ -1,29 +1,28 @@
 
 import astropy.cosmology as cosmo
-import numpy as np
-from bilby.core.prior import (
-    Cosine,
-    PriorDict,
-    Uniform,
-)
-from bilby.gw.prior import UniformSourceFrame
 
-from priors.utils import mass_constraints
 from priors.priors import uniform_spin, uniform_extrinsic
+
+from bilby.core.prior import PriorDict
+from bilby.gw.prior import UniformComovingVolume
+
 
 # default cosmology
 COSMOLOGY = cosmo.Planck15
 
+
 def prior(
     mass_1: float,
     mass_2: float,
+    zmax: float,
 ):
-
     prior = PriorDict(uniform_extrinsic())
     prior["mass_1"] = mass_1
     prior["mass_2"] = mass_2
-    prior["redshift"] = UniformSourceFrame(
-        name="redshift", minimum=0, maximum=2
+    prior["redshift"] = UniformComovingVolume(
+        name="redshift",
+        minimum=0,
+        maximum=zmax,
     )
 
     spin_prior = uniform_spin()
