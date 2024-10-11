@@ -19,7 +19,7 @@ class WaveformParams(law.Task):
     prior = luigi.Parameter(
         "Python path to prior to use for waveform generation"
     )
-    prior_args = luigi.Parameter(
+    prior_args = luigi.DictParameter(
         default={}, description="Optional arguments for prior functions"
     )
     minimum_frequency = luigi.FloatParameter(
