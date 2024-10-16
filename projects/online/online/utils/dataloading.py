@@ -103,7 +103,7 @@ def reset_t0(datadir, last_t0):
 
 def data_iterator(
     datadir: Path,
-    channel: str,
+    channels: List[str],
     ifos: List[str],
     sample_rate: float,
     ifo_suffix: str = None,
@@ -124,7 +124,7 @@ def data_iterator(
         logging.debug(f"Reading frames from timestamp {t0}")
 
         ready = True
-        for ifo in ifos:
+        for ifo, channel in zip(ifos, channels):
             prefix = f"{ifo[0]}-{ifo}_{middle}"
             if ifo_suffix is not None:
                 ifo_dir = "_".join([ifo, ifo_suffix])
@@ -152,7 +152,7 @@ def data_iterator(
                 # we never broke, therefore the filename exists,
                 # so read the strain data as well as its state
                 # vector to see if it's analysis ready
-                x = read_channel(fname, f"{ifo}:{channel}")
+                x = read_channel(fname, f"{channel}")
                 frames.append(x.value)
 
                 state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"

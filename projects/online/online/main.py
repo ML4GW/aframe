@@ -259,7 +259,7 @@ def main(
     datadir: Path,
     ifos: List[str],
     inference_params: List[str],
-    channel: str,
+    channels: List[str],
     sample_rate: float,
     kernel_length: float,
     inference_sampling_rate: float,
@@ -375,7 +375,7 @@ def main(
         inference_sampling_rate=inference_sampling_rate,
         refractory_period=refractory_period,
         ifos=ifos,
-        channel=channel,
+        channels=channels,
         datadir=datadir,
         ifo_suffix=ifo_suffix,
     )
@@ -390,7 +390,7 @@ def main(
 
     data_it = data_iterator(
         datadir=datadir,
-        channel=channel,
+        channels=channels,
         ifos=ifos,
         sample_rate=sample_rate,
         ifo_suffix=ifo_suffix,

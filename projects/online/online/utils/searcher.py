@@ -25,8 +25,8 @@ class Event:
     gpstime: float
     detection_statistic: float
     far: float
-    ifos: List[str]
-    channel: str
+    ifos: str
+    channels: List[str]
     datadir: Path
     ifo_suffix: Optional[str] = None
 
@@ -58,13 +58,14 @@ class Event:
         return gps_from_timestamp(t_write)
 
     def __str__(self):
+        ifos = ",".join(self.ifos)
         return (
             "Event("
             f"gpstime={self.gpstime:0.3f}, "
             f"detection_statistic={self.detection_statistic:0.2f}, "
             f"far={self.far:0.3e} Hz, "
-            f"ifos={self.ifos}, "
-            f"channel={self.channel}"
+            f"ifos={ifos}, "
+            f"channels={self.channels}"
             ")"
         )
 
@@ -102,14 +103,14 @@ class Searcher:
         inference_sampling_rate: float,
         refractory_period: float,
         ifos: List[str],
-        channel: str,
+        channels: str,
         datadir: Path,
         ifo_suffix: Optional[str] = None,
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
         self.ifos = ifos
-        self.channel = channel
+        self.channels = channels
         self.datadir = datadir
         self.ifo_suffix = ifo_suffix
 
@@ -156,7 +157,7 @@ class Searcher:
             detection_statistic=value,
             far=far,
             ifos=self.ifos,
-            channel=self.channel,
+            channels=self.channels,
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
