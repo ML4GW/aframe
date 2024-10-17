@@ -1,19 +1,31 @@
 from concurrent.futures import Executor, as_completed
 from dataclasses import dataclass, make_dataclass
-from typing import Optional
+from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
-from bilby.gw.waveform_generator import WaveformGenerator
+from astropy.cosmology import z_at_value
+from astropy.units import Mpc
+from lalsimulation import (
+    SimInspiralTransformPrecessingNewInitialConditions,
+    SimInspiralTransformPrecessingWvf2PE,
+)
+from pycbc.waveform import get_td_waveform
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
+from utils.cosmology import DEFAULT_COSMOLOGY
+
+MSUN = 1.988409902147041637325262574352366540e30
 
 
 def chirp_mass(m1, m2):
     """Calculate chirp mass from component masses"""
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
+
+
+def transpose(d: Dict[str, List]):
+    """Turn a dict of lists into a list of dicts"""
+    return [dict(zip(d, col)) for col in zip(*d.values())]
 
 
 @dataclass
@@ -26,13 +38,31 @@ class IntrinsicParameterSet(Ledger):
 
     mass_1: np.ndarray = parameter()
     mass_2: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
     a_1: np.ndarray = parameter()
     a_2: np.ndarray = parameter()
     tilt_1: np.ndarray = parameter()
     tilt_2: np.ndarray = parameter()
     phi_12: np.ndarray = parameter()
     phi_jl: np.ndarray = parameter()
+
+    @property
+    def chirp_mass(self):
+        return chirp_mass(self.mass_1, self.mass_2)
+
+    @property
+    def total_mass(self):
+        return self.mass_1 + self.mass_2
+
+    @property
+    def mass_ratio(self):
+        return self.mass_2 / self.mass_1
+
+
+@dataclass
+class ExtrinsicParameterSet(Ledger):
+    ra: np.ndarray = parameter()
+    dec: np.ndarray = parameter()
+    redshift: np.ndarray = parameter()
     psi: np.ndarray = parameter()
     theta_jn: np.ndarray = parameter()
     phase: np.ndarray = parameter()
@@ -46,8 +76,158 @@ class IntrinsicParameterSet(Ledger):
         return self.mass_2 / (1 + self.redshift)
 
     @property
-    def chirp_mass(self):
-        return chirp_mass(self.mass_1, self.mass_2)
+    def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
+        return cosmology.luminosity_distance(self.redshift).value
+
+
+@dataclass
+class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
+    def convert_to_lal_param_set(self, reference_frequency: float):
+        mass_1_si = self.mass_1 * MSUN
+        mass_2_si = self.mass_2 * MSUN
+        inclination = np.zeros(len(self))
+        spin1x = np.zeros(len(self))
+        spin1y = np.zeros(len(self))
+        spin1z = np.zeros(len(self))
+        spin2x = np.zeros(len(self))
+        spin2y = np.zeros(len(self))
+        spin2z = np.zeros(len(self))
+
+        for i in range(len(self)):
+            (
+                inclination[i],
+                spin1x[i],
+                spin1y[i],
+                spin1z[i],
+                spin2x[i],
+                spin2y[i],
+                spin2z[i],
+            ) = SimInspiralTransformPrecessingNewInitialConditions(
+                self.theta_jn[i],
+                self.phi_jl[i],
+                self.tilt_1[i],
+                self.tilt_2[i],
+                self.phi_12[i],
+                self.a_1[i],
+                self.a_2[i],
+                mass_1_si[i],
+                mass_2_si[i],
+                reference_frequency,
+                self.phase[i],
+            )
+
+        return LALParameterSet(
+            mass1=self.mass_1,
+            mass2=self.mass_2,
+            spin1x=spin1x,
+            spin1y=spin1y,
+            spin1z=spin1z,
+            spin2x=spin2x,
+            spin2y=spin2y,
+            spin2z=spin2z,
+            inclination=inclination,
+            luminosity_distance=self.luminosity_distance,
+            phase=self.phase,
+            ra=self.ra,
+            dec=self.dec,
+            psi=self.psi,
+        )
+
+
+@dataclass
+class LALParameterSet(Ledger):
+    # No underscores in masses because of format PyCBC expects
+    mass1: np.ndarray = parameter()
+    mass2: np.ndarray = parameter()
+    spin1x: np.ndarray = parameter()
+    spin1y: np.ndarray = parameter()
+    spin1z: np.ndarray = parameter()
+    spin2x: np.ndarray = parameter()
+    spin2y: np.ndarray = parameter()
+    spin2z: np.ndarray = parameter()
+    inclination: np.ndarray = parameter()
+    luminosity_distance: np.ndarray = parameter()
+    phase: np.ndarray = parameter()
+    ra: np.ndarray = parameter()
+    dec: np.ndarray = parameter()
+    psi: np.ndarray = parameter()
+
+    @property
+    def redshift(self, cosmology=DEFAULT_COSMOLOGY):
+        return z_at_value(
+            cosmology.luminosity_distance, self.luminosity_distance * Mpc
+        ).value
+
+    @property
+    def generation_params(self):
+        params = {
+            "mass1": self.mass1,
+            "mass2": self.mass2,
+            "spin1x": self.spin1x,
+            "spin1y": self.spin1y,
+            "spin1z": self.spin1z,
+            "spin2x": self.spin2x,
+            "spin2y": self.spin2y,
+            "spin2z": self.spin2z,
+            "inclination": self.inclination,
+            "distance": self.luminosity_distance,
+            "coa_phase": self.phase,
+        }
+        return params
+
+    def convert_to_bilby_param_set(self, reference_frequency: float):
+        theta_jn = np.zeros(len(self))
+        phi_jl = np.zeros(len(self))
+        tilt_1 = np.zeros(len(self))
+        tilt_2 = np.zeros(len(self))
+        phi_12 = np.zeros(len(self))
+        a_1 = np.zeros(len(self))
+        a_2 = np.zeros(len(self))
+
+        for i in range(len(self)):
+            (
+                theta_jn[i],
+                phi_jl[i],
+                tilt_1[i],
+                tilt_2[i],
+                phi_12[i],
+                a_1[i],
+                a_2[i],
+            ) = SimInspiralTransformPrecessingWvf2PE(
+                self.inclination[i],
+                self.spin1x[i],
+                self.spin1y[i],
+                self.spin1z[i],
+                self.spin2x[i],
+                self.spin2y[i],
+                self.spin2z[i],
+                self.mass1[i],
+                self.mass2[i],
+                reference_frequency,
+                self.phase[i],
+            )
+
+        # When the spin magnitude is 0, the conversion function sets
+        # the tilts to pi/2. To me, 0 is a more sensible value
+        tilt_1[a_1 == 0] = 0
+        tilt_2[a_2 == 0] = 0
+
+        return BilbyParameterSet(
+            mass_1=self.mass1,
+            mass_2=self.mass2,
+            a_1=a_1,
+            a_2=a_2,
+            tilt_1=tilt_1,
+            tilt_2=tilt_2,
+            phi_12=phi_12,
+            phi_jl=phi_jl,
+            ra=self.ra,
+            dec=self.dec,
+            redshift=self.redshift,
+            psi=self.psi,
+            theta_jn=theta_jn,
+            phase=self.phase,
+        )
 
 
 @dataclass
@@ -109,27 +289,92 @@ class InjectionMetadata(Ledger):
 class _WaveformGenerator:
     """Thin wrapper so that we can potentially parallelize this"""
 
-    gen: WaveformGenerator
+    waveform_approximant: str
     sample_rate: float
     waveform_duration: float
     coalescence_time: float
+    minimum_frequency: float
+    reference_frequency: float
 
-    def shift_coalescence(self, waveform):
-        shift = int(self.coalescence_time * self.sample_rate)
-        return np.roll(waveform, shift, axis=-1)
+    def shift_coalescence(self, waveforms: np.ndarray, t_final: float):
+        """
+        Shift a pair of polarizations such that the coalescence point is moved
+        to the time specified by self.coalescence_time. The shift is
+        accomplished by rolling the array
 
-    def __call__(self, params):
-        polarizations = self.gen.time_domain_strain(params)
+        Args:
+            waveforms:
+                The stacked polarizations of a waveform. These are generated
+                by PyCBC's `get_td_waveform`, which places the coalescence
+                point at t = 0
+            t_final:
+                The ending time of the signal array. This time is relative
+                to the coalescence point
 
-        stacked = np.stack([v for v in polarizations.values()])
-        stacked = self.shift_coalescence(stacked)
-        unstacked = {k: v for (k, v) in zip(polarizations.keys(), stacked)}
+        Returns:
+            The stacked, shifted polarizations
+        """
+        shift_time = (
+            t_final
+            - (self.waveform_duration - self.coalescence_time)
+            + 1 / self.sample_rate
+        )
+        shift_idx = int(shift_time * self.sample_rate)
+        return np.roll(waveforms, shift_idx, axis=-1)
+
+    def align_waveforms(self, waveforms: np.ndarray, t_final: float):
+        """
+        Adjust a pair of polarizations such that the arrays have the desired
+        length and the coalescence point is at the desired time. Waveforms
+        generated by PyCBC have different lengths based on the waveform
+        parameters, and so may be longer or shorter than
+        `self.waveform_duration`. If the generated signal is shorter, it
+        will be zero-padded on the left and then shifted. If it is longer,
+        it will be shifted and then cropped.
+
+        Args:
+            waveforms:
+                The stacked polarizations of a waveform. These are generated
+                by PyCBC's `get_td_waveform`, which places the coalescence
+                point at t = 0
+            t_final:
+                The ending time of the signal array. This time is relative
+                to the coalescence point
+
+        Returns:
+            The stacked, shifted polarizations padded or cropped to the
+            appropriate length
+        """
+        waveform_length = int(self.sample_rate * self.waveform_duration)
+        if waveforms.shape[-1] < waveform_length:
+            pad = waveform_length - waveforms.shape[-1]
+            waveforms = np.pad(waveforms, ((0, 0), (pad, 0)))
+            waveforms = self.shift_coalescence(waveforms, t_final)
+        elif waveforms.shape[-1] >= waveform_length:
+            waveforms = self.shift_coalescence(waveforms, t_final)
+            waveforms = waveforms[:, -waveform_length:]
+        return waveforms
+
+    def __call__(self, params: Dict[str, float]):
+        hp, hc = get_td_waveform(
+            approximant=self.waveform_approximant,
+            f_lower=self.minimum_frequency,
+            f_ref=self.reference_frequency,
+            delta_t=1 / self.sample_rate,
+            **params,
+        )
+
+        t_final = hp.sample_times.data[-1]
+        stacked = np.stack([hp.data, hc.data])
+        stacked = self.align_waveforms(stacked, t_final)
+
+        unstacked = {k: v for (k, v) in zip(["plus", "cross"], stacked)}
 
         return unstacked
 
 
 @dataclass
-class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
+class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
@@ -143,7 +388,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
     @classmethod
     def from_parameters(
         cls,
-        params: IntrinsicParameterSet,
+        params: BilbyParameterSet,
         minimum_frequency: float,
         reference_frequency: float,
         sample_rate: float,
@@ -152,19 +397,19 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
         coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
-        gen = WaveformGenerator(
-            duration=waveform_duration,
-            sampling_frequency=sample_rate,
-            frequency_domain_source_model=lal_binary_black_hole,
-            parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-            waveform_arguments={
-                "waveform_approximant": waveform_approximant,
-                "reference_frequency": reference_frequency,
-                "minimum_frequency": minimum_frequency,
-            },
-        )
+        if waveform_duration < coalescence_time:
+            raise ValueError(
+                "Coalescence time must be less than waveform duration; "
+                f"got values of {coalescence_time} and {waveform_duration}"
+            )
+
         waveform_generator = _WaveformGenerator(
-            gen, sample_rate, waveform_duration, coalescence_time
+            waveform_approximant=waveform_approximant,
+            sample_rate=sample_rate,
+            waveform_duration=waveform_duration,
+            coalescence_time=coalescence_time,
+            minimum_frequency=minimum_frequency,
+            reference_frequency=reference_frequency,
         )
 
         waveform_length = int(sample_rate * waveform_duration)
@@ -173,13 +418,15 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
             "cross": np.zeros((len(params), waveform_length)),
         }
 
+        lal_params = params.convert_to_lal_param_set(reference_frequency)
+        param_list = transpose(lal_params.generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
-            for i, polars in enumerate(map(waveform_generator, params)):
+            for i, polars in enumerate(map(waveform_generator, param_list)):
                 for key, value in polars.items():
                     polarizations[key][i] = value
         else:
-            futures = ex.map(waveform_generator, params)
+            futures = ex.map(waveform_generator, param_list)
             idx_map = {f: i for f, i in zip(futures, len(futures))}
             for f in as_completed(futures):
                 i = idx_map.pop(f)
@@ -197,14 +444,7 @@ class IntrinsicWaveformSet(InjectionMetadata, IntrinsicParameterSet):
 
 
 @dataclass
-class SkyLocationParameterSet(Ledger):
-    ra: np.ndarray = parameter()
-    dec: np.ndarray = parameter()
-    redshift: np.ndarray = parameter()
-
-
-@dataclass
-class InjectionParameterSet(SkyLocationParameterSet, IntrinsicParameterSet):
+class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
     snr: np.ndarray = parameter()
     ifo_snrs: np.ndarray = parameter()
     ifos: list[str] = metadata(default_factory=list)

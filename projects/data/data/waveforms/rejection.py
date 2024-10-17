@@ -4,13 +4,14 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
-from bilby.gw.source import lal_binary_black_hole
-from bilby.gw.waveform_generator import WaveformGenerator
 from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
 from data.waveforms.utils import convert_to_detector_frame, load_psds
-from ledger.injections import InjectionParameterSet, _WaveformGenerator
+from ledger.injections import (
+    BilbyParameterSet,
+    InjectionParameterSet,
+    WaveformPolarizationSet,
+)
 
 ResponseSetFields = Dict[str, Union[np.ndarray, float]]
 
@@ -32,24 +33,6 @@ def rejection_sample(
     # get the detector tensors and vertices
     # for projecting our waveforms
     tensors, vertices = get_ifo_geometry(*ifos)
-
-    # instantiate a waveform generator whose
-    # call method will generate raw polarizations
-    _generator = WaveformGenerator(
-        duration=waveform_duration,
-        sampling_frequency=sample_rate,
-        frequency_domain_source_model=lal_binary_black_hole,
-        parameter_conversion=convert_to_lal_binary_black_hole_parameters,
-        waveform_arguments={
-            "waveform_approximant": waveform_approximant,
-            "reference_frequency": reference_frequency,
-            "minimum_frequency": minimum_frequency,
-        },
-    )
-
-    generator = _WaveformGenerator(
-        _generator, sample_rate, waveform_duration, coalescence_time
-    )
 
     # create a dictionary to store accepted
     # parameters, waveforms, and metadata
@@ -79,17 +62,19 @@ def rejection_sample(
         if num_signals == 1:
             params = {k: params[k] for k in prior.keys() if k in params}
 
-        # TODO: can encapsulate this in a
-        # WaveformSet.from_parameters method
-        params_list = [dict(zip(params, col)) for col in zip(*params.values())]
+        polarization_set = WaveformPolarizationSet.from_parameters(
+            BilbyParameterSet(**params),
+            minimum_frequency,
+            reference_frequency,
+            sample_rate,
+            waveform_duration,
+            waveform_approximant,
+            coalescence_time,
+        )
         polarizations = {
-            "cross": torch.zeros((len(params_list), waveform_size)),
-            "plus": torch.zeros((len(params_list), waveform_size)),
+            "cross": torch.Tensor(polarization_set.cross),
+            "plus": torch.Tensor(polarization_set.plus),
         }
-
-        for i, polars in enumerate(map(generator, params_list)):
-            for key, value in polars.items():
-                polarizations[key][i] = torch.Tensor(value)
 
         projected = compute_observed_strain(
             torch.Tensor(params["dec"]),

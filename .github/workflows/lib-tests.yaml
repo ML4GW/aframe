@@ -58,6 +58,9 @@ jobs:
         env:
           test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
+            apt-get update
+            apt-get install -y build-essential
+            apt-get clean
             python -m pip install poetry
             cd $test_dir
             poetry install

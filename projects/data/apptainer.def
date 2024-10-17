@@ -16,6 +16,7 @@ mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 # install git for pip installation
 apt-get update
 apt-get install -y --no-install-recommends git
+apt-get install -y build-essential
 apt-get clean
 
 # activate micromamba and create environment from lockfile
@@ -25,7 +26,7 @@ micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
 # install poetry so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
     pip install --no-build-isolation \
-	poetry 'virtualenv==20.4.7' 
+	poetry 'virtualenv==20.26.3' 
 
 micromamba run -p /opt/env \
     poetry config virtualenvs.create false

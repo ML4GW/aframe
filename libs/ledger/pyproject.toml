@@ -8,9 +8,11 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
-bilby = "^2.2.2"
 h5py = "^3.10.0"
-numpy = "^1.26"
+numpy = "^1.26.4"
+pycbc = "^2.5.1"
+
+utils = {path = "../utils", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
