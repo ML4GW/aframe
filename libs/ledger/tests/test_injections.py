@@ -3,6 +3,155 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+from ledger.injections import BilbyParameterSet, _WaveformGenerator
+
+
+@pytest.fixture
+def reference_frequency():
+    return 20
+
+
+@pytest.fixture
+def bilby_param_set():
+    params = {
+        "mass_1": np.array(
+            [
+                35,
+            ]
+        ),
+        "mass_2": np.array(
+            [
+                20,
+            ]
+        ),
+        "a_1": np.array(
+            [
+                0.5,
+            ]
+        ),
+        "a_2": np.array(
+            [
+                0,
+            ]
+        ),
+        "tilt_1": np.array(
+            [
+                np.pi / 2,
+            ]
+        ),
+        "tilt_2": np.array(
+            [
+                np.pi / 2,
+            ]
+        ),
+        "phi_12": np.array(
+            [
+                np.pi,
+            ]
+        ),
+        "phi_jl": np.array(
+            [
+                np.pi,
+            ]
+        ),
+        "ra": np.array(
+            [
+                np.pi / 4,
+            ]
+        ),
+        "dec": np.array(
+            [
+                np.pi / 4,
+            ]
+        ),
+        "redshift": np.array(
+            [
+                1,
+            ]
+        ),
+        "psi": np.array(
+            [
+                np.pi / 8,
+            ]
+        ),
+        "theta_jn": np.array(
+            [
+                np.pi / 8,
+            ]
+        ),
+        "phase": np.array(
+            [
+                np.pi / 8,
+            ]
+        ),
+    }
+    return BilbyParameterSet(**params)
+
+
+def test_parameter_conversion(bilby_param_set, reference_frequency):
+    lal_params = bilby_param_set.convert_to_lal_param_set(reference_frequency)
+    new_params = lal_params.convert_to_bilby_param_set(reference_frequency)
+    for key in new_params._get_params():
+        np.allclose(
+            getattr(bilby_param_set, key), getattr(new_params, key), rtol=1e-16
+        )
+
+    for _ in range(100):
+        new_params = new_params.convert_to_lal_param_set(reference_frequency)
+        new_params = new_params.convert_to_bilby_param_set(reference_frequency)
+
+    for key in new_params._get_params():
+        np.allclose(
+            getattr(bilby_param_set, key), getattr(new_params, key), rtol=1e-16
+        )
+
+
+class TestWaveformGenerator:
+    @pytest.fixture
+    def waveform_duration(self):
+        return 8
+
+    @pytest.fixture
+    def sample_rate(self):
+        return 2048
+
+    @pytest.fixture(params=[0, 4, 7, 8 - 1 / 2048])
+    def coalescence_time(self, request):
+        return request.param
+
+    @pytest.fixture(params=[4, 10])
+    def dummy_signal_duration(self, request):
+        return request.param
+
+    @pytest.fixture
+    def dummy_signal(self, dummy_signal_duration, sample_rate):
+        # Odd number of points to remove ambiguity of peak
+        return np.bartlett(dummy_signal_duration * sample_rate - 1)[None]
+
+    def test_align_waveforms(
+        self,
+        sample_rate,
+        waveform_duration,
+        coalescence_time,
+        dummy_signal,
+    ):
+        gen = _WaveformGenerator(
+            waveform_approximant="",
+            sample_rate=sample_rate,
+            waveform_duration=waveform_duration,
+            coalescence_time=coalescence_time,
+            minimum_frequency=20,
+            reference_frequency=20,
+        )
+        # If the peak is at t=0, the final time is half the signal length
+        t_final = dummy_signal.shape[-1] // 2 / sample_rate
+        waveforms = gen.align_waveforms(dummy_signal, t_final)
+        assert waveforms.shape[-1] == int(sample_rate * waveform_duration)
+        assert (
+            np.argmax(waveforms)
+            == (coalescence_time % waveform_duration) * sample_rate
+        )
+
 
 class TestLigoResponseSet:
     @pytest.fixture

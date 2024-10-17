@@ -158,6 +158,7 @@ class LALParameterSet(Ledger):
             cosmology.luminosity_distance, self.luminosity_distance * Mpc
         ).value
 
+    @property
     def generation_params(self):
         params = {
             "mass1": self.mass1,
@@ -313,7 +314,11 @@ class _WaveformGenerator:
         Returns:
             The stacked, shifted polarizations
         """
-        shift_time = t_final - (self.waveform_duration - self.coalescence_time)
+        shift_time = (
+            t_final
+            - (self.waveform_duration - self.coalescence_time)
+            + 1 / self.sample_rate
+        )
         shift_idx = int(shift_time * self.sample_rate)
         return np.roll(waveforms, shift_idx, axis=-1)
 
@@ -356,7 +361,7 @@ class _WaveformGenerator:
             f_lower=self.minimum_frequency,
             f_ref=self.reference_frequency,
             delta_t=1 / self.sample_rate,
-            **params
+            **params,
         )
 
         t_final = max(hp.sample_times.data)
@@ -392,6 +397,12 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         coalescence_time: float,
         ex: Optional[Executor] = None,
     ):
+        if waveform_duration < coalescence_time:
+            raise ValueError(
+                "Coalescence time must be less than waveform duration; "
+                f"got values of {coalescence_time} and {waveform_duration}"
+            )
+
         waveform_generator = _WaveformGenerator(
             waveform_approximant=waveform_approximant,
             sample_rate=sample_rate,
@@ -408,8 +419,7 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         }
 
         lal_params = params.convert_to_lal_param_set(reference_frequency)
-        generation_params = lal_params.generation_params()
-        param_list = transpose(generation_params)
+        param_list = transpose(lal_params.generation_params)
         # give flexibility if we want to parallelize or not
         if ex is None:
             for i, polars in enumerate(map(waveform_generator, param_list)):
