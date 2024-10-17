@@ -115,7 +115,7 @@ class TestWaveformGenerator:
     def sample_rate(self):
         return 2048
 
-    @pytest.fixture(params=[0, 4, 7, 8 - 1 / 2048])
+    @pytest.fixture(params=[0, 4, 7, 8])
     def coalescence_time(self, request):
         return request.param
 
@@ -124,7 +124,9 @@ class TestWaveformGenerator:
         return request.param
 
     @pytest.fixture
-    def dummy_signal(self, dummy_signal_duration, sample_rate):
+    def dummy_signal(
+        self, dummy_signal_duration, sample_rate, waveform_duration
+    ):
         # Odd number of points to remove ambiguity of peak
         return np.bartlett(dummy_signal_duration * sample_rate - 1)[None]
 
@@ -135,6 +137,8 @@ class TestWaveformGenerator:
         coalescence_time,
         dummy_signal,
     ):
+        if coalescence_time == waveform_duration:
+            coalescence_time -= 1 / sample_rate
         gen = _WaveformGenerator(
             waveform_approximant="",
             sample_rate=sample_rate,

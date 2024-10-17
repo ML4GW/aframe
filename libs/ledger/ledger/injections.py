@@ -364,7 +364,7 @@ class _WaveformGenerator:
             **params,
         )
 
-        t_final = max(hp.sample_times.data)
+        t_final = hp.sample_times.data[-1]
         stacked = np.stack([hp.data, hc.data])
         stacked = self.align_waveforms(stacked, t_final)
 
