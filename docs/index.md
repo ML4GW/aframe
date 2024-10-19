@@ -17,8 +17,17 @@ meaningful metrics
    Contributing <contributing>
 
 .. toctree::
+   :caption: Code Structure
+   :maxdepth: 1
+
+   Tasks <tasks>
+   Projects <projects>
+   Libraries <libraries>
+
+.. toctree::
    :caption: Advanced
    :maxdepth: 1
+
 
    Tuning <tuning>
 ```
