@@ -28,7 +28,7 @@ meaningful metrics
    :caption: Advanced
    :maxdepth: 1
 
-
+   Remote Training <remote>
    Tuning <tuning>
 ```
 
