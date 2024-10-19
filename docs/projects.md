@@ -4,13 +4,13 @@ Projects
 Each aframe project represents an individually containerized sub-task of the aframe analysis. This allows project environments
 to be lightweight, flexible and portable. Projects are meant to produce _artifacts_ of some specific experiment. By artifact, we typically mean some file (e.g training data, optimized models, analysis plots, etc.) saved to disk somewhere. Projects should be kept modular and specific to the artifact they are designed to generate.
 
-The current projects include
-- [`data`](./projects/data.md) - Scripts for generating training and testing data
-- [`train`](./projects/train.md) - Pytorch lightning code for training neural-networks
-- [`export`](./projects/export.md) - Exporting trained networks as accelerated executables
-- [`infer`](./projects/infer.md) - Launching triton inference servers and deploying inference clients to analyze timeslides and injections
-- ['plot'](./projects/plots.md) - Visualization utilities
-- ['online'](./projects/online.md) - Deploying Aframe for low-latency inference
+```{eval-rst}
+.. toctree::
+   :glob:
+   :caption: Current projects
+   :maxdepth: 1
+   
+   projects/*
 
 ## Building Project Containers
 Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
