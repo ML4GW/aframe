@@ -14,7 +14,7 @@ to be lightweight, flexible and portable. Projects are meant to produce _artifac
    projects/*
 ```
 
-## Building Project Containers
+## Building Containers
 Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
 The `data` project also requires the use of [`Mamba`](https://mamba.readthedocs.io/en/latest/).
 
@@ -44,7 +44,7 @@ poetry run build-containers data export
 ```
 
 ## Executing a Container
-Most projects come with a command line interface (CLI) built with the extremely flexible [jsonargparse](https://jsonargparse.readthedocs.io/en/stable/). As an example of how you might run a command inside the container, let's use the CLI in the data container to query for science-mode segments from (gwosc)[https://gwosc.org/]
+Most projects come with a command line interface (CLI) built with the extremely flexible [jsonargparse](https://jsonargparse.readthedocs.io/en/stable/). As an example of how you might run a command inside the container, let's use the CLI in the data container to query for science-mode segments from [gwosc](https://gwosc.org/)
 
 ```bash
 mkdir ~/aframe/data/
@@ -54,7 +54,7 @@ apptainer run $AFRAME_CONTAINER_ROOT/data.sif \
 
 See each projects README for details on available commands.
 
-## When to Rebuild Containers
+## Rebuilding Containers
 If a project requires dependencies to be changed, modified or added, the corresponding container will have to be rebuilt to reflect that. 
 However, code-only changes can be mapped from your local filesystem into the container at runtime using the `--bind` flag:
 
@@ -75,12 +75,16 @@ As an example, let's build the `data` container image. Once inside the `data` ro
 apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 ```
 
-> **_Note It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default expecatation in `luigi`/`law` tasks_**
+```{eval-rst}
+
+.. note: 
+    It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default expecatation of the `luigi`/`law` tasks
+```
 
 Each projects `README` has instructions for building its container/environment.
 
 
-## Other Tips and Tricks
+## Tips and Tricks
 For development, it can often be useful to open a shell inside a container to poke around and debug: 
 
 ```bash
