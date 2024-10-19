@@ -11,7 +11,6 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import sys
-from importlib.metadata import distribution
 from pathlib import Path
 
 parent_path = str(Path(__file__).parents[1])
@@ -19,8 +18,6 @@ sys.path.insert(0, parent_path)
 
 
 # -- Project information -----------------------------------------------------
-dist = distribution("amplfi")
-
 project = "aframe"
 author = "Ethan Marx, Will Benoit"
 copyright = f"2024, {author}"
