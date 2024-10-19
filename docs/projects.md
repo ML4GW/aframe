@@ -11,6 +11,7 @@ to be lightweight, flexible and portable. Projects are meant to produce _artifac
    :maxdepth: 1
    
    projects/*
+```
 
 ## Building Project Containers
 Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
