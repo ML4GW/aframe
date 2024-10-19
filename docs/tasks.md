@@ -1,10 +1,10 @@
 Tasks
 =====
-[`luigi`](https://github.com/spotify/luigi) and [`law`](https://github.com/riga/law) `Tasks` for building scalable, complex, and dynamic `Aframe` analyses
+Aframe utilizes [`luigi`](https://github.com/spotify/luigi) and [`law`](https://github.com/riga/law) `Tasks` for building scalable and dynamic analyses
 
 ```{eval-rst}
 .. note::
-    It is expected that you are familiar with `Aframe` [projects](./projects.md) and have built their container images
+    It is expected that you are familiar with :code:`Aframe` `projects <./projects.md>`_ and have built their container images
 ```
 
 ```{eval-rst}
