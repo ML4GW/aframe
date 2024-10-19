@@ -1,8 +1,6 @@
 Contributing
 ============
 
-# Contributing to Aframe
-
 Thanks for taking the time to contribute! While we appreciate all who wish to contribute, at the moment we're prioritizing contributions from IGWN scientists.
 
 Here are some guidelines on how code in this repo should be structured, as well as best practices for making contributions to it.
