@@ -1,6 +1,6 @@
 Projects
 ========
-# Aframe Projects
+
 Each aframe project represents an individually containerized sub-task of the aframe analysis. This allows project environments
 to be lightweight, flexible and portable. Projects are meant to produce _artifacts_ of some specific experiment. By artifact, we typically mean some file (e.g training data, optimized models, analysis plots, etc.) saved to disk somewhere. Projects should be kept modular and specific to the artifact they are designed to generate.
 
