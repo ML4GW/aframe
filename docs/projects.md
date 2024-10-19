@@ -7,13 +7,14 @@ to be lightweight, flexible and portable. Projects are meant to produce _artifac
 ```{eval-rst}
 .. toctree::
    :glob:
+   :titlesonly:
    :caption: Current projects
    :maxdepth: 1
    
    projects/*
 ```
 
-### Building Project Containers
+## Building Project Containers
 Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
 The `data` project also requires the use of [`Mamba`](https://mamba.readthedocs.io/en/latest/).
 
