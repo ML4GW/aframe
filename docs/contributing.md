@@ -14,7 +14,7 @@ Here are some guidelines on how code in this repo should be structured, as well 
 To start contributing, create a [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository. You can then clone your fork
 
 ```console
-git clone git@github.com:albert-einstein/aframe.git
+git clone git@github.com:albert.einstein/aframe.git
 ```
 
 (replacing your GitHub username for `albert.einstein`). Then, add your the main (`ML4GW`) repository as a remote reference. A common practice is to rename this remote `upstream`.
