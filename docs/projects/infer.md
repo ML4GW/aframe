@@ -2,15 +2,13 @@
 Performing inference with `Aframe` models using NVIDIA's [Triton Inference Server](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/index.html)
 
 ## Environment
-The infer project is currently not containerized, and only uses `poetry` for environment management.
 
-The infer environment can be built by running 
-
+In the root of the `infer` project, run 
+```bash
+apptainer build $AFRAME_CONTAINER_ROOT/infer.sif apptainer.def
 ```
-poetry install
-```
+to build the `infer` container.
 
-in the root infer project directory
 
 ## Scripts
 TODO: explain inference deployment
