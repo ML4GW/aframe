@@ -79,7 +79,12 @@ git_ref = my-feature
 .. important::
     The git-sync :code:`initContainer` uses your ssh key to clone software from github. To do so, a Kubernetes secret 
     is made to mount your ssh key into the container. By default, :code:`Aframe` will automatically pull your ssh key from
-    :code:`~/.ssh/id_rsa` or :code:`~/.ssh/id_ed25519`
+    :code:`~/.ssh/id_rsa`. You can override this default under the :code:`[luigi_ssh]` header
+
+    .. code-block:: ini
+    
+        [luigi_ssh]
+        ssh_file = ~/.ssh/id_ed25519
 ```
 
 ## Local Training with S3 Data
