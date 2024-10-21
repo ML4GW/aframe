@@ -2492,22 +2492,17 @@ pyyaml = ">=6.0"
 
 [[package]]
 name = "law"
-version = "0.1.18"
+version = "0.1.19"
 description = "Build large-scale task workflows using luigi, remote job submission, remote targets, and environment"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <4"
-files = []
-develop = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,<4,>=2.7"
+files = [
+    {file = "law-0.1.19.tar.gz", hash = "sha256:de539fd4daa9ddb3bbf82490e6c187bf297be9fc289cff2e5da98ede76bb7e43"},
+]
 
 [package.dependencies]
 luigi = {version = ">=2.8.2", markers = "python_version >= \"3.0\""}
 six = ">=1.13"
-
-[package.source]
-type = "git"
-url = "https://github.com/riga/law.git"
-reference = "master"
-resolved_reference = "673c2ac16eb8da9304a6c749e557f9c42ad4d976"
 
 [[package]]
 name = "linkify-it-py"
@@ -5565,4 +5560,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "49bc34cca4da1ca17cde753edd9d225f5dcd3d6186327c938bca425e3625a20c"
+content-hash = "488e90005cdb437037aac5f932146c50cb12e34c0a07c9857de282b4b7c86cfe"
