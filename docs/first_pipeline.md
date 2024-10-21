@@ -3,7 +3,7 @@ First Pipeline
 
 ```{eval-rst}
 .. note::
-    It is highly recommended that you have completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions, or installed the equivalent software, before running the sandbox pipeline.
+    It is highly recommended that you have completed the `ml4gw quickstart <https://github.com/ml4gw/quickstart/>`_ instructions, or installed the equivalent software, before running the sandbox pipeline.
 ```
 
 ```{eval-rst}
@@ -11,7 +11,7 @@ First Pipeline
     It is assumed that you have already built each [project's container](./projects.md)
 ```
 
-The Aframe `Sandbox` pipelines strings together `luigi` / `law` tasks to run an end-to-end workflow.
+Aframe pipelines strings together `luigi` / `law` tasks to run an end-to-end workflow. Here, we will run the `Sandbox` pipeline (see also the [tuning]() pipeline).
 In short, the `Sandbox` pipeline will
 
 1. Generate training data 
@@ -30,7 +30,7 @@ uses a `.yaml` file. See the [`config.yaml`](../../../projects/train/config.yaml
 
 ```{eval-rst}
 .. note::
-    When running the `Sandbox` pipeline, parameters that are common between training and other tasks (e.g. ifos, highpass, fduration) are specified once in the `.cfg` and automatically passed to the downstream training or tuning `config.yaml` by `luigi`/`law`.
+    When running pipelines, parameters that are common between the training task and other tasks (e.g. :code:`ifos`, :code:`highpass`, :code:`fduration`) are specified once in the :code:`.cfg` and automatically passed to the downstream training or tuning :code:`config.yaml` by :code:`luigi`/:code:`law`.
 ```
 
 ## Initialize a Pipeline
@@ -39,7 +39,7 @@ In the specified directory, `aframe-init` will create default `.cfg` and `.yaml`
 
 ```{eval-rst}
 .. tip::
-    When running a new "experiment", it is recommended to use `aframe-init` to initialize a new directory. This way, all the configuration associated with the experiment is isolated, and the experiment is reproducible.
+    When running a new "experiment", it is recommended to use :code:`aframe-init` to initialize a new directory. This way, all the configuration associated with the experiment is isolated, and the experiment is reproducible.
 ```
 
 
@@ -91,14 +91,14 @@ are ingested by the `law` tasks and control where various pipeline artifacts are
 - `AFRAME_RESULTS_DIR` Inference and sensitive volume results
 - `AFRAME_TMPDIR` Intermediate data product storage 
 
-The bottom of the `run.sh` contains the command that launches the pipeline. The `workers` argument specifies how many `luigi` workers to use. This controls how many concurrent tasks can be launched. It is useful to specify more than 1 worker when you have several tasks that are not dependent on one another. The default of 5 should be plenty.
+The last line of the `run.sh` contains the command that launches the pipeline. The `workers` argument specifies how many `luigi` workers to use. This controls how many concurrent tasks can be launched. It is useful to specify more than 1 worker when you have several tasks that are not dependent on one another. The default of 5 should be plenty.
 
 The `gpus` argument controls which gpus to use for training and inference. Under the hood, the pipeline is simply setting
-the `CUDA_VISIBLE_DEVICES` environment variable. `gpus` should be specified as a comma separated list.
+the `CUDA_VISIBLE_DEVICES` environment variable. `gpus` should be specified as a comma separated list (e.g. `--gpus 0,1,2`).
 
 The pipeline can now be kicked off by executing the `run.sh` 
 
-```bash
+```console
 bash ~/aframe/my-first-run/run.sh
 ```
 
@@ -106,7 +106,7 @@ bash ~/aframe/my-first-run/run.sh
 .. tip:: 
     The end to end pipeline can take a few days to run. 
     If you wish to launch an analysis with the freedom of ending
-    your ssh session, use a tool like [`tmux`](https://github.com/tmux/tmux/wiki) or [`screen`](https://www.gnu.org/software/screen/manual/screen.html)
+    your ssh session, use a tool like `tmux <https://github.com/tmux/tmux/wiki>`_ or `screen <https://www.gnu.org/software/screen/manual/screen.html>`_
 ```
 
 The most time consuming steps are training and performing inference. If you wish to reduce these timescales for testing the end-to-end analysis, consider altering the following arguments:
