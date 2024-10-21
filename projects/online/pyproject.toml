@@ -14,9 +14,9 @@ utils = {path = "../../libs/utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 p_astro = {path = "../../libs/p_astro", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
-"amplfi.architectures" = {path = "../../amplfi/amplfi/architectures", develop = true}
 
 
+amplfi = "^0.1.0"
 ml4gw = "^0.5"
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"

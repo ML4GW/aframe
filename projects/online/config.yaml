@@ -5,14 +5,14 @@ foreground_file: ${oc.env:ONLINE_FOREGROUND_FILE}
 rejected_file: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_architecture: 
-  class_path: amplfi.architectures.flows.MaskedAutoregressiveFlow
+  class_path: amplfi.train.architectures.flows.MaskedAutoregressiveFlow
   init_args:
     hidden_features: 150
     num_transforms: 80
     num_blocks: 6
     context_dim: 8
     embedding_net: 
-      class_path: amplfi.architectures.embeddings.ResNet
+      class_path: amplfi.train.architectures.embeddings.ResNet
       init_args:
         layers: [5, 3, 3]
         norm_layer:

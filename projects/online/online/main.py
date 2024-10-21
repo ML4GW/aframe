@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
-from amplfi.architectures.flows.base import FlowArchitecture
+from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
 from ligo.gracedb.rest import GraceDb
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
