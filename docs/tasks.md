@@ -4,7 +4,7 @@ Aframe utilizes [`luigi`](https://github.com/spotify/luigi) and [`law`](https://
 
 ```{eval-rst}
 .. note::
-    It is expected that you are familiar with :code:`Aframe` `projects <projects.md>`_ and have built their container images
+    It is expected that you are familiar with :code:`Aframe` :doc:`projects </projects>` and have built their container images
 ```
 
 ```{eval-rst}

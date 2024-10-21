@@ -8,10 +8,10 @@ First Pipeline
 
 ```{eval-rst}
 .. note::
-    It is assumed that you have already built each [project's container](./projects.md)
+    It is assumed that you have already built each project's container (See :doc:`projects <projects>`)
 ```
 
-Aframe pipelines strings together `luigi` / `law` tasks to run an end-to-end workflow. Here, we will run the `Sandbox` pipeline (see also the [tuning]() pipeline).
+Aframe pipelines strings together `luigi` / `law` tasks to run an end-to-end workflow. Here, we will run the `Sandbox` pipeline, (see also the {doc}`tuning <tuning>` pipeline).
 In short, the `Sandbox` pipeline will
 
 1. Generate training data 
@@ -23,10 +23,10 @@ In short, the `Sandbox` pipeline will
 
 ## Configuration
 The `Sandbox` pipeline is configured by two main configuration files. A `.cfg` file is used by `law`, and contains the parameters
-for the data generation, export, and inference tasks. See the [`bbh.cfg`](../aframe/pipelines/sandbox/configs/bbh.cfg) for a complete example.
+for the data generation, export, and inference tasks. See [here](https://github.com/ML4GW/aframe/blob/main/aframe/pipelines/sandbox/configs/bbh.cfg) for a complete example.
 
-Details of the training configuration is handled by [`lightning`](https://lightning.ai/docs/pytorch/stable/), which 
-uses a `.yaml` file. See the [`config.yaml`](../../../projects/train/config.yaml) that lives at the root of the train project for an example. 
+Training configuration and parsing is handled by [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/), which 
+uses a `.yaml` file. See [here](https://github.com/ML4GW/aframe/blob/main/projects/train/configs/bbh.yaml) for a complete example
 
 ```{eval-rst}
 .. note::
@@ -45,13 +45,13 @@ In the specified directory, `aframe-init` will create default `.cfg` and `.yaml`
 
 While in the root directory, a sandbox pipeline can be initialized with
 
-```bash
+```console
 poetry run aframe-init offline  --mode sandbox --directory ~/aframe/my-first-run/ 
 ```
 
 You can also initialize a directory for launching the tune pipeline
 
-```bash
+```console
 poetry run aframe-init offline --mode tune --directory ~/aframe/my-first-tune-run/ 
 ```
 
@@ -109,7 +109,8 @@ bash ~/aframe/my-first-run/run.sh
     your ssh session, use a tool like `tmux <https://github.com/tmux/tmux/wiki>`_ or `screen <https://www.gnu.org/software/screen/manual/screen.html>`_
 ```
 
-The most time consuming steps are training and performing inference. If you wish to reduce these timescales for testing the end-to-end analysis, consider altering the following arguments:
-- [`max_epochs`](../../../projects/train/config.yaml#92) in the training `yaml` configuration file
-- the amount of analyzed background livetime ([`Tb`](./configs/base.cfg#17)) 
-- the number of injections ([`num_injections`](./configs/base.cfg#101))
+The most time consuming steps are training, and performing inference. If you wish to reduce these timescales for testing the end-to-end analysis, consider altering the following arguments:
+- Number of training epochs, `max_epochs`, in the training `yaml` configuration file
+- Batches analyzed each epoch, `batches_per_epoch`, in the training `yaml` configuration file
+- Seconds of analyzed background livetime `Tb`, in the `.cfg` file
+- Number of injections performed, `num_injections`, in the `.cfg` file
