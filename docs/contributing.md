@@ -1,22 +1,26 @@
-# Contributing to Aframe
+Contributing
+============
 
 Thanks for taking the time to contribute! While we appreciate all who wish to contribute, at the moment we're prioritizing contributions from IGWN scientists.
 
 Here are some guidelines on how code in this repo should be structured, as well as best practices for making contributions to it.
 
 ## Getting started
-> **Note** It is assumed that you have succesfully completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions for pre-requisite environment setup and software installation.
+```{eval-rst}
+..note:
+    It is assumed that you have succesfully completed the `ml4gw quickstart <https://github.com/ml4gw/quickstart/>`_ instructions for pre-requisite environment and software setup, or have installed the equivalent by hand.
+```
 
 To start contributing, create a [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository. You can then clone your fork
 
 ```console
-git clone git@github.com:albert-einstein/aframev2.git
+git clone git@github.com:albert-einstein/aframe.git
 ```
 
-(replacing your GitHub username for `albert-einstein`). Then, add your the main (`ML4GW`) repository as a remote reference. A common practice is to rename this remote `upstream`.
+(replacing your GitHub username for `albert.einstein`). Then, add your the main (`ML4GW`) repository as a remote reference. A common practice is to rename this remote `upstream`.
 
 ```console
-git remote add upstream git@github.com:ML4GW/aframev2.git
+git remote add upstream git@github.com:ML4GW/aframe.git
 ```
 
 Next, check out to a new branch for a _specific_ issue you're trying to solve
@@ -27,30 +31,18 @@ git checkout -b new-feature
 Now you're ready to start adding in all your important fixes!
 
 ## Contribution guidelines
-
-### Libraries vs. Projects vs. Tasks/Pipelines
 Broadly speaking, Aframe consists of three main sub-directories: `projects` , `libs`, and `aframe`. 
 
-## libs
-If the code you're writing is some general-purpose function that gets used in many places, consider implementing it as a library in `libs` that other code (typically, a project) can import and call. To make clear what libraries come from this repository, we've adopted the practice that local library imports should start with `aframe.`, e.g. `from aframe.analysis import matched_filter`.
+### Libraries
+If the code you're writing is some general-purpose function that gets used in many places, consider implementing it as a library in `libs` that other code (typically, a project) can import and call.
 
-In practice, this means structuring libraries like:
-```
-| libs/
-|    | my-library/
-|    |    | aframe/
-|    |    |    | my-library/
-|    |    |    |    | __init__.py
-|    |    |    |    | ...
-|    |    | pyproject.toml
-|    |    | poetry.lock
-```
-
-## projects
+### Projects
 Code that produces _artifacts_ of some specific experiment (training data, optimized models, analysis plots, etc.) should be implemented as a project in the `projects` directory. Projects should be kept modular and specific to the artifact they are designed to generate, with light-weight environments.
 
-## tasks/pipelines
-The `aframe` sub-directory utilizes [`luigi`](https://luigi.readthedocs.io/en/stable/) and a higher level wrapper [`law`](https://github.com/riga/law) to construct complex, automated, end-to-end pipelines from different projects. `law` introduces environment sandboxing, which allows different tasks to be run in individual environments. These environments can be Apptainer images, or simple python environments. Also, `law` has abstractions for running tasks via [Condor](https://htcondor.readthedocs.io/en/latest/) which makes distributing tasks on HPC clusters trivial. If you think your contribution would benefit from being included in a broader pipeline, consider implementing a `law.Task` wrapper around it. It is recommended that you read the `law` and `luigi` docs linked above to get familiar with these concepts.
+### Tasks and Pipelines
+The `aframe` sub-directory utilizes [`luigi`](https://luigi.readthedocs.io/en/stable/) and a higher level wrapper [`law`](https://github.com/riga/law) to construct complex, automated, end-to-end pipelines from different projects. `law` introduces environment sandboxing, which allows different tasks to be run in individual environments. These environments are typically Apptainer images, but can also be simple python virtual environments. 
+
+`law` also has abstractions for running tasks via [Condor](https://htcondor.readthedocs.io/en/latest/) which makes distributing tasks on HPC clusters trivial. If you think your contribution would benefit from being included in a broader pipeline, consider implementing a `law.Task` wrapper around it. It is recommended that you read the `law` and `luigi` docs linked above to get familiar with these concepts.
 
 ### Testing
 For any code that you contribute, make sure to add unit tests which explicitly state and validate expectations about the behavior of your code. Tests should be placed in a `tests` subdirectory of each library and project, and should be structured similarly to the library code itself but with `test_` prepended to all the names.
