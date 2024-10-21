@@ -3,9 +3,9 @@ name = "aframe"
 version = "0.0.1"
 description = "End-to-end aframe pipeline components"
 authors = [
-    "Alec Gunny <alec.gunny@ligo.org>",
-    "Ethan Marx",
-    "William Benoit"
+    "Ethan Marx <emarx@mit.edu>",
+    "William Benoit <benoi090@umn.edu>",
+    "Alec Gunny <alec.gunny@ligo.org>"
 ]
 
 [tool.poetry.dependencies]
@@ -13,7 +13,7 @@ python = ">=3.9,<3.13"
 luigi = "^3.0"
 utils = {path = "./libs/utils", develop = true} 
 ml4gw-hermes = ">=0.2.0" 
-law = {git = "https://github.com/riga/law.git", branch = "master" }
+law = ">=0.1.19"
 kr8s = "^0.10.0"
 pykube-ng = {version = "^23.6.0", extras = ["oidc"]}
 spython = "^0.2"
@@ -61,6 +61,5 @@ exclude = '''
 
 [tool.isort]
 known_first_party = ["aframe", "train", "utils", "online", "data", "infer", "plots", "export", "ledger", "p_astro", "priors"]
-known_third_party = ["amplfi"]
 multi_line_output = 3
 include_trailing_comma = true
