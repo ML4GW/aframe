@@ -58,7 +58,8 @@ cpus_per_gpu = 12 # cpus per gpu
 memory_per_cpu = 1 # memory in GB
 ```
 
-It is also possible to sync remote `Aframe` code from git into the container. This is often useful when you are testing an idea that hasn't made 
+It is also possible to sync remote `Aframe` code from git into the container using an optional [git-sync](https://github.com/kubernetes/git-sync) `initContainer`.
+This is often useful when you are testing an idea that hasn't made 
 it onto the `Aframe` `main` branch (and thus hasn't been pushed to the remote container image). To do so, specify the following 
 in the `.cfg`.
 
@@ -75,7 +76,7 @@ git_ref = my-feature
 ```
 
 ```{eval-rst}
-.. important:
+.. important::
     The git-sync initContainer uses your ssh key to clone software from github. To do so, a Kubernetes secret 
     is made to mount your ssh key into the container. By default, :code:`Aframe` will automatically pull your ssh key from
     :code:`~/.ssh/id_rsa` or :code:`~/.ssh/id_ed25519`

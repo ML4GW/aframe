@@ -79,8 +79,7 @@ memory = 32G
 this configuration will create 4 worker pods, each with 2 gpus for a total of 8 gpus.∂ß
 
 ### Syncing Remote Code
-In some cases, it is necessary to launch a tuning job with code changes that haven’t been integrated into the `Aframe` `main` branch, and thus have not been pushed to the remote container. To allow this, the `lightray/ray-cluster` `helm` chart supports an optional git-sync initContainer that will clone and mount remote code from github inside the kubernetes pods.
-The remote repository and reference can be configured under the `[luigi_TuneRemote]` header in the `tune.cfg`
+In some cases, it is necessary to launch a tuning job with code changes that haven’t been integrated into the `Aframe` `main` branch, and thus have not been pushed to the remote container. To allow this, the `lightray/ray-cluster` `helm` chart supports an optional [git-sync](https://github.com/kubernetes/git-sync) `initContainer` that will clone and mount remote code from github inside the kubernetes pods. The remote repository and reference can be configured under the `[luigi_TuneRemote]` header in the `tune.cfg`
 
 ```cfg
 [luigi_TuneRemote]
@@ -91,9 +90,8 @@ git_url = git@github.com:albert.einstein/aframe.git
 git_ref = my-feature
 ```
 
-
 ```{eval-rst}
-.. important:
+.. important::
     The git-sync initContainer uses your ssh key to clone software from github. To do so, a Kubernetes secret 
     is made to mount your ssh key into the container. By default, :code:`Aframe` will automatically pull your ssh key from
     :code:`~/.ssh/id_rsa` or :code:`~/.ssh/id_ed25519`.
