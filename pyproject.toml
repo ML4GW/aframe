@@ -3,9 +3,9 @@ name = "aframe"
 version = "0.0.1"
 description = "End-to-end aframe pipeline components"
 authors = [
-    "Alec Gunny <alec.gunny@ligo.org>",
     "Ethan Marx <emarx@mit.edu>",
-    "William Benoit"
+    "William Benoit <benoi090@umn.edu>",
+    "Alec Gunny <alec.gunny@ligo.org>"
 ]
 
 [tool.poetry.dependencies]
