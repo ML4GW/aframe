@@ -83,6 +83,23 @@ trainer:
       init_args:
         # save_dir:
         flush_logs_every_n_steps: 10
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: "valid_auroc"
+        mode: "max"
+        patience: 50
+    # custom model checkpoint for saving and
+    # tracing best model at end of traiing
+    # that will be used for downstream export
+    - class_path: train.callbacks.ModelCheckpoint
+      init_args:
+        monitor: "valid_auroc"
+        mode: "max"
+        save_top_k: 1
+        save_last: true
+        auto_insert_metric_name: false
+    - class_path: train.callbacks.SaveAugmentedBatch
   # uncomment below if you want to profile
   # profiler:
     # class_path: lightning.pytorch.profilers.PyTorchProfiler

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Union
 
 import lightning.pytorch as pl
 import torch
@@ -38,8 +38,6 @@ class AframeBase(pl.LightningModule):
         learning_rate: float,
         pct_lr_ramp: float,
         weight_decay: float = 0.0,
-        patience: Optional[int] = None,
-        save_top_k_models: int = 10,
         verbose: bool = False,
     ) -> None:
         super().__init__()
@@ -152,6 +150,7 @@ class AframeBase(pl.LightningModule):
 
     def validation_step(self, batch, _) -> None:
         shift, X_bg, X_inj = batch
+
         y_bg = self.score(X_bg)
 
         # compute predictions over multiple views of
