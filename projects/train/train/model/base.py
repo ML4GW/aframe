@@ -1,12 +1,10 @@
 import logging
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
 import lightning.pytorch as pl
-import ray
 import torch
 from architectures import Architecture
 
-from train.callbacks import ModelCheckpoint, SaveAugmentedBatch
 from train.metrics import TimeSlideAUROC
 
 Tensor = torch.Tensor
@@ -180,37 +178,6 @@ class AframeBase(pl.LightningModule):
             on_epoch=True,
             sync_dist=True,
         )
-
-    def configure_callbacks(self) -> Sequence[pl.Callback]:
-        # checkpoint for saving best model
-        # that will be used for downstream export
-        # and inference tasks
-        # checkpoint for saving multiple best models
-        callbacks = []
-        callbacks.append(SaveAugmentedBatch())
-
-        # if using ray tune don't append lightning
-        # model checkpoint since we'll be using ray's
-        checkpoint = ModelCheckpoint(
-            monitor="valid_auroc",
-            save_top_k=self.hparams.save_top_k_models,
-            save_last=True,
-            auto_insert_metric_name=False,
-            mode="max",
-        )
-
-        if not ray.is_initialized():
-            callbacks.append(checkpoint)
-
-        if self.hparams.patience is not None:
-            early_stop = pl.callbacks.EarlyStopping(
-                monitor="valid_auroc",
-                patience=self.hparams.patience,
-                mode="max",
-                min_delta=0.00,
-            )
-            callbacks.append(early_stop)
-        return callbacks
 
     def configure_optimizers(self):
         if not torch.distributed.is_initialized():
