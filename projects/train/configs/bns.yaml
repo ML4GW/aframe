@@ -29,7 +29,7 @@ model:
     learning_rate: 0.000585
     pct_lr_ramp: 0.115
     # early stop
-    patience: 50
+    patience: null
 data:
   class_path: train.data.supervised.SpectrogramDomainSupervisedAframeDataset
   init_args:
