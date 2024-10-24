@@ -17,6 +17,7 @@ mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 apt-get update
 apt-get install -y --no-install-recommends git
 apt-get install -y build-essential
+apt-get install -y openssh-client
 apt-get clean
 
 # activate micromamba and create environment from lockfile
