@@ -1,4 +1,4 @@
-import logging
+# import logging
 from typing import List
 
 import arrakis
@@ -20,33 +20,37 @@ def data_iterator(
     channels = strain_channels + state_channels
     block_buffer = np.zeros((len(ifos), 0))
     # Blocks delivered in 16th of a second intervals
-    slc = slice(-2 * BLOCK_SIZE, -BLOCK_SIZE)
+    crop_size = int(sample_rate * BLOCK_DURATION)
+    slc = slice(-2 * crop_size, -crop_size)
     last_ready = True
     for block in arrakis.stream(channels):
         ready = True
         for channel in state_channels:
             state_vector = block[channel].data
-            ifo_ready = ((state_vector.value & 3) == 3).all()
+            ifo_ready = ((state_vector & 3) == 3).all()
             # Not sure we want to be logging every 16th of a second
-            if not ifo_ready:
-                logging.warning(f"IFO {channel[:2]} not analysis ready")
+            # if not ifo_ready:
+            #     logging.warning(f"IFO {channel[:2]} not analysis ready")
             ready &= ifo_ready
 
-        strain_data = np.stack([block[channel] for channel in strain_channels])
+        strain_data = np.stack(
+            [block[channel].data for channel in strain_channels]
+        )
         block_buffer = np.append(block_buffer, strain_data, axis=1)
+        dur = block_buffer.shape[-1] / STRAIN_SAMPLE_RATE
         # Need at least 3 blocks to be able to crop out edge effects
         # from resampling and just yield the middle second
-        if block_buffer.shape[-1] >= 3 * BLOCK_SIZE:
+        if dur >= 3 * BLOCK_DURATION:
             x = resample(
                 block_buffer,
-                int(sample_rate * BLOCK_DURATION),
+                int(sample_rate * dur),
                 axis=1,
                 window="hann",
             )
             x = x[:, slc]
-            block_buffer = block_buffer[:, STRAIN_SAMPLE_RATE:]
-            yield torch.Tensor(
-                x
-            ).double(), block.t0 - BLOCK_DURATION, last_ready
+            block_buffer = block_buffer[:, BLOCK_SIZE:]
+            yield torch.Tensor(x).double(), float(
+                block.t0 - BLOCK_DURATION
+            ), last_ready
 
         last_ready = ready

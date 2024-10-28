@@ -1,4 +1,6 @@
+import csv
 import logging
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
@@ -14,19 +16,12 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
 
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
-
-
-# seconds of data per update
-UPDATE_SIZE = 1
-
-SECONDS_PER_DAY = 86400
 
 
 def load_model(model: Architecture, weights: Path):
@@ -85,8 +80,8 @@ def process_event(
     buffer: InputBuffer,
     spectral_density: SpectralDensity,
     pe_whitener: Whiten,
-    amplfi: FlowArchitecture,
-    scaler: ChannelWiseScaler,
+    # amplfi: FlowArchitecture,
+    # scaler: ChannelWiseScaler,
     pastro_model: "Pastro",
     samples_per_event: int,
     inference_params: list[str],
@@ -98,7 +93,7 @@ def process_event(
     # write event information to disk
     # and submit it to gracedb
     event.write(outdir)
-    response = gdb.submit(event)
+    # response = gdb.submit(event)
 
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
@@ -134,7 +129,7 @@ def process_event(
 def search(
     gdb: GraceDb,
     pe_whitener: Whiten,
-    scaler: torch.nn.Module,
+    # scaler: torch.nn.Module,
     spectral_density: SpectralDensity,
     whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
@@ -142,7 +137,7 @@ def search(
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
-    amplfi: Architecture,
+    # amplfi: Architecture,
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     update_size: float,
@@ -162,6 +157,7 @@ def search(
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
+        loop_start = time.time()
         # if this frame was not analysis ready
         if not ready:
             if searcher.detecting:
@@ -169,7 +165,7 @@ def search(
                 # we won't get to see the peak of the event
                 # so build the event with what we have
                 event = searcher.build_event(
-                    integrated, t0 - update_size, len(integrated) - 1
+                    integrated[-1], t0 - update_size, len(integrated) - 1
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
@@ -179,8 +175,8 @@ def search(
                         input_buffer,
                         spectral_density,
                         pe_whitener,
-                        amplfi,
-                        scaler,
+                        # amplfi,
+                        # scaler,
                         pastro_model,
                         samples_per_event,
                         inference_params,
@@ -194,10 +190,11 @@ def search(
             # being analysis ready, in which case perform updates
             # but don't search for events
             if X is not None:
-                logging.warning(
-                    "Frame {} is not analysis ready. Performing "
-                    "inference but ignoring any triggers".format(t0)
-                )
+                pass
+                # logging.warning(
+                #     "Frame {} is not analysis ready. Performing "
+                #     "inference but ignoring any triggers".format(t0)
+                # )
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
@@ -221,41 +218,75 @@ def search(
             output_buffer.reset()
             in_spec = True
 
+        if not t0 % 1:
+            logging.info(f"Analyzing data with shape {X.shape}")
         # we have a frame that is analysis ready,
         # so lets analyze it:
+        start = time.time()
         X = X.to(device)
+        to_gpu = time.time() - start
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
+        start = time.time()
         batch, state = snapshotter(X[None], state)
+        snapshot = time.time() - start
 
         # whiten the batch, and analyze with aframe
+        start = time.time()
         whitened = whitener(batch)
+        whiten = time.time() - start
+
+        start = time.time()
         y = aframe(whitened)[:, 0]
+        nn = time.time() - start
 
         # update our input buffer with latest strain data,
+        start = time.time()
         input_buffer.update(X.cpu(), t0)
+        input_update = time.time() - start
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
+        start = time.time()
         integrated = output_buffer.update(y.cpu(), t0)
+        output_update = time.time() - start
 
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
-        if snapshotter.full_psd_present and ready:
+        start = time.time()
+        if snapshotter.full_psd_present:  # and ready:
+            if not t0 % 1:
+                logging.info("Searching data")
             event = searcher.search(integrated, t0 + time_offset)
+        search = time.time() - start
+
+        with open("latency.csv", "a", newline="") as f:
+            writer = csv.writer(f, delimiter=" ")
+            writer.writerow(
+                [
+                    to_gpu,
+                    snapshot,
+                    whiten,
+                    nn,
+                    input_update,
+                    output_update,
+                    search,
+                ]
+            )
 
         # if we found an event, process it!
         if event is not None:
+            logging.info("Found event")
             process_event(
                 event,
                 gdb,
                 input_buffer,
                 spectral_density,
                 pe_whitener,
-                amplfi,
-                scaler,
+                # amplfi,
+                # scaler,
                 pastro_model,
                 samples_per_event,
                 inference_params,
@@ -265,6 +296,10 @@ def search(
             )
             searcher.detecting = False
 
+        loop_end = time.time()
+        with open("loop_latency.csv", "a", newline="") as f:
+            writer = csv.writer(f, delimiter=" ")
+            writer.writerow([loop_end - loop_start])
         # TODO write buffers to disk:
 
 
@@ -524,7 +559,7 @@ def main(
     search(
         gdb=gdb,
         pe_whitener=pe_whitener,
-        scaler=scaler,
+        # scaler=scaler,
         spectral_density=spectral_density,
         whitener=whitener,
         snapshotter=snapshotter,
@@ -532,7 +567,7 @@ def main(
         input_buffer=input_buffer,
         output_buffer=output_buffer,
         aframe=aframe,
-        amplfi=amplfi,
+        # amplfi=amplfi,
         pastro_model=pastro_model,
         data_it=data_it,
         update_size=update_size,
