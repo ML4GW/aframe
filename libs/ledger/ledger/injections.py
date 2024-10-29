@@ -356,10 +356,19 @@ class _WaveformGenerator:
         return waveforms
 
     def __call__(self, params: Dict[str, float]):
+        # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/transforms/detection/waveform.py?ref_type=heads#L112 # noqa
+        freq_limit = 1899.0 / (params["mass1"] + params["mass2"])
+        if self.minimum_frequency > freq_limit:
+            minimum_frequency = freq_limit
+            reference_frequency = freq_limit
+        else:
+            minimum_frequency = self.minimum_frequency
+            reference_frequency = self.reference_frequency
+
         hp, hc = get_td_waveform(
             approximant=self.waveform_approximant,
-            f_lower=self.minimum_frequency,
-            f_ref=self.reference_frequency,
+            f_lower=minimum_frequency,
+            f_ref=reference_frequency,
             delta_t=1 / self.sample_rate,
             **params,
         )
