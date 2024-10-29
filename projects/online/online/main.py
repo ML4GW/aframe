@@ -218,7 +218,7 @@ def search(
             output_buffer.reset()
             in_spec = True
 
-        if not t0 % 1:
+        if not t0 % 10:
             logging.info(f"Analyzing data with shape {X.shape}")
         # we have a frame that is analysis ready,
         # so lets analyze it:
@@ -256,9 +256,7 @@ def search(
         # search for events in the integrated output
         event = None
         start = time.time()
-        if snapshotter.full_psd_present:  # and ready:
-            if not t0 % 1:
-                logging.info("Searching data")
+        if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
         search = time.time() - start
 
