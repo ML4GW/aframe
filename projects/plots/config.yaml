@@ -1,4 +1,4 @@
-port: 5005
+port: 5006
 app:
   init_args:
     weights: ${oc.env:AFRAME_TRAIN_RUN_DIR}/best.ckpt
