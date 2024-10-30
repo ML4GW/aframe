@@ -1,15 +1,53 @@
 import os
 from typing import TYPE_CHECKING
 
+import law
 import luigi
+from luigi.util import inherits
 
-from aframe.base import AframeRayTask
+from aframe.base import AframeRayTask, AframeSingularityTask, AframeWrapperTask
 from aframe.config import ray_head, ray_worker, s3, ssh, wandb
 from aframe.targets import Bytes, LawS3Target
-from aframe.tasks.train.base import RemoteTrainBase
+from aframe.tasks.train.base import RemoteTrainBase, TrainBase
 
 if TYPE_CHECKING:
     from aframe.helm import RayCluster
+
+
+class TuneLocal(TrainBase, AframeSingularityTask):
+    tune_config = luigi.Parameter(
+        description="Path to the `yaml` file used"
+        " to configure the lightray tune job. "
+    )
+
+    @property
+    def default_image(self):
+        return "train.sif"
+
+    def output(self):
+        path = self.run_dir / "best.pt"
+        return law.LocalFileTarget(str(path), format=Bytes)
+
+    def run(self):
+        from lightray.cli import cli
+
+        args = ["--config", self.tune_config, "--"]
+        lightning_args = self.get_args()
+        lightning_args.pop(
+            0
+        )  # remove "fit" subcommand since lightray takes care of it
+        args.extend(lightning_args)
+
+        results = cli(args)
+        prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
+
+        # return path to best model weights from best trial
+        best = results.get_best_result(scope="all")
+        best = best.get_best_checkpoint()
+        weights = os.path.join(prefix, best.path, "model.pt")
+
+        # copy the best weights to the output location
+        s3().client.copy(weights, self.output().path)
 
 
 class TuneRemote(RemoteTrainBase, AframeRayTask):
@@ -90,3 +128,38 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
         # copy the best weights to the output location
         s3().client.copy(weights, self.output().path)
+
+
+@inherits(TuneLocal, TuneRemote)
+class Tune(AframeWrapperTask):
+    """
+    Class that dynamically chooses between
+    remote training on nautilus or local training on LDG.
+
+    Useful for incorporating into pipelines where
+    you don't care where the training is run.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.remote = self.validate_dirs()
+
+    def validate_dirs(self) -> bool:
+        # train remotely if run_dir stars with s3://
+
+        # Note: one can specify a remote data_dir, but
+        # train locally
+        remote = str(self.run_dir).startswith("s3://")
+
+        if remote and not str(self.data_dir).startswith("s3://"):
+            raise ValueError(
+                "If run_dir is an s3 path, data_dir must also be an s3 path"
+                "Got data_dir: {self.data_dir} and run_dir: {self.run_dir}"
+            )
+        return remote
+
+    def requires(self):
+        if self.remote:
+            return TuneRemote.req(self)
+        else:
+            return TuneLocal.req(self)

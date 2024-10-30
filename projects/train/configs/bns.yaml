@@ -5,7 +5,6 @@
 # To start training from a checkpoint, uncomment the below argument
 # and specify a path to the desired checkpoint
 # ckpt_path: ""
-matmul_precision: "highest"
 model:
   class_path: train.model.SupervisedAframe
   init_args:
@@ -117,4 +116,5 @@ trainer:
   max_epochs: 200
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
+  enable_progres_bar: true
   benchmark: true
