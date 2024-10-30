@@ -116,7 +116,11 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         from lightray.cli import cli
 
         args = ["--config", self.tune_config, "--"]
-        args.extend(self.get_args())
+        lightning_args = self.get_args()
+        lightning_args.pop(
+            0
+        )  # remove "fit" subcommand since lightray takes care of it
+        args.extend(lightning_args)
 
         results = cli(args)
         prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
