@@ -26,7 +26,7 @@ class Event:
     detection_statistic: float
     far: float
     ifos: List[str]
-    channel: str
+    channels: List[str]
     datadir: Path
     ifo_suffix: Optional[str] = None
 
@@ -64,7 +64,7 @@ class Event:
             f"detection_statistic={self.detection_statistic:0.2f}, "
             f"far={self.far:0.3e} Hz, "
             f"ifos={self.ifos}, "
-            f"channel={self.channel}"
+            f"channels={self.channels}"
             ")"
         )
 
@@ -82,6 +82,7 @@ class Event:
 
         event = asdict(self)
         _, _ = event.pop("datadir"), event.pop("ifo_suffix", None)
+        event["ifos"] = ",".join(event["ifos"])
         filecontents = str(event)
         filecontents = json.loads(filecontents.replace("'", '"'))
         with open(filename, "w") as f:
@@ -102,14 +103,14 @@ class Searcher:
         inference_sampling_rate: float,
         refractory_period: float,
         ifos: List[str],
-        channel: str,
+        channels: str,
         datadir: Path,
         ifo_suffix: Optional[str] = None,
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
         self.ifos = ifos
-        self.channel = channel
+        self.channels = channels
         self.datadir = datadir
         self.ifo_suffix = ifo_suffix
 
@@ -156,7 +157,7 @@ class Searcher:
             detection_statistic=value,
             far=far,
             ifos=self.ifos,
-            channel=self.channel,
+            channels=self.channels,
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
