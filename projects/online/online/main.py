@@ -14,6 +14,7 @@ from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import gracedb_factory
+from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -135,6 +136,7 @@ def search(
     amplfi: Architecture,
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
+    update_size: float,
     time_offset: float,
     outdir: Path,
     device: str,
@@ -155,7 +157,7 @@ def search(
                 # we won't get to see the peak of the event
                 # so build the event with what we have
                 event = searcher.build_event(
-                    integrated, t0 - 1, len(integrated) - 1
+                    integrated, t0 - update_size, len(integrated) - 1
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
@@ -270,6 +272,7 @@ def main(
     fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
+    data_source: str = "frames",
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     refractory_period: float = 8,
@@ -281,6 +284,25 @@ def main(
     device: str = "cpu",
 ):
     gdb = gracedb_factory(server, outdir)
+
+    if data_source == "ngdd":
+        update_size = 1 / 16
+        channels = [f"{ifo}:{channel}" for ifo in ifos]
+        data_it = ngdd_data_iterator(
+            strain_channels=channels,
+            ifos=ifos,
+            sample_rate=sample_rate,
+        )
+    else:
+        update_size = 1
+        data_it = data_iterator(
+            datadir=datadir,
+            channel=channel,
+            ifos=ifos,
+            sample_rate=sample_rate,
+            ifo_suffix=ifo_suffix,
+            timeout=10,
+        )
 
     # initialize a buffer for storing recent strain data,
     # and for storing integrated aframe outputs
@@ -318,14 +340,14 @@ def main(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=inference_sampling_rate,
-        batch_size=UPDATE_SIZE * inference_sampling_rate,
+        batch_size=update_size * inference_sampling_rate,
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
     ).to(device)
 
     snapshotter = OnlineSnapshotter(
-        update_size=UPDATE_SIZE,
+        update_size=update_size,
         num_channels=len(ifos),
         psd_length=psd_length,
         kernel_length=kernel_length,
@@ -388,15 +410,6 @@ def main(
         trigger_distance,
     )
 
-    data_it = data_iterator(
-        datadir=datadir,
-        channel=channel,
-        ifos=ifos,
-        sample_rate=sample_rate,
-        ifo_suffix=ifo_suffix,
-        timeout=10,
-    )
-
     search(
         gdb=gdb,
         pe_whitener=pe_whitener,
@@ -411,6 +424,7 @@ def main(
         amplfi=amplfi,
         pastro_model=pastro_model,
         data_it=data_it,
+        update_size=update_size,
         time_offset=time_offset,
         outdir=outdir,
         device=device,
