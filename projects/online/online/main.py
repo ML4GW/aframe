@@ -155,7 +155,7 @@ def search(
                 # we won't get to see the peak of the event
                 # so build the event with what we have
                 event = searcher.build_event(
-                    integrated, t0 - 1, len(integrated) - 1
+                    integrated[-1], t0 - 1, len(integrated) - 1
                 )
                 if event is not None:
                     # maybe process event found in the previous frame

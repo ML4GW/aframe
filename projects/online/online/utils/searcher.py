@@ -25,7 +25,7 @@ class Event:
     gpstime: float
     detection_statistic: float
     far: float
-    ifos: str
+    ifos: List[str]
     channels: List[str]
     datadir: Path
     ifo_suffix: Optional[str] = None
@@ -58,13 +58,12 @@ class Event:
         return gps_from_timestamp(t_write)
 
     def __str__(self):
-        ifos = ",".join(self.ifos)
         return (
             "Event("
             f"gpstime={self.gpstime:0.3f}, "
             f"detection_statistic={self.detection_statistic:0.2f}, "
             f"far={self.far:0.3e} Hz, "
-            f"ifos={ifos}, "
+            f"ifos={self.ifos}, "
             f"channels={self.channels}"
             ")"
         )
@@ -83,6 +82,7 @@ class Event:
 
         event = asdict(self)
         _, _ = event.pop("datadir"), event.pop("ifo_suffix", None)
+        event["ifos"] = ",".join(event["ifos"])
         filecontents = str(event)
         filecontents = json.loads(filecontents.replace("'", '"'))
         with open(filename, "w") as f:
