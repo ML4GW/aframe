@@ -1,12 +1,57 @@
-tune:
-  # name:
-  # address:
-  num_workers: 2
-  gpus_per_worker: 2
-  cpus_per_gpu: 8
-  num_samples: 16
-  min_epochs: 8
-  max_epochs: 100
-  reduction_factor: 2
-  # storage_dir:
-  # temp_dir:
+# ray.tune.TuneConfig
+tune_config:
+  mode: "max"
+  metric: "valid_auroc"
+  scheduler: 
+    class_path: ray.tune.schedulers.ASHAScheduler
+    init_args:
+      max_t: 200
+      grace_period: 21
+      reduction_factor: 2
+  num_samples: 8
+  reuse_actors: true
+
+# ray.train.RunConfig
+run_config:
+  name: "my-first-run"
+  storage_path: s3://aframe-test/new-tune/
+  failure_config:
+    class_path: ray.train.FailureConfig
+    init_args:
+      max_failures: 1
+  checkpoint_config:
+    class_path: ray.train.CheckpointConfig
+    init_args:
+      num_to_keep: 5
+      checkpoint_score_attribute: "valid_auroc"
+      checkpoint_score_order: "max"
+  verbose: null
+
+# ray.train.SyncConfig
+sync_config:
+  sync_period: 3600
+  # set so model artifacts (like trace) are synced to s3
+  sync_artifacts: true
+  sync_artifacts_on_checkpoint: false
+
+# ray.init
+ray_init:
+  address: null
+  
+# tune.Tune.param_space
+param_space:
+  model.learning_rate: tune.loguniform(1e-4, 1e-3)
+
+# ray.tune.TuneCallback
+tune_callback:
+  class_path: lightray.callbacks.LightRayReportCheckpointCallback
+  init_args:
+    'on': "validation_end"
+    checkpoint_every: 10
+
+# resources per trial
+cpus_per_trial: 2
+gpus_per_trial: 1
+
+# lightning cli cls
+lightning_cli_cls: train.cli.AframeCLI

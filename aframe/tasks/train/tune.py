@@ -13,34 +13,6 @@ if TYPE_CHECKING:
 
 
 class TuneRemote(RemoteTrainBase, AframeRayTask):
-    name = luigi.Parameter(
-        default="ray-tune",
-        description="Name of the tune job. "
-        "Will be used to group runs in WandB",
-    )
-    search_space = luigi.Parameter(
-        default="train.tune.search_space",
-        description="Import path to the search space file "
-        "used for hyperparameter tuning. This file is expected "
-        "to contain a dictionary named `space` of the search space",
-    )
-    num_samples = luigi.IntParameter(description="Number of trials to run")
-    min_epochs = luigi.IntParameter(
-        description="Minimum number of epochs each trial "
-        "can run before early stopping is considered."
-    )
-    max_epochs = luigi.IntParameter(
-        description="Maximum number of epochs each trial can run"
-    )
-    reduction_factor = luigi.IntParameter(
-        description="Fraction of poor performing trials to stop early"
-    )
-    workers_per_trial = luigi.IntParameter(
-        default=1, description="Number of ray workers to use per trial"
-    )
-    gpus_per_worker = luigi.IntParameter(
-        default=1, description="Number of gpus to allocate to each ray worker"
-    )
     git_url = luigi.Parameter(
         default="git@github.com:ML4GW/aframev2.git",
         description="Git repository url to clone and"
@@ -52,6 +24,10 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         description="Git branch or commit to checkout. "
         "Only used if `dev` is set to True",
     )
+    tune_config = luigi.Parameter(
+        description="Path to the `yaml` file used"
+        " to configure the lightray tune job. "
+    )
 
     # image used locally to connect to the ray cluster
     @property
@@ -62,15 +38,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
     def use_wandb(self):
         # always use wandb logging for tune jobs
         return True
-
-    def get_ip(self):
-        """
-        Get the ip of the ray cluster that
-        is stored via an environment variable
-        """
-        ip = os.getenv("AFRAME_RAY_CLUSTER_IP")
-        ip += ":10001"
-        return f"ray://{ip}"
 
     def configure_cluster(self, cluster: "RayCluster"):
         # get ssh key for git-sync init container
@@ -108,43 +75,17 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
         return LawS3Target(str(path), format=Bytes)
 
     def run(self):
-        from lightray.tune import run
-        from ray.tune.schedulers import ASHAScheduler
+        from lightray.cli import cli
 
-        from train.callbacks import TraceModel
-        from train.cli import AframeCLI
+        args = ["--config", self.tune_config, "--"]
+        args.extend(self.get_args())
 
-        args = self.get_args()
-
-        scheduler = ASHAScheduler(
-            max_t=self.max_epochs,
-            grace_period=self.min_epochs,
-            reduction_factor=self.reduction_factor,
-        )
-        metric_name = "valid_auroc"
-        objective = "max"
+        results = cli(args)
         prefix = "s3://" if str(self.run_dir).startswith("s3://") else ""
-        results = run(
-            cli_cls=AframeCLI,
-            name=self.name,
-            scheduler=scheduler,
-            metric_name=metric_name,
-            objective=objective,
-            search_space=self.search_space,
-            num_samples=self.num_samples,
-            workers_per_trial=self.workers_per_trial,
-            gpus_per_worker=self.gpus_per_worker,
-            cpus_per_gpu=ray_worker().cpus_per_gpu,
-            storage_dir=self.run_dir,
-            callbacks=[TraceModel],
-            address=self.get_ip(),
-            args=args,
-        )
+
         # return path to best model weights from best trial
-        best = results.get_best_result(
-            metric=metric_name, mode=objective, scope="all"
-        )
-        best = best.get_best_checkpoint(metric=metric_name, mode=objective)
+        best = results.get_best_result(scope="all")
+        best = best.get_best_checkpoint()
         weights = os.path.join(prefix, best.path, "model.pt")
 
         # copy the best weights to the output location

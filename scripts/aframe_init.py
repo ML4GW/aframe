@@ -12,14 +12,14 @@ root = Path(__file__).resolve().parent.parent
 TUNE_CONFIGS = [
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "tune.cfg",
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "base.cfg",
-    root / "projects" / "train" / "config.yaml",
-    root / "projects" / "train" / "configs" / "search_space.py",
+    root / "projects" / "train" / "train.yaml",
+    root / "projects" / "train" / "configs" / "tune.yaml",
 ]
 
 SANDBOX_CONFIGS = [
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "bbh.cfg",
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "base.cfg",
-    root / "projects" / "train" / "config.yaml",
+    root / "projects" / "train" / "train.yaml",
 ]
 
 REVIEW_CONFIGS = [
@@ -70,12 +70,11 @@ def copy_configs(
             train_task = (
                 "luigi_Train" if pipeline == "sandbox" else "luigi_TuneRemote"
             )
-            cfg[train_task]["config"] = str(path / "config.yaml")
+            cfg[train_task]["config"] = str(path / "train.yaml")
 
-            # set the search space for the tune pipeline
-            # to the search space file in the init directory
+            # if tuning, set the tune config file
             if pipeline == "tune":
-                cfg[train_task]["search_space"] = str(path / "search_space.py")
+                cfg[train_task]["tune_config"] = str(path / "tune.yaml")
 
             with open(dest, "w") as f:
                 cfg.write(f)
