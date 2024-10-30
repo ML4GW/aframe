@@ -14,7 +14,7 @@ tune_config:
 # ray.train.RunConfig
 run_config:
   name: "my-first-run"
-  storage_path: s3://aframe-test/new-tune/
+  storage_path: ${oc.env:AFRAME_TRAIN_RUN_DIR}
   failure_config:
     class_path: ray.train.FailureConfig
     init_args:
