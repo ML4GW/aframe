@@ -87,9 +87,12 @@ class AframeSandbox(singularity.SingularitySandbox):
         # bind users /local directory for
         # storing large tmp files,
         # e.g. for local storage before
-        # being dumped to s3 by luigi
-        tmpdir = f"/local/{os.getenv('USER')}"
-        volumes[tmpdir] = tmpdir
+        # being dumped to s3 by luigi;
+        # only bind if this directory exists,
+        # since for condor jobs /local might not
+        local = f"/local/{os.getenv('USER')}"
+        if os.path.exists(local):
+            volumes[local] = local
 
         # bind aws directory that contains s3 credentials
         aws_dir = os.path.expanduser("~/.aws/")
@@ -161,7 +164,8 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
         # luigi/law will write temporary files to disk before
         # they are sent to s3
         local = f"/local/{os.getenv('USER')}"
-        env["TMPDIR"] = local
+        if os.path.exists(local):
+            env["TMPDIR"] = local
 
         # location for storing "temporary" files
         # that will eventually be merged (and uploaded to s3)
