@@ -96,10 +96,11 @@ class AframeSandbox(singularity.SingularitySandbox):
         volumes[aws_dir] = aws_dir
 
         # bind AFRAME env var data directories
-        # so users can point to other users directories
+        # so users can point to other users directories.
+        # dont bind s3 directories!
         for path in AFRAME_DATA_DIRS:
             value = os.getenv(path)
-            if value is not None:
+            if value is not None and not value.startswith("s3://"):
                 volumes[value] = value
         return volumes
 
@@ -266,10 +267,11 @@ class AframeRayTask(AframeSingularityTask):
         return cluster
 
     def sandbox_env(self, _):
-        # hacky way to pass cluster ip to sandbox task
-        # that gets run in the container.
+        # set the ray address environment variable
+        # in the container to the cluster ip
+        # Ray will use this env variable to initialize cluster
         env = super().sandbox_env(_)
-        env["AFRAME_RAY_CLUSTER_IP"] = self.ip
+        env["RAY_ADDRESS"] = f"ray://{self.ip}:10001"
         env["WANDB_API_KEY"] = wandb().api_key
         env["WANDB_USERNAME"] = wandb().username
 

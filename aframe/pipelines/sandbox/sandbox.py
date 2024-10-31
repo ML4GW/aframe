@@ -4,7 +4,7 @@ from aframe.base import AframeWrapperTask
 from aframe.tasks import TestingWaveforms, Train
 from aframe.tasks.infer import Infer
 from aframe.tasks.plots.sv import SensitiveVolume
-from aframe.tasks.train.tune import TuneRemote
+from aframe.tasks.train.tune import Tune
 
 
 class SandboxInfer(Infer):
@@ -34,5 +34,5 @@ class Sandbox(_Sandbox):
     train_task = Train
 
 
-class Tune(_Sandbox):
-    train_task = TuneRemote
+class TunePipeline(_Sandbox):
+    train_task = Tune

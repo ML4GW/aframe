@@ -228,6 +228,16 @@ files = [
 ]
 
 [[package]]
+name = "antlr4-python3-runtime"
+version = "4.9.3"
+description = "ANTLR 4.9.3 runtime for Python 3.7"
+optional = false
+python-versions = "*"
+files = [
+    {file = "antlr4-python3-runtime-4.9.3.tar.gz", hash = "sha256:f224469b4168294902bb1efa80a8bf7855f24c99aef99cbefc1bcd3cce77881b"},
+]
+
+[[package]]
 name = "anyio"
 version = "4.6.2.post1"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -248,17 +258,6 @@ typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
 doc = ["Sphinx (>=7.4,<8.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme"]
 test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "pytest-mock (>=3.6.1)", "trustme", "truststore (>=0.9.1)", "uvloop (>=0.21.0b1)"]
 trio = ["trio (>=0.26.1)"]
-
-[[package]]
-name = "appdirs"
-version = "1.4.4"
-description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
-optional = false
-python-versions = "*"
-files = [
-    {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
-    {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
-]
 
 [[package]]
 name = "architectures"
@@ -2382,21 +2381,23 @@ typing = ["mypy (>=1.0.0)", "types-setuptools"]
 
 [[package]]
 name = "lightray"
-version = "0.1.5"
+version = "0.2.3"
 description = "Distribute a LightningCLI hyperparameter search with Ray Tune"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "lightray-0.1.5-py3-none-any.whl", hash = "sha256:5d5b8cdb54e3990d95bfd8147b86f7651cc632685514db9150a069994252a508"},
-    {file = "lightray-0.1.5.tar.gz", hash = "sha256:6677facd2cbb8292bde00efcf1aec13ff6342598503900c4fa4f85a54f1473e1"},
+    {file = "lightray-0.2.3-py3-none-any.whl", hash = "sha256:387d156d307737203c456ded1f6e37a90b1850b0c0e1ca3a3bde53bfa7cd8f9d"},
+    {file = "lightray-0.2.3.tar.gz", hash = "sha256:2f7332e434466a1b0a8bf8c526730411217a94a21f1183618fbdcced558f942e"},
 ]
 
 [package.dependencies]
-jsonargparse = {version = ">=4.29,<5.0", extras = ["signatures"]}
+jsonargparse = {version = ">=4.33.2,<5.0.0", extras = ["signatures"]}
 lightning = "<=2.4.0"
+omegaconf = ">=2.3.0,<3.0.0"
 pyarrow = ">=17.0.0,<18.0.0"
 ray = {version = ">=2.8.0,<3.0.0", extras = ["default", "tune"]}
 s3fs = ">=2024.9.0,<2025.0.0"
+wandb = ">=0.18.5,<0.19.0"
 
 [[package]]
 name = "ligo-segments"
@@ -3250,6 +3251,21 @@ signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
+name = "omegaconf"
+version = "2.3.0"
+description = "A flexible configuration library"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "omegaconf-2.3.0-py3-none-any.whl", hash = "sha256:7b4df175cdb08ba400f45cae3bdcae7ba8365db4d165fc65fd04b050ab63b46b"},
+    {file = "omegaconf-2.3.0.tar.gz", hash = "sha256:d5d4b6d29955cc50ad50c46dc269bcd92c6e00f5f90d23ab5fee7bfca4ba4cc7"},
+]
+
+[package.dependencies]
+antlr4-python3-runtime = "==4.9.*"
+PyYAML = ">=5.1.0"
+
+[[package]]
 name = "opencensus"
 version = "0.11.4"
 description = "A stats collection and distributed tracing framework"
@@ -3372,16 +3388,6 @@ spss = ["pyreadstat (>=1.2.0)"]
 sql-other = ["SQLAlchemy (>=2.0.0)", "adbc-driver-postgresql (>=0.8.0)", "adbc-driver-sqlite (>=0.8.0)"]
 test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
-
-[[package]]
-name = "pathtools"
-version = "0.1.2"
-description = "File system general utilities"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pathtools-0.1.2.tar.gz", hash = "sha256:7c35c5421a39bb82e58018febd90e3b6e5db34c5443aaaf742b3f33d4655f1c0"},
-]
 
 [[package]]
 name = "pegasus-wms-api"
@@ -5562,45 +5568,52 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 
 [[package]]
 name = "wandb"
-version = "0.15.12"
+version = "0.18.5"
 description = "A CLI and library for interacting with the Weights & Biases API."
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "wandb-0.15.12-py3-none-any.whl", hash = "sha256:75c57b5bb8ddae21d45a02f644628585bdd112fea686de3177099a0996f1c41c"},
-    {file = "wandb-0.15.12.tar.gz", hash = "sha256:c344d92fb8044b072a6138afd9adc5d3801ad050cf11378fe2af2fe899dcca84"},
+    {file = "wandb-0.18.5-py3-none-any.whl", hash = "sha256:49ba7bafff0cecff2159bc6fb68176d6e5561d744a9bd6a63753e7077a74e26d"},
+    {file = "wandb-0.18.5-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:c9d903dbff9517843881d9a0d561d82bcf0e949d8b8c03aafa35aceef31ea7e0"},
+    {file = "wandb-0.18.5-py3-none-macosx_11_0_arm64.whl", hash = "sha256:33d3e5765a9bb305558af4f291338cf8723856d2b3a3c377414cd8f8b711baa4"},
+    {file = "wandb-0.18.5-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:9ff72e7a45e998e2a7ff42645ec76bedabf17ea51fd112ae2837dce5023ac0cc"},
+    {file = "wandb-0.18.5-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:136a79c06c114c225add8f977acec23d53df5e2a4d2803700a5eb5501ae40160"},
+    {file = "wandb-0.18.5-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:350fc0f6f5bc23f4baeef12ccfea6daa89d1a5b84948d72d48249cbb652ab22a"},
+    {file = "wandb-0.18.5-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:4e31741eefa2b2a83aa9f69ef27ce6112fee6f4c792a9e2996cf374a74465276"},
+    {file = "wandb-0.18.5-py3-none-win32.whl", hash = "sha256:b2a25e9caf63c12e5de1cbdb30b13f76553c04754f9ff404080f70386adb8384"},
+    {file = "wandb-0.18.5-py3-none-win_amd64.whl", hash = "sha256:83b619167eb2ffdd1188cba3805ccad158f6fd7fc06bef43daf6d2729a787fa0"},
+    {file = "wandb-0.18.5.tar.gz", hash = "sha256:75ef47ba7fc709b787be05e558f1635d99246afeacc9369031c1be6e5b620ce6"},
 ]
 
 [package.dependencies]
-appdirs = ">=1.4.3"
-Click = ">=7.1,<8.0.0 || >8.0.0"
+click = ">=7.1,<8.0.0 || >8.0.0"
 docker-pycreds = ">=0.4.0"
-GitPython = ">=1.0.0,<3.1.29 || >3.1.29"
-pathtools = "*"
+gitpython = ">=1.0.0,<3.1.29 || >3.1.29"
+platformdirs = "*"
 protobuf = [
-    {version = ">=3.15.0,<4.21.0 || >4.21.0,<5", markers = "python_version == \"3.9\" and sys_platform == \"linux\""},
-    {version = ">=3.19.0,<4.21.0 || >4.21.0,<5", markers = "python_version > \"3.9\" or sys_platform != \"linux\""},
+    {version = ">=3.15.0,<4.21.0 || >4.21.0,<5.28.0 || >5.28.0,<6", markers = "python_version == \"3.9\" and sys_platform == \"linux\""},
+    {version = ">=3.19.0,<4.21.0 || >4.21.0,<5.28.0 || >5.28.0,<6", markers = "python_version > \"3.9\" or sys_platform != \"linux\""},
 ]
 psutil = ">=5.0.0"
-PyYAML = "*"
+pyyaml = "*"
 requests = ">=2.0.0,<3"
-sentry-sdk = ">=1.0.0"
+sentry-sdk = ">=2.0.0"
 setproctitle = "*"
 setuptools = "*"
-typing-extensions = {version = "*", markers = "python_version < \"3.10\""}
+typing-extensions = {version = ">=4.4,<5", markers = "python_version < \"3.12\""}
 
 [package.extras]
-async = ["httpx (>=0.22.0)"]
 aws = ["boto3"]
 azure = ["azure-identity", "azure-storage-blob"]
 gcp = ["google-cloud-storage"]
+importers = ["filelock", "mlflow", "polars (<=1.2.1)", "rich", "tenacity"]
 kubeflow = ["google-cloud-storage", "kubernetes", "minio", "sh"]
-launch = ["PyYAML (>=6.0.0)", "awscli", "azure-containerregistry", "azure-identity", "azure-storage-blob", "boto3", "botocore", "chardet", "google-auth", "google-cloud-artifact-registry", "google-cloud-compute", "google-cloud-storage", "iso8601", "kubernetes", "nbconvert", "nbformat", "optuna", "typing-extensions"]
-media = ["bokeh", "moviepy", "numpy", "pillow", "plotly", "rdkit-pypi", "soundfile"]
+launch = ["awscli", "azure-containerregistry", "azure-identity", "azure-storage-blob", "boto3", "botocore", "chardet", "google-auth", "google-cloud-aiplatform", "google-cloud-artifact-registry", "google-cloud-compute", "google-cloud-storage", "iso8601", "jsonschema", "kubernetes", "kubernetes-asyncio", "nbconvert", "nbformat", "optuna", "pydantic", "pyyaml (>=6.0.0)", "tomli", "typing-extensions"]
+media = ["bokeh", "imageio", "moviepy", "numpy", "pillow", "plotly (>=5.18.0)", "rdkit", "soundfile"]
 models = ["cloudpickle"]
-nexus = ["wandb-core (>=0.16.0b1)"]
 perf = ["orjson"]
 sweeps = ["sweeps (>=0.2.0)"]
+workspaces = ["wandb-workspaces"]
 
 [[package]]
 name = "wrapt"
@@ -5882,4 +5895,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "44573a72d3417025689ab1e512c21bab301dcf3996f47e38eba78ca9ef877637"
+content-hash = "952f33fb873b37bed8c1cab5f756c0c7f705be58d5d82e464fe2ba0f458f2109"

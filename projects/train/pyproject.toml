@@ -21,7 +21,7 @@ lightning = "2.2.1"
 jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
 # plotting/logging dependencies
-wandb = "^0.15"
+wandb = ">=0.15"
 bokeh = "^3.0"
 
 # hyperparameter search
@@ -47,7 +47,7 @@ architectures = {path = "../../libs/architectures", develop = true}
 bayesian-optimization = "^1.4.3"
 filelock = "^3.13.1"
 s3fs = "^2024"
-lightray = "^0.1.5"
+lightray = ">=0.2.3"
 
 [[tool.poetry.source]]
 name = "torch"

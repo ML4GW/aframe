@@ -10,7 +10,6 @@ from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers import WandbLogger
-from ray.train.lightning import RayTrainReportCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
@@ -126,36 +125,3 @@ class SaveAugmentedBatch(Callback):
                         os.path.join(save_dir, "wandb_url.txt"), "w"
                     ) as f:
                         f.write(url)
-
-
-class TraceModel(RayTrainReportCallback):
-    """
-    Callback to trace model at the end of each Ray Tune trial epoch
-
-    Inherit from `RayTrainReportCallback` to get access to the
-    trial information that is set in its __init__
-    """
-
-    def on_train_epoch_end(self, trainer, pl_module) -> None:
-        # Creates a checkpoint dir with fixed name
-        tmpdir = os.path.join(self.tmpdir_prefix, str(trainer.current_epoch))
-        os.makedirs(tmpdir, exist_ok=True)
-
-        device = pl_module.device
-
-        # generate sample input to infer shape,
-        # making sure to augment on the device
-        # where the model lives
-        [X], waveforms = next(iter(trainer.train_dataloader))
-        X = X.to(device)
-        X, _ = trainer.datamodule.augment(X, waveforms)
-        trace = torch.jit.trace(pl_module.model.to("cpu"), X.to("cpu"))
-
-        # trace the model on cpu and then
-        # move model back to original device
-        pl_module.model.to(device)
-
-        # Save trace checkpoint to local
-        ckpt_path = os.path.join(tmpdir, "model.pt")
-        with open(ckpt_path, "wb") as f:
-            torch.jit.save(trace, f)
