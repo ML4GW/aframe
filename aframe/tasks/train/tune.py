@@ -135,7 +135,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
 
 @inherits(TuneLocal, TuneRemote)
-class Tune(AframeWrapperTask):
+class TuneTask(AframeWrapperTask):
     """
     Class that dynamically chooses between
     remote training on nautilus or local training on LDG.

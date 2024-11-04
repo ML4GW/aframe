@@ -142,7 +142,7 @@ class TrainBase(law.Task):
 
 class RemoteParameters(law.Task):
     remote_image = luigi.Parameter(
-        default="ghcr.io/ml4gw/aframev2/train:main",
+        default="ghcr.io/ml4gw/aframe/train:main",
         description="The container image to use for "
         "training on the nautilus cluster ",
     )
