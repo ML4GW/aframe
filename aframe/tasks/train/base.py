@@ -113,7 +113,6 @@ class TrainBase(law.Task):
 
     def get_args(self):
         args = [
-            "fit",
             "--config",
             self.config,
             "--seed_everything",

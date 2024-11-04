@@ -42,7 +42,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
         args = self.get_args()
         if len(self.gpus.split(",")) > 1:
             args.append("--trainer.strategy=ddp")
-        cmd = [sys.executable, "-m", "train"] + args
+        cmd = [sys.executable, "-m", "train", "fit"] + args
         cmd_str = shlex.join(cmd)
         logger.info(f"Executing command {cmd_str}")
         stream_command(cmd)
@@ -109,13 +109,13 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         return json_string
 
     def get_args(self):
-        # get args from base class removing the first two
-        # which reference the config file. We'll
-        # need to set this as an environment variable of
-        # raw yaml content to run remotely.
+        # get args from local train base class, removing the first three
+        # which reference the path to a local config file.
+        # For remote training, we'll need to set the config
+        # as an environment variable of raw yaml content
         args = super().get_args()
         args = args[2:]
-        args = ["--config", self.get_config()] + args
+        args = ["fit", "--config", self.get_config()] + args
         return args
 
     def output(self):
