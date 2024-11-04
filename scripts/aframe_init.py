@@ -68,7 +68,7 @@ def copy_configs(
             # set the train config file
             # to the one in the init directory
             train_task = (
-                "luigi_Train" if pipeline == "sandbox" else "luigi_TuneRemote"
+                "luigi_Train" if pipeline == "sandbox" else "luigi_TuneTask"
             )
             cfg[train_task]["config"] = str(path / "train.yaml")
 

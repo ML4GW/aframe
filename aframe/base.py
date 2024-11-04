@@ -258,7 +258,7 @@ class AframeRayTask(AframeSingularityTask):
     """
 
     container = luigi.Parameter(
-        default="ghcr.io/ml4gw/aframev2/train:main",
+        default="ghcr.io/ml4gw/aframe/train:main",
         significant=False,
         description="The container image used for launching ray workers",
     )

@@ -33,9 +33,6 @@ class TuneLocal(TrainBase, AframeSingularityTask):
 
         args = ["--config", self.tune_config, "--"]
         lightning_args = self.get_args()
-        lightning_args.pop(
-            0
-        )  # remove "fit" subcommand since lightray takes care of it
         args.extend(lightning_args)
 
         results = cli(args)
@@ -135,7 +132,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
 
 @inherits(TuneLocal, TuneRemote)
-class Tune(AframeWrapperTask):
+class TuneTask(AframeWrapperTask):
     """
     Class that dynamically chooses between
     remote training on nautilus or local training on LDG.
