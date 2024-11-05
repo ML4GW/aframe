@@ -1,1 +1,1 @@
-from .sandbox import Sandbox, TunePipeline
+from .sandbox import Sandbox, Tune
