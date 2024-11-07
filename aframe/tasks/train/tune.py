@@ -114,9 +114,6 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
         args = ["--config", self.tune_config, "--"]
         lightning_args = self.get_args()
-        lightning_args.pop(
-            0
-        )  # remove "fit" subcommand since lightray takes care of it
         args.extend(lightning_args)
 
         results = cli(args)

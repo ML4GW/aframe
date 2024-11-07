@@ -58,11 +58,6 @@ class TrainBaseParameters(law.Task):
         "files used for training",
         default=paths().train_datadir,
     )
-    ckpt_path = PathParameter(
-        default="",
-        description="Path to checkpoint file from which "
-        "to restart training",
-    )
 
 
 @inherits(TrainBaseParameters)
