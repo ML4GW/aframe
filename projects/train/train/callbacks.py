@@ -135,4 +135,4 @@ class GradientTracker(Callback):
     def on_before_optimizer_step(self, trainer, pl_module, optimizer):
         norms = grad_norm(pl_module, norm_type=self.norm_type)
         total_norm = norms[f"grad_{float(self.norm_type)}_norm_total"]
-        self.log("grad_norm", total_norm)
+        self.log(f"grad_norm_{self.norm_type}", total_norm)
