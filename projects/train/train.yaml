@@ -81,11 +81,13 @@ trainer:
         # save_dir:
         flush_logs_every_n_steps: 10
   callbacks:
-    - class_path: lightning.pytorch.callbacks.EarlyStopping
-      init_args:
-        monitor: "valid_auroc"
-        mode: "max"
-        patience: null
+    # Uncomment below if you want to stop early based on validation score
+    # - class_path: lightning.pytorch.callbacks.EarlyStopping
+    #   init_args:
+    #     monitor: "valid_auroc"
+    #     mode: "max"
+    #     patience:
+
     # custom model checkpoint for saving and
     # tracing best model at end of traiing
     # that will be used for downstream export
