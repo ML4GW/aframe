@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.utilities import grad_norm
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
@@ -125,3 +126,13 @@ class SaveAugmentedBatch(Callback):
                         os.path.join(save_dir, "wandb_url.txt"), "w"
                     ) as f:
                         f.write(url)
+
+
+class GradientTracker(Callback):
+    def __init__(self, norm_type: int = 2):
+        self.norm_type = norm_type
+
+    def on_before_optimizer_step(self, trainer, pl_module, optimizer):
+        norms = grad_norm(pl_module, norm_type=self.norm_type)
+        total_norm = norms[f"grad_{float(self.norm_type)}_norm_total"]
+        self.log("grad_norm", total_norm)
