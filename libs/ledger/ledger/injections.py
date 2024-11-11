@@ -373,6 +373,24 @@ class _WaveformGenerator:
             **params,
         )
 
+        if self.waveform_approximant == "IMRPhenomXPHM":
+            # IMRPhenomXPHM has a rare glitch where it produces a waveform
+            # with an unphysical amplitude despite using reasonable parameters.
+            # See https://git.ligo.org/reed.essick/rpo4-injection-triage/-/blob/main/rpo4a/README.md?ref_type=heads # noqa
+            # The glitch is deterministic, but fragile, such that changing
+            # a digit 18 places after the decimal can fix the glitch.
+            # So, this is a little hacky, but if any waveform has value larger
+            # than should be possible, we can tweak the minimum frequency
+            # and re-generate.
+            if max(abs(hp)) > 1e-17:
+                hp, hc = get_td_waveform(
+                    approximant=self.waveform_approximant,
+                    f_lower=minimum_frequency - 1,
+                    f_ref=reference_frequency,
+                    delta_t=1 / self.sample_rate,
+                    **params,
+                )
+
         t_final = hp.sample_times.data[-1]
         stacked = np.stack([hp.data, hc.data])
         stacked = self.align_waveforms(stacked, t_final)
