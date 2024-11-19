@@ -1,7 +1,7 @@
 port: 5005
 app:
   init_args:
-    weights: ${oc.env:AFRAME_TRAIN_RUN_DIR}/best.ckpt
+    weights: ${oc.env:AFRAME_TRAIN_RUN_DIR}/model.pt
     data_dir: ${oc.env:AFRAME_TEST_DATA_DIR}
     results_dir: ${oc.env:AFRAME_RESULTS_DIR}
     fftlength: 2
