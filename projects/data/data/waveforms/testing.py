@@ -28,6 +28,7 @@ def testing_waveforms(
     snr_threshold: float,
     psd_file: Path,
     output_dir: Path,
+    jitter: float = 0.1,
     seed: Optional[int] = None,
 ):
     """
@@ -85,6 +86,8 @@ def testing_waveforms(
         output_dir:
             Directory to which the waveform file and rejected parameter
             file will be written
+        jitter:
+            Scale of random jitter to add to injection times
         seed:
             Random seed to use for reproducibility
 
@@ -113,6 +116,10 @@ def testing_waveforms(
         waveform_duration,
     )
     n_samples = len(injection_times)
+
+    # add random jitter to injection times
+    jitter = np.random.uniform(-jitter, jitter, size=len(n_samples))
+    injection_times += jitter
 
     # calculate psd that will be used for snr calculation
     df = 1 / waveform_duration
