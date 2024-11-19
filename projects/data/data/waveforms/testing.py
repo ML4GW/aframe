@@ -86,6 +86,8 @@ def testing_waveforms(
         output_dir:
             Directory to which the waveform file and rejected parameter
             file will be written
+        jitter:
+            Scale of random jitter to add to injection times
         seed:
             Random seed to use for reproducibility
 
