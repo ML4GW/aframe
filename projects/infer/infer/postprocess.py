@@ -47,8 +47,8 @@ class Postprocessor:
         self.offset = int(psd_length * inference_sampling_rate)
 
         # convert our window lengths to sample units
-        self.integration_window_size = int(
-            inference_sampling_rate * integration_window_length
+        self.integration_window_size = (
+            int(inference_sampling_rate * integration_window_length) + 1
         )
         self.cluster_window_size = int(
             inference_sampling_rate * cluster_window_length
