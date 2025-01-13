@@ -6,4 +6,4 @@ from .supervised import (
     SupervisedSpectrogramDomainResNet,
     SupervisedTimeDomainResNet,
 )
-from .concat import ConcatArchitecture, ConcatResNet
+from .concat import ConcatResNet
