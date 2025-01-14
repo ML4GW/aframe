@@ -118,7 +118,7 @@ def testing_waveforms(
     n_samples = len(injection_times)
 
     # add random jitter to injection times
-    jitter = np.random.uniform(-jitter, jitter, size=len(n_samples))
+    jitter = np.random.uniform(-jitter, jitter, size=n_samples)
     injection_times += jitter
 
     # calculate psd that will be used for snr calculation
