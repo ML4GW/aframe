@@ -32,6 +32,52 @@ UPDATE_SIZE = 1
 SECONDS_PER_DAY = 86400
 
 
+def _event_processing_worker(queue: Queue):
+    while True:
+        try:
+            args = queue.get()
+            if args[0] is None:
+                continue
+            process_event(*args)
+        except Empty:
+            time.sleep(1e-3)
+
+
+def _submit_detection(
+    event: Event,
+    gdb: GraceDb,
+    outdir: Path,
+    graceid: str,
+):
+    # write event information to disk
+    # and submit it to gracedb
+    event.write(outdir)
+    response = gdb.submit(event)
+    graceid.value = response.json()["graceid"]
+
+
+def _write_buffer_worker(queue: Queue):
+    while True:
+        try:
+            args = queue.get()
+            if args[0] is None:
+                continue
+            _write_buffers(*args)
+        except Empty:
+            time.sleep(1)
+
+
+def _write_buffers(
+    event_time: float,
+    input_buffer: InputBuffer,
+    output_buffer: OutputBuffer,
+    outdir: Path,
+):
+    path = outdir / f"event_{event_time}"
+    input_buffer.write(path / "strain.hdf5", event_time)
+    output_buffer.write(path / "network_output.hdf5", event_time)
+
+
 def load_model(model: Architecture, weights: Path):
     checkpoint = torch.load(weights, map_location="cpu")
     arch_weights = {
@@ -80,30 +126,6 @@ def get_time_offset(
         time_offset -= abs(aframe_right_pad) - fduration / 2
 
     return time_offset
-
-
-def _event_processing_worker(queue: Queue):
-    while True:
-        try:
-            args = queue.get()
-            if args[0] is None:
-                continue
-            process_event(*args)
-        except Empty:
-            time.sleep(1e-3)
-
-
-def _submit_detection(
-    event: Event,
-    gdb: GraceDb,
-    outdir: Path,
-    graceid: str,
-):
-    # write event information to disk
-    # and submit it to gracedb
-    event.write(outdir)
-    response = gdb.submit(event)
-    graceid.value = response.json()["graceid"]
 
 
 def process_event(
@@ -187,8 +209,17 @@ def search(
     # item in the queue to start
     event_queue = Queue()
     event_queue.put((None,))
-    p = Process(target=_event_processing_worker, args=(event_queue,))
-    p.start()
+    event_process = Process(
+        target=_event_processing_worker, args=(event_queue,)
+    )
+    event_process.start()
+
+    buffer_write_queue = Queue()
+    buffer_write_queue.put((None,))
+    write_process = Process(
+        target=_write_buffer_worker, args=(buffer_write_queue,)
+    )
+    write_process.start()
 
     # Set up variables for writing buffers to disk
     last_event_written = True
@@ -311,12 +342,16 @@ def search(
         # to get a more complete picture
         if (
             not last_event_written
-            and t0 > last_event_time + output_buffer.buffer_length_length / 2
+            and t0 > last_event_time + output_buffer.buffer_length / 2
         ):
-            path = outdir / f"event_{event.gpstime}"
-            input_buffer.write(path / "strain.hdf5", event.gpstime)
-            output_buffer.write(path / "network_output.hdf5", event.gpstime)
-            last_event_written = True
+            buffer_write_queue.put(
+                (
+                    last_event_time,
+                    input_buffer,
+                    output_buffer,
+                    outdir,
+                )
+            )
 
 
 def main(
