@@ -24,6 +24,7 @@ Stage: build
 # we'll hard pin it to the value we need.
 # TODO: there's got to be a better solution here
 python -m pip install poetry
+pip install poetry-plugin-export
 cd /opt/aframe/projects/train
 poetry export -o requirements.txt --without-hashes \
     && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
