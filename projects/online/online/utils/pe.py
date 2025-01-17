@@ -25,9 +25,9 @@ def run_amplfi(
     # get pe data from the buffer, whitene
     psd_strain, pe_strain = input_buffer.get_pe_data(event_time)
     psd_strain = psd_strain.to(device)
-    pe_strain = pe_strain.to(device)
-    pe_psd = spectral_density(psd_strain)
-    whitened = pe_whitener(pe_strain[None], pe_psd[None])
+    pe_strain = pe_strain.to(device)[None]
+    pe_psd = spectral_density(psd_strain)[None]
+    whitened = pe_whitener(pe_strain, pe_psd)
 
     freqs = torch.fft.rfftfreq(
         whitened.shape[-1], d=1 / pe_whitener.sample_rate
