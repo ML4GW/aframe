@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -121,3 +123,34 @@ def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
     return GraceDb(service_url=server, write_dir=write_dir)
+
+
+def authenticate():
+    # TODO: don't hardcode keytab locations
+    subprocess.run(
+        [
+            "htgettoken",
+            "-v",
+            "-a",
+            "vault.ligo.org",
+            "-i",
+            "igwn",
+            "-r",
+            "aframe-1-scitoken",
+            "--scopes=gracedb.read",
+            "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
+            "--nooidc",
+        ]
+    )
+
+    subprocess.run(
+        [
+            "kinit",
+            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
+            "-k",
+            "-t",
+            os.path.expanduser(
+                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
+            ),
+        ]
+    )

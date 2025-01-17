@@ -13,7 +13,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import gracedb_factory
+from online.utils.gdb import authenticate, gracedb_factory
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -280,6 +280,8 @@ def main(
     output_buffer_length: int = 8,
     device: str = "cpu",
 ):
+    # run htgettoken and kinit
+    authenticate()
     gdb = gracedb_factory(server, outdir)
 
     # initialize a buffer for storing recent strain data,
