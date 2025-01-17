@@ -41,5 +41,6 @@ server: "local"
 ifo_suffix: 
 input_buffer_length: 75
 output_buffer_length: 8
+write_buffers: false
 device: "cuda"
 verbose: true

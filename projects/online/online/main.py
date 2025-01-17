@@ -1,9 +1,7 @@
 import logging
-import time
 from ctypes import c_wchar_p
-from multiprocessing import Process, Queue, Value
+from multiprocessing import Process, Value
 from pathlib import Path
-from queue import Empty
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
 import torch
@@ -16,6 +14,7 @@ from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
+from online.utils.mp import initialize_queue_processor
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -32,42 +31,25 @@ UPDATE_SIZE = 1
 SECONDS_PER_DAY = 86400
 
 
-def _event_processing_worker(queue: Queue):
-    while True:
-        try:
-            args = queue.get()
-            if args[0] is None:
-                continue
-            process_event(*args)
-        except Empty:
-            time.sleep(1e-3)
-
-
 def _submit_detection(
     event: Event,
     gdb: GraceDb,
     outdir: Path,
+    pastro_model: "Pastro",
     graceid: str,
 ):
     # write event information to disk
     # and submit it to gracedb
     event.write(outdir)
+    logging.info("Wrote event to file")
     response = gdb.submit(event)
     graceid.value = response.json()["graceid"]
+    # calculate and submit pastro
+    pastro = pastro_model(event.detection_statistic)
+    gdb.submit_pastro(float(pastro), graceid.value)
 
 
-def _write_buffer_worker(queue: Queue):
-    while True:
-        try:
-            args = queue.get()
-            if args[0] is None:
-                continue
-            _write_buffers(*args)
-        except Empty:
-            time.sleep(1)
-
-
-def _write_buffers(
+def write_buffers(
     event_time: float,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
@@ -76,6 +58,7 @@ def _write_buffers(
     path = outdir / f"event_{event_time}"
     input_buffer.write(path / "strain.hdf5", event_time)
     output_buffer.write(path / "network_output.hdf5", event_time)
+    logging.info("Wrote buffers to disk")
 
 
 def load_model(model: Architecture, weights: Path):
@@ -145,7 +128,8 @@ def process_event(
 ):
     # Define variable to be shared between parent and child process
     graceid = Value(c_wchar_p, "")
-    p = Process(target=_submit_detection, args=(event, gdb, outdir, graceid))
+    args = (event, gdb, outdir, pastro_model, graceid)
+    p = Process(target=_submit_detection, args=args)
     p.start()
 
     # after event is submitted, run AMPLFI
@@ -171,11 +155,6 @@ def process_event(
     p.close()
     gdb.submit_pe(posterior, skymap, graceid.value)
 
-    # calculate and submit pastro
-    pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-    pass
-
 
 @torch.no_grad()
 def search(
@@ -188,6 +167,7 @@ def search(
     searcher: Searcher,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
+    write_buffers: bool,
     aframe: Architecture,
     amplfi: Architecture,
     pastro_model: "Pastro",
@@ -205,25 +185,10 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    # Set up a queue of events to be processed, and put a dummy
-    # item in the queue to start
-    event_queue = Queue()
-    event_queue.put((None,))
-    event_process = Process(
-        target=_event_processing_worker, args=(event_queue,)
-    )
-    event_process.start()
-
-    buffer_write_queue = Queue()
-    buffer_write_queue.put((None,))
-    write_process = Process(
-        target=_write_buffer_worker, args=(buffer_write_queue,)
-    )
-    write_process.start()
-
-    # Set up variables for writing buffers to disk
-    last_event_written = True
-    last_event_time = 0
+    # Set up a queue of events to be processed and written
+    event_queue = initialize_queue_processor(process_event, sleep=1e-3)
+    if write_buffers:
+        buffer_write_queue = initialize_queue_processor(write_buffers, sleep=1)
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -341,7 +306,8 @@ def search(
         # write buffers to disk, waiting a little while after the event
         # to get a more complete picture
         if (
-            not last_event_written
+            write_buffers
+            and not last_event_written
             and t0 > last_event_time + output_buffer.buffer_length / 2
         ):
             buffer_write_queue.put(
@@ -384,6 +350,7 @@ def main(
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
+    write_buffers: bool = False,
     samples_per_event: int = 20000,
     nside: int = 32,
     device: str = "cpu",
@@ -457,6 +424,9 @@ def main(
             Length of strain data buffer in seconds
         output_buffer_length:
              Length of inference output buffer in seconds
+        write_buffers:
+            Flag that determines whether to write buffer contents
+            to disk after an event
         samples_per_event:
             Number of posterior samples to generate per event
             for creating skymaps and other parameter estimation
@@ -597,6 +567,7 @@ def main(
         searcher=searcher,
         input_buffer=input_buffer,
         output_buffer=output_buffer,
+        write_buffers=write_buffers,
         aframe=aframe,
         amplfi=amplfi,
         pastro_model=pastro_model,
