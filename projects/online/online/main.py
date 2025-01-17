@@ -189,7 +189,11 @@ def search(
     event_queue.put((None,))
     p = Process(target=_event_processing_worker, args=(event_queue,))
     p.start()
-    #
+
+    # Set up variables for writing buffers to disk
+    last_event_written = True
+    last_event_time = 0
+
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         # if this frame was not analysis ready
@@ -203,21 +207,25 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    process_event(
-                        event,
-                        gdb,
-                        input_buffer,
-                        spectral_density,
-                        pe_whitener,
-                        amplfi,
-                        scaler,
-                        pastro_model,
-                        samples_per_event,
-                        inference_params,
-                        outdir,
-                        nside,
-                        device,
+                    event_queue.put(
+                        (
+                            event,
+                            gdb,
+                            input_buffer,
+                            spectral_density,
+                            pe_whitener,
+                            amplfi,
+                            scaler,
+                            pastro_model,
+                            samples_per_event,
+                            inference_params,
+                            outdir,
+                            nside,
+                            device,
+                        )
                     )
+                    last_event_written = False
+                    last_event_time = event.gpstime
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -278,22 +286,6 @@ def search(
 
         # if we found an event, add it to the processing queue!
         if event is not None:
-<<<<<<< HEAD
-            process_event(
-                event,
-                gdb,
-                input_buffer,
-                spectral_density,
-                pe_whitener,
-                amplfi,
-                scaler,
-                pastro_model,
-                samples_per_event,
-                inference_params,
-                outdir,
-                nside,
-                device,
-=======
             event_queue.put(
                 (
                     event,
@@ -304,14 +296,27 @@ def search(
                     amplfi,
                     scaler,
                     pastro_model,
+                    samples_per_event,
+                    inference_params,
                     outdir,
+                    nside,
                     device,
                 )
->>>>>>> 0fc95dd (Added multi-processing for event submission and running AMPLFI)
             )
             searcher.detecting = False
+            last_event_written = False
+            last_event_time = event.gpstime
 
-        # TODO write buffers to disk:
+        # write buffers to disk, waiting a little while after the event
+        # to get a more complete picture
+        if (
+            not last_event_written
+            and t0 > last_event_time + output_buffer.buffer_length_length / 2
+        ):
+            path = outdir / f"event_{event.gpstime}"
+            input_buffer.write(path / "strain.hdf5", event.gpstime)
+            output_buffer.write(path / "network_output.hdf5", event.gpstime)
+            last_event_written = True
 
 
 def main(
