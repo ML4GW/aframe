@@ -190,6 +190,10 @@ def search(
     if write_buffers:
         buffer_write_queue = initialize_queue_processor(write_buffers, sleep=1)
 
+    # Set up variables for writing buffers to disk
+    last_event_written = True
+    last_event_time = 0
+
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         # if this frame was not analysis ready
