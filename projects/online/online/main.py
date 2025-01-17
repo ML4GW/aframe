@@ -1,5 +1,9 @@
 import logging
+import time
+from ctypes import c_wchar_p
+from multiprocessing import Process, Queue, Value
 from pathlib import Path
+from queue import Empty
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
 import torch
@@ -78,6 +82,30 @@ def get_time_offset(
     return time_offset
 
 
+def _event_processing_worker(queue: Queue):
+    while True:
+        try:
+            args = queue.get()
+            if args[0] is None:
+                continue
+            process_event(*args)
+        except Empty:
+            time.sleep(1e-3)
+
+
+def _submit_detection(
+    event: Event,
+    gdb: GraceDb,
+    outdir: Path,
+    graceid: str,
+):
+    # write event information to disk
+    # and submit it to gracedb
+    event.write(outdir)
+    response = gdb.submit(event)
+    graceid.value = response.json()["graceid"]
+
+
 def process_event(
     event: Event,
     gdb: GraceDb,
@@ -93,10 +121,10 @@ def process_event(
     nside: int,
     device: str,
 ):
-    # write event information to disk
-    # and submit it to gracedb
-    event.write(outdir)
-    response = gdb.submit(event)
+    # Define variable to be shared between parent and child process
+    graceid = Value(c_wchar_p, "")
+    p = Process(target=_submit_detection, args=(event, gdb, outdir, graceid))
+    p.start()
 
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
@@ -114,10 +142,12 @@ def process_event(
         device,
     )
 
+    # Wait for event submission to finish, and then
     # submit the posterior and skymap to gracedb
     # using the graceid from the event submission
-    graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
+    p.join()
+    p.close()
+    gdb.submit_pe(posterior, skymap, graceid.value)
 
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)
@@ -153,6 +183,12 @@ def search(
     # was analysis ready or not
     in_spec = False
 
+    # Set up a queue of events to be processed, and put a dummy
+    # item in the queue to start
+    event_queue = Queue()
+    event_queue.put((None,))
+    p = Process(target=_event_processing_worker, args=(event_queue,))
+    p.start()
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -240,8 +276,9 @@ def search(
         if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
 
-        # if we found an event, process it!
+        # if we found an event, add it to the processing queue!
         if event is not None:
+<<<<<<< HEAD
             process_event(
                 event,
                 gdb,
@@ -256,6 +293,21 @@ def search(
                 outdir,
                 nside,
                 device,
+=======
+            event_queue.put(
+                (
+                    event,
+                    gdb,
+                    input_buffer,
+                    spectral_density,
+                    pe_whitener,
+                    amplfi,
+                    scaler,
+                    pastro_model,
+                    outdir,
+                    device,
+                )
+>>>>>>> 0fc95dd (Added multi-processing for event submission and running AMPLFI)
             )
             searcher.detecting = False
 
