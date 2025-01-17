@@ -1,4 +1,6 @@
 import logging
+from ctypes import c_wchar_p
+from multiprocessing import Process, Value
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
@@ -14,6 +16,7 @@ from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import gracedb_factory
+from online.utils.mp import initialize_queue_processor
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -25,6 +28,36 @@ if TYPE_CHECKING:
 
 # seconds of data per update
 UPDATE_SIZE = 1
+
+
+def _submit_detection(
+    event: Event,
+    gdb: GraceDb,
+    outdir: Path,
+    pastro_model: "Pastro",
+    graceid: str,
+):
+    # write event information to disk
+    # and submit it to gracedb
+    event.write(outdir)
+    logging.info("Wrote event to file")
+    response = gdb.submit(event)
+    graceid.value = response.json()["graceid"]
+    # calculate and submit pastro
+    pastro = pastro_model(event.detection_statistic)
+    gdb.submit_pastro(float(pastro), graceid.value)
+
+
+def write_buffers(
+    event_time: float,
+    input_buffer: InputBuffer,
+    output_buffer: OutputBuffer,
+    outdir: Path,
+):
+    path = outdir / f"event_{event_time}"
+    input_buffer.write(path / "strain.hdf5", event_time)
+    output_buffer.write(path / "network_output.hdf5", event_time)
+    logging.info("Wrote buffers to disk")
 
 
 def load_model(model: Architecture, weights: Path):
@@ -90,10 +123,11 @@ def process_event(
     outdir: Path,
     device: str,
 ):
-    # write event information to disk
-    # and submit it to gracedb
-    event.write(outdir)
-    response = gdb.submit(event)
+    # Define variable to be shared between parent and child process
+    graceid = Value(c_wchar_p, "")
+    args = (event, gdb, outdir, pastro_model, graceid)
+    p = Process(target=_submit_detection, args=args)
+    p.start()
 
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
@@ -109,15 +143,12 @@ def process_event(
         device,
     )
 
+    # Wait for event submission to finish, and then
     # submit the posterior and skymap to gracedb
     # using the graceid from the event submission
-    graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, skymap, graceid)
-
-    # calculate and submit pastro
-    pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid)
-    pass
+    p.join()
+    p.close()
+    gdb.submit_pe(posterior, skymap, graceid.value)
 
 
 @torch.no_grad()
@@ -131,6 +162,7 @@ def search(
     searcher: Searcher,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
+    write_buffers: bool,
     aframe: Architecture,
     amplfi: Architecture,
     pastro_model: "Pastro",
@@ -145,7 +177,15 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    #
+    # Set up a queue of events to be processed and written
+    event_queue = initialize_queue_processor(process_event, sleep=1e-3)
+    if write_buffers:
+        buffer_write_queue = initialize_queue_processor(write_buffers, sleep=1)
+
+    # Set up variables for writing buffers to disk
+    last_event_written = True
+    last_event_time = 0
+
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         # if this frame was not analysis ready
@@ -159,18 +199,22 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    process_event(
-                        event,
-                        gdb,
-                        input_buffer,
-                        spectral_density,
-                        pe_whitener,
-                        amplfi,
-                        scaler,
-                        pastro_model,
-                        outdir,
-                        device,
+                    event_queue.put(
+                        (
+                            event,
+                            gdb,
+                            input_buffer,
+                            spectral_density,
+                            pe_whitener,
+                            amplfi,
+                            scaler,
+                            pastro_model,
+                            outdir,
+                            device,
+                        )
                     )
+                    last_event_written = False
+                    last_event_time = event.gpstime
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -229,23 +273,41 @@ def search(
         if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
 
-        # if we found an event, process it!
+        # if we found an event, add it to the processing queue!
         if event is not None:
-            process_event(
-                event,
-                gdb,
-                input_buffer,
-                spectral_density,
-                pe_whitener,
-                amplfi,
-                scaler,
-                pastro_model,
-                outdir,
-                device,
+            event_queue.put(
+                (
+                    event,
+                    gdb,
+                    input_buffer,
+                    spectral_density,
+                    pe_whitener,
+                    amplfi,
+                    scaler,
+                    pastro_model,
+                    outdir,
+                    device,
+                )
             )
             searcher.detecting = False
+            last_event_written = False
+            last_event_time = event.gpstime
 
-        # TODO write buffers to disk:
+        # write buffers to disk, waiting a little while after the event
+        # to get a more complete picture
+        if (
+            write_buffers
+            and not last_event_written
+            and t0 > last_event_time + output_buffer.buffer_length / 2
+        ):
+            buffer_write_queue.put(
+                (
+                    last_event_time,
+                    input_buffer,
+                    output_buffer,
+                    outdir,
+                )
+            )
 
 
 def main(
@@ -278,6 +340,7 @@ def main(
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
+    write_buffers: bool = False,
     device: str = "cpu",
 ):
     gdb = gracedb_factory(server, outdir)
@@ -407,6 +470,7 @@ def main(
         searcher=searcher,
         input_buffer=input_buffer,
         output_buffer=output_buffer,
+        write_buffers=write_buffers,
         aframe=aframe,
         amplfi=amplfi,
         pastro_model=pastro_model,
