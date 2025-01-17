@@ -39,6 +39,7 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
         )
+        logging.info("Created event in GraceDB")
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
@@ -68,6 +69,7 @@ class GraceDb(_GraceDb):
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
+        logging.info("Submitted corner plot to GraceDB")
 
         mollview_fname = self.write_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
@@ -77,6 +79,7 @@ class GraceDb(_GraceDb):
             filename=mollview_fname,
             tag_name="sky_loc",
         )
+        logging.info("Submitted Mollview plots to GraceDB")
 
     def submit_pastro(self, pastro: float, graceid: int):
         fname = self.write_dir / "aframe.pastro.json"
@@ -96,6 +99,7 @@ class GraceDb(_GraceDb):
             filename=fname,
             tag_name="p_astro",
         )
+        logging.info("Submitted p_astro to GraceDB")
 
 
 class LocalGraceDb(GraceDb):
