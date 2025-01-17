@@ -29,7 +29,19 @@ def run_amplfi(
     pe_psd = spectral_density(psd_strain)
     whitened = pe_whitener(pe_strain[None], pe_psd[None])
 
-    samples = amplfi.sample(20000, context=whitened)
+    freqs = torch.fft.rfftfreq(
+        whitened.shape[-1], d=1 / pe_whitener.sample_rate
+    )
+    num_freqs = len(freqs)
+    pe_psd = torch.nn.functional.interpolate(
+        pe_psd, size=(num_freqs,), mode="linear"
+    )
+
+    mask = freqs > pe_whitener.highpass
+    pe_psd = pe_psd[:, :, mask]
+    asds = torch.sqrt(pe_psd)
+
+    samples = amplfi.sample(20000, context=(whitened, asds))
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     posterior = cast_samples_as_bilby_result(
         descaled_samples[..., :3].numpy(),
