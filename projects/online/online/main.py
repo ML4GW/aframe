@@ -86,6 +86,7 @@ def process_event(
     scaler: ChannelWiseScaler,
     pastro_model: "Pastro",
     samples_per_event: int,
+    inference_params: list[str],
     outdir: Path,
     device: str,
 ):
@@ -100,6 +101,7 @@ def process_event(
     posterior, skymap = run_amplfi(
         last_event_time,
         buffer,
+        inference_params,
         samples_per_event,
         spectral_density,
         pe_whitener,
@@ -136,6 +138,7 @@ def search(
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
     samples_per_event: int,
+    inference_params: List[str],
     outdir: Path,
     device: str,
 ):
@@ -169,6 +172,7 @@ def search(
                         scaler,
                         pastro_model,
                         samples_per_event,
+                        inference_params,
                         outdir,
                         device,
                     )
@@ -242,6 +246,7 @@ def search(
                 scaler,
                 pastro_model,
                 samples_per_event,
+                inference_params,
                 outdir,
                 device,
             )
@@ -490,6 +495,7 @@ def main(
         data_it=data_it,
         time_offset=time_offset,
         samples_per_event=samples_per_event,
+        inference_params=inference_params,
         outdir=outdir,
         device=device,
     )

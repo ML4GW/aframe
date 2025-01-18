@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
+    inference_params: list,
     samples_per_event: int,
     spectral_density: "SpectralDensity",
     amplfi_whitener: "Whiten",
@@ -45,24 +46,31 @@ def run_amplfi(
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
 
-    # sample from the model
+    # sample from the model and descale back to physical units
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+
+    indices = [
+        inference_params.index(p)
+        for p in ["chirp_mass", "mass_ratio", "luminosity_distance"]
+    ]
     posterior = cast_samples_as_bilby_result(
-        descaled_samples[..., :3].numpy(),
+        descaled_samples[..., indices].numpy(),
         ["chirp_mass", "mass_ratio", "luminosity_distance"],
         f"{event_time} result",
     )
 
+    phi_idx = inference_params.index("phi")
+    dec_idx = inference_params.index("dec")
     phi = (
         torch.remainder(
             lal.GreenwichMeanSiderealTime(event_time)
-            + descaled_samples[..., 7],
+            + descaled_samples[..., phi_idx],
             torch.as_tensor(2 * torch.pi),
         )
         - torch.pi
     )
-    dec = descaled_samples[..., 5] + torch.pi / 2
+    dec = descaled_samples[..., dec_idx] + torch.pi / 2
 
     skymap = plot_mollview(
         phi,
