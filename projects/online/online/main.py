@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Literal, Optional, Tuple
 
-import numpy as np
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
@@ -60,7 +59,7 @@ def get_time_offset(
     fduration: float,
     integration_window_length: float,
     kernel_length: float,
-    trigger_distance: float,
+    aframe_right_pad: float,
 ):
     # offset the initial timestamp of our
     # integrated outputs relative to the
@@ -72,12 +71,7 @@ def get_time_offset(
         - integration_window_length  # account for time to build peak
     )
 
-    if trigger_distance is not None:
-        if trigger_distance > 0:
-            time_offset -= kernel_length - trigger_distance
-        if trigger_distance < 0:
-            # Trigger distance parameter accounts for fduration already
-            time_offset -= np.abs(trigger_distance) - fduration / 2
+    time_offset -= kernel_length - aframe_right_pad
 
     return time_offset
 
@@ -272,7 +266,7 @@ def main(
     kernel_length: float,
     inference_sampling_rate: float,
     psd_length: float,
-    trigger_distance: float,
+    aframe_right_pad: float,
     amplfi_kernel_length: float,
     event_position: float,
     fduration: float,
@@ -325,7 +319,7 @@ def main(
             Rate at which to sample the output of the Aframe model
         psd_length:
             Length of PSD estimation window in seconds
-        trigger_distance:
+        aframe_right_pad:
             Time offset for trigger positioning in seconds
         amplfi_kernel_length:
             Length of AMPLFI analysis window in seconds
@@ -468,7 +462,7 @@ def main(
         fduration,
         integration_window_length,
         kernel_length,
-        trigger_distance,
+        aframe_right_pad,
     )
 
     data_it = data_iterator(
