@@ -1,8 +1,10 @@
 import json
 import logging
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import bilby
 import matplotlib.pyplot as plt
@@ -10,6 +12,9 @@ from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 
 from online.utils.searcher import Event
+
+if TYPE_CHECKING:
+    from astropy import table
 
 GdbServer = Literal["local", "playground", "test", "production"]
 
@@ -26,7 +31,7 @@ class GraceDb(_GraceDb):
     """
 
     def __init__(self, *args, write_dir: Path, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, use_auth="scitoken")
         self.write_dir = write_dir
 
     def submit(self, event: Event):
@@ -61,8 +66,12 @@ class GraceDb(_GraceDb):
         self,
         result: bilby.core.result.Result,
         mollview_plot: plt.figure,
+        skymap: "table.Table",
         graceid: int,
     ):
+        skymap_fname = self.write_dir / "amplfi.fits"
+        skymap.writeto(skymap_fname)
+
         corner_fname = self.write_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
         self.write_log(
@@ -121,3 +130,34 @@ def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
     return GraceDb(service_url=server, write_dir=write_dir)
+
+
+def authenticate():
+    # TODO: don't hardcode keytab locations
+    subprocess.run(
+        [
+            "htgettoken",
+            "-v",
+            "-a",
+            "vault.ligo.org",
+            "-i",
+            "igwn",
+            "-r",
+            "aframe-1-scitoken",
+            "--scopes=gracedb.read",
+            "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
+            "--nooidc",
+        ]
+    )
+
+    subprocess.run(
+        [
+            "kinit",
+            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
+            "-k",
+            "-t",
+            os.path.expanduser(
+                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
+            ),
+        ]
+    )
