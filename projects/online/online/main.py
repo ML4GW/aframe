@@ -69,7 +69,11 @@ def get_time_offset(
         - integration_window_length  # account for time to build peak
     )
 
-    time_offset -= kernel_length - aframe_right_pad
+    if aframe_right_pad > 0:
+        time_offset -= kernel_length - aframe_right_pad
+    elif aframe_right_pad < 0:
+        # Trigger distance parameter accounts for fduration already
+        time_offset -= abs(aframe_right_pad) - fduration / 2
 
     return time_offset
 
