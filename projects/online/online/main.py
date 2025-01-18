@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, List, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
@@ -11,7 +11,7 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GraceDb, authenticate, gracedb_factory
+from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -21,7 +21,6 @@ from utils.preprocessing import BatchWhitener
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
 
-GdbServer = Literal["local", "playground", "test", "production"]
 
 # seconds of data per update
 UPDATE_SIZE = 1
