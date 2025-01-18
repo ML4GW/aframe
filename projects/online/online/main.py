@@ -360,7 +360,9 @@ def main(
             Device to run inference on ("cpu" or "cuda")
     """
     # run htgettoken and kinit
-    authenticate()
+    if server != "local":
+        authenticate()
+
     gdb = gracedb_factory(server, outdir)
 
     # initialize a buffer for storing recent strain data,
