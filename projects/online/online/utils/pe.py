@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import bilby
 import healpy as hp
@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from amplfi.train.testing import nest2uniq
+from astropy import io, table
+from astropy import units as u
 
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
@@ -24,6 +27,7 @@ def run_amplfi(
     amplfi_whitener: "Whiten",
     amplfi: "FlowArchitecture",
     std_scaler: "ChannelWiseScaler",
+    nside: int,
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
@@ -62,7 +66,7 @@ def run_amplfi(
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
-    phi = (
+    ra = (
         torch.remainder(
             lal.GreenwichMeanSiderealTime(event_time)
             + descaled_samples[..., phi_idx],
@@ -72,12 +76,14 @@ def run_amplfi(
     )
     dec = descaled_samples[..., dec_idx] + torch.pi / 2
 
-    skymap = plot_mollview(
-        phi,
+    skymap, figure = create_skymap(
+        ra,
         dec,
+        nside,
         title=f"{event_time} sky map",
     )
-    return posterior, skymap
+
+    return posterior, skymap, figure
 
 
 def cast_samples_as_bilby_result(
@@ -97,32 +103,45 @@ def cast_samples_as_bilby_result(
     )
 
 
-def plot_mollview(
+def create_skymap(
     ra_samples: np.ndarray,
     dec_samples: np.ndarray,
     nside: int = 32,
-    fig=None,
-    title=None,
-):
+    title: Optional[str] = None,
+) -> tuple[table.Table, plt.Figure]:
+    """Create a skymap from samples of right ascension and declination."""
     # mask out non physical samples;
-    ra_samples_mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
-    dec_samples_mask = (dec_samples > 0) * (dec_samples < np.pi)
+    mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
+    mask &= (dec_samples > 0) * (dec_samples < np.pi)
 
-    net_mask = ra_samples_mask * dec_samples_mask
-    ra_samples = ra_samples[net_mask]
-    dec_samples = dec_samples[net_mask]
+    ra_samples = ra_samples[mask]
+    dec_samples = dec_samples[mask]
+    num_samples = len(ra_samples)
 
     # calculate number of samples in each pixel
-    NPIX = hp.nside2npix(nside)
+    npix = hp.nside2npix(nside)
     ipix = hp.ang2pix(nside, dec_samples, ra_samples)
     ipix = np.sort(ipix)
     uniq, counts = np.unique(ipix, return_counts=True)
+    uniq_ipix = nest2uniq(nside, np.arange(npix))
 
     # create empty map and then fill in non-zero pix with counts
-    m = np.zeros(NPIX)
-    m[np.in1d(range(NPIX), uniq)] = counts
+    m = np.zeros(npix)
+    m[np.in1d(range(npix), uniq)] = counts
+
+    post = m / num_samples
+    post /= hp.nside2pixarea(nside)
+    post /= u.sr
+
+    # convert to astropy table
+    t = table.Table(
+        [uniq_ipix, post],
+        names=["UNIQ", "PROBDENSITY"],
+        copy=False,
+    )
+    fits_table = io.fits.table_to_hdu(t)
 
     fig = plt.figure()
     hp.mollview(m, fig=fig, title=title, hold=True)
     plt.close()
-    return fig
+    return fits_table, fig

@@ -88,6 +88,7 @@ def process_event(
     samples_per_event: int,
     inference_params: list[str],
     outdir: Path,
+    nside: int,
     device: str,
 ):
     # write event information to disk
@@ -107,6 +108,7 @@ def process_event(
         pe_whitener,
         amplfi,
         scaler,
+        nside,
         device,
     )
 
@@ -140,6 +142,7 @@ def search(
     samples_per_event: int,
     inference_params: List[str],
     outdir: Path,
+    nside: int,
     device: str,
 ):
     integrated = None
@@ -174,6 +177,7 @@ def search(
                         samples_per_event,
                         inference_params,
                         outdir,
+                        nside,
                         device,
                     )
                     searcher.detecting = False
@@ -248,6 +252,7 @@ def search(
                 samples_per_event,
                 inference_params,
                 outdir,
+                nside,
                 device,
             )
             searcher.detecting = False
@@ -286,6 +291,7 @@ def main(
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
     samples_per_event: int = 20000,
+    nside: int = 32,
     device: str = "cpu",
 ):
     """
@@ -497,6 +503,7 @@ def main(
         samples_per_event=samples_per_event,
         inference_params=inference_params,
         outdir=outdir,
+        nside=nside,
         device=device,
     )
 
