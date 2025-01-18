@@ -9,6 +9,9 @@ import pandas as pd
 import torch
 
 if TYPE_CHECKING:
+    from amplfi.train.architectures.flows.base import FlowArchitecture
+    from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
+
     from online.utils.buffer import InputBuffer
 
 
@@ -16,29 +19,29 @@ def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
     samples_per_event: int,
-    spectral_density,
-    pe_whitener,
-    amplfi,
-    std_scaler,
-    device,
+    spectral_density: "SpectralDensity",
+    amplfi_whitener: "Whiten",
+    amplfi: "FlowArchitecture",
+    std_scaler: "ChannelWiseScaler",
+    device: torch.device,
 ):
     # get pe data from the buffer and whiten it
-    psd_strain, pe_strain = input_buffer.get_pe_data(event_time)
+    psd_strain, pe_strain = input_buffer.get_amplfi_data(event_time)
     psd_strain = psd_strain.to(device)
     pe_strain = pe_strain.to(device)[None]
     pe_psd = spectral_density(psd_strain)[None]
-    whitened = pe_whitener(pe_strain, pe_psd)
+    whitened = amplfi_whitener(pe_strain, pe_psd)
 
     # construct and highpass asd
     freqs = torch.fft.rfftfreq(
-        whitened.shape[-1], d=1 / pe_whitener.sample_rate
+        whitened.shape[-1], d=1 / amplfi_whitener.sample_rate
     )
     num_freqs = len(freqs)
     pe_psd = torch.nn.functional.interpolate(
         pe_psd, size=(num_freqs,), mode="linear"
     )
 
-    mask = freqs > pe_whitener.highpass
+    mask = freqs > amplfi_whitener.highpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
 

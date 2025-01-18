@@ -273,7 +273,7 @@ def main(
     inference_sampling_rate: float,
     psd_length: float,
     trigger_distance: float,
-    pe_window: float,
+    amplfi_kernel_length: float,
     event_position: float,
     fduration: float,
     integration_window_length: float,
@@ -327,8 +327,8 @@ def main(
             Length of PSD estimation window in seconds
         trigger_distance:
             Time offset for trigger positioning in seconds
-        pe_window:
-            Parameter estimation window length in seconds
+        amplfi_kernel_length:
+            Length of AMPLFI analysis window in seconds
         event_position:
             Event position (in seconds) from the left edge
             of the analysis window used for parameter estimation
@@ -370,7 +370,7 @@ def main(
         sample_rate=sample_rate,
         buffer_length=input_buffer_length,
         fduration=fduration,
-        pe_window=pe_window,
+        amplfi_kernel_length=amplfi_kernel_length,
         event_position=event_position,
         device="cpu",
     )

@@ -6,8 +6,7 @@ import torch
 class InputBuffer(torch.nn.Module):
     """
     A buffer for storing raw strain data for use
-    in parameter estimation (amplfi) followup
-    of events detected by Aframe
+    in AMPLFI parameter estimation followup of events detected by Aframe
 
     Args:
         num_channels:
@@ -16,11 +15,11 @@ class InputBuffer(torch.nn.Module):
             The sampling rate of the data
         buffer_length:
             The length of the buffer in seconds
-        pe_window:
+        amplfi_kernel_length:
             The length of the window to use for parameter estimation in seconds
         event_position:
             The placement of the coalescence time
-            of the event in the pe window in seconds
+            of the event in the AMPLFI analysis window in seconds
     """
 
     def __init__(
@@ -29,7 +28,7 @@ class InputBuffer(torch.nn.Module):
         sample_rate: float,
         buffer_length: float,
         fduration: float,
-        pe_window: float,
+        amplfi_kernel_length: float,
         event_position: float,
         device: str,
     ):
@@ -41,7 +40,7 @@ class InputBuffer(torch.nn.Module):
         self.sample_rate = sample_rate
         self.buffer_length = buffer_length
         self.buffer_size = int(buffer_length * sample_rate)
-        self.pe_window = pe_window
+        self.amplfi_kernel_length = amplfi_kernel_length
         self.event_position = event_position
 
         self.input_buffer = torch.zeros(
@@ -71,13 +70,14 @@ class InputBuffer(torch.nn.Module):
         update_duration = update.shape[-1] / self.sample_rate
         self.t0 = t0 - (self.buffer_length - update_duration)
 
-    def get_pe_data(self, event_time: float):
+    def get_amplfi_data(self, event_time: float):
         window_start = (
             event_time - self.t0 - self.event_position - self.fduration / 2
         )
         window_start = int(self.sample_rate * window_start)
         window_end = int(
-            window_start + (self.pe_window + self.fduration) * self.sample_rate
+            window_start
+            + (self.amplfi_kernel_length + self.fduration) * self.sample_rate
         )
 
         psd_data = self.input_buffer[:, :window_start]
