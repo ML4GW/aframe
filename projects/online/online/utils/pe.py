@@ -15,20 +15,21 @@ if TYPE_CHECKING:
 def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
+    samples_per_event: int,
     spectral_density,
     pe_whitener,
     amplfi,
     std_scaler,
-    plot_dir,
     device,
 ):
-    # get pe data from the buffer, whitene
+    # get pe data from the buffer and whiten it
     psd_strain, pe_strain = input_buffer.get_pe_data(event_time)
     psd_strain = psd_strain.to(device)
     pe_strain = pe_strain.to(device)[None]
     pe_psd = spectral_density(psd_strain)[None]
     whitened = pe_whitener(pe_strain, pe_psd)
 
+    # construct and highpass asd
     freqs = torch.fft.rfftfreq(
         whitened.shape[-1], d=1 / pe_whitener.sample_rate
     )
@@ -41,7 +42,8 @@ def run_amplfi(
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
 
-    samples = amplfi.sample(20000, context=(whitened, asds))
+    # sample from the model
+    samples = amplfi.sample(samples_per_event, context=(whitened, asds))
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     posterior = cast_samples_as_bilby_result(
         descaled_samples[..., :3].numpy(),

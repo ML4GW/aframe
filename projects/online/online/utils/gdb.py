@@ -4,16 +4,14 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
 
 import bilby
 import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 
+from online.main import GdbServer
 from online.utils.searcher import Event
-
-GdbServer = Literal["local", "playground", "test", "production"]
 
 
 class GraceDb(_GraceDb):

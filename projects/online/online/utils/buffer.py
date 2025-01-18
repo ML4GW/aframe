@@ -5,8 +5,8 @@ import torch
 
 class InputBuffer(torch.nn.Module):
     """
-    A buffer for storing raw strain data f
-    or use in parameter estimation (amplfi) followup
+    A buffer for storing raw strain data for use
+    in parameter estimation (amplfi) followup
     of events detected by Aframe
 
     Args:

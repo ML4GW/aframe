@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, List, Literal, Optional, Tuple
 
 import numpy as np
 import torch
@@ -23,8 +23,12 @@ from utils.preprocessing import BatchWhitener
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
 
+GdbServer = Literal["local", "playground", "test", "production"]
+
 # seconds of data per update
 UPDATE_SIZE = 1
+
+SECONDS_PER_DAY = 86400
 
 
 def load_model(model: Architecture, weights: Path):
@@ -87,6 +91,7 @@ def process_event(
     amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
     pastro_model: "Pastro",
+    samples_per_event: int,
     outdir: Path,
     device: str,
 ):
@@ -101,11 +106,11 @@ def process_event(
     posterior, skymap = run_amplfi(
         last_event_time,
         buffer,
+        samples_per_event,
         spectral_density,
         pe_whitener,
         amplfi,
         scaler,
-        outdir / "whitened_data_plots",
         device,
     )
 
@@ -136,12 +141,13 @@ def search(
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
+    samples_per_event: int,
     outdir: Path,
     device: str,
 ):
     integrated = None
 
-    # flat that declares if the most previous frame
+    # flag that declares if the most previous frame
     # was analysis ready or not
     in_spec = False
 
@@ -168,6 +174,7 @@ def search(
                         amplfi,
                         scaler,
                         pastro_model,
+                        samples_per_event,
                         outdir,
                         device,
                     )
@@ -240,6 +247,7 @@ def search(
                 amplfi,
                 scaler,
                 pastro_model,
+                samples_per_event,
                 outdir,
                 device,
             )
@@ -274,12 +282,83 @@ def main(
     highpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
-    server: str = "test",
+    server: GdbServer = "test",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
+    samples_per_event: int = 20000,
     device: str = "cpu",
 ):
+    """
+    Main function for launching real-time Aframe and AMPLFI pipeline.
+
+    Args:
+        aframe_weights:
+            Path to trained Aframe model weights
+        amplfi_architecture:
+            AMPLFI model architecture for parameter estimation
+        amplfi_weights:
+            Path to trained AMPLFI model weights
+        background_path:
+            Path to background noise events dataset
+            used for Aframe FAR calculation
+        foreground_path:
+            Path to recovered injection events dataset
+        rejected_path:
+            Path to rejected injection parameters dataset
+        outdir:
+            Directory to save output files
+        datadir:
+            Directory containing input strain data
+        ifos:
+            List of interferometer names
+        inference_params:
+            List of parameters on which the AMPLFI
+            model was trained to perform inference
+        channels:
+            List of the channel names to analyze
+        sample_rate:
+            Input data sample rate in Hz
+        kernel_length:
+            Length of Aframe analysis kernel in seconds
+        inference_sampling_rate:
+            Rate at which to sample the output of the Aframe model
+        psd_length:
+            Length of PSD estimation window in seconds
+        trigger_distance:
+            Time offset for trigger positioning in seconds
+        pe_window:
+            Parameter estimation window length in seconds
+        event_position:
+            Event position (in seconds) from the left edge
+            of the analysis window used for parameter estimation
+        fduration:
+            Length of whitening filter in seconds
+        integration_window_length:
+            Length of output integration window in seconds
+        astro_event_rate:
+            Expected rate of astrophysical events in Hz
+        fftlength:
+            FFT length in seconds (defaults to kernel_length + fduration)
+        highpass:
+            High-pass filter frequency in Hz
+        refractory_period:
+            Minimum time between events in seconds
+        far_threshold:
+            False alarm rate threshold in events/day
+        server:
+            GraceDB server to use ("test" or "production")
+        ifo_suffix:
+            Optional suffix for IFO channel names
+        input_buffer_length:
+            Length of strain data buffer in seconds
+        output_buffer_length:
+             Length of inference output buffer in seconds
+        samples_per_event:
+            Number of posterior samples per event
+        device:
+            Device to run inference on ("cpu" or "cuda")
+    """
     # run htgettoken and kinit
     authenticate()
     gdb = gracedb_factory(server, outdir)
@@ -370,7 +449,7 @@ def main(
     )
 
     # Convert FAR to Hz from 1/days
-    far_threshold /= 86400
+    far_threshold /= SECONDS_PER_DAY
     searcher = Searcher(
         background=background,
         far_threshold=far_threshold,
@@ -414,6 +493,7 @@ def main(
         pastro_model=pastro_model,
         data_it=data_it,
         time_offset=time_offset,
+        samples_per_event=samples_per_event,
         outdir=outdir,
         device=device,
     )
