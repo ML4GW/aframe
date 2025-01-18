@@ -5,14 +5,13 @@ from typing import TYPE_CHECKING, Iterable, List, Literal, Optional, Tuple
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
-from ligo.gracedb.rest import GraceDb
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import authenticate, gracedb_factory
+from online.utils.gdb import GraceDb, authenticate, gracedb_factory
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -99,7 +98,7 @@ def process_event(
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
     last_event_time = event.gpstime
-    posterior, skymap = run_amplfi(
+    posterior, skymap, figure = run_amplfi(
         last_event_time,
         buffer,
         inference_params,
@@ -115,7 +114,7 @@ def process_event(
     # submit the posterior and skymap to gracedb
     # using the graceid from the event submission
     graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, skymap, graceid)
+    gdb.submit_pe(posterior, figure, skymap, graceid)
 
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)

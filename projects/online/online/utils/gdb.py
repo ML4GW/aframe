@@ -4,6 +4,7 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import bilby
 import matplotlib.pyplot as plt
@@ -12,6 +13,9 @@ from ligo.gracedb.rest import GraceDb as _GraceDb
 
 from online.main import GdbServer
 from online.utils.searcher import Event
+
+if TYPE_CHECKING:
+    from astropy import table
 
 
 class GraceDb(_GraceDb):
@@ -61,8 +65,12 @@ class GraceDb(_GraceDb):
         self,
         result: bilby.core.result.Result,
         mollview_plot: plt.figure,
+        skymap: "table.Table",
         graceid: int,
     ):
+        skymap_fname = self.write_dir / "amplfi.fits"
+        skymap.writeto(skymap_fname)
+
         corner_fname = self.write_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
         self.write_log(
