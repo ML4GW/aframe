@@ -612,8 +612,10 @@ class InterferometerResponseSet(WaveformSet):
         initial timestamp `start`
         """
         stop = start + x.shape[-1] / self.sample_rate
+        post_coalescence_time = self.duration - self.coalescence_time
+
         mask = self.injection_time >= (start - self.coalescence_time)
-        mask &= self.injection_time <= (stop + self.coalescence_time)
+        mask &= self.injection_time <= (stop + post_coalescence_time)
 
         if not mask.any():
             return x
@@ -626,13 +628,18 @@ class InterferometerResponseSet(WaveformSet):
         pad = []
         earliest = (times - self.coalescence_time - start).min()
         if earliest < 0:
-            num_early = int(-earliest * self.sample_rate)
+            # For consistency, we want to round down here
+            # E.g., if earliest = -0.1 and sample_rate = 2048,
+            # we want num_early = 205. The int function always
+            # rounds towards 0, so we can't do int(-earliest * sample_rate)
+            # or -int(earliest * sample_rate)
+            num_early = -int((earliest * self.sample_rate) // 1)
             pad.append(num_early)
             start += earliest
         else:
             pad.append(0)
 
-        latest = (times + self.coalescence_time - stop).max()
+        latest = (times + post_coalescence_time - stop).max()
         if latest > 0:
             num_late = int(latest * self.sample_rate)
             pad.append(num_late)
