@@ -366,7 +366,11 @@ def main(
         output_buffer_length:
              Length of inference output buffer in seconds
         samples_per_event:
-            Number of posterior samples per event
+            Number of posterior samples to generate per event
+            for creating skymaps and other parameter estimation
+            data products
+        nside:
+            Healpix resolution for low-latency skymaps
         device:
             Device to run inference on ("cpu" or "cuda")
     """
