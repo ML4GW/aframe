@@ -1,5 +1,6 @@
 import logging
 from ctypes import c_wchar_p
+from dataclasses import dataclass
 from multiprocessing import Process, Value
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
@@ -29,24 +30,6 @@ if TYPE_CHECKING:
 UPDATE_SIZE = 1
 
 SECONDS_PER_DAY = 86400
-
-
-def submit_detection(
-    event: Event,
-    gdb: GraceDb,
-    outdir: Path,
-    pastro_model: "Pastro",
-    graceid: str,
-):
-    # write event information to disk
-    # and submit it to gracedb
-    event.write(outdir)
-    logging.info("Wrote event to file")
-    response = gdb.submit(event)
-    graceid.value = response.json()["graceid"]
-    # calculate and submit pastro
-    pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid.value, event.gpstime)
 
 
 def write_buffers(
@@ -111,71 +94,80 @@ def get_time_offset(
     return time_offset
 
 
-def process_event(
-    event: Event,
-    gdb: GraceDb,
-    buffer: InputBuffer,
-    spectral_density: SpectralDensity,
-    pe_whitener: Whiten,
-    amplfi: FlowArchitecture,
-    scaler: ChannelWiseScaler,
-    pastro_model: "Pastro",
-    samples_per_event: int,
-    inference_params: list[str],
-    outdir: Path,
-    nside: int,
-    device: str,
-):
-    # Define variable to be shared between parent and child process
-    graceid = Value(c_wchar_p, "")
-    args = (event, gdb, outdir, pastro_model, graceid)
-    p = Process(target=submit_detection, args=args)
-    p.start()
+@dataclass
+class EventProcessor:
+    gdb: GraceDb
+    spectral_density: SpectralDensity
+    pe_whitener: Whiten
+    amplfi: FlowArchitecture
+    scaler: ChannelWiseScaler
+    pastro_model: "Pastro"
+    samples_per_event: int
+    inference_params: list[str]
+    outdir: Path
+    nside: int
+    device: str
 
-    # after event is submitted, run AMPLFI
-    # to produce a posterior and skymap
-    posterior, skymap, figure = run_amplfi(
-        event.gpstime,
-        buffer,
-        inference_params,
-        samples_per_event,
-        spectral_density,
-        pe_whitener,
-        amplfi,
-        scaler,
-        nside,
-        device,
-    )
+    def submit_detection(
+        self,
+        event: Event,
+        graceid: str,
+    ):
+        # write event information to disk
+        # and submit it to gracedb
+        event.write(self.outdir)
+        logging.info("Wrote event to file")
+        response = self.gdb.submit(event)
+        graceid.value = response.json()["graceid"]
+        # calculate and submit pastro
+        pastro = self.pastro_model(event.detection_statistic)
+        self.gdb.submit_pastro(float(pastro), graceid.value, event.gpstime)
 
-    # Wait for event submission to finish, and then
-    # submit the posterior and skymap to gracedb
-    # using the graceid from the event submission
-    p.join()
-    p.close()
-    gdb.submit_pe(posterior, figure, skymap, graceid.value, event.gpstime)
+    def process_event(self, event: Event, buffer: InputBuffer):
+        # Define variable to be shared between parent and child process
+        logging.info("Processing event")
+        graceid = Value(c_wchar_p, "")
+        p = Process(target=self.submit_detection, args=(event, graceid))
+        p.start()
+
+        # after event is submitted, run AMPLFI
+        # to produce a posterior and skymap
+        posterior, skymap, figure = run_amplfi(
+            event.gpstime,
+            buffer,
+            self.inference_params,
+            self.samples_per_event,
+            self.spectral_density,
+            self.pe_whitener,
+            self.amplfi,
+            self.scaler,
+            self.nside,
+            self.device,
+        )
+
+        # Wait for event submission to finish, and then
+        # submit the posterior and skymap to gracedb
+        # using the graceid from the event submission
+        p.join()
+        p.close()
+        self.gdb.submit_pe(
+            posterior, figure, skymap, graceid.value, event.gpstime
+        )
 
 
 @torch.no_grad()
 def search(
-    gdb: GraceDb,
-    pe_whitener: Whiten,
-    scaler: torch.nn.Module,
-    spectral_density: SpectralDensity,
-    whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
+    whitener: Whiten,
     searcher: Searcher,
+    event_processor: EventProcessor,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     write_buffers: bool,
     aframe: Architecture,
-    amplfi: Architecture,
-    pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
-    samples_per_event: int,
-    inference_params: List[str],
     outdir: Path,
-    nside: int,
     device: str,
 ):
     integrated = None
@@ -185,9 +177,9 @@ def search(
     in_spec = False
 
     # Set up a queue of events to be processed and written
-    event_queue = initialize_queue_processor(process_event, sleep=1e-3)
+    event_queue = initialize_queue_processor(event_processor.process_event)
     if write_buffers:
-        buffer_write_queue = initialize_queue_processor(write_buffers, sleep=1)
+        buffer_write_queue = initialize_queue_processor(write_buffers)
 
     # Set up variables for writing buffers to disk
     last_event_written = True
@@ -209,18 +201,7 @@ def search(
                     event_queue.put(
                         (
                             event,
-                            gdb,
                             input_buffer,
-                            spectral_density,
-                            pe_whitener,
-                            amplfi,
-                            scaler,
-                            pastro_model,
-                            samples_per_event,
-                            inference_params,
-                            outdir,
-                            nside,
-                            device,
                         )
                     )
                     last_event_written = False
@@ -288,18 +269,7 @@ def search(
             event_queue.put(
                 (
                     event,
-                    gdb,
                     input_buffer,
-                    spectral_density,
-                    pe_whitener,
-                    amplfi,
-                    scaler,
-                    pastro_model,
-                    samples_per_event,
-                    inference_params,
-                    outdir,
-                    nside,
-                    device,
                 )
             )
             searcher.detecting = False
@@ -560,26 +530,32 @@ def main(
         timeout=10,
     )
 
-    search(
+    event_processor = EventProcessor(
         gdb=gdb,
-        pe_whitener=pe_whitener,
-        scaler=scaler,
         spectral_density=spectral_density,
-        whitener=whitener,
-        snapshotter=snapshotter,
-        searcher=searcher,
-        input_buffer=input_buffer,
-        output_buffer=output_buffer,
-        write_buffers=write_buffers,
-        aframe=aframe,
+        pe_whitener=pe_whitener,
         amplfi=amplfi,
+        scaler=scaler,
         pastro_model=pastro_model,
-        data_it=data_it,
-        time_offset=time_offset,
         samples_per_event=samples_per_event,
         inference_params=inference_params,
         outdir=outdir,
         nside=nside,
+        device=device,
+    )
+
+    search(
+        snapshotter=snapshotter,
+        whitener=whitener,
+        searcher=searcher,
+        event_processor=event_processor,
+        input_buffer=input_buffer,
+        output_buffer=output_buffer,
+        write_buffers=write_buffers,
+        aframe=aframe,
+        data_it=data_it,
+        time_offset=time_offset,
+        outdir=outdir,
         device=device,
     )
 

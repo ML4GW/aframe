@@ -1,23 +1,15 @@
-import time
 from multiprocessing import Process, Queue
-from queue import Empty
 from typing import Callable
 
 
-def process_queue(queue: Queue, f: Callable, sleep: float = 1e-3):
+def process_queue(queue: Queue, f: Callable):
     while True:
-        try:
-            args = queue.get()
-            if args[0] is None:
-                continue
-            f(*args)
-        except Empty:
-            time.sleep(sleep)
+        args = queue.get()
+        f(*args)
 
 
-def initialize_queue_processor(f: Callable, sleep: float) -> Queue:
+def initialize_queue_processor(f: Callable) -> Queue:
     queue = Queue()
-    queue.put((None,))
-    process = Process(target=process_queue, args=(queue, f, sleep))
+    process = Process(target=process_queue, args=(queue, f))
     process.start()
     return queue
