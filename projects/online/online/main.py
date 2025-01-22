@@ -357,7 +357,10 @@ def main(
             GraceDB server to use:
             "local", "playground", "test" or "production"
         ifo_suffix:
-            Optional suffix for IFO channel names
+            Optional suffix for accessing data from /dev/shm.
+            Useful when analyzing alternative streams like
+            MDC replays that have directory structures in the format
+            `{ifo}_{ifo_suffix}`
         input_buffer_length:
             Length of strain data buffer in seconds
         output_buffer_length:
