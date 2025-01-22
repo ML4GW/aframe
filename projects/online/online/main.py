@@ -354,7 +354,8 @@ def main(
         far_threshold:
             False alarm rate threshold in events/day
         server:
-            GraceDB server to use ("test" or "production")
+            GraceDB server to use:
+            "local", "playground", "test" or "production"
         ifo_suffix:
             Optional suffix for IFO channel names
         input_buffer_length:
