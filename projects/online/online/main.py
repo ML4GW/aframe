@@ -5,6 +5,7 @@ from multiprocessing import Process, Value
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
+import lal
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
@@ -17,7 +18,7 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.mp import initialize_queue_processor
 from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import run_amplfi
+from online.utils.pe import cast_samples_as_bilby_result, create_skymap
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
@@ -97,6 +98,7 @@ def get_time_offset(
 @dataclass
 class EventProcessor:
     gdb: GraceDb
+    buffer: InputBuffer
     spectral_density: SpectralDensity
     pe_whitener: Whiten
     amplfi: FlowArchitecture
@@ -126,7 +128,7 @@ class EventProcessor:
         self.gdb.submit_pastro(float(pastro), graceid.value, event.gpstime)
         logging.info("p_astro submitted")
 
-    def process_event(self, event: Event, buffer: InputBuffer):
+    def process_event(self, event: Event):
         # Define variable to be shared between parent and child process
         logging.info("Processing event")
         graceid = Value(c_wchar_p, "")
@@ -136,18 +138,7 @@ class EventProcessor:
         # after event is submitted, run AMPLFI
         # to produce a posterior and skymap
         logging.info("Running AMPLFI")
-        posterior, skymap, figure = run_amplfi(
-            event.gpstime,
-            buffer,
-            self.inference_params,
-            self.samples_per_event,
-            self.spectral_density,
-            self.pe_whitener,
-            self.amplfi,
-            self.scaler,
-            self.nside,
-            self.device,
-        )
+        posterior, skymap, figure = self.run_amplfi(event.gpstime, self.buffer)
         logging.info("AMPLFI complete")
 
         # Wait for event submission to finish, and then
@@ -161,6 +152,72 @@ class EventProcessor:
         )
         logging.info("PE submitted")
 
+    def run_amplfi(self, event_time: float):
+        # get pe data from the buffer and whiten it
+        psd_strain, pe_strain = self.buffer.get_amplfi_data(event_time)
+        logging.info("Got amplfi data")
+        psd_strain = psd_strain.to(self.device)
+        pe_strain = pe_strain.to(self.device)[None]
+        logging.info("Moved amplfi data to device")
+        pe_psd = self.spectral_density(psd_strain)[None]
+        logging.info("Calculated amplfi PSD")
+        whitened = self.amplfi_whitener(pe_strain, pe_psd)
+        logging.info("Whitened amplfi data")
+
+        # construct and highpass asd
+        freqs = torch.fft.rfftfreq(
+            whitened.shape[-1], d=1 / self.amplfi_whitener.sample_rate
+        )
+        num_freqs = len(freqs)
+        pe_psd = torch.nn.functional.interpolate(
+            pe_psd, size=(num_freqs,), mode="linear"
+        )
+
+        mask = freqs > self.amplfi_whitener.highpass
+        pe_psd = pe_psd[:, :, mask]
+        asds = torch.sqrt(pe_psd)
+        logging.info("Calculated ASD")
+
+        # sample from the model and descale back to physical units
+        samples = self.amplfi.sample(
+            self.samples_per_event, context=(whitened, asds)
+        )
+        descaled_samples = self.std_scaler(samples.mT, reverse=True).mT.cpu()
+        logging.info("Sampled and scaled")
+
+        indices = [
+            self.inference_params.index(p)
+            for p in ["chirp_mass", "mass_ratio", "distance"]
+        ]
+        posterior = cast_samples_as_bilby_result(
+            descaled_samples[..., indices].numpy(),
+            ["chirp_mass", "mass_ratio", "distance"],
+            f"{event_time} result",
+        )
+        logging.info("Cast samples")
+
+        phi_idx = self.inference_params.index("phi")
+        dec_idx = self.inference_params.index("dec")
+        ra = (
+            torch.remainder(
+                lal.GreenwichMeanSiderealTime(event_time)
+                + descaled_samples[..., phi_idx],
+                torch.as_tensor(2 * torch.pi),
+            )
+            - torch.pi
+        )
+        dec = descaled_samples[..., dec_idx] + torch.pi / 2
+
+        skymap, figure = create_skymap(
+            ra,
+            dec,
+            self.nside,
+            title=f"{event_time} sky map",
+        )
+        logging.info("Created skymap")
+
+        return posterior, skymap, figure
+
 
 @torch.no_grad()
 def search(
@@ -168,7 +225,6 @@ def search(
     whitener: Whiten,
     searcher: Searcher,
     event_processor: EventProcessor,
-    input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     write_buffers: bool,
     aframe: Architecture,
@@ -205,12 +261,7 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    event_queue.put(
-                        (
-                            event,
-                            input_buffer,
-                        )
-                    )
+                    event_queue.put((event,))
                     last_event_written = False
                     last_event_time = event.gpstime
                     searcher.detecting = False
@@ -231,7 +282,7 @@ def search(
                     "resetting states".format(t0)
                 )
 
-                input_buffer.reset()
+                event_processor.buffer.reset()
                 output_buffer.reset()
 
                 # nothing left to do, so move on to next frame
@@ -242,7 +293,7 @@ def search(
             # weren't, so reset our running states
             logging.info(f"Frame {t0} is ready again, resetting states")
             state = snapshotter.reset()
-            input_buffer.reset()
+            event_processor.buffer.reset()
             output_buffer.reset()
             in_spec = True
 
@@ -259,7 +310,7 @@ def search(
         y = aframe(whitened)[:, 0]
 
         # update our input buffer with latest strain data,
-        input_buffer.update(X.cpu(), t0)
+        event_processor.buffer.update(X.cpu(), t0)
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
@@ -273,12 +324,7 @@ def search(
 
         # if we found an event, add it to the processing queue!
         if event is not None:
-            event_queue.put(
-                (
-                    event,
-                    input_buffer,
-                )
-            )
+            event_queue.put((event,))
             searcher.detecting = False
             last_event_written = False
             last_event_time = event.gpstime
@@ -293,7 +339,7 @@ def search(
             buffer_write_queue.put(
                 (
                     last_event_time,
-                    input_buffer,
+                    event_processor.buffer,
                     output_buffer,
                     outdir,
                 )
@@ -539,6 +585,7 @@ def main(
 
     event_processor = EventProcessor(
         gdb=gdb,
+        buffer=input_buffer,
         spectral_density=spectral_density,
         pe_whitener=pe_whitener,
         amplfi=amplfi,
@@ -556,7 +603,6 @@ def main(
         whitener=whitener,
         searcher=searcher,
         event_processor=event_processor,
-        input_buffer=input_buffer,
         output_buffer=output_buffer,
         write_buffers=write_buffers,
         aframe=aframe,
