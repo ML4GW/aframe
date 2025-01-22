@@ -38,6 +38,7 @@ class GraceDb(_GraceDb):
         logging.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / f"event_{int(event.gpstime)}"
         filename = event_dir / event.filename
+        logging.info("Creating event")
         response = self.create_event(
             group="CBC",
             pipeline="aframe",
@@ -74,10 +75,13 @@ class GraceDb(_GraceDb):
         event_dir = self.write_dir / f"event_{int(event_time)}"
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
+        logging.info("Submitting fits file")
         self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+        logging.info("Submitted fits file to GraceDB")
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
+        logging.info("Submitting corner plot")
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
@@ -85,13 +89,14 @@ class GraceDb(_GraceDb):
 
         mollview_fname = event_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
+        logging.info("Submitting Mollview plot")
         self.write_log(
             graceid,
             "Mollview projection",
             filename=mollview_fname,
             tag_name="sky_loc",
         )
-        logging.info("Submitted Mollview plots to GraceDB")
+        logging.info("Submitted Mollview plot to GraceDB")
 
     def submit_pastro(self, pastro: float, graceid: int, event_time: float):
         event_dir = self.write_dir / f"event_{int(event_time)}"

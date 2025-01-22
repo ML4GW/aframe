@@ -31,7 +31,7 @@ UPDATE_SIZE = 1
 SECONDS_PER_DAY = 86400
 
 
-def _submit_detection(
+def submit_detection(
     event: Event,
     gdb: GraceDb,
     outdir: Path,
@@ -46,7 +46,7 @@ def _submit_detection(
     graceid.value = response.json()["graceid"]
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid.value)
+    gdb.submit_pastro(float(pastro), graceid.value, event.gpstime)
 
 
 def write_buffers(
@@ -129,14 +129,13 @@ def process_event(
     # Define variable to be shared between parent and child process
     graceid = Value(c_wchar_p, "")
     args = (event, gdb, outdir, pastro_model, graceid)
-    p = Process(target=_submit_detection, args=args)
+    p = Process(target=submit_detection, args=args)
     p.start()
 
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
-    last_event_time = event.gpstime
     posterior, skymap, figure = run_amplfi(
-        last_event_time,
+        event.gpstime,
         buffer,
         inference_params,
         samples_per_event,
@@ -153,7 +152,7 @@ def process_event(
     # using the graceid from the event submission
     p.join()
     p.close()
-    gdb.submit_pe(posterior, skymap, graceid.value)
+    gdb.submit_pe(posterior, figure, skymap, graceid.value, event.gpstime)
 
 
 @torch.no_grad()
