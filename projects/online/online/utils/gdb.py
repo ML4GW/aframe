@@ -140,6 +140,17 @@ def authenticate():
     # TODO: don't hardcode keytab locations
     subprocess.run(
         [
+            "kinit",
+            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
+            "-k",
+            "-t",
+            os.path.expanduser(
+                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
+            ),
+        ]
+    )
+    subprocess.run(
+        [
             "htgettoken",
             "-v",
             "-a",
@@ -151,17 +162,5 @@ def authenticate():
             "--scopes=gracedb.read",
             "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
             "--nooidc",
-        ]
-    )
-
-    subprocess.run(
-        [
-            "kinit",
-            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
-            "-k",
-            "-t",
-            os.path.expanduser(
-                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
-            ),
         ]
     )
