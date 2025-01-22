@@ -68,17 +68,22 @@ class GraceDb(_GraceDb):
         mollview_plot: plt.figure,
         skymap: "table.Table",
         graceid: int,
+        event_time: float,
     ):
-        skymap_fname = self.write_dir / "amplfi.fits"
+        event_dir = self.write_dir / f"event_{int(event_time)}"
+        skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
+        self.write_log(
+            graceid, "skymap", filename=skymap_fname, tag_name="pe"
+        )
 
-        corner_fname = self.write_dir / "corner_plot.png"
+        corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
 
-        mollview_fname = self.write_dir / "mollview_plot.png"
+        mollview_fname = event_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
         self.write_log(
             graceid,
@@ -87,8 +92,9 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
         )
 
-    def submit_pastro(self, pastro: float, graceid: int):
-        fname = self.write_dir / "aframe.pastro.json"
+    def submit_pastro(self, pastro: float, graceid: int, event_time: float):
+        event_dir = self.write_dir / f"event_{int(event_time)}"
+        fname = event_dir / "aframe.pastro.json"
         pastro = {
             "BBH": pastro,
             "Terrestrial": 1 - pastro,

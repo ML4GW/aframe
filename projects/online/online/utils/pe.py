@@ -56,11 +56,11 @@ def run_amplfi(
 
     indices = [
         inference_params.index(p)
-        for p in ["chirp_mass", "mass_ratio", "luminosity_distance"]
+        for p in ["chirp_mass", "mass_ratio", "distance"]
     ]
     posterior = cast_samples_as_bilby_result(
         descaled_samples[..., indices].numpy(),
-        ["chirp_mass", "mass_ratio", "luminosity_distance"],
+        ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
 

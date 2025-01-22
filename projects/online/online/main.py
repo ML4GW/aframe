@@ -117,11 +117,11 @@ def process_event(
     # submit the posterior and skymap to gracedb
     # using the graceid from the event submission
     graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, figure, skymap, graceid)
+    gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
 
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid)
+    gdb.submit_pastro(float(pastro), graceid, event.gpstime)
     pass
 
 
