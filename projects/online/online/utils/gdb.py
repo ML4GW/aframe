@@ -73,9 +73,7 @@ class GraceDb(_GraceDb):
         event_dir = self.write_dir / f"event_{int(event_time)}"
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
-        self.write_log(
-            graceid, "skymap", filename=skymap_fname, tag_name="pe"
-        )
+        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
