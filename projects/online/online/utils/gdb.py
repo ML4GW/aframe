@@ -1,8 +1,10 @@
 import json
 import logging
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import bilby
 import matplotlib.pyplot as plt
@@ -10,6 +12,9 @@ from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 
 from online.utils.searcher import Event
+
+if TYPE_CHECKING:
+    from astropy import table
 
 GdbServer = Literal["local", "playground", "test", "production"]
 
@@ -26,7 +31,7 @@ class GraceDb(_GraceDb):
     """
 
     def __init__(self, *args, write_dir: Path, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, use_auth="scitoken")
         self.write_dir = write_dir
 
     def submit(self, event: Event):
@@ -61,15 +66,22 @@ class GraceDb(_GraceDb):
         self,
         result: bilby.core.result.Result,
         mollview_plot: plt.figure,
+        skymap: "table.Table",
         graceid: int,
+        event_time: float,
     ):
-        corner_fname = self.write_dir / "corner_plot.png"
+        event_dir = self.write_dir / f"event_{int(event_time)}"
+        skymap_fname = event_dir / "amplfi.fits"
+        skymap.writeto(skymap_fname)
+        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+
+        corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
 
-        mollview_fname = self.write_dir / "mollview_plot.png"
+        mollview_fname = event_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
         self.write_log(
             graceid,
@@ -78,8 +90,9 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
         )
 
-    def submit_pastro(self, pastro: float, graceid: int):
-        fname = self.write_dir / "aframe.pastro.json"
+    def submit_pastro(self, pastro: float, graceid: int, event_time: float):
+        event_dir = self.write_dir / f"event_{int(event_time)}"
+        fname = event_dir / "aframe.pastro.json"
         pastro = {
             "BBH": pastro,
             "Terrestrial": 1 - pastro,
@@ -121,3 +134,33 @@ def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
     return GraceDb(service_url=server, write_dir=write_dir)
+
+
+def authenticate():
+    # TODO: don't hardcode keytab locations
+    subprocess.run(
+        [
+            "kinit",
+            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
+            "-k",
+            "-t",
+            os.path.expanduser(
+                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
+            ),
+        ]
+    )
+    subprocess.run(
+        [
+            "htgettoken",
+            "-v",
+            "-a",
+            "vault.ligo.org",
+            "-i",
+            "igwn",
+            "-r",
+            "aframe-1-scitoken",
+            "--scopes=gracedb.read",
+            "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
+            "--nooidc",
+        ]
+    )

@@ -2,18 +2,16 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
-import numpy as np
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
-from ligo.gracedb.rest import GraceDb
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import gracedb_factory
+from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -23,8 +21,11 @@ from utils.preprocessing import BatchWhitener
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
 
+
 # seconds of data per update
 UPDATE_SIZE = 1
+
+SECONDS_PER_DAY = 86400
 
 
 def load_model(model: Architecture, weights: Path):
@@ -56,7 +57,7 @@ def get_time_offset(
     fduration: float,
     integration_window_length: float,
     kernel_length: float,
-    trigger_distance: float,
+    aframe_right_pad: float,
 ):
     # offset the initial timestamp of our
     # integrated outputs relative to the
@@ -68,12 +69,11 @@ def get_time_offset(
         - integration_window_length  # account for time to build peak
     )
 
-    if trigger_distance is not None:
-        if trigger_distance > 0:
-            time_offset -= kernel_length - trigger_distance
-        if trigger_distance < 0:
-            # Trigger distance parameter accounts for fduration already
-            time_offset -= np.abs(trigger_distance) - fduration / 2
+    if aframe_right_pad > 0:
+        time_offset -= kernel_length - aframe_right_pad
+    elif aframe_right_pad < 0:
+        # Trigger distance parameter accounts for fduration already
+        time_offset -= abs(aframe_right_pad) - fduration / 2
 
     return time_offset
 
@@ -87,7 +87,10 @@ def process_event(
     amplfi: FlowArchitecture,
     scaler: ChannelWiseScaler,
     pastro_model: "Pastro",
+    samples_per_event: int,
+    inference_params: list[str],
     outdir: Path,
+    nside: int,
     device: str,
 ):
     # write event information to disk
@@ -98,25 +101,27 @@ def process_event(
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
     last_event_time = event.gpstime
-    posterior, skymap = run_amplfi(
+    posterior, skymap, figure = run_amplfi(
         last_event_time,
         buffer,
+        inference_params,
+        samples_per_event,
         spectral_density,
         pe_whitener,
         amplfi,
         scaler,
-        outdir / "whitened_data_plots",
+        nside,
         device,
     )
 
     # submit the posterior and skymap to gracedb
     # using the graceid from the event submission
     graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, skymap, graceid)
+    gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
 
     # calculate and submit pastro
     pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid)
+    gdb.submit_pastro(float(pastro), graceid, event.gpstime)
     pass
 
 
@@ -136,12 +141,15 @@ def search(
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     time_offset: float,
+    samples_per_event: int,
+    inference_params: List[str],
     outdir: Path,
+    nside: int,
     device: str,
 ):
     integrated = None
 
-    # flat that declares if the most previous frame
+    # flag that declares if the most previous frame
     # was analysis ready or not
     in_spec = False
 
@@ -168,7 +176,10 @@ def search(
                         amplfi,
                         scaler,
                         pastro_model,
+                        samples_per_event,
+                        inference_params,
                         outdir,
+                        nside,
                         device,
                     )
                     searcher.detecting = False
@@ -240,7 +251,10 @@ def search(
                 amplfi,
                 scaler,
                 pastro_model,
+                samples_per_event,
+                inference_params,
                 outdir,
+                nside,
                 device,
             )
             searcher.detecting = False
@@ -264,8 +278,8 @@ def main(
     kernel_length: float,
     inference_sampling_rate: float,
     psd_length: float,
-    trigger_distance: float,
-    pe_window: float,
+    aframe_right_pad: float,
+    amplfi_kernel_length: float,
     event_position: float,
     fduration: float,
     integration_window_length: float,
@@ -274,12 +288,96 @@ def main(
     highpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
-    server: str = "test",
+    server: GdbServer = "test",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
+    samples_per_event: int = 20000,
+    nside: int = 32,
     device: str = "cpu",
 ):
+    """
+    Main function for launching real-time Aframe and AMPLFI pipeline.
+
+    Args:
+        aframe_weights:
+            Path to trained Aframe model weights
+        amplfi_architecture:
+            AMPLFI model architecture for parameter estimation
+        amplfi_weights:
+            Path to trained AMPLFI model weights
+        background_path:
+            Path to background noise events dataset
+            used for Aframe FAR calculation
+        foreground_path:
+            Path to recovered injection events dataset
+        rejected_path:
+            Path to rejected injection parameters dataset
+        outdir:
+            Directory to save output files
+        datadir:
+            Directory containing input strain data
+        ifos:
+            List of interferometer names
+        inference_params:
+            List of parameters on which the AMPLFI
+            model was trained to perform inference
+        channels:
+            List of the channel names to analyze
+        sample_rate:
+            Input data sample rate in Hz
+        kernel_length:
+            Length of Aframe analysis kernel in seconds
+        inference_sampling_rate:
+            Rate at which to sample the output of the Aframe model
+        psd_length:
+            Length of PSD estimation window in seconds
+        aframe_right_pad:
+            Time offset for trigger positioning in seconds
+        amplfi_kernel_length:
+            Length of AMPLFI analysis window in seconds
+        event_position:
+            Event position (in seconds) from the left edge
+            of the analysis window used for parameter estimation
+        fduration:
+            Length of whitening filter in seconds
+        integration_window_length:
+            Length of output integration window in seconds
+        astro_event_rate:
+            Prior on rate of astrophysical events in units Gpc^-3 yr^-1
+        fftlength:
+            FFT length in seconds (defaults to kernel_length + fduration)
+        highpass:
+            High-pass filter frequency in Hz
+        refractory_period:
+            Minimum time between events in seconds
+        far_threshold:
+            False alarm rate threshold in events/day
+        server:
+            GraceDB server to use:
+            "local", "playground", "test" or "production"
+        ifo_suffix:
+            Optional suffix for accessing data from /dev/shm.
+            Useful when analyzing alternative streams like
+            MDC replays that have directory structures in the format
+            `{ifo}_{ifo_suffix}`
+        input_buffer_length:
+            Length of strain data buffer in seconds
+        output_buffer_length:
+             Length of inference output buffer in seconds
+        samples_per_event:
+            Number of posterior samples to generate per event
+            for creating skymaps and other parameter estimation
+            data products
+        nside:
+            Healpix resolution for low-latency skymaps
+        device:
+            Device to run inference on ("cpu" or "cuda")
+    """
+    # run htgettoken and kinit
+    if server != "local":
+        authenticate()
+
     gdb = gracedb_factory(server, outdir)
 
     # initialize a buffer for storing recent strain data,
@@ -289,7 +387,7 @@ def main(
         sample_rate=sample_rate,
         buffer_length=input_buffer_length,
         fduration=fduration,
-        pe_window=pe_window,
+        amplfi_kernel_length=amplfi_kernel_length,
         event_position=event_position,
         device="cpu",
     )
@@ -368,7 +466,7 @@ def main(
     )
 
     # Convert FAR to Hz from 1/days
-    far_threshold /= 86400
+    far_threshold /= SECONDS_PER_DAY
     searcher = Searcher(
         background=background,
         far_threshold=far_threshold,
@@ -385,7 +483,7 @@ def main(
         fduration,
         integration_window_length,
         kernel_length,
-        trigger_distance,
+        aframe_right_pad,
     )
 
     data_it = data_iterator(
@@ -412,7 +510,10 @@ def main(
         pastro_model=pastro_model,
         data_it=data_it,
         time_offset=time_offset,
+        samples_per_event=samples_per_event,
+        inference_params=inference_params,
         outdir=outdir,
+        nside=nside,
         device=device,
     )
 
