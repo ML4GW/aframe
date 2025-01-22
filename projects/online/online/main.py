@@ -344,7 +344,7 @@ def main(
         integration_window_length:
             Length of output integration window in seconds
         astro_event_rate:
-            Expected rate of astrophysical events in Hz
+            Prior on rate of astrophysical events in units Gpc^-3 yr^-1
         fftlength:
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
