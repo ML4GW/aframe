@@ -120,8 +120,11 @@ class EventProcessor:
         response = self.gdb.submit(event)
         graceid.value = response.json()["graceid"]
         # calculate and submit pastro
+        logging.info("Calculating p_astro")
         pastro = self.pastro_model(event.detection_statistic)
+        logging.info("Submitting p_astro")
         self.gdb.submit_pastro(float(pastro), graceid.value, event.gpstime)
+        logging.info("p_astro submitted")
 
     def process_event(self, event: Event, buffer: InputBuffer):
         # Define variable to be shared between parent and child process
@@ -132,6 +135,7 @@ class EventProcessor:
 
         # after event is submitted, run AMPLFI
         # to produce a posterior and skymap
+        logging.info("Running AMPLFI")
         posterior, skymap, figure = run_amplfi(
             event.gpstime,
             buffer,
@@ -144,15 +148,18 @@ class EventProcessor:
             self.nside,
             self.device,
         )
+        logging.info("AMPLFI complete")
 
         # Wait for event submission to finish, and then
         # submit the posterior and skymap to gracedb
         # using the graceid from the event submission
         p.join()
         p.close()
+        logging.info("Submitting PE data products")
         self.gdb.submit_pe(
             posterior, figure, skymap, graceid.value, event.gpstime
         )
+        logging.info("PE submitted")
 
 
 @torch.no_grad()
