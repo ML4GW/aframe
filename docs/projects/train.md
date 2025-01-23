@@ -73,12 +73,12 @@ You can even train using multiple GPUS for free! Just specify a list of comma-se
 ##### Weights & Biases (WandB)
 `Aframe` uses [WandB](https://docs.wandb.ai/?_gl=1*csft4n*_ga*Njk1NDUzNjcyLjE3MTI4NDYyNTA.*_ga_JH1SJHJQXJ*MTcxMzI4NzY0NC4yOC4xLjE3MTMyODc2NDUuNTkuMC4w) for experiment tracking. WandB already has built-in integration with lightning.
 
-You can assign various attributes to your W&B logger
+You can assign various attributes to your W&B logger in the `luigi.cfg` file present in `aframe`'s root directory
 - name: name the run will be assigned
 - group: group to which the run will be assigned. This is useful for runs that are part of the same experiment but execute in different scripts, e.g. a hyperparameter sweep or maybe separate train, inferenence, and evaluation scripts
 - tags: comma-separated list of tags to give your run. Makes it easy to filter in the dashboard e.g. for autoencoder runs
-- project: the workspace consisting of multiple related experiments that your run is a part of, e.g. aframe
-- entity: the group managing the experiments your run is associated, e.g. ml4gw. If left blank, the project and run will be associated with your personal account
+- project: the workspace consisting of multiple related experiments that your run is a part of, by default this is set to `aframe`
+- entity: the group managing the experiments your run is associated, e.g. ml4gw. By default, this is left blank, resulting in the project and run being associated with your personal account
 
 > **_Note_** All the attributes above can also be configured via [environment variables](https://docs.wandb.ai/guides/track/environment-variables#optional-environment-variables)
 
