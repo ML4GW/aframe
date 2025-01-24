@@ -124,8 +124,8 @@ class LocalGraceDb(GraceDb):
     def create_event(self, filename: str, **_):
         return filename
 
-    def write_log(self, filename: str, **_):
-        return filename
+    def write_log(self, *args, **kwargs):
+        pass
 
 
 def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:

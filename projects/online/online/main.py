@@ -133,25 +133,15 @@ def process_event(
 
 @torch.no_grad()
 def search(
-    gdb: GraceDb,
-    pe_whitener: Whiten,
-    scaler: torch.nn.Module,
-    spectral_density: SpectralDensity,
     whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
     searcher: Searcher,
-    input_buffer: InputBuffer,
+    event_processor: EventProcessor,
     output_buffer: OutputBuffer,
     aframe: Architecture,
-    amplfi: Architecture,
-    pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     update_size: float,
     time_offset: float,
-    samples_per_event: int,
-    inference_params: List[str],
-    outdir: Path,
-    nside: int,
     device: str,
 ):
     integrated = None
@@ -174,21 +164,7 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    process_event(
-                        event,
-                        gdb,
-                        input_buffer,
-                        spectral_density,
-                        pe_whitener,
-                        amplfi,
-                        scaler,
-                        pastro_model,
-                        samples_per_event,
-                        inference_params,
-                        outdir,
-                        nside,
-                        device,
-                    )
+                    event_processor(event)
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -207,7 +183,7 @@ def search(
                     "resetting states".format(t0)
                 )
 
-                input_buffer.reset()
+                event_processor.buffer.reset()
                 output_buffer.reset()
 
                 # nothing left to do, so move on to next frame
@@ -218,7 +194,7 @@ def search(
             # weren't, so reset our running states
             logging.info(f"Frame {t0} is ready again, resetting states")
             state = snapshotter.reset()
-            input_buffer.reset()
+            event_processor.buffer.reset()
             output_buffer.reset()
             in_spec = True
 
@@ -236,7 +212,7 @@ def search(
         y = aframe(whitened)[:, 0]
 
         # update our input buffer with latest strain data,
-        input_buffer.update(X.cpu(), t0)
+        event_processor.buffer.update(X.cpu(), t0)
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
@@ -245,27 +221,12 @@ def search(
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
-        if snapshotter.full_psd_present and ready:
+        if snapshotter.full_psd_present:  # and ready:
             event = searcher.search(integrated, t0 + time_offset)
 
         # if we found an event, process it!
         if event is not None:
-            logging.info("Found event")
-            process_event(
-                event,
-                gdb,
-                input_buffer,
-                spectral_density,
-                pe_whitener,
-                amplfi,
-                scaler,
-                pastro_model,
-                samples_per_event,
-                inference_params,
-                outdir,
-                nside,
-                device,
-            )
+            event_processor(event)
             searcher.detecting = False
         # TODO write buffers to disk:
 
@@ -498,6 +459,7 @@ def main(
         background = background.sort_by("detection_statistic")
         background.write(background_path)
 
+    logging.info("Fitting p_astro model or loading from cache")
     pastro_model = fit_or_load_pastro(
         outdir / "pastro.pkl",
         background,
@@ -529,16 +491,11 @@ def main(
 
     search(
         gdb=gdb,
-        pe_whitener=pe_whitener,
-        scaler=scaler,
+        buffer=input_buffer,
         spectral_density=spectral_density,
-        whitener=whitener,
-        snapshotter=snapshotter,
-        searcher=searcher,
-        input_buffer=input_buffer,
-        output_buffer=output_buffer,
-        aframe=aframe,
+        pe_whitener=pe_whitener,
         amplfi=amplfi,
+        scaler=scaler,
         pastro_model=pastro_model,
         data_it=data_it,
         update_size=update_size,
@@ -547,6 +504,19 @@ def main(
         inference_params=inference_params,
         outdir=outdir,
         nside=nside,
+        device=device,
+    )
+
+    logging.info("Beginning search")
+    search(
+        whitener=whitener,
+        snapshotter=snapshotter,
+        event_processor=event_processor,
+        searcher=searcher,
+        output_buffer=output_buffer,
+        aframe=aframe,
+        data_it=data_it,
+        time_offset=time_offset,
         device=device,
     )
 
