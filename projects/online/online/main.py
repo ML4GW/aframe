@@ -114,8 +114,13 @@ def process_event(
     )
 
     # submit the posterior and skymap to gracedb
-    # using the graceid from the event submission
-    graceid = response.json()["graceid"]
+    # using the graceid from the event submission.
+    if isinstance(response, str):
+        # If the response is a string, then we are using the local gracedb
+        # client, which just returns the filename
+        graceid = response
+    else:
+        graceid = response.json()["graceid"]
     gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
     logging.info("All PE products submitted")
 
