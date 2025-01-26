@@ -1,21 +1,25 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import torch
+import torch.multiprocessing as mp
+from amplfi.train.architectures.embeddings import MultiModalPsd
+from amplfi.train.architectures.flows import MaskedAutoregressiveFlow
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
+from ml4gw.nn.norm import GroupNorm1DGetter
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
+from torch.multiprocessing import Process, Queue
 
-from ledger.events import EventSet, RecoveredInjectionSet
-from ledger.injections import InjectionParameterSet
+from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
-from online.utils.searcher import Event, Searcher
+from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
 
@@ -75,68 +79,13 @@ def get_time_offset(
     return time_offset
 
 
-def process_event(
-    event: Event,
-    gdb: GraceDb,
-    buffer: InputBuffer,
-    spectral_density: SpectralDensity,
-    pe_whitener: Whiten,
-    amplfi: FlowArchitecture,
-    scaler: ChannelWiseScaler,
-    pastro_model: "Pastro",
-    samples_per_event: int,
-    inference_params: list[str],
-    outdir: Path,
-    nside: int,
-    device: str,
-):
-    logging.info("Processing event")
-    # write event information to disk
-    # and submit it to gracedb
-    event.write(outdir)
-    response = gdb.submit(event)
-
-    # after event is submitted, run AMPLFI
-    # to produce a posterior and skymap
-    last_event_time = event.gpstime
-    logging.info("Running AMPLFI")
-    posterior, skymap, figure = run_amplfi(
-        last_event_time,
-        buffer,
-        inference_params,
-        samples_per_event,
-        spectral_density,
-        pe_whitener,
-        amplfi,
-        scaler,
-        nside,
-        device,
-    )
-
-    # submit the posterior and skymap to gracedb
-    # using the graceid from the event submission.
-    if isinstance(response, str):
-        # If the response is a string, then we are using the local gracedb
-        # client, which just returns the filename
-        graceid = response
-    else:
-        graceid = response.json()["graceid"]
-    gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
-    logging.info("All PE products submitted")
-
-    # calculate and submit pastro
-    logging.info("Computing p_astro")
-    pastro = pastro_model(event.detection_statistic)
-    gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-    logging.info("Completed event processing and submission")
-
-
 @torch.no_grad()
 def search(
     whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
     searcher: Searcher,
-    event_processor: EventProcessor,
+    event_queue: Queue,
+    input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
@@ -150,7 +99,6 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         # if this frame was not analysis ready
@@ -164,7 +112,8 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    event_processor(event)
+                    # event_processor(event)
+                    event_queue.put((event, input_buffer))
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -183,7 +132,7 @@ def search(
                     "resetting states".format(t0)
                 )
 
-                event_processor.buffer.reset()
+                input_buffer.reset()
                 output_buffer.reset()
 
                 # nothing left to do, so move on to next frame
@@ -194,7 +143,7 @@ def search(
             # weren't, so reset our running states
             logging.info(f"Frame {t0} is ready again, resetting states")
             state = snapshotter.reset()
-            event_processor.buffer.reset()
+            input_buffer.reset()
             output_buffer.reset()
             in_spec = True
 
@@ -212,7 +161,7 @@ def search(
         y = aframe(whitened)[:, 0]
 
         # update our input buffer with latest strain data,
-        event_processor.buffer.update(X.cpu(), t0)
+        input_buffer.update(X.cpu(), t0)
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
@@ -226,9 +175,146 @@ def search(
 
         # if we found an event, process it!
         if event is not None:
-            event_processor(event)
+            # event_processor(event)
+            logging.info("Putting event in event queue")
+            event_queue.put(
+                (
+                    event,
+                    input_buffer,
+                )
+            )
             searcher.detecting = False
         # TODO write buffers to disk:
+
+
+def pastro_subprocess(
+    pastro_queue: Queue,
+    server: GdbServer,
+    background_path: Path,
+    foreground_path: Path,
+    rejected_path: Path,
+    astro_event_rate: float,
+    outdir: Path,
+):
+    gdb = gracedb_factory(server, outdir)
+
+    logging.info("Fitting p_astro model or loading from cache")
+    pastro_model = fit_or_load_pastro(
+        outdir / "pastro.pkl",
+        background_path,
+        foreground_path,
+        rejected_path,
+        astro_event_rate=astro_event_rate,
+    )
+    logging.info("Loaded p_astro model")
+
+    while True:
+        event = pastro_queue.get()
+        logging.info("Calculating p_astro")
+        pastro = pastro_model(event.detection_statistic)
+        logging.info(f"Submitting p_astro: {pastro}")
+        graceid = pastro_queue.get()
+        gdb.submit_pastro(float(pastro), graceid, event.gpstime)
+
+
+def amplfi_subprocess(
+    amplfi_queue: Queue,
+    server: GdbServer,
+    outdir: Path,
+    amplfi_weights: Path,
+    inference_params: List[str],
+    sample_rate: float,
+    fduration: float,
+    fftlength: Optional[float] = None,
+    highpass: Optional[float] = None,
+    samples_per_event: int = 20000,
+    nside: int = 32,
+    device: str = "cpu",
+):
+    gdb = gracedb_factory(server, outdir)
+
+    norm_layer = GroupNorm1DGetter(groups=8)
+    embedding_net = MultiModalPsd(
+        num_ifos=2,
+        time_context_dim=12,
+        freq_context_dim=32,
+        time_layers=[5, 3, 3],
+        freq_layers=[5, 3, 3],
+        norm_layer=norm_layer,
+    )
+    amplfi_architecture = MaskedAutoregressiveFlow(
+        num_params=len(inference_params),
+        transform_type="spline",
+        hidden_features=100,
+        num_transforms=60,
+        num_blocks=6,
+        embedding_net=embedding_net,
+    )
+
+    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
+    amplfi, scaler = load_amplfi(
+        amplfi_architecture, amplfi_weights, len(inference_params)
+    )
+    amplfi = amplfi.to(device)
+    scaler = scaler.to(device)
+
+    spectral_density = SpectralDensity(
+        sample_rate=sample_rate,
+        fftlength=fftlength,
+        average="median",
+    ).to(device)
+    amplfi_whitener = Whiten(
+        fduration=fduration, sample_rate=sample_rate, highpass=highpass
+    ).to(device)
+
+    while True:
+        event, buffer = amplfi_queue.get()
+        posterior, skymap, figure = run_amplfi(
+            event_time=event.gpstime,
+            input_buffer=buffer,
+            inference_params=inference_params,
+            samples_per_event=samples_per_event,
+            spectral_density=spectral_density,
+            amplfi_whitener=amplfi_whitener,
+            amplfi=amplfi,
+            std_scaler=scaler,
+            nside=nside,
+            device=device,
+        )
+        graceid = amplfi_queue.get()
+        gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
+
+
+def event_creation_subprocess(
+    event_queue: Queue,
+    server: GdbServer,
+    outdir: Path,
+    amplfi_queue: Queue,
+    pastro_queue: Queue,
+):
+    gdb = gracedb_factory(server, outdir)
+    while True:
+        event, buffer = event_queue.get()
+        logging.info("Putting event in amplfi and pastro queues")
+        amplfi_queue.put((event, buffer))
+        pastro_queue.put(event)
+
+        # write event information to disk
+        # and submit it to gracedb
+        event.write(outdir)
+        response = gdb.submit(event)
+
+        # Get the event's graceid for submitting
+        # further data products
+        if isinstance(response, str):
+            # If the response is a string, then we are using the local gracedb
+            # client, which just returns the filename
+            graceid = response
+        else:
+            graceid = response.json()["graceid"]
+        logging.info("Putting graceid in amplfi and pastro queues")
+        amplfi_queue.put(graceid)
+        pastro_queue.put(graceid)
 
 
 def main(
@@ -351,7 +437,44 @@ def main(
     if server != "local":
         authenticate()
 
-    gdb = gracedb_factory(server, outdir)
+    fftlength = fftlength or kernel_length + fduration
+
+    mp.set_start_method("spawn")
+    amplfi_queue = Queue()
+    args = (
+        amplfi_queue,
+        server,
+        outdir,
+        amplfi_weights,
+        inference_params,
+        sample_rate,
+        fduration,
+        fftlength,
+        highpass,
+        samples_per_event,
+        nside,
+        device,
+    )
+    amplfi_process = Process(target=amplfi_subprocess, args=args)
+    amplfi_process.start()
+
+    pastro_queue = Queue()
+    args = (
+        pastro_queue,
+        server,
+        background_path,
+        foreground_path,
+        rejected_path,
+        astro_event_rate,
+        outdir,
+    )
+    pastro_process = Process(target=pastro_subprocess, args=args)
+    pastro_process.start()
+
+    event_queue = Queue()
+    args = (event_queue, server, outdir, amplfi_queue, pastro_queue)
+    event_process = Process(target=event_creation_subprocess, args=args)
+    event_process.start()
 
     if data_source == "ngdd":
         update_size = 1 / 16
@@ -396,17 +519,8 @@ def main(
 
     # Load in Aframe and amplfi models
     logging.info(f"Loading Aframe from weights at path {aframe_weights}")
-    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
     aframe = torch.jit.load(aframe_weights)
     aframe = aframe.to(device)
-    amplfi, scaler = load_amplfi(
-        amplfi_architecture, amplfi_weights, len(inference_params)
-    )
-    amplfi = amplfi.to(device)
-    scaler = scaler.to(device)
-    logging.info("Weights loaded")
-
-    fftlength = fftlength or kernel_length + fduration
 
     whitener = BatchWhitener(
         kernel_length=kernel_length,
@@ -444,11 +558,8 @@ def main(
 
     # load in background, foreground, and rejected injections;
     # use them to fit (or load in a cached) a pastro model
-    logging.info("Loading background, foreground, and rejected waveform data")
+    logging.info("Loading background distribution")
     background = EventSet.read(background_path)
-    foreground = RecoveredInjectionSet.read(foreground_path)
-    rejected = InjectionParameterSet.read(rejected_path)
-    logging.info("Data loaded")
 
     # if event set is not sorted by detection statistic, sort it
     # which will significantly speed up the far calculation
@@ -458,15 +569,6 @@ def main(
         )
         background = background.sort_by("detection_statistic")
         background.write(background_path)
-
-    logging.info("Fitting p_astro model or loading from cache")
-    pastro_model = fit_or_load_pastro(
-        outdir / "pastro.pkl",
-        background,
-        foreground,
-        rejected,
-        astro_event_rate=astro_event_rate,
-    )
 
     # Convert FAR to Hz from 1/days
     far_threshold /= SECONDS_PER_DAY
@@ -489,6 +591,7 @@ def main(
         aframe_right_pad,
     )
 
+    logging.info("Beginning search")
     search(
         gdb=gdb,
         buffer=input_buffer,
@@ -504,19 +607,6 @@ def main(
         inference_params=inference_params,
         outdir=outdir,
         nside=nside,
-        device=device,
-    )
-
-    logging.info("Beginning search")
-    search(
-        whitener=whitener,
-        snapshotter=snapshotter,
-        event_processor=event_processor,
-        searcher=searcher,
-        output_buffer=output_buffer,
-        aframe=aframe,
-        data_it=data_it,
-        time_offset=time_offset,
         device=device,
     )
 
