@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Optional
 
 import bilby
@@ -49,6 +50,7 @@ def run_amplfi(
     mask = freqs > amplfi_whitener.highpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
+    logging.info("Computed AMPLFI ASD")
 
     # sample from the model and descale back to physical units
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
@@ -63,6 +65,7 @@ def run_amplfi(
         ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
+    logging.info("Computed posterior")
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
@@ -82,6 +85,7 @@ def run_amplfi(
         nside,
         title=f"{event_time} sky map",
     )
+    logging.info("Created skymap")
 
     return posterior, skymap, figure
 

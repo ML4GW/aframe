@@ -93,6 +93,7 @@ def process_event(
     nside: int,
     device: str,
 ):
+    logging.info("Processing event")
     # write event information to disk
     # and submit it to gracedb
     event.write(outdir)
@@ -101,6 +102,7 @@ def process_event(
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
     last_event_time = event.gpstime
+    logging.info("Running AMPLFI")
     posterior, skymap, figure = run_amplfi(
         last_event_time,
         buffer,
@@ -118,11 +120,13 @@ def process_event(
     # using the graceid from the event submission
     graceid = response.json()["graceid"]
     gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
+    logging.info("All PE products submitted")
 
     # calculate and submit pastro
+    logging.info("Computing p_astro")
     pastro = pastro_model(event.detection_statistic)
     gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-    pass
+    logging.info("Completed event processing and submission")
 
 
 @torch.no_grad()
@@ -409,6 +413,7 @@ def main(
     )
     amplfi = amplfi.to(device)
     scaler = scaler.to(device)
+    logging.info("Weights loaded")
 
     fftlength = fftlength or kernel_length + fduration
 
@@ -444,9 +449,11 @@ def main(
 
     # load in background, foreground, and rejected injections;
     # use them to fit (or load in a cached) a pastro model
+    logging.info("Loading background, foreground, and rejected waveform data")
     background = EventSet.read(background_path)
     foreground = RecoveredInjectionSet.read(foreground_path)
     rejected = InjectionParameterSet.read(rejected_path)
+    logging.info("Data loaded")
 
     # if event set is not sorted by detection statistic, sort it
     # which will significantly speed up the far calculation
@@ -495,6 +502,7 @@ def main(
         timeout=10,
     )
 
+    logging.info("Beginning search")
     search(
         gdb=gdb,
         pe_whitener=pe_whitener,
