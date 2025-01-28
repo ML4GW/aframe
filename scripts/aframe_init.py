@@ -106,6 +106,13 @@ def create_online_runfile(path: Path):
 
     content = f"""
     #!/bin/bash
+
+    control_c() {{
+        kill $$
+        exit
+    }}
+    trap control_c SIGINT
+
     # trained model weights
     export AMPLFI_WEIGHTS=
     export AFRAME_WEIGHTS=
