@@ -1,3 +1,4 @@
+import logging
 import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,9 +38,12 @@ def fit_or_load_pastro(
     """
 
     if model_path.exists():
+        logging.info("Loading p_astro model")
         with open(model_path, "rb") as f:
             pastro = pickle.load(f)
+        logging.info("Model loaded")
     else:
+        logging.info("Fitting p_astro model")
         background_model = KdeAndPolynomialBackground(background)
         foreground_model = KdeForeground(
             foreground, rejected, astro_event_rate
@@ -47,4 +51,5 @@ def fit_or_load_pastro(
         pastro = Pastro(foreground_model, background_model)
         with open(model_path, "wb") as f:
             pickle.dump(pastro, f)
+        logging.info("Fitting complete")
     return pastro
