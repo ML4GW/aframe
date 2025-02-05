@@ -57,7 +57,8 @@ class MultiModalPsd(SupervisedArchitecture):
         self.classifier = torch.nn.Linear(time_classes + freq_classes, 1)
 
     def forward(self, X):
-        strain, asds = X
+        strain, psds = X
+        asds = psds**0.5
 
         asds *= 1e23
         asds = asds.float()

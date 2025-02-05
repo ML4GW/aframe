@@ -22,6 +22,41 @@ class SupervisedAframe(AframeBase):
         return self(X)
 
 
+class SupervisedMultiModalAframe(SupervisedAframe):
+    def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
+        super().__init__(arch, *args, **kwargs)
+
+    def validation_step(self, batch, _) -> None:
+        shift, X_bg, X_inj, psds = batch
+
+        y_bg = self.score((X_bg, psds))
+
+        # compute predictions over multiple views of
+        # each injection and use their average as our
+        # prediction
+        num_views, batch, *shape = X_inj.shape
+        X_inj = X_inj.view(num_views * batch, *shape)
+        y_fg = self.score((X_inj, psds))
+        y_fg = y_fg.view(num_views, batch)
+        y_fg = y_fg.mean(0)
+
+        # include the shift associated with this data
+        # in our outputs to reconstruct background
+        # timeseries at aggregation time
+        self.metric.update(shift, y_bg, y_fg)
+
+        # lightning will take care of updating then
+        # computing the metric at the end of the
+        # validation epoch
+        self.log(
+            "valid_auroc",
+            self.metric,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+        )
+
+
 class SupervisedAframeS4(SupervisedAframe):
     def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
         super().__init__(arch, *args, **kwargs)
