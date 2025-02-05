@@ -36,6 +36,9 @@ class SupervisedMultiModalAframe(SupervisedAframe):
         # prediction
         num_views, batch, *shape = X_inj.shape
         X_inj = X_inj.view(num_views * batch, *shape)
+        psds = psds.repeat(num_views, 1, 1, 1)
+        num_views, batch, *shape = psds.shape
+        psds = psds.view(num_views * batch, *shape)
         y_fg = self.score((X_inj, psds))
         y_fg = y_fg.view(num_views, batch)
         y_fg = y_fg.mean(0)

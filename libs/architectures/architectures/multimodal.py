@@ -62,12 +62,16 @@ class MultiModalPsd(SupervisedArchitecture):
 
         asds *= 1e23
         asds = asds.float()
-        inv_asds = 1 / asds
 
         time_domain_output = self.time_domain_resnet(strain)
 
         X_fft = torch.fft.rfft(strain)
-        X_fft = X_fft[..., -asds.shape[-1] :]
+        num_freqs = X_fft.shape[-1]
+        if asds.shape[-1] != num_freqs:
+            asds = torch.nn.functional.interpolate(
+                asds, size=(num_freqs,), mode="linear"
+            )
+        inv_asds = 1 / asds
         X_fft = torch.cat((X_fft.real, X_fft.imag, inv_asds), dim=1)
         freq_domain_output = self.freq_psd_resnet(X_fft)
 
