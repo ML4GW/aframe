@@ -35,7 +35,10 @@ class DeployValidationWaveforms(
     highpass = luigi.FloatParameter(
         description="Frequency of highpass filter in Hz"
     )
-
+    lowpass = luigi.OptionalFloatParameter(
+        description="Frequency of lowpass filter in Hz",
+        default="",
+    )
     output_dir = PathParameter(
         description="Directory where merged training waveforms will be saved",
         default=paths().train_datadir,
@@ -123,6 +126,7 @@ class DeployValidationWaveforms(
             self.waveform_approximant,
             self.coalescence_time,
             self.highpass,
+            self.lowpass,
             self.snr_threshold,
             psds,
         )

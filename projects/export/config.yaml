@@ -16,6 +16,7 @@ fduration: 2
 psd_length: 64
 fftlength: 2
 highpass: 32
+lowpass: null
 streams_per_gpu: 1
 aframe_instances: 1
 platform: TENSORRT

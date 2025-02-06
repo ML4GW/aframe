@@ -33,6 +33,7 @@ def add_streaming_input_preprocessor(
     fftlength: float,
     q: Optional[float] = None,
     highpass: Optional[float] = None,
+    lowpass: Optional[float] = None,
     preproc_instances: Optional[int] = None,
     streams_per_gpu: int = 1,
 ) -> "ExposedTensor":
@@ -86,6 +87,7 @@ def add_streaming_input_preprocessor(
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
+        lowpass=lowpass,
         augmentor=augmentor,
     )
     preproc_model = ensemble.repository.add(

@@ -40,6 +40,10 @@ class TestingWaveformsParams(WaveformParams):
     highpass = luigi.FloatParameter(
         description="Frequency of highpass filter in Hz"
     )
+    lowpass = luigi.OptionalFloatParameter(
+        description="Frequency of lowpass filter in Hz",
+        default="",
+    )
     snr_threshold = luigi.FloatParameter(
         description="SNR threshold for rejection sampling"
     )
@@ -176,6 +180,7 @@ class DeployTestingWaveforms(
                 self.waveform_approximant,
                 self.coalescence_time,
                 self.highpass,
+                self.lowpass,
                 self.snr_threshold,
                 psd_file,
                 Path(self.tmp_dir),

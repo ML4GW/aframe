@@ -36,6 +36,10 @@ class TrainBaseParameters(law.Task):
     highpass = luigi.FloatParameter(
         description="Highpass frequency in Hz to apply during whitening"
     )
+    lowpass = luigi.OptionalFloatParameter(
+        description="Lowpass frequency in Hz to apply during whitening",
+        default="",
+    )
     fftlength = luigi.OptionalFloatParameter(
         description="Duration in seconds of data used for FFT calculation",
         default="",
@@ -102,6 +106,7 @@ class TrainBase(law.Task):
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.fftlength=" + str(fftlength))
         args.append("--data.highpass=" + str(self.highpass))
+        args.append("--data.lowpass=" + str(self.lowpass))
         if self.q is not None:
             args.append("--data.q=" + str(self.q))
         return args

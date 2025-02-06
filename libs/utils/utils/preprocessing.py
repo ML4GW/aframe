@@ -109,6 +109,7 @@ class BatchWhitener(torch.nn.Module):
         fftlength: float,
         augmentor: Optional[Callable] = None,
         highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
         return_whitened: bool = False,
     ) -> None:
         super().__init__()
@@ -131,7 +132,7 @@ class BatchWhitener(torch.nn.Module):
             average="median",
             fast=highpass is not None,
         )
-        self.whitener = Whiten(fduration, sample_rate, highpass)
+        self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
 
     def forward(self, x: Tensor) -> Tensor:
         # Get the number of channels so we know how to

@@ -36,6 +36,7 @@ def export(
     fftlength: Optional[float] = None,
     q: Optional[float] = None,
     highpass: Optional[float] = None,
+    lowpass: Optional[float] = None,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
@@ -89,6 +90,8 @@ def export(
             during whitening
         highpass:
             Frequency to use for a highpass filter
+        lowpass:
+            Frequency to use for a lowpass filter
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
@@ -184,6 +187,7 @@ def export(
             fftlength=fftlength,
             q=q,
             highpass=highpass,
+            lowpass=lowpass,
             preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,
         )

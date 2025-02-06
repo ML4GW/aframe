@@ -290,6 +290,7 @@ def main(
     astro_event_rate: float,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
+    lowpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
     server: GdbServer = "test",
@@ -353,6 +354,8 @@ def main(
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
             High-pass filter frequency in Hz
+        lowpass:
+            Low-pass filter frequency in Hz
         refractory_period:
             Minimum time between events in seconds
         far_threshold:
@@ -425,6 +428,7 @@ def main(
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
+        lowpass=lowpass,
     ).to(device)
 
     snapshotter = OnlineSnapshotter(
@@ -444,7 +448,10 @@ def main(
         average="median",
     ).to(device)
     pe_whitener = Whiten(
-        fduration=fduration, sample_rate=sample_rate, highpass=highpass
+        fduration=fduration,
+        sample_rate=sample_rate,
+        highpass=highpass,
+        lowpass=lowpass,
     ).to(device)
 
     # load in background, foreground, and rejected injections;

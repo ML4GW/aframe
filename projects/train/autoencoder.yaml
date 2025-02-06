@@ -39,6 +39,7 @@ data:
     psd_length: 8
     fduration: 1
     highpass: 32
+    lowpass: null
     fftlength: null
 
     # augmentation args

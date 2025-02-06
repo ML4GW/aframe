@@ -32,6 +32,7 @@ class App:
         kernel_length: float,
         psd_length: float,
         highpass: float,
+        lowpass: float,
         batch_size: int,
         sample_rate: float,
         inference_sampling_rate: float,
@@ -56,6 +57,7 @@ class App:
         self.kernel_length = kernel_length
         self.psd_length = psd_length
         self.highpass = highpass
+        self.lowpass = lowpass
         self.batch_size = batch_size
         self.sample_rate = sample_rate
         self.inference_sampling_rate = inference_sampling_rate

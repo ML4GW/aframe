@@ -25,6 +25,7 @@ def testing_waveforms(
     waveform_approximant: str,
     coalescence_time: float,
     highpass: float,
+    lowpass: float,
     snr_threshold: float,
     psd_file: Path,
     output_dir: Path,
@@ -75,6 +76,9 @@ def testing_waveforms(
             the generated waveform
         highpass:
             The frequency to use for a highpass filter, specified
+            in Hz
+        lowpass:
+            The frequency to use for a lowpass filter, specified
             in Hz
         snr_threshold:
             Minimum SNR of generated waveforms. Sampled parameters
@@ -138,6 +142,7 @@ def testing_waveforms(
         waveform_approximant,
         coalescence_time,
         highpass,
+        lowpass,
         snr_threshold,
         psds,
     )
