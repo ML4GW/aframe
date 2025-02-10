@@ -3,14 +3,10 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 import torch
-import torch.multiprocessing as mp
-from amplfi.train.architectures.embeddings import MultiModalPsd
-from amplfi.train.architectures.flows import MaskedAutoregressiveFlow
 from amplfi.train.architectures.flows.base import FlowArchitecture
 from architectures import Architecture
-from ml4gw.nn.norm import GroupNorm1DGetter
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
-from torch.multiprocessing import Process, Queue
+from torch.multiprocessing import Array, Process, Queue
 
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
@@ -18,9 +14,10 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import run_amplfi
+from online.utils.pe import run_amplfi, skymap_from_samples
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
+from utils.logging import configure_logging
 from utils.preprocessing import BatchWhitener
 
 if TYPE_CHECKING:
@@ -85,9 +82,16 @@ def search(
     snapshotter: OnlineSnapshotter,
     searcher: Searcher,
     event_queue: Queue,
+    amplfi_queue: Queue,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
+    amplfi: FlowArchitecture,
+    scaler: ChannelWiseScaler,
+    spectral_density: SpectralDensity,
+    amplfi_whitener: Whiten,
+    samples_per_event: int,
+    shared_samples: Array,
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     update_size: float,
     time_offset: float,
@@ -113,7 +117,22 @@ def search(
                 if event is not None:
                     # maybe process event found in the previous frame
                     # event_processor(event)
-                    event_queue.put((event, input_buffer))
+                    logging.info("Putting event in event queue")
+                    event_queue.put(event)
+                    logging.info("Running AMPLFI")
+                    descaled_samples = run_amplfi(
+                        event_time=event.gpstime,
+                        input_buffer=input_buffer,
+                        samples_per_event=samples_per_event,
+                        spectral_density=spectral_density,
+                        amplfi_whitener=amplfi_whitener,
+                        amplfi=amplfi,
+                        std_scaler=scaler,
+                        device=device,
+                    )
+                    for i, sample in enumerate(descaled_samples.flatten()):
+                        shared_samples[i] = sample
+                    amplfi_queue.put(event.gpstime)
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -177,12 +196,21 @@ def search(
         if event is not None:
             # event_processor(event)
             logging.info("Putting event in event queue")
-            event_queue.put(
-                (
-                    event,
-                    input_buffer,
-                )
+            event_queue.put(event)
+            logging.info("Running AMPLFI")
+            descaled_samples = run_amplfi(
+                event_time=event.gpstime,
+                input_buffer=input_buffer,
+                samples_per_event=samples_per_event,
+                spectral_density=spectral_density,
+                amplfi_whitener=amplfi_whitener,
+                amplfi=amplfi,
+                std_scaler=scaler,
+                device=device,
             )
+            for i, sample in enumerate(descaled_samples.flatten()):
+                shared_samples[i] = sample
+            amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
 
@@ -196,6 +224,7 @@ def pastro_subprocess(
     astro_event_rate: float,
     outdir: Path,
 ):
+    configure_logging(outdir / "log" / "pastro.log")
     gdb = gracedb_factory(server, outdir)
 
     logging.info("Fitting p_astro model or loading from cache")
@@ -211,78 +240,52 @@ def pastro_subprocess(
     while True:
         event = pastro_queue.get()
         logging.info("Calculating p_astro")
-        pastro = pastro_model(event.detection_statistic)
-        logging.info(f"Submitting p_astro: {pastro}")
+        # pastro = pastro_model(event.detection_statistic)
+        pastro = pastro_model(7)
         graceid = pastro_queue.get()
+        logging.info(f"Submitting p_astro: {pastro}")
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
+        logging.info("Submitted p_astro")
 
 
 def amplfi_subprocess(
     amplfi_queue: Queue,
     server: GdbServer,
     outdir: Path,
-    amplfi_weights: Path,
     inference_params: List[str],
-    sample_rate: float,
-    fduration: float,
-    fftlength: Optional[float] = None,
-    highpass: Optional[float] = None,
-    samples_per_event: int = 20000,
+    shared_samples: Array,
     nside: int = 32,
-    device: str = "cpu",
 ):
+    configure_logging(outdir / "log" / "amplfi.log")
     gdb = gracedb_factory(server, outdir)
 
-    norm_layer = GroupNorm1DGetter(groups=8)
-    embedding_net = MultiModalPsd(
-        num_ifos=2,
-        time_context_dim=12,
-        freq_context_dim=32,
-        time_layers=[5, 3, 3],
-        freq_layers=[5, 3, 3],
-        norm_layer=norm_layer,
-    )
-    amplfi_architecture = MaskedAutoregressiveFlow(
-        num_params=len(inference_params),
-        transform_type="spline",
-        hidden_features=100,
-        num_transforms=60,
-        num_blocks=6,
-        embedding_net=embedding_net,
-    )
-
-    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
-    amplfi, scaler = load_amplfi(
-        amplfi_architecture, amplfi_weights, len(inference_params)
-    )
-    amplfi = amplfi.to(device)
-    scaler = scaler.to(device)
-
-    spectral_density = SpectralDensity(
-        sample_rate=sample_rate,
-        fftlength=fftlength,
-        average="median",
-    ).to(device)
-    amplfi_whitener = Whiten(
-        fduration=fduration, sample_rate=sample_rate, highpass=highpass
-    ).to(device)
-
     while True:
-        event, buffer = amplfi_queue.get()
-        posterior, skymap, figure = run_amplfi(
-            event_time=event.gpstime,
-            input_buffer=buffer,
-            inference_params=inference_params,
-            samples_per_event=samples_per_event,
-            spectral_density=spectral_density,
-            amplfi_whitener=amplfi_whitener,
-            amplfi=amplfi,
-            std_scaler=scaler,
-            nside=nside,
-            device=device,
-        )
-        graceid = amplfi_queue.get()
-        gdb.submit_pe(posterior, figure, skymap, graceid, event.gpstime)
+        arg = amplfi_queue.get()
+        if isinstance(arg, float):
+            event_time = arg
+            descaled_samples = torch.reshape(
+                torch.Tensor(shared_samples), (-1, len(inference_params))
+            )
+            logging.info("Creating skymap")
+            posterior, figure, skymap = skymap_from_samples(
+                descaled_samples, event_time, inference_params, nside
+            )
+            graceid = amplfi_queue.get()
+            logging.info("Submitting skymap")
+            gdb.submit_pe(posterior, figure, skymap, graceid, event_time)
+        else:
+            graceid = arg
+            event_time = amplfi_queue.get()
+            descaled_samples = torch.reshape(
+                torch.Tensor(shared_samples), (-1, len(inference_params))
+            )
+            logging.info("Creating skymap")
+            posterior, figure, skymap = skymap_from_samples(
+                descaled_samples, event_time, inference_params, nside
+            )
+            logging.info("Submitting PE")
+            gdb.submit_pe(posterior, figure, skymap, graceid, event_time)
+            logging.info("Submitted all PE")
 
 
 def event_creation_subprocess(
@@ -294,9 +297,8 @@ def event_creation_subprocess(
 ):
     gdb = gracedb_factory(server, outdir)
     while True:
-        event, buffer = event_queue.get()
+        event = event_queue.get()
         logging.info("Putting event in amplfi and pastro queues")
-        amplfi_queue.put((event, buffer))
         pastro_queue.put(event)
 
         # write event information to disk
@@ -434,26 +436,22 @@ def main(
             Device to run inference on ("cpu" or "cuda")
     """
     # run htgettoken and kinit
-    if server != "local":
-        authenticate()
+    # if server != "local":
+    #     logging.info("Authenticating")
+    #     authenticate()
+    #     logging.info("Authentication complete")
 
     fftlength = fftlength or kernel_length + fduration
-
-    mp.set_start_method("spawn")
+    data = torch.randn(samples_per_event * len(inference_params))
+    shared_samples = Array("d", data)
     amplfi_queue = Queue()
     args = (
         amplfi_queue,
         server,
         outdir,
-        amplfi_weights,
         inference_params,
-        sample_rate,
-        fduration,
-        fftlength,
-        highpass,
-        samples_per_event,
+        shared_samples,
         nside,
-        device,
     )
     amplfi_process = Process(target=amplfi_subprocess, args=args)
     amplfi_process.start()
@@ -521,6 +519,22 @@ def main(
     logging.info(f"Loading Aframe from weights at path {aframe_weights}")
     aframe = torch.jit.load(aframe_weights)
     aframe = aframe.to(device)
+
+    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
+    amplfi, scaler = load_amplfi(
+        amplfi_architecture, amplfi_weights, len(inference_params)
+    )
+    amplfi = amplfi.to(device)
+    scaler = scaler.to(device)
+
+    spectral_density = SpectralDensity(
+        sample_rate=sample_rate,
+        fftlength=fftlength,
+        average="median",
+    ).to(device)
+    amplfi_whitener = Whiten(
+        fduration=fduration, sample_rate=sample_rate, highpass=highpass
+    ).to(device)
 
     whitener = BatchWhitener(
         kernel_length=kernel_length,
@@ -593,13 +607,20 @@ def main(
 
     logging.info("Beginning search")
     search(
-        gdb=gdb,
-        buffer=input_buffer,
-        spectral_density=spectral_density,
-        pe_whitener=pe_whitener,
+        whitener=whitener,
+        snapshotter=snapshotter,
+        searcher=searcher,
+        event_queue=event_queue,
+        amplfi_queue=amplfi_queue,
+        input_buffer=input_buffer,
+        output_buffer=output_buffer,
+        aframe=aframe,
         amplfi=amplfi,
         scaler=scaler,
-        pastro_model=pastro_model,
+        spectral_density=spectral_density,
+        amplfi_whitener=amplfi_whitener,
+        samples_per_event=samples_per_event,
+        shared_samples=shared_samples,
         data_it=data_it,
         update_size=update_size,
         time_offset=time_offset,

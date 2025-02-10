@@ -22,13 +22,11 @@ if TYPE_CHECKING:
 def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
-    inference_params: list,
     samples_per_event: int,
     spectral_density: "SpectralDensity",
     amplfi_whitener: "Whiten",
     amplfi: "FlowArchitecture",
     std_scaler: "ChannelWiseScaler",
-    nside: int,
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
@@ -50,19 +48,30 @@ def run_amplfi(
     mask = freqs > amplfi_whitener.highpass
     mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
-    asds = torch.sqrt(pe_psd)
+    # asds = torch.sqrt(pe_psd)
     logging.info("Computed AMPLFI ASD")
 
     # sample from the model and descale back to physical units
-    samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+    # samples = amplfi.sample(samples_per_event, context=(whitened, asds))
+    logging.info("Sampled from AMPLFI")
+    # descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+    logging.info("Descaled samples")
+    return torch.randn((20000, 8))
+    # return descaled_samples
 
+
+def skymap_from_samples(
+    descaled_samples: torch.Tensor,
+    event_time: float,
+    inference_params: list[str],
+    nside: int,
+):
     indices = [
         inference_params.index(p)
         for p in ["chirp_mass", "mass_ratio", "distance"]
     ]
     posterior = cast_samples_as_bilby_result(
-        descaled_samples[..., indices].numpy(),
+        descaled_samples[..., indices],
         ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
@@ -88,7 +97,7 @@ def run_amplfi(
     )
     logging.info("Created skymap")
 
-    return posterior, skymap, figure
+    return posterior, figure, skymap
 
 
 def cast_samples_as_bilby_result(

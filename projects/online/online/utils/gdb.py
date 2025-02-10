@@ -77,6 +77,7 @@ class GraceDb(_GraceDb):
         skymap.writeto(skymap_fname)
         logging.info("Submitting skymap to GraceDB")
         self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+        logging.info("Skymap submitted")
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(filename=corner_fname)
@@ -84,6 +85,7 @@ class GraceDb(_GraceDb):
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
+        logging.info("Corner plot submitted")
 
         mollview_fname = event_dir / "mollview_plot.png"
         mollview_plot.savefig(mollview_fname, dpi=300)
@@ -94,6 +96,7 @@ class GraceDb(_GraceDb):
             filename=mollview_fname,
             tag_name="sky_loc",
         )
+        logging.info("Mollview plot submitted")
 
     def submit_pastro(self, pastro: float, graceid: int, event_time: float):
         event_dir = self.write_dir / f"event_{int(event_time)}"
@@ -164,7 +167,6 @@ def authenticate():
             "igwn",
             "-r",
             "aframe-1-scitoken",
-            "--scopes=gracedb.read",
             "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
             "--nooidc",
         ]
