@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import bilby
 import healpy as hp
@@ -53,9 +53,8 @@ def run_amplfi(
 
     # sample from the model and descale back to physical units
     # samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    logging.info("Sampled from AMPLFI")
     # descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
-    logging.info("Descaled samples")
+    logging.info("Finished AMPLFI")
     return torch.randn((20000, 8))
     # return descaled_samples
 
@@ -88,16 +87,14 @@ def skymap_from_samples(
         - torch.pi
     )
     dec = descaled_samples[..., dec_idx] + torch.pi / 2
-
-    skymap, figure = create_skymap(
+    skymap, mollview_map = create_skymap(
         ra,
         dec,
         nside,
-        title=f"{event_time} sky map",
     )
     logging.info("Created skymap")
 
-    return posterior, figure, skymap
+    return posterior, mollview_map, skymap
 
 
 def cast_samples_as_bilby_result(
@@ -121,7 +118,6 @@ def create_skymap(
     ra_samples: np.ndarray,
     dec_samples: np.ndarray,
     nside: int = 32,
-    title: Optional[str] = None,
 ) -> tuple[table.Table, plt.Figure]:
     """Create a skymap from samples of right ascension and declination."""
     # mask out non physical samples;
@@ -154,8 +150,4 @@ def create_skymap(
         copy=False,
     )
     fits_table = io.fits.table_to_hdu(t)
-
-    fig = plt.figure()
-    hp.mollview(m, fig=fig, title=title, hold=True)
-    plt.close()
-    return fits_table, fig
+    return fits_table, m

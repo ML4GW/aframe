@@ -208,8 +208,7 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            for i, sample in enumerate(descaled_samples.flatten()):
-                shared_samples[i] = sample
+            shared_samples = descaled_samples.flatten()
             amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
@@ -240,8 +239,8 @@ def pastro_subprocess(
     while True:
         event = pastro_queue.get()
         logging.info("Calculating p_astro")
-        # pastro = pastro_model(event.detection_statistic)
-        pastro = pastro_model(7)
+        pastro = pastro_model(event.detection_statistic)
+        # pastro = pastro_model(7)
         graceid = pastro_queue.get()
         logging.info(f"Submitting p_astro: {pastro}")
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
@@ -267,12 +266,13 @@ def amplfi_subprocess(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
             logging.info("Creating skymap")
-            posterior, figure, skymap = skymap_from_samples(
+            posterior, mollview_map, skymap = skymap_from_samples(
                 descaled_samples, event_time, inference_params, nside
             )
             graceid = amplfi_queue.get()
-            logging.info("Submitting skymap")
-            gdb.submit_pe(posterior, figure, skymap, graceid, event_time)
+            logging.info("Submitting PE")
+            gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
+            logging.info("Submitted all PE")
         else:
             graceid = arg
             event_time = amplfi_queue.get()
@@ -280,11 +280,11 @@ def amplfi_subprocess(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
             logging.info("Creating skymap")
-            posterior, figure, skymap = skymap_from_samples(
+            posterior, mollview_map, skymap = skymap_from_samples(
                 descaled_samples, event_time, inference_params, nside
             )
             logging.info("Submitting PE")
-            gdb.submit_pe(posterior, figure, skymap, graceid, event_time)
+            gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
             logging.info("Submitted all PE")
 
 
@@ -298,7 +298,7 @@ def event_creation_subprocess(
     gdb = gracedb_factory(server, outdir)
     while True:
         event = event_queue.get()
-        logging.info("Putting event in amplfi and pastro queues")
+        logging.info("Putting event in pastro queue")
         pastro_queue.put(event)
 
         # write event information to disk

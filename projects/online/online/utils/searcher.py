@@ -123,9 +123,13 @@ class Searcher:
         self.last_detection_time = time.time() - self.refractory_period
 
         # calculate the detection statistic threshold
-        # corresponding to the requested FAR threshodl
-        self.background = background
-        self.threshold = self.background.threshold_at_far(far_threshold)
+        # corresponding to the requested FAR threshold
+        self.threshold = background.threshold_at_far(far_threshold)
+        # Speed up FAR calculation by excluding below-threshold events,
+        # and just record the total number of them
+        mask = background.detection_statistic >= self.threshold
+        self.background = background[mask]
+        self.total_below_threshold = np.sum(~mask)
 
     def check_refractory(self, value):
         time_since_last = time.time() - self.last_detection_time
@@ -143,7 +147,17 @@ class Searcher:
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
+        logging.info("Computing FAR")
         far = self.background.far(value)
+        logging.info("FAR computed")
+        # Add back in the below-threshold events if
+        # the FAR is below the minimum FAR
+        if far != self.background.min_far:
+            far += (
+                SECONDS_PER_YEAR
+                * self.total_below_threshold
+                / self.background.Tb
+            )
         far /= SECONDS_PER_YEAR
 
         logging.info(
@@ -185,13 +199,14 @@ class Searcher:
             # if not, nothing to do here
             return None
 
-        logging.info(
-            f"Detected event with detection statistic>={max_val:0.3f}"
-        )
+        logging.info(f"Detected event with detection statistic {max_val:0.3f}")
 
         # check if the integrated output is still
         # ramping as we get to the end of the frame
         idx = np.argmax(y)
+        # timestamp = t0 + idx / self.inference_sampling_rate
+        # detection_time = float(tconvert(datetime.now(tz=timezone.utc)))
+        # logging.info(f"Detection latency: {detection_time - timestamp}")
         if idx < (len(y) - 1):
             # if not, assume the event is in this
             # frame and build an event around it

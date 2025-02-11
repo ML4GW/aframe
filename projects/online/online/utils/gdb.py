@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import bilby
+import healpy as hp
 import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
@@ -14,6 +15,7 @@ from ligo.gracedb.rest import GraceDb as _GraceDb
 from online.utils.searcher import Event
 
 if TYPE_CHECKING:
+    import numpy as np
     from astropy import table
 
 GdbServer = Literal["local", "playground", "test", "production"]
@@ -31,7 +33,7 @@ class GraceDb(_GraceDb):
     """
 
     def __init__(self, *args, write_dir: Path, **kwargs):
-        super().__init__(*args, **kwargs, use_auth="scitoken")
+        super().__init__(*args, **kwargs)  # , use_auth="scitoken")
         self.write_dir = write_dir
 
     def submit(self, event: Event):
@@ -67,7 +69,7 @@ class GraceDb(_GraceDb):
     def submit_pe(
         self,
         result: bilby.core.result.Result,
-        mollview_plot: plt.figure,
+        mollview_map: "np.ndarray",
         skymap: "table.Table",
         graceid: int,
         event_time: float,
@@ -88,7 +90,11 @@ class GraceDb(_GraceDb):
         logging.info("Corner plot submitted")
 
         mollview_fname = event_dir / "mollview_plot.png"
-        mollview_plot.savefig(mollview_fname, dpi=300)
+        fig = plt.figure()
+        title = (f"{event_time:.3} sky map",)
+        hp.mollview(mollview_map, fig=fig, title=title, hold=True)
+        plt.close()
+        fig.savefig(mollview_fname, dpi=300)
         logging.info("Submitting Mollview plot to GraceDB")
         self.write_log(
             graceid,
