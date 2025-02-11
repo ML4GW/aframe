@@ -1,5 +1,7 @@
 import logging
+import time
 from pathlib import Path
+from queue import Empty
 from typing import Iterable, List, Optional, Tuple
 
 import torch
@@ -11,13 +13,16 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
+<<<<<<< HEAD
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
+=======
+from online.utils.gdb import GdbServer, authenticate, gracedb_factory
+>>>>>>> 6104a24 (Fix FAR calc bug and added authentication to loop)
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi, skymap_from_samples
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
-from utils.logging import configure_logging
 from utils.preprocessing import BatchWhitener
 
 if TYPE_CHECKING:
@@ -223,7 +228,6 @@ def pastro_subprocess(
     astro_event_rate: float,
     outdir: Path,
 ):
-    configure_logging(outdir / "log" / "pastro.log")
     gdb = gracedb_factory(server, outdir)
 
     logging.info("Fitting p_astro model or loading from cache")
@@ -255,7 +259,6 @@ def amplfi_subprocess(
     shared_samples: Array,
     nside: int = 32,
 ):
-    configure_logging(outdir / "log" / "amplfi.log")
     gdb = gracedb_factory(server, outdir)
 
     while True:
@@ -296,27 +299,37 @@ def event_creation_subprocess(
     pastro_queue: Queue,
 ):
     gdb = gracedb_factory(server, outdir)
+    last_auth = time.time()
     while True:
-        event = event_queue.get()
-        logging.info("Putting event in pastro queue")
-        pastro_queue.put(event)
+        try:
+            event = event_queue.get_nowait()
+            logging.info("Putting event in pastro queue")
+            pastro_queue.put(event)
 
-        # write event information to disk
-        # and submit it to gracedb
-        event.write(outdir)
-        response = gdb.submit(event)
+            # write event information to disk
+            # and submit it to gracedb
+            event.write(outdir)
+            response = gdb.submit(event)
 
-        # Get the event's graceid for submitting
-        # further data products
-        if isinstance(response, str):
-            # If the response is a string, then we are using the local gracedb
-            # client, which just returns the filename
-            graceid = response
-        else:
-            graceid = response.json()["graceid"]
-        logging.info("Putting graceid in amplfi and pastro queues")
-        amplfi_queue.put(graceid)
-        pastro_queue.put(graceid)
+            # Get the event's graceid for submitting
+            # further data products
+            if isinstance(response, str):
+                # If the response is a string, then we are using the
+                # local gracedb client, which just returns the filename
+                graceid = response
+            else:
+                graceid = response.json()["graceid"]
+            logging.info("Putting graceid in amplfi and pastro queues")
+            amplfi_queue.put(graceid)
+            pastro_queue.put(graceid)
+        except Empty:
+            time.sleep(1e-3)
+            # Re-authenticate every 1000 seconds so that
+            # the scitoken doesn't expire. Doing it in this
+            # loop as it's the earliest point of submission
+            if last_auth - time.time() > 1000:
+                authenticate()
+                last_auth = time.time()
 
 
 def main(
@@ -435,7 +448,7 @@ def main(
         device:
             Device to run inference on ("cpu" or "cuda")
     """
-    # run htgettoken and kinit
+    # run kinit and htgettoken
     # if server != "local":
     #     logging.info("Authenticating")
     #     authenticate()

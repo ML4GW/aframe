@@ -125,11 +125,9 @@ class Searcher:
         # calculate the detection statistic threshold
         # corresponding to the requested FAR threshold
         self.threshold = background.threshold_at_far(far_threshold)
-        # Speed up FAR calculation by excluding below-threshold events,
-        # and just record the total number of them
+        # Speed up FAR calculation by excluding below-threshold events
         mask = background.detection_statistic >= self.threshold
         self.background = background[mask]
-        self.total_below_threshold = np.sum(~mask)
 
     def check_refractory(self, value):
         time_since_last = time.time() - self.last_detection_time
@@ -149,16 +147,8 @@ class Searcher:
         timestamp = t0 + idx / self.inference_sampling_rate
         logging.info("Computing FAR")
         far = self.background.far(value)
-        logging.info("FAR computed")
-        # Add back in the below-threshold events if
-        # the FAR is below the minimum FAR
-        if far != self.background.min_far:
-            far += (
-                SECONDS_PER_YEAR
-                * self.total_below_threshold
-                / self.background.Tb
-            )
         far /= SECONDS_PER_YEAR
+        logging.info("FAR computed")
 
         logging.info(
             "Event coalescence time found to be {:0.3f} "
