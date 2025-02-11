@@ -194,12 +194,11 @@ def search(
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
-        if snapshotter.full_psd_present:  # and ready:
+        if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
 
         # if we found an event, process it!
         if event is not None:
-            # event_processor(event)
             logging.info("Putting event in event queue")
             event_queue.put(event)
             logging.info("Running AMPLFI")
@@ -244,7 +243,6 @@ def pastro_subprocess(
         event = pastro_queue.get()
         logging.info("Calculating p_astro")
         pastro = pastro_model(event.detection_statistic)
-        # pastro = pastro_model(7)
         graceid = pastro_queue.get()
         logging.info(f"Submitting p_astro: {pastro}")
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
@@ -438,7 +436,7 @@ def main(
         input_buffer_length:
             Length of strain data buffer in seconds
         output_buffer_length:
-             Length of inference output buffer in seconds
+            Length of inference output buffer in seconds
         samples_per_event:
             Number of posterior samples to generate per event
             for creating skymaps and other parameter estimation
@@ -449,10 +447,10 @@ def main(
             Device to run inference on ("cpu" or "cuda")
     """
     # run kinit and htgettoken
-    # if server != "local":
-    #     logging.info("Authenticating")
-    #     authenticate()
-    #     logging.info("Authentication complete")
+    if server != "local":
+        logging.info("Authenticating")
+        authenticate()
+        logging.info("Authentication complete")
 
     fftlength = fftlength or kernel_length + fduration
     data = torch.randn(samples_per_event * len(inference_params))

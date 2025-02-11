@@ -194,9 +194,6 @@ class Searcher:
         # check if the integrated output is still
         # ramping as we get to the end of the frame
         idx = np.argmax(y)
-        # timestamp = t0 + idx / self.inference_sampling_rate
-        # detection_time = float(tconvert(datetime.now(tz=timezone.utc)))
-        # logging.info(f"Detection latency: {detection_time - timestamp}")
         if idx < (len(y) - 1):
             # if not, assume the event is in this
             # frame and build an event around it

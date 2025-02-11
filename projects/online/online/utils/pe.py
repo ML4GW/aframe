@@ -48,15 +48,13 @@ def run_amplfi(
     mask = freqs > amplfi_whitener.highpass
     mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
-    # asds = torch.sqrt(pe_psd)
-    logging.info("Computed AMPLFI ASD")
+    asds = torch.sqrt(pe_psd)
 
     # sample from the model and descale back to physical units
-    # samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    # descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+    samples = amplfi.sample(samples_per_event, context=(whitened, asds))
+    descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     logging.info("Finished AMPLFI")
-    return torch.randn((20000, 8))
-    # return descaled_samples
+    return descaled_samples
 
 
 def skymap_from_samples(
@@ -74,7 +72,6 @@ def skymap_from_samples(
         ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
-    logging.info("Computed posterior")
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
