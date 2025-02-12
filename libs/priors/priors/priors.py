@@ -62,23 +62,6 @@ def uniform_spin() -> PriorDict:
     return prior
 
 
-def aligned_spin() -> PriorDict:
-    """
-    Define a Bilby `PriorDict` containing distributions that are
-    uniform over the allowed ranges of binary black hole spin
-    parameters, ensuring the spins are aligned.
-    """
-    prior = PriorDict()
-    prior["psi"] = 0
-    prior["a_1"] = Uniform(0, 0.998)
-    prior["a_2"] = Uniform(0, 0.998)
-    prior["tilt_1"] = 0
-    prior["tilt_2"] = 0
-    prior["phi_12"] = 0
-    prior["phi_jl"] = 0
-    return prior
-
-
 def nonspin_bbh(cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY) -> PriorDict:
     """
     Define a Bilby `PriorDict` that describes a reasonable population
@@ -184,7 +167,7 @@ def end_o3_ratesandpops(
         0, 2, name="redshift", cosmology=cosmology
     )
     # change spin func here
-    spin_prior = aligned_spin()
+    spin_prior = uniform_spin()
     for key, value in spin_prior.items():
         prior[key] = value
     detector_frame_prior = False
@@ -222,7 +205,7 @@ def end_o3_ratesandpops_bns(
     prior["redshift"] = UniformSourceFrame(
         0, 0.15, name="redshift", cosmology=cosmology
     )
-    spin_prior = aligned_spin()
+    spin_prior = uniform_spin()
     for key, value in spin_prior.items():
         prior[key] = value
     prior["a_1"] = Uniform(0, 0.4)

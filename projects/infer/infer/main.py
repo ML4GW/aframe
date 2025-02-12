@@ -81,10 +81,6 @@ def infer(
     logging.info("Inference complete, postprocessing output timeseries")
 
     background, foreground = result
-    # t0 = postprocessor.t0
-    # shift = postprocessor.shifts[-1]
-    # save_file = f"/home/katrine.kompanets/aframe/runs/aligned_TaylorF2_v2/results_month_inference/{t0}_{shift}.npy" # noqa
-    # np.save(save_file, background)
     background = postprocessor(background)
     foreground = postprocessor(foreground)
 
