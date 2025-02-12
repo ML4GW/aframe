@@ -137,9 +137,8 @@ class InferBase(
             start, duration = map(float, fname.stem.split("-")[-2:])
             stop = start + duration
 
-            # if its somehow not analyzeable for 0lag then segment
-            # length has been set incorrectly, but put this check here anyway
             if self.zero_lag:
+                # check if segment is long enough to be analyzed
                 if data_utils.is_analyzeable_segment(
                     start, stop, [0] * len(self.shifts), self.psd_length
                 ):

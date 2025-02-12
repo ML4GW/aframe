@@ -166,7 +166,6 @@ def end_o3_ratesandpops(
     prior["redshift"] = UniformComovingVolume(
         0, 2, name="redshift", cosmology=cosmology
     )
-    # change spin func here
     spin_prior = uniform_spin()
     for key, value in spin_prior.items():
         prior[key] = value
