@@ -30,7 +30,7 @@ class InferParameters(law.Task):
     rate_per_gpu = luigi.FloatParameter(
         default=100.0, description="Inferences per second per gpu"
     )
-    zero_lag = luigi.BoolParameter(default="false")
+    zero_lag = luigi.BoolParameter(default="true")
     output_dir = PathParameter(default=paths().results_dir)
     train_task = luigi.TaskParameter()
 
@@ -136,24 +136,26 @@ class InferBase(
             fname = Path(fname.path)
             start, duration = map(float, fname.stem.split("-")[-2:])
             stop = start + duration
-            for i in range(num_shifts):
-                _shifts = [s * (i + 1) for s in self.shifts]
+
+            if self.zero_lag:
                 # check if segment is long enough to be analyzed
                 if data_utils.is_analyzeable_segment(
-                    start, stop, _shifts, self.psd_length
+                    start, stop, [0] * len(self.shifts), self.psd_length
                 ):
-                    # unique identifier for mapping to branch map
+                    _shifts = [0 for s in self.shifts]
                     branch_map[counter] = (fname, _shifts)
                     counter += 1
 
-            # if its somehow not analyzeable for 0lag then segment
-            # length has been set incorrectly, but put this check here anyway
-            if self.zero_lag and data_utils.is_analyzeable_segment(
-                start, stop, [0] * len(self.shifts), self.psd_length
-            ):
-                _shifts = [0 for s in self.shifts]
-                branch_map[counter] = (fname, _shifts)
-                counter += 1
+            if num_shifts > 0:
+                for i in range(num_shifts):
+                    _shifts = [s * (i + 1) for s in self.shifts]
+                    # check if segment is long enough to be analyzed
+                    if data_utils.is_analyzeable_segment(
+                        start, stop, _shifts, self.psd_length
+                    ):
+                        # unique identifier for mapping to branch map
+                        branch_map[counter] = (fname, _shifts)
+                        counter += 1
 
         return branch_map
 

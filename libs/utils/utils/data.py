@@ -38,6 +38,8 @@ def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
     combinations in front of the sum above.
     """
 
+    if Tb == 0:
+        return 0
     discriminant = (delta / 2 - T) ** 2 - 2 * delta * Tb
     N = (T - delta / 2 - discriminant**0.5) / delta
     return math.ceil(N)

@@ -190,8 +190,9 @@ class Infer(AframeSingularityTask):
 
         # Sort background events for later use.
         # TODO: any benefit to sorting foreground for SV calculation?
-        background = EventSet.read(self.background_output)
-        background = background.sort_by("detection_statistic")
-        background.write(self.background_output)
+        if len(back_files) > 0:
+            background = EventSet.read(self.background_output)
+            background = background.sort_by("detection_statistic")
+            background.write(self.background_output)
 
         shutil.rmtree(self.output_dir / "tmp")
