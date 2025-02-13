@@ -13,7 +13,7 @@ python = ">=3.9,<3.13"
 utils = {path = "../../libs/utils", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 priors = {path = "../../libs/priors", develop = true}
-ml4gw = "^0.5"
+ml4gw = ">=0.7.2"
 aframe = {path = "../..", develop = true}
 
 [tool.poetry.group.dev.dependencies]
