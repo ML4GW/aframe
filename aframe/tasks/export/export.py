@@ -23,6 +23,7 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
+    lowpass = luigi.FloatParameter(default="")
     q = luigi.OptionalFloatParameter(default="")
     fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
@@ -84,6 +85,7 @@ class ExportLocal(AframeSingularityTask):
             self.fftlength,
             self.q,
             self.highpass,
+            self.lowpass,
             self.streams_per_gpu,
             self.aframe_instances,
             self.preproc_instances,
