@@ -219,7 +219,7 @@ wandb = "^0.18.5"
 
 [package.source]
 type = "git"
-url = "git@github.com:ML4GW/amplfi.git"
+url = "https://github.com/ML4GW/amplfi.git"
 reference = "HEAD"
 resolved_reference = "3337c032111c6ac543a1d70ecec7cbf1c1dc85c2"
 
@@ -5325,4 +5325,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "b90cf519801458941f796fd8cae36f643790a3dd0b5252dd3be536bfbda3abe5"
+content-hash = "3d32b473e00081bd86a6468b73e148070917d2f965609836ced2a516eddc7c09"
