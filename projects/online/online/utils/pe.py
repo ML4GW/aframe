@@ -51,7 +51,9 @@ def run_amplfi(
     asds = torch.sqrt(pe_psd)
 
     # sample from the model and descale back to physical units
+    logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
+    logging.info("Sampling complete")
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     logging.info("Finished AMPLFI")
     return descaled_samples

@@ -5,7 +5,7 @@ foreground_file: ${oc.env:ONLINE_FOREGROUND_FILE}
 rejected_file: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_architecture: 
-  class_path: amplfi.train.architectures.flows.MaskedAutoregressiveFlow
+  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
   init_args:
     hidden_features: 150
     num_transforms: 80
