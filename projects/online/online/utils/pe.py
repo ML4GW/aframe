@@ -54,7 +54,8 @@ def run_amplfi(
     )
 
     mask = freqs > amplfi_whitener.highpass
-    mask *= freqs < amplfi_whitener.lowpass
+    if amplfi_whitener.lowpass is not None:
+        mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
     asd_time = time.time()
@@ -67,10 +68,10 @@ def run_amplfi(
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     descale = time.time()
     logging.info("Finished AMPLFI")
-    fname = "amplfi_times.csv"
+    fname = "run_amplfi_times.csv"
     with open(fname, "a", newline="") as f:
         writer = csv.writer(f)
-        if not os.path.exists(fname):
+        if os.stat(fname).st_size == 0:
             writer.writerow(
                 [
                     "get_strain",
@@ -136,7 +137,7 @@ def skymap_from_samples(
     fname = "skymap_times.csv"
     with open(fname, "a", newline="") as f:
         writer = csv.writer(f)
-        if not os.path.exists(fname):
+        if os.stat(fname).st_size == 0:
             writer.writerow(
                 [
                     "cast_samples",

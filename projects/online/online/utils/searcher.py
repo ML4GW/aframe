@@ -173,7 +173,7 @@ class Searcher:
         fname = "build_event_times.csv"
         with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
-            if not os.path.exists(fname):
+            if os.stat(fname).st_size == 0:
                 writer.writerow(
                     [
                         "pre_far",

@@ -189,7 +189,9 @@ def search(
         aframe_time = time.time()
 
         # update our input buffer with latest strain data,
-        input_buffer.update(X.cpu(), t0)
+        X_cpu = X.cpu()
+        to_cpu = time.time()
+        input_buffer.update(X_cpu, t0)
         input_buffer_time = time.time()
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
@@ -264,7 +266,7 @@ def pastro_subprocess(
         fname = "pastro_submission_times.csv"
         with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
-            if not os.path.exists(fname):
+            if os.stat(fname).st_size == 0:
                 writer.writerow(["p_astro_time", "submission_time"])
             writer.writerow([p_astro_time, submission_time])
 
@@ -320,10 +322,10 @@ def amplfi_subprocess(
             submission_time -= skymap_time
             skymap_time -= from_shared
             from_shared -= start
-        fname = "amplfi_skymap_times.csv"
+        fname = "amplfi_queue_times.csv"
         with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
-            if not os.path.exists(fname):
+            if os.stat(fname).st_size == 0:
                 writer.writerow(
                     ["from_shared", "skymap_time", "submission_time"]
                 )
@@ -352,10 +354,10 @@ def event_creation_subprocess(
             event_write_time = time.time()
             response = gdb.submit(event)
             submission_time = time.time()
-            fname = "event_submission_times.csv"
+            fname = "event_queue_times.csv"
             with open(fname, "a", newline="") as f:
                 writer = csv.writer(f)
-                if not os.path.exists(fname):
+                if os.stat(fname).st_size == 0:
                     writer.writerow(["event_write_time", "submission_time"])
                 writer.writerow(
                     [

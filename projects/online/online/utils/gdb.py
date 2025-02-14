@@ -71,7 +71,7 @@ class GraceDb(_GraceDb):
         fname = "event_submission.csv"
         with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
-            if not os.path.exists(fname):
+            if os.stat(fname).st_size == 0:
                 writer.writerow(["event_creation", "latency_logging"])
             writer.writerow(
                 [event_creation - start, latency_logging - event_creation]
@@ -127,7 +127,7 @@ class GraceDb(_GraceDb):
         fname = "pe_submission.csv"
         with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
-            if not os.path.exists(fname):
+            if os.stat(fname).st_size == 0:
                 writer.writerow(
                     [
                         "fits_write",
