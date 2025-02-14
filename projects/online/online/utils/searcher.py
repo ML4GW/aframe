@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -141,12 +142,15 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
+        start = time.time()
         if self.check_refractory(value):
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
         logging.info("Computing FAR")
+        pre_far = time.time()
         far = self.background.far(value)
+        far_time = time.time()
         far /= SECONDS_PER_YEAR
         logging.info("FAR computed")
 
@@ -156,7 +160,7 @@ class Searcher:
         )
 
         self.last_detection_time = time.time()
-        return Event(
+        event = Event(
             gpstime=timestamp,
             detection_statistic=value,
             far=far,
@@ -165,6 +169,23 @@ class Searcher:
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
+        event_create = time.time()
+        with open("build_event_times.csv", "a", newline="") as f:
+            reader = csv.reader(f)
+            if not list(reader):
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        "pre_far",
+                        "far_time",
+                        "event_create",
+                    ]
+                )
+            writer = csv.writer(f)
+            writer.writerow(
+                [pre_far - start, far_time - pre_far, event_create - far_time]
+            )
+        return event
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
         """

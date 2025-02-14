@@ -1,3 +1,6 @@
+import csv
+import time
+
 import h5py
 import numpy as np
 import torch
@@ -148,6 +151,7 @@ class OutputBuffer(torch.nn.Module):
     def update(self, update: torch.Tensor, t0: float):
         # first append update to the output buffer
         # and remove buffer_size samples from front
+        start = time.time()
         self.output_buffer = torch.cat([self.output_buffer, update])
         self.output_buffer = self.output_buffer[-self.buffer_size :]
 
@@ -158,9 +162,28 @@ class OutputBuffer(torch.nn.Module):
 
         integration_size = self.integrator_size + len(update)
         y = self.output_buffer[-integration_size:]
+        pre_int = time.time()
         integrated = self.integrate(y)
+        integrate = time.time()
         self.integrated_buffer = torch.cat(
             [self.integrated_buffer, integrated]
         )
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
-        return integrated.detach().cpu().numpy()
+        cat_crop = time.time()
+        integrated_cpu = integrated.detach().cpu().numpy()
+        cpu = time.time()
+        with open("output_buffer_timing.csv", "a", newline="") as f:
+            reader = csv.reader(f)
+            if not list(reader):
+                writer = csv.writer(f)
+                writer.writerow(["pre_int", "integrate", "cat_crop", "cpu"])
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    pre_int - start,
+                    integrate - pre_int,
+                    cat_crop - integrate,
+                    cpu - cat_crop,
+                ]
+            )
+        return integrated_cpu
