@@ -78,7 +78,6 @@ def add_streaming_input_preprocessor(
         streams_per_gpu=streams_per_gpu,
     )
     ensemble.add_input(streaming_model.inputs["stream"])
-
     preprocessor = BatchWhitener(
         kernel_length=kernel_length,
         sample_rate=sample_rate,

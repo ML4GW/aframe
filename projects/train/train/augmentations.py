@@ -212,7 +212,7 @@ class WaveformProjector(torch.nn.Module):
         phi: torch.Tensor,
         snrs: Union[torch.Tensor, float, None] = None,
         psds: Optional[torch.Tensor] = None,
-        **polarizations: torch.Tensor
+        **polarizations: torch.Tensor,
     ) -> torch.Tensor:
         responses = gw.compute_observed_strain(
             dec,
