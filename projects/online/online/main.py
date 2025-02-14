@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 import time
 from pathlib import Path
 from queue import Empty
@@ -260,12 +261,11 @@ def pastro_subprocess(
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
         submission_time = time.time() - start
         logging.info("Submitted p_astro")
-        with open("pastro_submission_times.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
-                writer.writerow(["p_astro_time", "submission_time"])
+        fname = "pastro_submission_times.csv"
+        with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
+            if not os.path.exists(fname):
+                writer.writerow(["p_astro_time", "submission_time"])
             writer.writerow([p_astro_time, submission_time])
 
 
@@ -320,14 +320,13 @@ def amplfi_subprocess(
             submission_time -= skymap_time
             skymap_time -= from_shared
             from_shared -= start
-        with open("amplfi_skymap_times.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
+        fname = "amplfi_skymap_times.csv"
+        with open(fname, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not os.path.exists(fname):
                 writer.writerow(
                     ["from_shared", "skymap_time", "submission_time"]
                 )
-            writer = csv.writer(f)
             writer.writerow([from_shared, skymap_time, submission_time])
 
 
@@ -353,12 +352,11 @@ def event_creation_subprocess(
             event_write_time = time.time()
             response = gdb.submit(event)
             submission_time = time.time()
-            with open("event_submission_times.csv", "a", newline="") as f:
-                reader = csv.reader(f)
-                if not list(reader):
-                    writer = csv.writer(f)
-                    writer.writerow(["event_write_time", "submission_time"])
+            fname = "event_submission_times.csv"
+            with open(fname, "a", newline="") as f:
                 writer = csv.writer(f)
+                if not os.path.exists(fname):
+                    writer.writerow(["event_write_time", "submission_time"])
                 writer.writerow(
                     [
                         event_write_time - start,

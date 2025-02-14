@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 import time
 from typing import TYPE_CHECKING
 
@@ -66,10 +67,10 @@ def run_amplfi(
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     descale = time.time()
     logging.info("Finished AMPLFI")
-    with open("amplfi_times.csv", "a", newline="") as f:
-        reader = csv.reader(f)
-        if not list(reader):
-            writer = csv.writer(f)
+    fname = "amplfi_times.csv"
+    with open(fname, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not os.path.exists(fname):
             writer.writerow(
                 [
                     "get_strain",
@@ -81,7 +82,6 @@ def run_amplfi(
                     "descale",
                 ]
             )
-        writer = csv.writer(f)
         writer.writerow(
             [
                 get_strain - start,
@@ -133,10 +133,10 @@ def skymap_from_samples(
     )
     create_skymap_time = time.time()
     logging.info("Created skymap")
-    with open("skymap_times.csv", "a", newline="") as f:
-        reader = csv.reader(f)
-        if not list(reader):
-            writer = csv.writer(f)
+    fname = "skymap_times.csv"
+    with open(fname, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not os.path.exists(fname):
             writer.writerow(
                 [
                     "cast_samples",
@@ -144,7 +144,6 @@ def skymap_from_samples(
                     "create_skymap",
                 ]
             )
-        writer = csv.writer(f)
         writer.writerow(
             [
                 cast_samples - start,

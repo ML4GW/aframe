@@ -1,4 +1,5 @@
 import csv
+import os
 import time
 
 import h5py
@@ -172,12 +173,11 @@ class OutputBuffer(torch.nn.Module):
         cat_crop = time.time()
         integrated_cpu = integrated.detach().cpu().numpy()
         cpu = time.time()
-        with open("output_buffer_timing.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
-                writer.writerow(["pre_int", "integrate", "cat_crop", "cpu"])
+        fname = "output_buffer_timing.csv"
+        with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
+            if not os.path.exists(fname):
+                writer.writerow(["pre_int", "integrate", "cat_crop", "cpu"])
             writer.writerow(
                 [
                     pre_int - start,

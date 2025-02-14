@@ -68,12 +68,11 @@ class GraceDb(_GraceDb):
         with open(latency_fname, "w") as f:
             f.write(latency)
         latency_logging = time.time()
-        with open("event_submission.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
-                writer.writerow(["event_creation", "latency_logging"])
+        fname = "event_submission.csv"
+        with open(fname, "a", newline="") as f:
             writer = csv.writer(f)
+            if not os.path.exists(fname):
+                writer.writerow(["event_creation", "latency_logging"])
             writer.writerow(
                 [event_creation - start, latency_logging - event_creation]
             )
@@ -125,10 +124,10 @@ class GraceDb(_GraceDb):
         )
         mollview_submit = time.time()
         logging.info("Mollview plot submitted")
-        with open("pe_submission.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
+        fname = "pe_submission.csv"
+        with open(fname, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not os.path.exists(fname):
                 writer.writerow(
                     [
                         "fits_write",
@@ -140,7 +139,6 @@ class GraceDb(_GraceDb):
                         "mollview_submit",
                     ]
                 )
-            writer = csv.writer(f)
             writer.writerow(
                 [
                     fits_write - start,

@@ -170,10 +170,10 @@ class Searcher:
             ifo_suffix=self.ifo_suffix,
         )
         event_create = time.time()
-        with open("build_event_times.csv", "a", newline="") as f:
-            reader = csv.reader(f)
-            if not list(reader):
-                writer = csv.writer(f)
+        fname = "build_event_times.csv"
+        with open(fname, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not os.path.exists(fname):
                 writer.writerow(
                     [
                         "pre_far",
@@ -181,7 +181,6 @@ class Searcher:
                         "event_create",
                     ]
                 )
-            writer = csv.writer(f)
             writer.writerow(
                 [pre_far - start, far_time - pre_far, event_create - far_time]
             )
