@@ -77,6 +77,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         right_pad: float = 0,
         fftlength: Optional[float] = None,
         highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
         snr_sampler: Optional[
             Union[TransformedDist, Callable[[int], Tensor]]
         ] = None,
@@ -355,9 +356,13 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.hparams.fduration,
             self.hparams.sample_rate,
             self.hparams.highpass,
+            self.hparams.lowpass,
         )
         self.projector = aug.WaveformProjector(
-            self.hparams.ifos, self.hparams.sample_rate, self.hparams.highpass
+            self.hparams.ifos,
+            self.hparams.sample_rate,
+            self.hparams.highpass,
+            self.hparams.lowpass,
         )
 
     def setup(self, stage: str) -> None:

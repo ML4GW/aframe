@@ -35,6 +35,7 @@ amplfi_kernel_length: 4
 event_position: 3
 fftlength: null
 highpass: 32
+lowpass: null
 refractory_period: 8
 far_threshold: 1 
 server: "local"

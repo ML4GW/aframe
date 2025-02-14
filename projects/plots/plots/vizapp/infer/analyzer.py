@@ -29,6 +29,7 @@ class EventAnalyzer:
         integration_length: float,
         batch_size: int,
         highpass: float,
+        lowpass: float,
         fftlength: float,
         device: str,
         ifos: List[str],
@@ -43,6 +44,7 @@ class EventAnalyzer:
             fduration,
             fftlength=fftlength,
             highpass=highpass,
+            lowpass=lowpass,
             return_whitened=True,
         ).to(device)
 
@@ -63,6 +65,7 @@ class EventAnalyzer:
         self.psd_length = psd_length
         self.kernel_length = kernel_length
         self.highpass = highpass
+        self.lowpass = lowpass
         self.inference_sampling_rate = inference_sampling_rate
         self.integration_length = integration_length
         self.batch_size = batch_size
@@ -207,7 +210,7 @@ class EventAnalyzer:
             data = strain[ifo]
             ts = TimeSeries(data, times=self.whitened_times)
             ts = ts.crop(-3, 5)
-            fft = ts.fft().crop(start=self.highpass)
+            fft = ts.fft().crop(start=self.highpass, end=self.lowpass)
             freqs = fft.frequencies.value
             ffts[ifo] = np.abs(fft.value)
 

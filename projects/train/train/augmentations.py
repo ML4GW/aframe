@@ -74,10 +74,12 @@ class SnrRescaler(torch.nn.Module):
         self,
         sample_rate: float,
         highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.sample_rate = sample_rate
         self.highpass = highpass
+        self.lowpass = lowpass
 
     def forward(
         self,
@@ -112,7 +114,11 @@ class SnrRescaler(torch.nn.Module):
 
         # compute the SNRs of the existing signals
         snrs = gw.compute_network_snr(
-            responses, psds, self.sample_rate, self.highpass
+            responses,
+            psds,
+            self.sample_rate,
+            self.highpass,
+            self.lowpass,
         )
 
         if target_snrs is None:
@@ -189,6 +195,7 @@ class WaveformProjector(torch.nn.Module):
         ifos: list[str],
         sample_rate: float,
         highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
     ) -> None:
         super().__init__()
         tensors, vertices = gw.get_ifo_geometry(*ifos)
@@ -196,7 +203,7 @@ class WaveformProjector(torch.nn.Module):
         self.register_buffer("vertices", vertices)
 
         self.sample_rate = sample_rate
-        self.rescaler = SnrRescaler(sample_rate, highpass)
+        self.rescaler = SnrRescaler(sample_rate, highpass, lowpass)
 
     def forward(
         self,
@@ -205,7 +212,7 @@ class WaveformProjector(torch.nn.Module):
         phi: torch.Tensor,
         snrs: Union[torch.Tensor, float, None] = None,
         psds: Optional[torch.Tensor] = None,
-        **polarizations: torch.Tensor
+        **polarizations: torch.Tensor,
     ) -> torch.Tensor:
         responses = gw.compute_observed_strain(
             dec,

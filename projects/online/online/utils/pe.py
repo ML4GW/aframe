@@ -38,7 +38,7 @@ def run_amplfi(
     pe_psd = spectral_density(psd_strain)[None]
     whitened = amplfi_whitener(pe_strain, pe_psd)
 
-    # construct and highpass asd
+    # construct and bandpass asd
     freqs = torch.fft.rfftfreq(
         whitened.shape[-1], d=1 / amplfi_whitener.sample_rate
     )
@@ -48,6 +48,7 @@ def run_amplfi(
     )
 
     mask = freqs > amplfi_whitener.highpass
+    mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
     logging.info("Computed AMPLFI ASD")

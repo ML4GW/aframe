@@ -32,6 +32,7 @@ class Analysis(Page):
             self.app.integration_length,
             self.app.batch_size,
             self.app.highpass,
+            self.app.lowpass,
             self.app.fftlength,
             self.app.device,
             self.app.ifos,

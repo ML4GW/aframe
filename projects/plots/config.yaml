@@ -12,6 +12,7 @@ app:
     integration_length: 1.0
     psd_length: 64
     highpass: 32
+    lowpass: null
     batch_size: 128
     sample_rate: 2048
     inference_sampling_rate: 4

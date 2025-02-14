@@ -91,6 +91,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
             self.hparams.fduration,
             self.sample_rate,
             self.hparams.highpass,
+            self.hparams.lowpass,
         )
         X = X - X.mean(-1, keepdim=True)
         X = X * self.window
@@ -98,6 +99,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
             X.shape[-1], 1 / self.sample_rate, device=self.device
         )
         mask = freqs > self.hparams.highpass
+        mask *= freqs < self.hparams.lowpass
         X = torch.fft.rfft(X, dim=-1) / self.sample_rate
         X /= torch.sqrt(psd)
         X = X[..., mask]
@@ -106,7 +108,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
     def build_val_batches(self, *args, **kwargs):
         X_bg, X_inj, psds = super().build_val_batches(*args, **kwargs)
 
-        # fft whiten and highpass in frequency domain
+        # fft whiten and bandpass in frequency domain
         X_bg = self.whiten(X_bg, psds)
         X_inj = self.whiten(X_inj, psds)
 
@@ -118,7 +120,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
     def augment(self, X):
         X, y, psds = super().augment(X)
 
-        # fft whiten and highpass in frequency domain
+        # fft whiten and bandpass in frequency domain
         X = self.whiten(X, psds)
 
         # split into real and imaginary parts

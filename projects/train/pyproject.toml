@@ -17,6 +17,10 @@ train = "train.cli:main"
 # core dependencies
 python = ">=3.9,<3.13"
 torchmetrics = "^0.11"
+
+# Need torch < 2.6.0 because of this:
+# https://github.com/Lightning-AI/pytorch-lightning/issues/20058
+torch = "2.5.0"
 lightning = "2.2.1"
 jsonargparse = {version = "^4.29", extras = ["signatures"]}
 
@@ -39,7 +43,7 @@ urllib3 = ">=1.25.4,<1.27"
 
 # local deps
 utils = {path = "../../libs/utils", develop = true}
-ml4gw = ">=0.5.1"
+ml4gw = ">=0.7.2"
 aframe = {path = "../..", develop = true}
 ledger = {path = "../../libs/ledger", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}

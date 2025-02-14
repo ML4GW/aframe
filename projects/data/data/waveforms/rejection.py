@@ -27,6 +27,7 @@ def rejection_sample(
     waveform_approximant: str,
     coalescence_time: float,
     highpass: float,
+    lowpass: float,
     snr_threshold: float,
     psd: Union[Path, torch.Tensor],
 ) -> Tuple[ResponseSetFields, InjectionParameterSet]:
@@ -92,7 +93,9 @@ def rejection_sample(
             psd = load_psds(psd, ifos, df)
 
         # compute both individual ifo snrs and network snr
-        ifo_snrs = compute_ifo_snr(projected, psd, sample_rate, highpass)
+        ifo_snrs = compute_ifo_snr(
+            projected, psd, sample_rate, highpass, lowpass
+        )
         snrs = ifo_snrs**2
         snrs = snrs.sum(axis=-1) ** 0.5
         snrs = snrs.numpy()

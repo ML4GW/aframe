@@ -12,7 +12,7 @@ export-and-launch-triton = "export.remote:main"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 
-ml4gw = "^0.5"
+ml4gw = ">=0.7.3"
 
 # nautilus/remote file access
 # dependencies for s3 support. Should probably put these
