@@ -23,7 +23,7 @@ class ExportParams(law.Task):
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    lowpass = luigi.FloatParameter(default="")
+    lowpass = luigi.OptionalFloatParameter(default="")
     q = luigi.OptionalFloatParameter(default="")
     fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
