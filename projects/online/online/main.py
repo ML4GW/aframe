@@ -636,10 +636,6 @@ def main(
         data_it=data_it,
         update_size=update_size,
         time_offset=time_offset,
-        samples_per_event=samples_per_event,
-        inference_params=inference_params,
-        outdir=outdir,
-        nside=nside,
         device=device,
     )
 
