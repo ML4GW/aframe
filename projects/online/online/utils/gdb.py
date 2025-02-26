@@ -33,7 +33,7 @@ class GraceDb(_GraceDb):
     """
 
     def __init__(self, *args, write_dir: Path, **kwargs):
-        super().__init__(*args, **kwargs)  # , use_auth="scitoken")
+        super().__init__(*args, **kwargs, use_auth="scitoken")
         self.write_dir = write_dir
 
     def submit(self, event: Event):
