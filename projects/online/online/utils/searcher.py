@@ -1,4 +1,3 @@
-import csv
 import json
 import logging
 import os
@@ -142,15 +141,12 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
-        start = time.time()
         if self.check_refractory(value):
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
         logging.info("Computing FAR")
-        pre_far = time.time()
         far = self.background.far(value)
-        far_time = time.time()
         far /= SECONDS_PER_YEAR
         logging.info("FAR computed")
 
@@ -169,21 +165,6 @@ class Searcher:
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
-        event_create = time.time()
-        fname = "build_event_times.csv"
-        with open(fname, "a", newline="") as f:
-            writer = csv.writer(f)
-            if os.stat(fname).st_size == 0:
-                writer.writerow(
-                    [
-                        "pre_far",
-                        "far_time",
-                        "event_create",
-                    ]
-                )
-            writer.writerow(
-                [pre_far - start, far_time - pre_far, event_create - far_time]
-            )
         return event
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:

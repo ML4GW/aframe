@@ -1,7 +1,4 @@
-import csv
 import logging
-import os
-import time
 from typing import TYPE_CHECKING
 
 import bilby
@@ -33,16 +30,11 @@ def run_amplfi(
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
-    start = time.time()
     psd_strain, pe_strain = input_buffer.get_amplfi_data(event_time)
-    get_strain = time.time()
     psd_strain = psd_strain.to(device)
     pe_strain = pe_strain.to(device)[None]
-    to_device = time.time()
     pe_psd = spectral_density(psd_strain)[None]
-    get_psd = time.time()
     whitened = amplfi_whitener(pe_strain, pe_psd)
-    whiten = time.time()
 
     # construct and bandpass asd
     freqs = torch.fft.rfftfreq(
@@ -58,42 +50,13 @@ def run_amplfi(
         mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
-    asd_time = time.time()
 
     # sample from the model and descale back to physical units
     logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    sampling = time.time()
     logging.info("Sampling complete")
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
-    descale = time.time()
     logging.info("Finished AMPLFI")
-    fname = "run_amplfi_times.csv"
-    with open(fname, "a", newline="") as f:
-        writer = csv.writer(f)
-        if os.stat(fname).st_size == 0:
-            writer.writerow(
-                [
-                    "get_strain",
-                    "to_device",
-                    "get_psd",
-                    "whiten",
-                    "asd_time",
-                    "sampling",
-                    "descale",
-                ]
-            )
-        writer.writerow(
-            [
-                get_strain - start,
-                to_device - get_strain,
-                get_psd - to_device,
-                whiten - get_psd,
-                asd_time - whiten,
-                sampling - asd_time,
-                descale - sampling,
-            ]
-        )
     return descaled_samples
 
 
@@ -103,7 +66,6 @@ def skymap_from_samples(
     inference_params: list[str],
     nside: int,
 ):
-    start = time.time()
     indices = [
         inference_params.index(p)
         for p in ["chirp_mass", "mass_ratio", "distance"]
@@ -113,7 +75,6 @@ def skymap_from_samples(
         ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
-    cast_samples = time.time()
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
@@ -126,32 +87,12 @@ def skymap_from_samples(
         - torch.pi
     )
     dec = descaled_samples[..., dec_idx] + torch.pi / 2
-    get_ra_dec = time.time()
     skymap, mollview_map = create_skymap(
         ra,
         dec,
         nside,
     )
-    create_skymap_time = time.time()
     logging.info("Created skymap")
-    fname = "skymap_times.csv"
-    with open(fname, "a", newline="") as f:
-        writer = csv.writer(f)
-        if os.stat(fname).st_size == 0:
-            writer.writerow(
-                [
-                    "cast_samples",
-                    "get_ra_dec",
-                    "create_skymap",
-                ]
-            )
-        writer.writerow(
-            [
-                cast_samples - start,
-                get_ra_dec - cast_samples,
-                create_skymap_time - get_ra_dec,
-            ]
-        )
 
     return posterior, mollview_map, skymap
 

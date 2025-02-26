@@ -1,6 +1,4 @@
-import csv
 import logging
-import os
 import time
 from pathlib import Path
 from queue import Empty
@@ -171,29 +169,22 @@ def search(
 
         # we have a frame that is analysis ready,
         # so lets analyze it:
-        start = time.time()
         X = X.to(device)
-        to_device = time.time()
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
         batch, state = snapshotter(X[None], state)
-        snapshotter_time = time.time()
 
         # whiten the batch, and analyze with aframe
         whitened = whitener(batch)
         y = aframe(whitened)[:, 0]
-        aframe_time = time.time()
 
         # update our input buffer with latest strain data,
         X_cpu = X.cpu()
-        to_cpu = time.time()
         input_buffer.update(X_cpu, t0)
-        input_buffer_time = time.time()
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
-        output_buffer_time = time.time()
 
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
@@ -201,13 +192,11 @@ def search(
         event = None
         if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
-            search_time = time.time()
 
         # if we found an event, process it!
         if event is not None:
             logging.info("Putting event in event queue")
             event_queue.put(event)
-            event_queue_time = time.time()
             logging.info("Running AMPLFI")
             descaled_samples = run_amplfi(
                 event_time=event.gpstime,
@@ -219,53 +208,9 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            amplfi_time = time.time()
             shared_samples = descaled_samples.flatten()
             amplfi_queue.put(event.gpstime)
-            amplfi_queue_time = time.time()
             searcher.detecting = False
-            with open("event_detection_times.csv", "a", newline="") as f:
-                writer = csv.writer(f)
-                if os.stat("event_detection_times.csv").st_size == 0:
-                    writer.writerow(
-                        [
-                            "search_time",
-                            "event_queue_time",
-                            "amplfi_time",
-                            "amplfi_queue_time",
-                        ]
-                    )
-                writer.writerow(
-                    [
-                        search_time - output_buffer_time,
-                        event_queue_time - search_time,
-                        amplfi_time - event_queue_time,
-                        amplfi_queue_time - amplfi_time,
-                    ]
-                )
-        with open("main_loop_times.csv", "a", newline="") as f:
-            writer = csv.writer(f)
-            if os.stat("main_loop_times.csv").st_size == 0:
-                writer.writerow(
-                    [
-                        "to_device",
-                        "snapshotter_time",
-                        "aframe_time",
-                        "to_cpu",
-                        "input_buffer_time",
-                        "output_buffer_time",
-                    ]
-                )
-            writer.writerow(
-                [
-                    to_device - start,
-                    snapshotter_time - to_device,
-                    aframe_time - snapshotter_time,
-                    to_cpu - aframe_time,
-                    input_buffer_time - to_cpu,
-                    output_buffer_time - input_buffer_time,
-                ]
-            )
         # TODO write buffers to disk:
 
 
@@ -293,21 +238,11 @@ def pastro_subprocess(
     while True:
         event = pastro_queue.get()
         logging.info("Calculating p_astro")
-        start = time.time()
         pastro = pastro_model(event.detection_statistic)
-        p_astro_time = time.time() - start
         graceid = pastro_queue.get()
         logging.info(f"Submitting p_astro: {pastro}")
-        start = time.time()
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-        submission_time = time.time() - start
         logging.info("Submitted p_astro")
-        fname = "pastro_submission_times.csv"
-        with open(fname, "a", newline="") as f:
-            writer = csv.writer(f)
-            if os.stat(fname).st_size == 0:
-                writer.writerow(["p_astro_time", "submission_time"])
-            writer.writerow([p_astro_time, submission_time])
 
 
 def amplfi_subprocess(
@@ -324,51 +259,30 @@ def amplfi_subprocess(
         arg = amplfi_queue.get()
         if isinstance(arg, float):
             event_time = arg
-            start = time.time()
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-            from_shared = time.time()
             logging.info("Creating skymap")
             posterior, mollview_map, skymap = skymap_from_samples(
                 descaled_samples, event_time, inference_params, nside
             )
-            skymap_time = time.time() - from_shared
-            from_shared -= start
             graceid = amplfi_queue.get()
             logging.info("Submitting PE")
-            start = time.time()
             gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
-            submission_time = time.time() - start
             logging.info("Submitted all PE")
         else:
             graceid = arg
             event_time = amplfi_queue.get()
-            start = time.time()
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-            from_shared = time.time()
             logging.info("Creating skymap")
             posterior, mollview_map, skymap = skymap_from_samples(
                 descaled_samples, event_time, inference_params, nside
             )
-            skymap_time = time.time()
             logging.info("Submitting PE")
             gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
-            submission_time = time.time()
             logging.info("Submitted all PE")
-            submission_time -= skymap_time
-            skymap_time -= from_shared
-            from_shared -= start
-        fname = "amplfi_queue_times.csv"
-        with open(fname, "a", newline="") as f:
-            writer = csv.writer(f)
-            if os.stat(fname).st_size == 0:
-                writer.writerow(
-                    ["from_shared", "skymap_time", "submission_time"]
-                )
-            writer.writerow([from_shared, skymap_time, submission_time])
 
 
 def event_creation_subprocess(
@@ -388,22 +302,8 @@ def event_creation_subprocess(
 
             # write event information to disk
             # and submit it to gracedb
-            start = time.time()
             event.write(outdir)
-            event_write_time = time.time()
             response = gdb.submit(event)
-            submission_time = time.time()
-            fname = "event_queue_times.csv"
-            with open(fname, "a", newline="") as f:
-                writer = csv.writer(f)
-                if os.stat(fname).st_size == 0:
-                    writer.writerow(["event_write_time", "submission_time"])
-                writer.writerow(
-                    [
-                        event_write_time - start,
-                        submission_time - event_write_time,
-                    ]
-                )
             # Get the event's graceid for submitting
             # further data products
             if isinstance(response, str):
