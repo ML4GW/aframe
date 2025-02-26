@@ -21,5 +21,5 @@ dependencies:
   - htgettoken
   # frame file I/O dependencies
   - python-ldas-tools-framecpp<3.0.0
-  - python-nds2-clientv
+  - python-nds2-client
   - python-ligo-lw
