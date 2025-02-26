@@ -18,16 +18,13 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
+from online.utils.gdb import GdbServer, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi, skymap_from_samples
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
-
-if TYPE_CHECKING:
-    from pastro.pastro import Pastro
 
 SECONDS_PER_DAY = 86400
 
@@ -227,6 +224,48 @@ def search(
             amplfi_queue.put(event.gpstime)
             amplfi_queue_time = time.time()
             searcher.detecting = False
+            with open("event_detection_times.csv", "a", newline="") as f:
+                writer = csv.writer(f)
+                if os.stat("event_detection_times.csv").st_size == 0:
+                    writer.writerow(
+                        [
+                            "search_time",
+                            "event_queue_time",
+                            "amplfi_time",
+                            "amplfi_queue_time",
+                        ]
+                    )
+                writer.writerow(
+                    [
+                        search_time - output_buffer_time,
+                        event_queue_time - search_time,
+                        amplfi_time - event_queue_time,
+                        amplfi_queue_time - amplfi_time,
+                    ]
+                )
+        with open("main_loop_times.csv", "a", newline="") as f:
+            writer = csv.writer(f)
+            if os.stat("main_loop_times.csv").st_size == 0:
+                writer.writerow(
+                    [
+                        "to_device",
+                        "snapshotter_time",
+                        "aframe_time",
+                        "to_cpu",
+                        "input_buffer_time",
+                        "output_buffer_time",
+                    ]
+                )
+            writer.writerow(
+                [
+                    to_device - start,
+                    snapshotter_time - to_device,
+                    aframe_time - snapshotter_time,
+                    to_cpu - aframe_time,
+                    input_buffer_time - to_cpu,
+                    output_buffer_time - input_buffer_time,
+                ]
+            )
         # TODO write buffers to disk:
 
 
