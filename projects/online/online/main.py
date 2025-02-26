@@ -12,6 +12,7 @@ from ledger.injections import InjectionParameterSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
+from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
@@ -21,15 +22,11 @@ from utils.preprocessing import BatchWhitener
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
 
-
-# seconds of data per update
-UPDATE_SIZE = 1
-
 SECONDS_PER_DAY = 86400
 
 
 def load_model(model: Architecture, weights: Path):
-    checkpoint = torch.load(weights, map_location="cpu")
+    checkpoint = torch.load(weights, map_location="cpu", weights_only=False)
     arch_weights = {
         k[6:]: v
         for k, v in checkpoint["state_dict"].items()
@@ -144,6 +141,7 @@ def search(
     amplfi: Architecture,
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
+    update_size: float,
     time_offset: float,
     samples_per_event: int,
     inference_params: List[str],
@@ -167,7 +165,7 @@ def search(
                 # we won't get to see the peak of the event
                 # so build the event with what we have
                 event = searcher.build_event(
-                    integrated[-1], t0 - 1, len(integrated) - 1
+                    integrated[-1], t0 - update_size, len(integrated) - 1
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
@@ -229,6 +227,7 @@ def search(
 
         # whiten the batch, and analyze with aframe
         whitened = whitener(batch)
+
         y = aframe(whitened)[:, 0]
 
         # update our input buffer with latest strain data,
@@ -246,6 +245,7 @@ def search(
 
         # if we found an event, process it!
         if event is not None:
+            logging.info("Found event")
             process_event(
                 event,
                 gdb,
@@ -262,7 +262,6 @@ def search(
                 device,
             )
             searcher.detecting = False
-
         # TODO write buffers to disk:
 
 
@@ -288,6 +287,7 @@ def main(
     fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
+    data_source: str = "frames",
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
@@ -387,6 +387,28 @@ def main(
 
     gdb = gracedb_factory(server, outdir)
 
+    if data_source == "ngdd":
+        update_size = 1 / 16
+        data_it = ngdd_data_iterator(
+            strain_channels=channels,
+            ifos=ifos,
+            sample_rate=sample_rate,
+        )
+    elif data_source == "frames":
+        update_size = 1
+        data_it = data_iterator(
+            datadir=datadir,
+            channels=channels,
+            ifos=ifos,
+            sample_rate=sample_rate,
+            ifo_suffix=ifo_suffix,
+            timeout=10,
+        )
+    else:
+        raise ValueError(
+            f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
+        )
+
     # initialize a buffer for storing recent strain data,
     # and for storing integrated aframe outputs
     input_buffer = InputBuffer(
@@ -424,7 +446,7 @@ def main(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=inference_sampling_rate,
-        batch_size=UPDATE_SIZE * inference_sampling_rate,
+        batch_size=update_size * inference_sampling_rate,
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
@@ -432,7 +454,7 @@ def main(
     ).to(device)
 
     snapshotter = OnlineSnapshotter(
-        update_size=UPDATE_SIZE,
+        update_size=update_size,
         num_channels=len(ifos),
         psd_length=psd_length,
         kernel_length=kernel_length,
@@ -500,16 +522,6 @@ def main(
         aframe_right_pad,
     )
 
-    data_it = data_iterator(
-        datadir=datadir,
-        channels=channels,
-        ifos=ifos,
-        sample_rate=sample_rate,
-        ifo_suffix=ifo_suffix,
-        timeout=10,
-    )
-
-    logging.info("Beginning search")
     search(
         gdb=gdb,
         pe_whitener=pe_whitener,
@@ -524,6 +536,7 @@ def main(
         amplfi=amplfi,
         pastro_model=pastro_model,
         data_it=data_it,
+        update_size=update_size,
         time_offset=time_offset,
         samples_per_event=samples_per_event,
         inference_params=inference_params,

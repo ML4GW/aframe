@@ -22,6 +22,7 @@ amplfi_architecture:
 amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
 ifos: ["H1", "L1"]
 channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN"]
+data_source: "frames"
 sample_rate: 2048
 astro_event_rate: 31
 kernel_length: 1.5

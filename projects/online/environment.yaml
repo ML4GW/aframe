@@ -3,11 +3,11 @@ channels:
   - conda-forge
 dependencies:
   # python/env dependencies
-  - python=3.9
+  - python=3.10
   - pip
   - poetry
   - jsonargparse
-  - scipy
+  - scipy=<1.15
   - h5py
   # general GW
   - healpy
