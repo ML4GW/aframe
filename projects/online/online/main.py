@@ -1,6 +1,4 @@
-import csv
 import logging
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple
 
@@ -160,7 +158,6 @@ def search(
     #
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        loop_start = time.time()
         # if this frame was not analysis ready
         if not ready:
             if searcher.detecting:
@@ -193,11 +190,10 @@ def search(
             # being analysis ready, in which case perform updates
             # but don't search for events
             if X is not None:
-                pass
-                # logging.warning(
-                #     "Frame {} is not analysis ready. Performing "
-                #     "inference but ignoring any triggers".format(t0)
-                # )
+                logging.warning(
+                    "Frame {} is not analysis ready. Performing "
+                    "inference but ignoring any triggers".format(t0)
+                )
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
@@ -221,61 +217,31 @@ def search(
             output_buffer.reset()
             in_spec = True
 
-        if not t0 % 10:
-            logging.info(f"Analyzing data with shape {X.shape}")
         # we have a frame that is analysis ready,
         # so lets analyze it:
-        start = time.time()
         X = X.to(device)
-        to_gpu = time.time() - start
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
-        start = time.time()
         batch, state = snapshotter(X[None], state)
-        snapshot = time.time() - start
 
         # whiten the batch, and analyze with aframe
-        start = time.time()
         whitened = whitener(batch)
-        whiten = time.time() - start
 
-        start = time.time()
         y = aframe(whitened)[:, 0]
-        nn = time.time() - start
 
         # update our input buffer with latest strain data,
-        start = time.time()
         input_buffer.update(X.cpu(), t0)
-        input_update = time.time() - start
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
-        start = time.time()
         integrated = output_buffer.update(y.cpu(), t0)
-        output_update = time.time() - start
 
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
-        start = time.time()
         if snapshotter.full_psd_present and ready:
             event = searcher.search(integrated, t0 + time_offset)
-        search = time.time() - start
-
-        with open("latency.csv", "a", newline="") as f:
-            writer = csv.writer(f, delimiter=" ")
-            writer.writerow(
-                [
-                    to_gpu,
-                    snapshot,
-                    whiten,
-                    nn,
-                    input_update,
-                    output_update,
-                    search,
-                ]
-            )
 
         # if we found an event, process it!
         if event is not None:
@@ -296,11 +262,6 @@ def search(
                 device,
             )
             searcher.detecting = False
-
-        loop_end = time.time()
-        with open("loop_latency.csv", "a", newline="") as f:
-            writer = csv.writer(f, delimiter=" ")
-            writer.writerow([loop_end - loop_start])
         # TODO write buffers to disk:
 
 
@@ -433,7 +394,7 @@ def main(
             ifos=ifos,
             sample_rate=sample_rate,
         )
-    else:
+    elif data_source == "frames":
         update_size = 1
         data_it = data_iterator(
             datadir=datadir,
@@ -442,6 +403,10 @@ def main(
             sample_rate=sample_rate,
             ifo_suffix=ifo_suffix,
             timeout=10,
+        )
+    else:
+        raise ValueError(
+            f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
         )
 
     # initialize a buffer for storing recent strain data,
