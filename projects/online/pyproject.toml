@@ -15,12 +15,13 @@ ledger = {path = "../../libs/ledger", develop = true}
 p_astro = {path = "../../libs/p_astro", develop = true}
 architectures = {path = "../../libs/architectures", develop = true}
 
-arrakis = {git = "https://git.ligo.org/ngdd/arrakis-python.git"}
+arrakis-python = "^0.1.0"
 
 amplfi = {git = "https://github.com/ML4GW/amplfi.git"}
 ml4gw = "^0.7"
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"
+scipy = "<1.15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"

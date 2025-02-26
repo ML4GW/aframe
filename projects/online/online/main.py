@@ -16,6 +16,7 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, GraceDb, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
+from online.utils.pe import run_amplfi
 from online.utils.searcher import Event, Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
@@ -23,9 +24,11 @@ from utils.preprocessing import BatchWhitener
 if TYPE_CHECKING:
     from pastro.pastro import Pastro
 
+SECONDS_PER_DAY = 86400
+
 
 def load_model(model: Architecture, weights: Path):
-    checkpoint = torch.load(weights, map_location="cpu")
+    checkpoint = torch.load(weights, map_location="cpu", weights_only=False)
     arch_weights = {
         k[6:]: v
         for k, v in checkpoint["state_dict"].items()
@@ -80,8 +83,8 @@ def process_event(
     buffer: InputBuffer,
     spectral_density: SpectralDensity,
     pe_whitener: Whiten,
-    # amplfi: FlowArchitecture,
-    # scaler: ChannelWiseScaler,
+    amplfi: FlowArchitecture,
+    scaler: ChannelWiseScaler,
     pastro_model: "Pastro",
     samples_per_event: int,
     inference_params: list[str],
@@ -93,7 +96,7 @@ def process_event(
     # write event information to disk
     # and submit it to gracedb
     event.write(outdir)
-    # response = gdb.submit(event)
+    response = gdb.submit(event)
 
     # after event is submitted, run AMPLFI
     # to produce a posterior and skymap
@@ -129,7 +132,7 @@ def process_event(
 def search(
     gdb: GraceDb,
     pe_whitener: Whiten,
-    # scaler: torch.nn.Module,
+    scaler: torch.nn.Module,
     spectral_density: SpectralDensity,
     whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
@@ -137,7 +140,7 @@ def search(
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
-    # amplfi: Architecture,
+    amplfi: Architecture,
     pastro_model: "Pastro",
     data_it: Iterable[Tuple[torch.Tensor, float, bool]],
     update_size: float,
@@ -175,8 +178,8 @@ def search(
                         input_buffer,
                         spectral_density,
                         pe_whitener,
-                        # amplfi,
-                        # scaler,
+                        amplfi,
+                        scaler,
                         pastro_model,
                         samples_per_event,
                         inference_params,
@@ -283,8 +286,8 @@ def search(
                 input_buffer,
                 spectral_density,
                 pe_whitener,
-                # amplfi,
-                # scaler,
+                amplfi,
+                scaler,
                 pastro_model,
                 samples_per_event,
                 inference_params,
@@ -557,7 +560,7 @@ def main(
     search(
         gdb=gdb,
         pe_whitener=pe_whitener,
-        # scaler=scaler,
+        scaler=scaler,
         spectral_density=spectral_density,
         whitener=whitener,
         snapshotter=snapshotter,
@@ -565,7 +568,7 @@ def main(
         input_buffer=input_buffer,
         output_buffer=output_buffer,
         aframe=aframe,
-        # amplfi=amplfi,
+        amplfi=amplfi,
         pastro_model=pastro_model,
         data_it=data_it,
         update_size=update_size,
