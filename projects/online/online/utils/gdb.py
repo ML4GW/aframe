@@ -173,6 +173,7 @@ def authenticate():
             "igwn",
             "-r",
             "aframe-1-scitoken",
+            "--scopes=gracedb.read",
             "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
             "--nooidc",
         ]
