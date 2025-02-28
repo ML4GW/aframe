@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 69b7a02617d39bdd749929361455090163cc2e87b93fd44449b33da27057ca91
+    linux-64: f408dd8b393eccb2c2910b08b9c1d8ffd8086e0fd3c7ce4a9585cc62a73cfc72
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -2834,7 +2834,7 @@ package:
   category: main
   optional: false
 - name: scipy
-  version: 1.14.1
+  version: 1.15.2
   manager: conda
   platform: linux-64
   dependencies:
@@ -2849,10 +2849,10 @@ package:
     numpy: '>=1.23.5'
     python: '>=3.10,<3.11.0a0'
     python_abi: 3.10.*
-  url: https://conda.anaconda.org/conda-forge/linux-64/scipy-1.14.1-py310hfcf56fc_2.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/scipy-1.15.2-py310h1d65ade_0.conda
   hash:
-    md5: b5d548b2a7cf8d0c74fc6c4bf42d1ca5
-    sha256: a15008a51fd6b6dcaeb5563869ff0a8a015f1e0a8634a9d89d2c189eefbd7182
+    md5: 8c29cd33b64b2eb78597fa28b5595c8d
+    sha256: 4cb98641f870666d365594013701d5691205a0fe81ac3ba7778a23b1cc2caa8e
   category: main
   optional: false
 - name: scitokens
@@ -2887,15 +2887,15 @@ package:
   category: main
   optional: false
 - name: setuptools
-  version: 75.8.0
+  version: 75.8.2
   manager: conda
   platform: linux-64
   dependencies:
     python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/setuptools-75.8.0-pyhff2d567_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/setuptools-75.8.2-pyhff2d567_0.conda
   hash:
-    md5: 8f28e299c11afdd79e0ec1e279dcdc52
-    sha256: e0778e4f276e9a81b51c56f51ec22a27b4d8fc955abc0be77ad09ca9bea06bb9
+    md5: 9bddfdbf4e061821a1a443f93223be61
+    sha256: 91d664ace7c22e787775069418daa9f232ee8bafdd0a6a080a5ed2395a6fa6b2
   category: main
   optional: false
 - name: shellingham

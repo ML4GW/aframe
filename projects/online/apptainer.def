@@ -33,6 +33,14 @@ micromamba run -p /opt/env \
     poetry config virtualenvs.create false
 
 cd /opt/aframe/projects/online/
+# I don't know why, but doing this seems to make the 
+# python-ligo-lw install more consistent
+micromamba run -p /opt/env python -m \
+    pip uninstall -y virtualenv
+micromamba run -p /opt/env python -m \
+    pip install --no-build-isolation \
+	'virtualenv==20.29.2' 
+
 micromamba run -p /opt/env \
     poetry install 
 

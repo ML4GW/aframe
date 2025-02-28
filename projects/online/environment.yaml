@@ -7,7 +7,7 @@ dependencies:
   - pip
   - poetry
   - jsonargparse
-  - scipy=<1.15
+  - scipy
   - h5py
   # general GW
   - healpy

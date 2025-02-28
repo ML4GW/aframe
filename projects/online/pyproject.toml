@@ -22,9 +22,12 @@ ml4gw = "^0.7"
 omegaconf = "^2.3.0"
 numpy = "<2.0.0"
 scipy = "<1.15"
+# Restricting this because 3.10 breaks our plotting for some reason
+matplotlib = "3.9.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"
+jupyter = "^1.0.0"
 
 [[tool.poetry.source]]
 name = "torch"

@@ -123,9 +123,11 @@ class Searcher:
         self.last_detection_time = time.time() - self.refractory_period
 
         # calculate the detection statistic threshold
-        # corresponding to the requested FAR threshodl
-        self.background = background
-        self.threshold = self.background.threshold_at_far(far_threshold)
+        # corresponding to the requested FAR threshold
+        self.threshold = background.threshold_at_far(far_threshold)
+        # Speed up FAR calculation by excluding below-threshold events
+        mask = background.detection_statistic >= self.threshold
+        self.background = background[mask]
 
     def check_refractory(self, value):
         time_since_last = time.time() - self.last_detection_time
@@ -143,8 +145,10 @@ class Searcher:
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
+        logging.info("Computing FAR")
         far = self.background.far(value)
         far /= SECONDS_PER_YEAR
+        logging.info("FAR computed")
 
         logging.info(
             "Event coalescence time found to be {:0.3f} "
@@ -152,7 +156,7 @@ class Searcher:
         )
 
         self.last_detection_time = time.time()
-        return Event(
+        event = Event(
             gpstime=timestamp,
             detection_statistic=value,
             far=far,
@@ -161,6 +165,7 @@ class Searcher:
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
+        return event
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
         """
@@ -185,9 +190,7 @@ class Searcher:
             # if not, nothing to do here
             return None
 
-        logging.info(
-            f"Detected event with detection statistic>={max_val:0.3f}"
-        )
+        logging.info(f"Detected event with detection statistic {max_val:0.3f}")
 
         # check if the integrated output is still
         # ramping as we get to the end of the frame

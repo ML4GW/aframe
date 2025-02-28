@@ -46,8 +46,9 @@ def cli(args=None):
     configure_logging(
         args.outdir / "log" / f"deploy_{log_suffix}.log", args.verbose
     )
-    # matplotlib has a log of debug-level logging
+    # matplotlib and h5py have some debug-level logging
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("h5py").setLevel(logging.WARNING)
     args.pop("config")
     args.pop("verbose")
     args = parser.instantiate_classes(args)

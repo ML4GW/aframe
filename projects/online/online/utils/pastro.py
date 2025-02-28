@@ -1,22 +1,19 @@
 import logging
 import pickle
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.injections import InjectionParameterSet
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
 from p_astro.p_astro import Pastro
 
-if TYPE_CHECKING:
-    from ledger.events import EventSet, RecoveredInjectionSet
-    from ledger.injections import InjectionParameterSet
-
 
 def fit_or_load_pastro(
     model_path: Path,
-    background: "EventSet",
-    foreground: "RecoveredInjectionSet",
-    rejected: "InjectionParameterSet",
+    background_path: Path,
+    foreground_path: Path,
+    rejected_path: Path,
     astro_event_rate: float,
 ) -> Pastro:
     """
@@ -26,11 +23,11 @@ def fit_or_load_pastro(
         model_path:
             Path to the model file.
         background:
-            Background event set.
+            Path to background event set.
         foreground:
-            Foreground event set.
+            Path to foreground event set.
         rejected:
-            Rejected injections.
+            Path to rejected injection set.
         astro_event_rate:
             Expected rate of astrophysical events
 
@@ -43,13 +40,22 @@ def fit_or_load_pastro(
             pastro = pickle.load(f)
         logging.info("Model loaded")
     else:
-        logging.info("Fitting p_astro model")
+        logging.info(
+            "Loading background, foreground, and "
+            "rejected injections for pastro model"
+        )
+        background = EventSet.read(background_path)
+        foreground = RecoveredInjectionSet.read(foreground_path)
+        rejected = InjectionParameterSet.read(rejected_path)
+
+        logging.info("Data loaded, fitting pastro model")
         background_model = KdeAndPolynomialBackground(background)
         foreground_model = KdeForeground(
             foreground, rejected, astro_event_rate
         )
         pastro = Pastro(foreground_model, background_model)
+        logging.info("Fitting complete, saving pastro model")
         with open(model_path, "wb") as f:
             pickle.dump(pastro, f)
-        logging.info("Fitting complete")
+        logging.info("Model saved to disk")
     return pastro
