@@ -164,6 +164,9 @@ def search(
             output_buffer.reset()
             in_spec = True
 
+        # update our input buffer with latest strain data
+        input_buffer.update(X, t0)
+
         # we have a frame that is analysis ready,
         # so lets analyze it:
         X = X.to(device)
@@ -176,9 +179,6 @@ def search(
         whitened = whitener(batch)
         y = aframe(whitened)[:, 0]
 
-        # update our input buffer with latest strain data,
-        X_cpu = X.cpu()
-        input_buffer.update(X_cpu, t0)
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
