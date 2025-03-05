@@ -49,4 +49,18 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
     def augment(self, X, waveforms):
         X, y, psds = super().augment(X, waveforms)
         X = self.whitener(X, psds)
-        return (X, psds), y
+
+        asds = psds**0.5
+        asds *= 1e23
+        asds = asds.float()
+
+        X_fft = torch.fft.rfft(X)
+        num_freqs = X_fft.shape[-1]
+        if asds.shape[-1] != num_freqs:
+            asds = torch.nn.functional.interpolate(
+                asds, size=(num_freqs,), mode="linear"
+            )
+        inv_asds = 1 / asds
+        X_fft = torch.cat((X_fft.real, X_fft.imag, inv_asds), dim=1)
+
+        return (X, X_fft), y
