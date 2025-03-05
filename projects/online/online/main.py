@@ -114,7 +114,6 @@ def search(
                 )
                 if event is not None:
                     # maybe process event found in the previous frame
-                    # event_processor(event)
                     logging.info("Putting event in event queue")
                     event_queue.put(event)
                     logging.info("Running AMPLFI")
@@ -128,8 +127,7 @@ def search(
                         std_scaler=scaler,
                         device=device,
                     )
-                    for i, sample in enumerate(descaled_samples.flatten()):
-                        shared_samples[i] = sample
+                    shared_samples = descaled_samples.flatten()  # noqa: F841
                     amplfi_queue.put(event.gpstime)
                     searcher.detecting = False
 
@@ -205,7 +203,7 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            shared_samples = descaled_samples.flatten()
+            shared_samples = descaled_samples.flatten()  # noqa: F841
             amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
@@ -303,9 +301,8 @@ def event_creation_subprocess(
             response = gdb.submit(event)
             # Get the event's graceid for submitting
             # further data products
-            if isinstance(response, str):
-                # If the response is a string, then we are using the
-                # local gracedb client, which just returns the filename
+            if server == "local":
+                # The local gracedb client just returns the filename
                 graceid = response
             else:
                 graceid = response.json()["graceid"]
