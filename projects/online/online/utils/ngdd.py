@@ -22,16 +22,16 @@ def data_iterator(
     # Blocks delivered in 16th of a second intervals
     crop_size = int(sample_rate * BLOCK_DURATION)
     slc = slice(-2 * crop_size, -crop_size)
-    last_ready = True
+    last_ready = [True] * len(ifos)
     for block in arrakis.stream(channels):
-        ready = True
-        for channel in state_channels:
+        ready = [True] * len(ifos)
+        for i, channel in enumerate(state_channels):
             state_vector = block[channel].data
             ifo_ready = ((state_vector & 3) == 3).all()
             # Not sure we want to be logging every 16th of a second
             # if not ifo_ready:
             #     logging.warning(f"IFO {channel[:2]} not analysis ready")
-            ready &= ifo_ready
+            ready[i] &= ifo_ready
 
         strain_data = np.stack(
             [block[channel].data for channel in strain_channels]

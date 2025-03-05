@@ -4,7 +4,7 @@ background_file: ${oc.env:ONLINE_BACKGROUND_FILE}
 foreground_file: ${oc.env:ONLINE_FOREGROUND_FILE}
 rejected_file: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
-amplfi_architecture: 
+amplfi_hl_architecture: 
   class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
   init_args:
     hidden_features: 150
@@ -12,14 +12,36 @@ amplfi_architecture:
     num_blocks: 6
     context_dim: 8
     embedding_net: 
-      class_path: amplfi.train.architectures.embeddings.ResNet
+      class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
-        layers: [5, 3, 3]
+        time_context_dim: 12
+        freq_context_dim: 32
+        time_layers: [5, 3, 3]
+        freq_layers: [5, 3, 3]
         norm_layer:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-amplfi_weights: ${oc.env:AMPLFI_WEIGHTS}
+amplfi_hl_weights: ${oc.env:AMPLFI_WEIGHTS}
+amplfi_hlv_architecture: 
+  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
+  init_args:
+    hidden_features: 150
+    num_transforms: 80
+    num_blocks: 6
+    context_dim: 8
+    embedding_net: 
+      class_path: amplfi.train.architectures.embeddings.MultiModalPsd
+      init_args:
+        time_context_dim: 12
+        freq_context_dim: 32
+        time_layers: [5, 3, 3]
+        freq_layers: [5, 3, 3]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 8
+amplfi_hlv_weights: ${oc.env:AMPLFI_WEIGHTS}
 ifos: ["H1", "L1"]
 channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN"]
 data_source: "frames"
@@ -29,7 +51,7 @@ kernel_length: 1.5
 inference_sampling_rate: 512
 inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]
 psd_length: 64
-aframe_right_pad: -0.75
+aframe_right_pad: -0.55
 fduration: 1
 integration_window_length: 1
 amplfi_kernel_length: 4
