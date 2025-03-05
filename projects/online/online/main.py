@@ -103,7 +103,7 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    virgo_ready = [False] * input_buffer.amplfi_kernel_length // update_size
+    virgo_ready = [False] * input_buffer.buffer_length // update_size
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
