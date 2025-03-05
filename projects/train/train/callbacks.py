@@ -75,7 +75,7 @@ class SaveAugmentedBatch(Callback):
             waveforms = trainer.datamodule.slice_waveforms(waveforms)
             X = X.to(device)
 
-            X, y = trainer.datamodule.augment(X, waveforms)
+            (X, _), y = trainer.datamodule.augment(X, waveforms)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -83,7 +83,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
                 background, signals
             )
 
