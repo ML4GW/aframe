@@ -103,11 +103,15 @@ def search(
     # was analysis ready or not
     in_spec = False
 
+    virgo_ready = [False] * input_buffer.amplfi_kernel_length // update_size
+
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array
         hl_ready = ready[0] and ready[1]
+        virgo_ready.append(ready[-1])
+        virgo_ready.pop(0)
         if not hl_ready:
             if searcher.detecting:
                 # if we were in the middle of a detection,
@@ -121,7 +125,7 @@ def search(
                     logging.info("Putting event in event queue")
                     event_queue.put(event)
                     logging.info("Running AMPLFI")
-                    if ready[-1] and len(ready) == 3:
+                    if all(virgo_ready) and len(ready) == 3:
                         amplfi = amplfi_hlv
                         scaler = scaler_hlv
                     else:
@@ -203,7 +207,7 @@ def search(
             logging.info("Putting event in event queue")
             event_queue.put(event)
             logging.info("Running AMPLFI")
-            if ready[-1] and len(ready) == 3:
+            if all(virgo_ready) and len(ready) == 3:
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
             else:
