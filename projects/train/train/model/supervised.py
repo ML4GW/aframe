@@ -26,20 +26,38 @@ class SupervisedMultiModalAframe(SupervisedAframe):
     def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
         super().__init__(arch, *args, **kwargs)
 
+    def forward(self, X):
+        return self.model(*X)
+
     def validation_step(self, batch, _) -> None:
         shift, X_bg, X_inj, psds = batch
 
-        y_bg = self.score((X_bg, psds))
+        asds = psds**0.5
+        asds *= 1e23
+        asds = asds.float()
+
+        X_fft = torch.fft.rfft(X_bg)
+        num_freqs = X_fft.shape[-1]
+        if asds.shape[-1] != num_freqs:
+            asds = torch.nn.functional.interpolate(
+                asds, size=(num_freqs,), mode="linear"
+            )
+        inv_asds = 1 / asds
+        X_fft = torch.cat((X_fft.real, X_fft.imag, inv_asds), dim=1)
+
+        y_bg = self.score((X_bg, X_fft))
 
         # compute predictions over multiple views of
         # each injection and use their average as our
         # prediction
         num_views, batch, *shape = X_inj.shape
         X_inj = X_inj.view(num_views * batch, *shape)
-        psds = psds.repeat(num_views, 1, 1, 1)
-        num_views, batch, *shape = psds.shape
-        psds = psds.view(num_views * batch, *shape)
-        y_fg = self.score((X_inj, psds))
+        X_fft = torch.fft.rfft(X_inj)
+        inv_asds = inv_asds.repeat(num_views, 1, 1, 1)
+        num_views, batch, *shape = inv_asds.shape
+        inv_asds = inv_asds.view(num_views * batch, *shape)
+        X_fft = torch.cat((X_fft.real, X_fft.imag, inv_asds), dim=1)
+        y_fg = self.score((X_inj, X_fft))
         y_fg = y_fg.view(num_views, batch)
         y_fg = y_fg.mean(0)
 

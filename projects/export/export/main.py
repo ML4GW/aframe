@@ -140,8 +140,17 @@ def export(
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
         size = batch_file["X"].shape[2:]
+        if "X_fft" in batch_file.keys():
+            size_fft = batch_file["X_fft"].shape[-2:]
+        else:
+            size_fft = None
 
     input_shape = (batch_size, num_ifos) + tuple(size)
+    input_shape_dict = {"whitened": input_shape}
+    if size_fft is not None:
+        input_shape_fft = (batch_size,) + tuple(size_fft)
+        input_shape_dict["whitened_fft"] = input_shape_fft
+
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -159,7 +168,7 @@ def export(
 
     aframe.export_version(
         graph,
-        input_shapes={"whitened": input_shape},
+        input_shapes=input_shape_dict,
         output_names=["discriminator"],
         **kwargs,
     )
@@ -176,7 +185,7 @@ def export(
         ensemble = repo.add(ensemble_name, platform=qv.Platform.ENSEMBLE)
         # if fftlength isn't specified, calculate the default value
         fftlength = fftlength or kernel_length + fduration
-        whitened = add_streaming_input_preprocessor(
+        whitened, whitened_fft = add_streaming_input_preprocessor(
             ensemble,
             aframe.inputs["whitened"],
             psd_length=psd_length,
@@ -192,6 +201,7 @@ def export(
             streams_per_gpu=streams_per_gpu,
         )
         ensemble.pipe(whitened, aframe.inputs["whitened"])
+        ensemble.pipe(whitened_fft, aframe.inputs["whitened_fft"])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry

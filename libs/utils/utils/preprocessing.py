@@ -160,6 +160,20 @@ class BatchWhitener(torch.nn.Module):
         if self.augmentor is not None:
             x = self.augmentor(x)
 
+        asd = psd**0.5
+        asd *= 1e23
+        asd = asd.float()
+
+        x_fft = torch.fft.rfft(x)
+        num_freqs = x_fft.shape[-1]
+        if asd.shape[-1] != num_freqs:
+            asd = torch.nn.functional.interpolate(
+                asd[None], size=(num_freqs,), mode="linear"
+            )
+        inv_asd = 1 / asd
+        inv_asd = inv_asd.repeat(x_fft.shape[0], 1, 1)
+        x_fft = torch.cat((x_fft.real, x_fft.imag, inv_asd), dim=1)
+
         if self.return_whitened:
             return x, whitened
-        return x
+        return x, x_fft
