@@ -163,4 +163,5 @@ class OutputBuffer(torch.nn.Module):
             [self.integrated_buffer, integrated]
         )
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
-        return integrated.detach().cpu().numpy()
+        integrated_cpu = integrated.detach().cpu().numpy()
+        return integrated_cpu

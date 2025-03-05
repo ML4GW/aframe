@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import bilby
 import healpy as hp
@@ -22,13 +22,11 @@ if TYPE_CHECKING:
 def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
-    inference_params: list,
     samples_per_event: int,
     spectral_density: "SpectralDensity",
     amplfi_whitener: "Whiten",
     amplfi: "FlowArchitecture",
     std_scaler: "ChannelWiseScaler",
-    nside: int,
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
@@ -48,25 +46,35 @@ def run_amplfi(
     )
 
     mask = freqs > amplfi_whitener.highpass
-    mask *= freqs < amplfi_whitener.lowpass
+    if amplfi_whitener.lowpass is not None:
+        mask *= freqs < amplfi_whitener.lowpass
     pe_psd = pe_psd[:, :, mask]
     asds = torch.sqrt(pe_psd)
-    logging.info("Computed AMPLFI ASD")
 
     # sample from the model and descale back to physical units
+    logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
+    logging.info("Sampling complete")
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+    logging.info("Finished AMPLFI")
+    return descaled_samples
 
+
+def skymap_from_samples(
+    descaled_samples: torch.Tensor,
+    event_time: float,
+    inference_params: list[str],
+    nside: int,
+):
     indices = [
         inference_params.index(p)
         for p in ["chirp_mass", "mass_ratio", "distance"]
     ]
     posterior = cast_samples_as_bilby_result(
-        descaled_samples[..., indices].numpy(),
+        descaled_samples[..., indices],
         ["chirp_mass", "mass_ratio", "distance"],
         f"{event_time} result",
     )
-    logging.info("Computed posterior")
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
@@ -79,16 +87,14 @@ def run_amplfi(
         - torch.pi
     )
     dec = descaled_samples[..., dec_idx] + torch.pi / 2
-
-    skymap, figure = create_skymap(
+    skymap, mollview_map = create_skymap(
         ra,
         dec,
         nside,
-        title=f"{event_time} sky map",
     )
     logging.info("Created skymap")
 
-    return posterior, skymap, figure
+    return posterior, mollview_map, skymap
 
 
 def cast_samples_as_bilby_result(
@@ -112,7 +118,6 @@ def create_skymap(
     ra_samples: np.ndarray,
     dec_samples: np.ndarray,
     nside: int = 32,
-    title: Optional[str] = None,
 ) -> tuple[table.Table, plt.Figure]:
     """Create a skymap from samples of right ascension and declination."""
     # mask out non physical samples;
@@ -145,8 +150,4 @@ def create_skymap(
         copy=False,
     )
     fits_table = io.fits.table_to_hdu(t)
-
-    fig = plt.figure()
-    hp.mollview(m, fig=fig, title=title, hold=True)
-    plt.close()
-    return fits_table, fig
+    return fits_table, m
