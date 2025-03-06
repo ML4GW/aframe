@@ -103,7 +103,7 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    virgo_ready = [False] * input_buffer.buffer_length // update_size
+    virgo_ready = [False] * (input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -587,9 +587,10 @@ def main(
         lowpass=lowpass,
     ).to(device)
 
+    # Hard-coding number of channels until Aframe is generalized
     snapshotter = OnlineSnapshotter(
         update_size=update_size,
-        num_channels=len(ifos),
+        num_channels=2,
         psd_length=psd_length,
         kernel_length=kernel_length,
         fduration=fduration,

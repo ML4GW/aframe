@@ -1,8 +1,8 @@
 outdir: ${oc.env:AFRAME_ONLINE_OUTDIR}
 datadir: ${oc.env:ONLINE_DATADIR}
-background_file: ${oc.env:ONLINE_BACKGROUND_FILE}
-foreground_file: ${oc.env:ONLINE_FOREGROUND_FILE}
-rejected_file: ${oc.env:ONLINE_REJECTED_FILE}
+background_path: ${oc.env:ONLINE_BACKGROUND_FILE}
+foreground_path: ${oc.env:ONLINE_FOREGROUND_FILE}
+rejected_path: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_hl_architecture: 
   class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
@@ -10,10 +10,10 @@ amplfi_hl_architecture:
     hidden_features: 150
     num_transforms: 80
     num_blocks: 6
-    context_dim: 8
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
+        num_ifos: 2
         time_context_dim: 12
         freq_context_dim: 32
         time_layers: [5, 3, 3]
@@ -33,6 +33,7 @@ amplfi_hlv_architecture:
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
+        num_ifos: 3
         time_context_dim: 12
         freq_context_dim: 32
         time_layers: [5, 3, 3]

@@ -155,7 +155,10 @@ def data_iterator(
                 x = read_channel(fname, f"{channel}")
                 frames.append(x.value)
 
-                state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
+                if ifo in ["H1", "L1"]:
+                    state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
+                else:
+                    state_channel = "V1:DQ_ANALYSIS_STATE_VECTOR"
                 state_vector = read_channel(fname, state_channel)
                 ifo_ready = ((state_vector.value & 3) == 3).all()
 

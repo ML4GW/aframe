@@ -22,37 +22,12 @@ def build_parser():
     )
 
     parser.link_arguments(
-        "amplfi_hl_architecture.init_args.context_dim",
-        "amplfi_hl_architecture.init_args.embedding_net.init_args.context_dim",  # noqa
-        apply_on="parse",
-    )
-
-    parser.link_arguments(
-        "ifos",
-        "amplfi_hl_architecture.init_args.embedding_net.init_args.num_ifos",
-        compute_fn=lambda x: len(x),
-        apply_on="parse",
-    )
-
-    parser.link_arguments(
         "inference_params",
         "amplfi_hlv_architecture.init_args.num_params",
         compute_fn=lambda x: len(x),
         apply_on="parse",
     )
 
-    parser.link_arguments(
-        "amplfi_hlv_architecture.init_args.context_dim",
-        "amplfi_hlv_architecture.init_args.embedding_net.init_args.context_dim",  # noqa
-        apply_on="parse",
-    )
-
-    parser.link_arguments(
-        "ifos",
-        "amplfi_hlv_architecture.init_args.embedding_net.init_args.num_ifos",
-        compute_fn=lambda x: len(x),
-        apply_on="parse",
-    )
     return parser
 
 
