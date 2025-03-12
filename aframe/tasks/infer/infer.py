@@ -109,6 +109,12 @@ class Infer(AframeSingularityTask):
     individual condor inference jobs
     """
 
+    remove_tmpdir = luigi.BoolParameter(
+        description="If `True`, remove directory where individual segment"
+        " results are stored after aggregation. Defaults to `True`.",
+        default=True,
+    )
+
     @property
     def default_image(self):
         return "infer.sif"
@@ -195,4 +201,5 @@ class Infer(AframeSingularityTask):
             background = background.sort_by("detection_statistic")
             background.write(self.background_output)
 
-        shutil.rmtree(self.output_dir / "tmp")
+        if self.remove_tmpdir:
+            shutil.rmtree(self.output_dir / "tmp")
