@@ -11,7 +11,7 @@ dependencies:
   - h5py
   # general GW
   - healpy
-  - gwpy=3.0.8
+  - gwpy=3.0.12
   - libgcc
   - ligo-gracedb
   # auth libs

@@ -16,23 +16,18 @@ def build_parser():
 
     parser.link_arguments(
         "inference_params",
-        "amplfi_architecture.init_args.num_params",
+        "amplfi_hl_architecture.init_args.num_params",
         compute_fn=lambda x: len(x),
         apply_on="parse",
     )
 
     parser.link_arguments(
-        "amplfi_architecture.init_args.context_dim",
-        "amplfi_architecture.init_args.embedding_net.init_args.context_dim",  # noqa
-        apply_on="parse",
-    )
-
-    parser.link_arguments(
-        "ifos",
-        "amplfi_architecture.init_args.embedding_net.init_args.num_ifos",
+        "inference_params",
+        "amplfi_hlv_architecture.init_args.num_params",
         compute_fn=lambda x: len(x),
         apply_on="parse",
     )
+
     return parser
 
 

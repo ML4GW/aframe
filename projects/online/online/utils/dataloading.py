@@ -118,13 +118,13 @@ def data_iterator(
 
     frame_buffer = np.zeros((len(ifos), 0))
     slc = slice(-int(2 * sample_rate), -int(sample_rate))
-    last_ready = True
+    last_ready = [True] * len(ifos)
     while True:
         frames = []
         logging.debug(f"Reading frames from timestamp {t0}")
 
-        ready = True
-        for ifo, channel in zip(ifos, channels):
+        ready = [True] * len(ifos)
+        for i, (ifo, channel) in enumerate(zip(ifos, channels)):
             prefix = f"{ifo[0]}-{ifo}_{middle}"
             if ifo_suffix is not None:
                 ifo_dir = "_".join([ifo, ifo_suffix])
@@ -142,10 +142,10 @@ def data_iterator(
                         )
                     )
 
-                    yield None, t0, False
+                    yield None, t0, [False] * len(ifos)
 
                     frame_buffer = np.zeros((len(ifos), 0))
-                    last_ready = False
+                    last_ready = [False] * len(ifos)
                     t0 = reset_t0(datadir / ifo, t0 - length)
                     break
             else:
@@ -155,7 +155,10 @@ def data_iterator(
                 x = read_channel(fname, f"{channel}")
                 frames.append(x.value)
 
-                state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
+                if ifo in ["H1", "L1"]:
+                    state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
+                else:
+                    state_channel = "V1:DQ_ANALYSIS_STATE_VECTOR"
                 state_vector = read_channel(fname, state_channel)
                 ifo_ready = ((state_vector.value & 3) == 3).all()
 
@@ -163,7 +166,7 @@ def data_iterator(
                 # as not ready
                 if not ifo_ready:
                     logging.warning(f"IFO {ifo} not analysis ready")
-                ready &= ifo_ready
+                ready[i] &= ifo_ready
 
                 # continue so that we don't break the ifo for-loop
                 continue
