@@ -57,69 +57,60 @@ def run_amplfi(
     logging.info("Sampling complete")
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
     logging.info("Finished AMPLFI")
+
     return descaled_samples
 
 
-def skymap_from_samples(
-    descaled_samples: torch.Tensor,
-    event_time: float,
-    inference_params: list[str],
-    nside: int,
-):
-    indices = [
-        inference_params.index(p)
-        for p in ["chirp_mass", "mass_ratio", "distance"]
-    ]
-    posterior = cast_samples_as_bilby_result(
-        descaled_samples[..., indices],
-        ["chirp_mass", "mass_ratio", "distance"],
-        f"{event_time} result",
-    )
-
+def postprocess_samples(
+    samples: torch.Tensor, event_time: float, inference_params: list[str]
+) -> bilby.core.result.Result:
+    """
+    Process samples into a bilby Result object
+    that can be used for all downstream tasks
+    """
+    # convert samples from relative angle phi
+    # to physical right ascension value;
+    # convert declination from [-pi / 2, pi / 2] -> [0, pi]
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
     ra = (
         torch.remainder(
-            lal.GreenwichMeanSiderealTime(event_time)
-            + descaled_samples[..., phi_idx],
+            lal.GreenwichMeanSiderealTime(event_time) + samples[..., phi_idx],
             torch.as_tensor(2 * torch.pi),
         )
         - torch.pi
     )
-    dec = descaled_samples[..., dec_idx] + torch.pi / 2
-    skymap, mollview_map = create_skymap(
-        ra,
-        dec,
-        nside,
-    )
-    logging.info("Created skymap")
+    dec = samples[..., dec_idx] + torch.pi / 2
 
-    return posterior, mollview_map, skymap
+    # build bilby posterior object for
+    # parameters we want to keep
+    posterior_params = ["chirp_mass", "mass_ratio", "distance"]
 
-
-def cast_samples_as_bilby_result(
-    samples,
-    inference_params,
-    label,
-):
-    """Cast posterior samples as bilby Result object"""
     posterior = dict()
-    for idx, k in enumerate(inference_params):
-        posterior[k] = samples.T[idx].flatten()
+    for param in posterior_params:
+        idx = inference_params.index(param)
+        posterior[param] = samples.T[idx].flatten()
+
+    posterior["ra"] = ra
+    posterior["dec"] = dec
     posterior = pd.DataFrame(posterior)
-    return bilby.result.Result(
-        label=label,
+
+    result = bilby.result.Result(
+        label=f"{event_time}",
         posterior=posterior,
         search_parameter_keys=inference_params,
     )
+    return result
 
 
-def create_skymap(
+def create_histogram_skymap(
     ra_samples: np.ndarray,
     dec_samples: np.ndarray,
     nside: int = 32,
 ) -> tuple[table.Table, plt.Figure]:
-    """Create a skymap from samples of right ascension and declination."""
+    """Create a skymap from samples of right ascension
+    and declination using a naive histogram estimator.
+    """
     # mask out non physical samples;
     mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
     mask &= (dec_samples > 0) * (dec_samples < np.pi)

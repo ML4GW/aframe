@@ -16,7 +16,11 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import run_amplfi, skymap_from_samples
+from online.utils.pe import (
+    create_histogram_skymap,
+    postprocess_samples,
+    run_amplfi,
+)
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
@@ -257,13 +261,25 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-            logging.info("Creating skymap")
-            posterior, mollview_map, skymap = skymap_from_samples(
-                descaled_samples, event_time, inference_params, nside
+
+            logging.info("Post-processing samples")
+            result = postprocess_samples(
+                descaled_samples, event_time, inference_params
+            )
+
+            logging.info("Creating low resolution skymap")
+            skymap, mollview_map = create_histogram_skymap(
+                result.posterior["ra"], result.posterior["dec"], nside
             )
             graceid = amplfi_queue.get()
-            logging.info("Submitting PE")
-            gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
+
+            logging.info("Submitting posterior and low resolution skymap")
+            gdb.submit_low_latency_pe(
+                result, mollview_map, skymap, graceid, event_time
+            )
+
+            logging.info("Launching ligo-skymap-from-samples")
+            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
             logging.info("Submitted all PE")
         else:
             graceid = arg
@@ -271,12 +287,24 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-            logging.info("Creating skymap")
-            posterior, mollview_map, skymap = skymap_from_samples(
-                descaled_samples, event_time, inference_params, nside
+
+            logging.info("Post-processing samples")
+            result = postprocess_samples(
+                descaled_samples, event_time, inference_params
             )
-            logging.info("Submitting PE")
-            gdb.submit_pe(posterior, mollview_map, skymap, graceid, event_time)
+
+            logging.info("Creating low resolution skymap")
+            skymap, mollview_map = create_histogram_skymap(
+                result.posterior["ra"], result.posterior["dec"], nside
+            )
+
+            logging.info("Submitting posterior and low resolution skymap")
+            gdb.submit_low_latency_pe(
+                result, mollview_map, skymap, graceid, event_time
+            )
+
+            logging.info("Launching ligo-skymap-from-samples")
+            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
             logging.info("Submitted all PE")
 
 
