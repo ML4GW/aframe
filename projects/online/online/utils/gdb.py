@@ -11,6 +11,7 @@ import healpy as hp
 import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
+from ligo.skymap.tool import ligo_skymap_from_samples
 
 from online.utils.searcher import Event
 
@@ -66,7 +67,7 @@ class GraceDb(_GraceDb):
 
         return response
 
-    def submit_pe(
+    def submit_low_latency_pe(
         self,
         result: bilby.core.result.Result,
         mollview_map: "np.ndarray",
@@ -82,7 +83,10 @@ class GraceDb(_GraceDb):
         logging.info("Skymap submitted")
 
         corner_fname = event_dir / "corner_plot.png"
-        result.plot_corner(filename=corner_fname)
+        result.plot_corner(
+            parameters=["chirp_mass", "mass_ratio", "distance"],
+            filename=corner_fname,
+        )
         logging.info("Submitting corner plot to GraceDB")
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
@@ -103,6 +107,32 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
         )
         logging.info("Mollview plot submitted")
+
+    def submit_ligo_skymap_from_samples(
+        self,
+        result: bilby.core.result.Result,
+        graceid: int,
+        event_time: float,
+    ):
+        event_dir = self.write_dir / f"event_{int(event_time)}"
+        filename = event_dir / "posterior_samples.dat"
+        result.save_posterior_samples(filename=filename)
+
+        # TODO: we probably will need cores beyond whats on the head node
+        # to really speed this up, and also the following env variables
+        # need to be set to take advantage of thread parallelism:
+        # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
+        # we might need to submit this via condor
+        args = [str(filename), "-j", 8, "-o", str(event_dir)]
+
+        ligo_skymap_from_samples.main(args)
+        self.write_log(
+            graceid,
+            "ligo-skymap-from-samples",
+            filename=str(event_dir / "skymap.fits"),
+            tag_name="sky_loc",
+        )
+        logging.info("Ligo-skymap-from-samples skymap submitted")
 
     def submit_pastro(self, pastro: float, graceid: int, event_time: float):
         event_dir = self.write_dir / f"event_{int(event_time)}"
