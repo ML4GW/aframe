@@ -1,6 +1,7 @@
 #!/bin/bash
 # trained model weights
-export AMPLFI_WEIGHTS=
+export AMPLFI_HL_WEIGHTS=
+export AMPLFI_HLV_WEIGHTS=
 export AFRAME_WEIGHTS=
 
 # file containing timeslide events detected
