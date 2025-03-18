@@ -16,9 +16,8 @@ export ONLINE_DATADIR=/dev/shm/kafka/
 # where results and deployment logs will be writen
 export AFRAME_ONLINE_OUTDIR=
 
-# where containers are stored
+# where aframe containers are stored
 export AFRAME_CONTAINER_ROOT=
-
 
 config=/path/to/config.yaml
 
