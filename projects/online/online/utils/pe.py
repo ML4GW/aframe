@@ -1,16 +1,10 @@
 import logging
 from typing import TYPE_CHECKING
 
-import bilby
-import healpy as hp
 import lal
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import torch
-from amplfi.train.testing import nest2uniq
-from astropy import io, table
-from astropy import units as u
+from amplfi.train.testing import Result
 
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
@@ -63,7 +57,7 @@ def run_amplfi(
 
 def postprocess_samples(
     samples: torch.Tensor, event_time: float, inference_params: list[str]
-) -> bilby.core.result.Result:
+) -> Result:
     """
     Process samples into a bilby Result object
     that can be used for all downstream tasks
@@ -95,50 +89,9 @@ def postprocess_samples(
     posterior["dec"] = dec
     posterior = pd.DataFrame(posterior)
 
-    result = bilby.result.Result(
+    result = Result(
         label=f"{event_time}",
         posterior=posterior,
         search_parameter_keys=inference_params,
     )
     return result
-
-
-def create_histogram_skymap(
-    ra_samples: np.ndarray,
-    dec_samples: np.ndarray,
-    nside: int = 32,
-) -> tuple[table.Table, plt.Figure]:
-    """Create a skymap from samples of right ascension
-    and declination using a naive histogram estimator.
-    """
-    # mask out non physical samples;
-    mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
-    mask &= (dec_samples > 0) * (dec_samples < np.pi)
-
-    ra_samples = ra_samples[mask]
-    dec_samples = dec_samples[mask]
-    num_samples = len(ra_samples)
-
-    # calculate number of samples in each pixel
-    npix = hp.nside2npix(nside)
-    ipix = hp.ang2pix(nside, dec_samples, ra_samples)
-    ipix = np.sort(ipix)
-    uniq, counts = np.unique(ipix, return_counts=True)
-    uniq_ipix = nest2uniq(nside, np.arange(npix))
-
-    # create empty map and then fill in non-zero pix with counts
-    m = np.zeros(npix)
-    m[np.in1d(range(npix), uniq)] = counts
-
-    post = m / num_samples
-    post /= hp.nside2pixarea(nside)
-    post /= u.sr
-
-    # convert to astropy table
-    t = table.Table(
-        [uniq_ipix, post],
-        names=["UNIQ", "PROBDENSITY"],
-        copy=False,
-    )
-    fits_table = io.fits.table_to_hdu(t)
-    return fits_table, m
