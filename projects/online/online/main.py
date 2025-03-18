@@ -88,8 +88,10 @@ def search(
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
-    amplfi: FlowArchitecture,
-    scaler: ChannelWiseScaler,
+    amplfi_hl: FlowArchitecture,
+    scaler_hl: ChannelWiseScaler,
+    amplfi_hlv: FlowArchitecture,
+    scaler_hlv: ChannelWiseScaler,
     spectral_density: SpectralDensity,
     amplfi_whitener: Whiten,
     samples_per_event: int,
@@ -105,10 +107,16 @@ def search(
     # was analysis ready or not
     in_spec = False
 
+    virgo_ready = [False] * (input_buffer.buffer_length // update_size)
+
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        # if this frame was not analysis ready
-        if not ready:
+        # if this frame was not analysis ready, assuming HLV ordering
+        # on ready array
+        hl_ready = ready[0] and ready[1]
+        virgo_ready.append(ready[-1])
+        virgo_ready.pop(0)
+        if not hl_ready:
             if searcher.detecting:
                 # if we were in the middle of a detection,
                 # we won't get to see the peak of the event
@@ -121,6 +129,12 @@ def search(
                     logging.info("Putting event in event queue")
                     event_queue.put(event)
                     logging.info("Running AMPLFI")
+                    if all(virgo_ready) and len(ready) == 3:
+                        amplfi = amplfi_hlv
+                        scaler = scaler_hlv
+                    else:
+                        amplfi = amplfi_hl
+                        scaler = scaler_hl
                     descaled_samples = run_amplfi(
                         event_time=event.gpstime,
                         input_buffer=input_buffer,
@@ -171,7 +185,7 @@ def search(
 
         # we have a frame that is analysis ready,
         # so lets analyze it:
-        X = X.to(device)
+        X = X[:2].to(device)
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
@@ -189,7 +203,7 @@ def search(
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
-        if snapshotter.full_psd_present and ready:
+        if snapshotter.full_psd_present and hl_ready:
             event = searcher.search(integrated, t0 + time_offset)
 
         # if we found an event, process it!
@@ -197,6 +211,12 @@ def search(
             logging.info("Putting event in event queue")
             event_queue.put(event)
             logging.info("Running AMPLFI")
+            if all(virgo_ready) and len(ready) == 3:
+                amplfi = amplfi_hlv
+                scaler = scaler_hlv
+            else:
+                amplfi = amplfi_hl
+                scaler = scaler_hl
             descaled_samples = run_amplfi(
                 event_time=event.gpstime,
                 input_buffer=input_buffer,
@@ -349,8 +369,10 @@ def event_creation_subprocess(
 
 def main(
     aframe_weights: Path,
-    amplfi_architecture: FlowArchitecture,
-    amplfi_weights: Path,
+    amplfi_hl_architecture: FlowArchitecture,
+    amplfi_hl_weights: Path,
+    amplfi_hlv_architecture: FlowArchitecture,
+    amplfi_hlv_weights: Path,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -469,6 +491,12 @@ def main(
         authenticate()
         logging.info("Authentication complete")
 
+    if ifos not in [["H1", "L1"], ["H1", "L1", "V1"]]:
+        raise ValueError(
+            f"Invalid interferometer configuration {ifos}. "
+            "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
+        )
+
     fftlength = fftlength or kernel_length + fduration
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
@@ -548,12 +576,21 @@ def main(
     aframe = torch.jit.load(aframe_weights)
     aframe = aframe.to(device)
 
-    logging.info(f"Loading AMPLFI from weights at path {amplfi_weights}")
-    amplfi, scaler = load_amplfi(
-        amplfi_architecture, amplfi_weights, len(inference_params)
+    logging.info(f"Loading HL AMPLFI from weights at path {amplfi_hl_weights}")
+    amplfi_hl, scaler_hl = load_amplfi(
+        amplfi_hl_architecture, amplfi_hl_weights, len(inference_params)
     )
-    amplfi = amplfi.to(device)
-    scaler = scaler.to(device)
+    amplfi_hl = amplfi_hl.to(device)
+    scaler_hl = scaler_hl.to(device)
+
+    logging.info(
+        f"Loading HLV AMPLFI from weights at path {amplfi_hlv_weights}"
+    )
+    amplfi_hlv, scaler_hlv = load_amplfi(
+        amplfi_hlv_architecture, amplfi_hlv_weights, len(inference_params)
+    )
+    amplfi_hlv = amplfi_hlv.to(device)
+    scaler_hlv = scaler_hlv.to(device)
 
     spectral_density = SpectralDensity(
         sample_rate=sample_rate,
@@ -578,9 +615,10 @@ def main(
         lowpass=lowpass,
     ).to(device)
 
+    # Hard-coding number of channels until Aframe is generalized
     snapshotter = OnlineSnapshotter(
         update_size=update_size,
-        num_channels=len(ifos),
+        num_channels=2,
         psd_length=psd_length,
         kernel_length=kernel_length,
         fduration=fduration,
@@ -633,8 +671,10 @@ def main(
         input_buffer=input_buffer,
         output_buffer=output_buffer,
         aframe=aframe,
-        amplfi=amplfi,
-        scaler=scaler,
+        amplfi_hl=amplfi_hl,
+        scaler_hl=scaler_hl,
+        amplfi_hlv=amplfi_hlv,
+        scaler_hlv=scaler_hlv,
         spectral_density=spectral_density,
         amplfi_whitener=amplfi_whitener,
         samples_per_event=samples_per_event,
