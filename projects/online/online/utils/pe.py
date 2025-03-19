@@ -29,7 +29,8 @@ def filter_samples(samples, parameter_sampler, inference_params):
     for i, param in enumerate(inference_params):
         prior = priors[param]
         curr_samples = samples[:, i]
-
+        logging.debug(f"Parameter {param} min: {curr_samples.min()}")
+        logging.debug(f"Parameter {param} min: {curr_samples.max()}")
         mask = (prior.log_prob(curr_samples) == float("-inf")).to(
             curr_samples.device
         )
@@ -40,10 +41,10 @@ def filter_samples(samples, parameter_sampler, inference_params):
 
         net_mask &= ~mask
 
-        logging.info(
-            f"Removed {(~net_mask).sum()}/{len(net_mask)} total samples "
-            "outside of prior range"
-        )
+    logging.info(
+        f"Removed {(~net_mask).sum()}/{len(net_mask)} total samples "
+        f"outside of prior range"
+    )
     samples = samples[net_mask]
     return samples
 
@@ -84,8 +85,9 @@ def run_amplfi(
     logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
     logging.info("Descaling samples")
-    descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
-
+    samples = samples.transpose(1, 0)
+    descaled_samples = std_scaler(samples, reverse=True)
+    descaled_samples = descaled_samples.transpose(1, 0)
     logging.info("Finished AMPLFI")
 
     return descaled_samples
@@ -101,7 +103,6 @@ def postprocess_samples(
     Process samples into a bilby Result object
     that can be used for all downstream tasks
     """
-    # filter samples outside of prior range
     samples = filter_samples(samples, parameter_sampler, inference_params)
     # convert samples from relative angle phi
     # to physical right ascension value;

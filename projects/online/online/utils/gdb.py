@@ -125,7 +125,7 @@ class GraceDb(_GraceDb):
         # need to be set to take advantage of thread parallelism:
         # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
         # we might need to submit this via condor
-        args = [str(filename), "-j", 8, "-o", str(event_dir)]
+        args = [str(filename), "-j", str(8), "-o", str(event_dir)]
 
         ligo_skymap_from_samples.main(args)
         self.write_log(
