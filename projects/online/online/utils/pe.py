@@ -146,12 +146,7 @@ def create_histogram_skymap(
     """Create a skymap from samples of right ascension
     and declination using a naive histogram estimator.
     """
-    # mask out non physical samples;
-    mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
-    mask &= (dec_samples > 0) * (dec_samples < np.pi)
 
-    ra_samples = ra_samples[mask]
-    dec_samples = dec_samples[mask]
     num_samples = len(ra_samples)
 
     # calculate number of samples in each pixel
