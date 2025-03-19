@@ -148,7 +148,8 @@ def search(
                         std_scaler=scaler,
                         device=device,
                     )
-                    shared_samples = descaled_samples.flatten()  # noqa: F841
+                    for i, sample in enumerate(descaled_samples.flatten()):
+                        shared_samples[i] = sample
                     amplfi_queue.put(event.gpstime)
                     searcher.detecting = False
 
@@ -232,7 +233,8 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            shared_samples = descaled_samples.flatten()  # noqa: F841
+            for i, sample in enumerate(descaled_samples.flatten()):
+                shared_samples[i] = sample
             amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
@@ -287,7 +289,6 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-
             logging.info("Post-processing samples")
             result = postprocess_samples(
                 descaled_samples,
@@ -316,7 +317,6 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-
             logging.info("Post-processing samples")
             result = postprocess_samples(
                 descaled_samples,
