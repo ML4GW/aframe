@@ -541,6 +541,11 @@ def main(
     event_process = Process(target=event_creation_subprocess, args=args)
     event_process.start()
 
+    if state_channels is None:
+        logging.info(
+            "No state channels specified: not checking for data quality"
+        )
+
     if data_source == "ngdd":
         update_size = 1 / 16
         data_it = ngdd_data_iterator(
