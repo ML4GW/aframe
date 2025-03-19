@@ -180,7 +180,9 @@ def create_histogram_skymap(
 # or by loading in from checkpoint
 def parameter_sampler() -> ParameterSampler:
     base = precessing_cbc_prior()
-    base.parameters["dec"] = Cosine()
-    base.parameters["phi"] = Uniform(0, 2 * np.pi)
-    base.parameters["psi"] = Uniform(0, np.pi)
+    base.parameters["dec"] = Cosine(
+        validate_args=False,
+    )
+    base.parameters["phi"] = Uniform(0, 2 * np.pi, validate_args=False)
+    base.parameters["psi"] = Uniform(0, np.pi, validate_args=False)
     return base
