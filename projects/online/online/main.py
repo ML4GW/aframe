@@ -215,9 +215,11 @@ def search(
             event_queue.put(event)
             logging.info("Running AMPLFI")
             if all(virgo_ready) and len(ready) == 3:
+                logging.info("Using HLV AMPLFI model")
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
             else:
+                logging.info("Using HL AMPLFI model")
                 amplfi = amplfi_hl
                 scaler = scaler_hl
             descaled_samples = run_amplfi(
