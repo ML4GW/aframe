@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from amplfi.train.data.utils.utils import ParameterSampler
 from amplfi.train.priors import precessing_cbc_prior
 from amplfi.train.testing import nest2uniq
 from astropy import io, table
@@ -17,7 +18,6 @@ from torch.distributions import Uniform
 
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
-    from amplfi.train.data.utils.utils import ParameterSampler
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
     from online.utils.buffer import InputBuffer
@@ -181,7 +181,7 @@ def create_histogram_skymap(
 # specify the parameter sampler,
 # either from the config,
 # or by loading in from checkpoint
-def parameter_sampler() -> "ParameterSampler":
+def parameter_sampler() -> ParameterSampler:
     base = precessing_cbc_prior()
     base.parameters["dec"] = Cosine()
     base.parameters["phi"] = Uniform(0, 2 * np.pi)
