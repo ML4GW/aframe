@@ -6,6 +6,7 @@ from typing import Iterable, List, Optional, Tuple
 
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
+from amplfi.train.data.utils.utils import ParameterSampler
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
@@ -269,6 +270,7 @@ def amplfi_subprocess(
     server: GdbServer,
     outdir: Path,
     inference_params: List[str],
+    amplfi_parameter_sampler: ParameterSampler,
     shared_samples: Array,
     nside: int = 32,
 ):
@@ -284,7 +286,10 @@ def amplfi_subprocess(
 
             logging.info("Post-processing samples")
             result = postprocess_samples(
-                descaled_samples, event_time, inference_params
+                descaled_samples,
+                event_time,
+                inference_params,
+                amplfi_parameter_sampler,
             )
 
             logging.info("Creating low resolution skymap")
@@ -310,7 +315,10 @@ def amplfi_subprocess(
 
             logging.info("Post-processing samples")
             result = postprocess_samples(
-                descaled_samples, event_time, inference_params
+                descaled_samples,
+                event_time,
+                inference_params,
+                amplfi_parameter_sampler,
             )
 
             logging.info("Creating low resolution skymap")
@@ -373,6 +381,7 @@ def main(
     amplfi_hl_weights: Path,
     amplfi_hlv_architecture: FlowArchitecture,
     amplfi_hlv_weights: Path,
+    amplfi_parameter_sampler: ParameterSampler,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -506,6 +515,7 @@ def main(
         server,
         outdir,
         inference_params,
+        amplfi_parameter_sampler,
         shared_samples,
         nside,
     )
