@@ -28,9 +28,11 @@ def filter_samples(samples, parameter_sampler, inference_params):
     priors = parameter_sampler.parameters
     for i, param in enumerate(inference_params):
         prior = priors[param]
-        samples = samples[:, i]
+        curr_samples = samples[:, i]
 
-        mask = (prior.log_prob(samples) == float("-inf")).to(samples.device)
+        mask = (prior.log_prob(curr_samples) == float("-inf")).to(
+            curr_samples.device
+        )
         logging.debug(
             f"Removed {mask.sum()}/{len(mask)} samples for parameter "
             f"{param} outside of prior range"
@@ -81,7 +83,7 @@ def run_amplfi(
     # sample from the model and descale back to physical units
     logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    logging.info("Descaling and filtering samples")
+    logging.info("Descaling samples")
     descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
 
     logging.info("Finished AMPLFI")
