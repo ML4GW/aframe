@@ -47,6 +47,10 @@ amplfi_parameter_sampler: amplfi.utils.pe.parameter_sampler
 
 ifos: ["H1", "L1"]
 channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN"]
+state_channels:
+   H1: "H1:GDS-CALIB_STATE_VECTOR"
+   L1: "L1:GDS-CALIB_STATE_VECTOR"
+   V1: "V1:DQ_ANALYSIS_STATE_VECTOR"
 data_source: "frames"
 sample_rate: 2048
 astro_event_rate: 31
