@@ -1,5 +1,5 @@
 # import logging
-from typing import List
+from typing import List, Optional
 
 import arrakis
 import numpy as np
@@ -15,8 +15,8 @@ def data_iterator(
     strain_channels: List[str],
     ifos: List[str],
     sample_rate: float,
+    state_channels: Optional[dict[str, str]] = None,
 ) -> torch.Tensor:
-    state_channels = [f"{ifo}:GDS-CALIB_STATE_VECTOR" for ifo in ifos]
     channels = strain_channels + state_channels
     block_buffer = np.zeros((len(ifos), 0))
     # Blocks delivered in 16th of a second intervals
@@ -25,13 +25,16 @@ def data_iterator(
     last_ready = [True] * len(ifos)
     for block in arrakis.stream(channels):
         ready = [True] * len(ifos)
-        for i, channel in enumerate(state_channels):
-            state_vector = block[channel].data
-            ifo_ready = ((state_vector & 3) == 3).all()
-            # Not sure we want to be logging every 16th of a second
-            # if not ifo_ready:
-            #     logging.warning(f"IFO {channel[:2]} not analysis ready")
-            ready[i] &= ifo_ready
+
+        if state_channels is not None:
+            for i, channel in enumerate(state_channels):
+                state_vector = block[channel].data
+
+                ifo_ready = ((state_vector & 3) == 3).all()
+                # Not sure we want to be logging every 16th of a second
+                # if not ifo_ready:
+                #     logging.warning(f"IFO {channel[:2]} not analysis ready")
+                ready[i] &= ifo_ready
 
         strain_data = np.stack(
             [block[channel].data for channel in strain_channels]

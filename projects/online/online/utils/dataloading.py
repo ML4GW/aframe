@@ -107,6 +107,7 @@ def data_iterator(
     ifos: List[str],
     sample_rate: float,
     ifo_suffix: str = None,
+    state_channels: Optional[dict[str, str]] = None,
     timeout: Optional[float] = None,
 ) -> torch.Tensor:
     if ifo_suffix is not None:
@@ -155,12 +156,16 @@ def data_iterator(
                 x = read_channel(fname, f"{channel}")
                 frames.append(x.value)
 
-                if ifo in ["H1", "L1"]:
-                    state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
-                else:
-                    state_channel = "V1:DQ_ANALYSIS_STATE_VECTOR"
-                state_vector = read_channel(fname, state_channel)
-                ifo_ready = ((state_vector.value & 3) == 3).all()
+                # if state channels were specified,
+                # check that the 3rd bit is on.
+                # If left as `None` set ifo_ready
+                # to True by default.
+                # TODO: parameterize bitmask
+                ifo_ready = True
+                if state_channels is not None:
+                    state_channel = state_channels[ifo]
+                    state_vector = read_channel(fname, state_channel)
+                    ifo_ready = ((state_vector.value & 3) == 3).all()
 
                 # if either ifo isn't ready, mark the whole thing
                 # as not ready

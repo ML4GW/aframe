@@ -401,6 +401,7 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: str = "frames",
+    state_channels: Optional[dict[str, str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
@@ -546,6 +547,7 @@ def main(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
+            state_channels=state_channels,
         )
     elif data_source == "frames":
         update_size = 1
@@ -555,6 +557,7 @@ def main(
             ifos=ifos,
             sample_rate=sample_rate,
             ifo_suffix=ifo_suffix,
+            state_channels=state_channels,
             timeout=10,
         )
     else:
