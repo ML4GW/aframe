@@ -6,6 +6,7 @@ from typing import Iterable, List, Optional, Tuple
 
 import torch
 from amplfi.train.architectures.flows.base import FlowArchitecture
+from amplfi.train.data.utils.utils import ParameterSampler
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
@@ -130,9 +131,11 @@ def search(
                     event_queue.put(event)
                     logging.info("Running AMPLFI")
                     if all(virgo_ready) and len(ready) == 3:
+                        logging.info("Using HLV AMPLFI model")
                         amplfi = amplfi_hlv
                         scaler = scaler_hlv
                     else:
+                        logging.info("Using HL AMPLFI model")
                         amplfi = amplfi_hl
                         scaler = scaler_hl
                     descaled_samples = run_amplfi(
@@ -145,7 +148,8 @@ def search(
                         std_scaler=scaler,
                         device=device,
                     )
-                    shared_samples = descaled_samples.flatten()  # noqa: F841
+                    for i, sample in enumerate(descaled_samples.flatten()):
+                        shared_samples[i] = sample
                     amplfi_queue.put(event.gpstime)
                     searcher.detecting = False
 
@@ -212,9 +216,11 @@ def search(
             event_queue.put(event)
             logging.info("Running AMPLFI")
             if all(virgo_ready) and len(ready) == 3:
+                logging.info("Using HLV AMPLFI model")
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
             else:
+                logging.info("Using HL AMPLFI model")
                 amplfi = amplfi_hl
                 scaler = scaler_hl
             descaled_samples = run_amplfi(
@@ -227,7 +233,8 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            shared_samples = descaled_samples.flatten()  # noqa: F841
+            for i, sample in enumerate(descaled_samples.flatten()):
+                shared_samples[i] = sample
             amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
@@ -269,6 +276,7 @@ def amplfi_subprocess(
     server: GdbServer,
     outdir: Path,
     inference_params: List[str],
+    amplfi_parameter_sampler: ParameterSampler,
     shared_samples: Array,
     nside: int = 32,
 ):
@@ -281,10 +289,12 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-
             logging.info("Post-processing samples")
             result = postprocess_samples(
-                descaled_samples, event_time, inference_params
+                descaled_samples,
+                event_time,
+                inference_params,
+                amplfi_parameter_sampler,
             )
 
             logging.info("Creating low resolution skymap")
@@ -307,10 +317,12 @@ def amplfi_subprocess(
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
-
             logging.info("Post-processing samples")
             result = postprocess_samples(
-                descaled_samples, event_time, inference_params
+                descaled_samples,
+                event_time,
+                inference_params,
+                amplfi_parameter_sampler,
             )
 
             logging.info("Creating low resolution skymap")
@@ -373,6 +385,7 @@ def main(
     amplfi_hl_weights: Path,
     amplfi_hlv_architecture: FlowArchitecture,
     amplfi_hlv_weights: Path,
+    amplfi_parameter_sampler: ParameterSampler,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -392,6 +405,7 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: str = "frames",
+    state_channels: Optional[dict[str, str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
@@ -506,6 +520,7 @@ def main(
         server,
         outdir,
         inference_params,
+        amplfi_parameter_sampler,
         shared_samples,
         nside,
     )
@@ -530,12 +545,18 @@ def main(
     event_process = Process(target=event_creation_subprocess, args=args)
     event_process.start()
 
+    if state_channels is None:
+        logging.info(
+            "No state channels specified: not checking for data quality"
+        )
+
     if data_source == "ngdd":
         update_size = 1 / 16
         data_it = ngdd_data_iterator(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
+            state_channels=state_channels,
         )
     elif data_source == "frames":
         update_size = 1
@@ -545,6 +566,7 @@ def main(
             ifos=ifos,
             sample_rate=sample_rate,
             ifo_suffix=ifo_suffix,
+            state_channels=state_channels,
             timeout=10,
         )
     else:

@@ -8,15 +8,43 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from amplfi.train.data.utils.utils import ParameterSampler
+from amplfi.train.priors import precessing_cbc_prior
 from amplfi.train.testing import nest2uniq
 from astropy import io, table
 from astropy import units as u
+from ml4gw.distributions import Cosine
+from torch.distributions import Uniform
 
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
     from online.utils.buffer import InputBuffer
+
+
+def filter_samples(samples, parameter_sampler, inference_params):
+    net_mask = torch.ones(samples.shape[0], dtype=bool, device=samples.device)
+    priors = parameter_sampler.parameters
+    for i, param in enumerate(inference_params):
+        prior = priors[param]
+        curr_samples = samples[:, i]
+        mask = (prior.log_prob(curr_samples) == float("-inf")).to(
+            curr_samples.device
+        )
+        logging.debug(
+            f"Removed {mask.sum()}/{len(mask)} samples for parameter "
+            f"{param} outside of prior range"
+        )
+
+        net_mask &= ~mask
+
+    logging.info(
+        f"Removed {(~net_mask).sum()}/{len(net_mask)} total samples "
+        f"outside of prior range"
+    )
+    samples = samples[net_mask]
+    return samples
 
 
 def run_amplfi(
@@ -54,20 +82,26 @@ def run_amplfi(
     # sample from the model and descale back to physical units
     logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
-    logging.info("Sampling complete")
-    descaled_samples = std_scaler(samples.mT, reverse=True).mT.cpu()
+    logging.info("Descaling samples")
+    samples = samples.transpose(1, 0)
+    descaled_samples = std_scaler(samples, reverse=True)
+    descaled_samples = descaled_samples.transpose(1, 0)
     logging.info("Finished AMPLFI")
 
     return descaled_samples
 
 
 def postprocess_samples(
-    samples: torch.Tensor, event_time: float, inference_params: list[str]
+    samples: torch.Tensor,
+    event_time: float,
+    inference_params: list[str],
+    parameter_sampler: torch.nn.Module,
 ) -> bilby.core.result.Result:
     """
     Process samples into a bilby Result object
     that can be used for all downstream tasks
     """
+    samples = filter_samples(samples, parameter_sampler, inference_params)
     # convert samples from relative angle phi
     # to physical right ascension value;
     # convert declination from [-pi / 2, pi / 2] -> [0, pi]
@@ -111,12 +145,7 @@ def create_histogram_skymap(
     """Create a skymap from samples of right ascension
     and declination using a naive histogram estimator.
     """
-    # mask out non physical samples;
-    mask = (ra_samples > -np.pi) * (ra_samples < np.pi)
-    mask &= (dec_samples > 0) * (dec_samples < np.pi)
 
-    ra_samples = ra_samples[mask]
-    dec_samples = dec_samples[mask]
     num_samples = len(ra_samples)
 
     # calculate number of samples in each pixel
@@ -142,3 +171,17 @@ def create_histogram_skymap(
     )
     fits_table = io.fits.table_to_hdu(t)
     return fits_table, m
+
+
+# TODO: need more robust way to
+# specify the parameter sampler,
+# either from the config,
+# or by loading in from checkpoint
+def parameter_sampler() -> ParameterSampler:
+    base = precessing_cbc_prior()
+    base.parameters["dec"] = Cosine(
+        validate_args=False,
+    )
+    base.parameters["phi"] = Uniform(0, 2 * np.pi, validate_args=False)
+    base.parameters["psi"] = Uniform(0, np.pi, validate_args=False)
+    return base
