@@ -29,8 +29,6 @@ def filter_samples(samples, parameter_sampler, inference_params):
     for i, param in enumerate(inference_params):
         prior = priors[param]
         curr_samples = samples[:, i]
-        logging.debug(f"Parameter {param} min: {curr_samples.min()}")
-        logging.debug(f"Parameter {param} min: {curr_samples.max()}")
         mask = (prior.log_prob(curr_samples) == float("-inf")).to(
             curr_samples.device
         )
