@@ -82,6 +82,8 @@ class GraceDb(_GraceDb):
         self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
         logging.info("Skymap submitted")
 
+        posterior_fname = event_dir / "posterior_samples.dat"
+        result.save_posterior_samples(posterior_fname)
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
             parameters=["chirp_mass", "mass_ratio", "distance"],
