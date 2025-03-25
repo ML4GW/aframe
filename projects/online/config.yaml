@@ -22,7 +22,7 @@ amplfi_hl_architecture:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-amplfi_hl_weights: ${oc.env:AMPLFI_WEIGHTS}
+amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_architecture: 
   class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
   init_args:
@@ -42,7 +42,7 @@ amplfi_hlv_architecture:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-amplfi_hlv_weights: ${oc.env:AMPLFI_WEIGHTS}
+amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 ifos: ["H1", "L1"]
 channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN"]
 data_source: "frames"
