@@ -2,7 +2,7 @@
 Producing visualizations of `Aframe` performance
 
 ## Environment
-The `plots` project environment is manged by `poetry`.
+The `plots` project environment is manged by `uv`.
 
 In the root of the `plots` project, run 
 ```bash
@@ -13,5 +13,5 @@ to build the `plots` container.
 This project can also be installed locally via 
 
 ```
-poetry install
+uv sync
 ```

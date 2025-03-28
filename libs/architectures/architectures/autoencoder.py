@@ -40,7 +40,7 @@ class ConvolutionalAutoencoder(
         encode_channels: Sequence[int],
         kernel_size: int,
         stride: int = 1,
-        activation: torch.nn.Module = torch.nn.ReLU(),
+        activation: torch.nn.Module = torch.nn.ReLU,
         output_activation: Optional[torch.nn.Module] = None,
         norm: Module = torch.nn.BatchNorm1d,
         skip_connection: Optional[SkipConnection] = None,

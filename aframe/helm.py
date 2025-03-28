@@ -1,6 +1,7 @@
 """
 Tools for deploying helm charts
 """
+
 import logging
 import subprocess
 import time
@@ -114,6 +115,6 @@ class RayCluster(HelmChart):
         # can subclass to define "readiness"
         ready = False
         while not ready:
-            ready = any([p.ready() for p in workers])
+            ready = any(p.ready() for p in workers)
             ready = ready and head.ready()
             time.sleep(2)

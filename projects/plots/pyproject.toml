@@ -1,38 +1,43 @@
-[tool.poetry]
+[project]
 name = "plots"
 version = "0.0.1"
 description = "Aframe performance summary plots"
-authors = ["Alec Gunny"]
+authors = [{ name = "Alec Gunny" }]
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "bokeh~=3.0",
+    "scipy~=1.7",
+    "h5py~=3.5",
+    "gwpy>=3.0.8,<4",
+    "ledger",
+    "priors",
+    "utils",
+    "aframe",
+    "python-ligo-lw>=1.8.3,<2",
+    "lalsuite~=7.19",
+    "jsonargparse>=4.27.4,<5",
+    "omegaconf~=2.2",
+    "urllib3>=1.25.4,<1.27",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 sensitive-volume = "plots.legacy.cli:main"
 vizapp = "plots.vizapp.main:cli"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-bokeh = "^3.0"
-scipy = "^1.7"
-h5py = "^3.5"
-gwpy = "^3.0.8"
+[dependency-groups]
+dev = [
+    "jupyter>=1.0.0,<2",
+    "pytest>=8.3.0,<9",
+]
 
-ledger = {path = "../../libs/ledger", develop = true}
-priors = {path = "../../libs/priors", develop = true}
-utils = {path = "../../libs/utils", develop = true}
+[tool.uv]
 
-aframe = {path = "../../", develop = true}
-python-ligo-lw = "^1.8.3"
-lalsuite = "^7.19"
-jsonargparse = "^4.27.4"
-omegaconf = "^2.2"
-
-
-# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
-urllib3 = ">=1.25.4,<1.27"
-
-[tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
-pytest = "^8.3.0"
+[tool.uv.sources]
+ledger = { path = "../../libs/ledger", editable = true }
+priors = { path = "../../libs/priors", editable = true }
+utils = { path = "../../libs/utils", editable = true }
+aframe = { path = "../../", editable = true }
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

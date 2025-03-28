@@ -34,11 +34,11 @@ class InspectorPlot:
 
         self.strain_source = ColumnDataSource(strain_source)
         self.response_source = ColumnDataSource(
-            dict(nn=[], integrated=[], t=[])
+            {"nn": [], "integrated": [], "t": []}
         )
         self.fft_source = ColumnDataSource(fft_source)
         self.spectrogram_source = ColumnDataSource(
-            data=dict(image=[], x=[], y=[], dw=[], dh=[])
+            data={"image": [], "x": [], "y": [], "dw": [], "dh": []}
         )
 
     def get_layout(self, height: int, width: int) -> None:
@@ -227,7 +227,13 @@ class InspectorPlot:
         self.spectrogram_plot.height = height
         self.spectrogram_plot.width = width
 
-        spec_source = dict(image=[img], x=[0], y=[0], dw=[width], dh=[height])
+        spec_source = {
+            "image": [img],
+            "x": [0],
+            "y": [0],
+            "dw": [width],
+            "dh": [height],
+        }
         self.spectrogram_source.data = spec_source
         self.spec_renderer.data_source.data = spec_source
 
@@ -245,9 +251,11 @@ class InspectorPlot:
             "t": self.analyzer.inference_times,
         }
         for r in self.output_renderers:
-            r.data_source.data = dict(
-                nn=nn, integrated=integrated, t=self.analyzer.inference_times
-            )
+            r.data_source.data = {
+                "nn": nn,
+                "integrated": integrated,
+                "t": self.analyzer.inference_times,
+            }
 
         # update axis labels, title and ranges of timeseries plot
         nn_min = nn.min()
@@ -267,13 +275,13 @@ class InspectorPlot:
     def reset(self):
         # TODO: implement this
         for r in self.strain_renderers:
-            r.data_source.data = dict(H1=[], L1=[], t=[])
+            r.data_source.data = {"H1": [], "L1": [], "t": []}
 
         for r in self.fft_renderers:
-            r.data_source.data = dict(H1=[], L1=[], f=[])
+            r.data_source.data = {"H1": [], "L1": [], "f": []}
 
         for r in self.output_renderers:
-            r.data_source.data = dict(nn=[], integrated=[], t=[])
+            r.data_source.data = {"nn": [], "integrated": [], "t": []}
 
         self.timeseries_plot.title.text = "Click on an event to inspect"
         self.timeseries_plot.xaxis.axis_label = "Time [s]"

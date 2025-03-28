@@ -43,8 +43,7 @@ def stream_command(command: List[str]):
     process.wait()
     if process.returncode:
         raise RuntimeError(
-            "Command '{}' failed with return code {} "
-            "and stderr:\n{}".format(
+            "Command '{}' failed with return code {} and stderr:\n{}".format(
                 shlex.join(command),
                 process.returncode,
                 process.stderr.read().decode(),

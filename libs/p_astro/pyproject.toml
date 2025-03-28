@@ -1,22 +1,29 @@
-[tool.poetry]
+[project]
 name = "p_astro"
 version = "0.1.0"
 description = "Functions for calculating p_astro of events"
-authors = ["Will Benoit <benoi090@umn.edu>"]
+authors = [{ name = "Will Benoit", email = "benoi090@umn.edu" }]
+requires-python = ">=3.9,<3.13"
 license = "MIT"
+dependencies = [
+    "astropy>=6.0",
+    "numpy~=1.26",
+    "ledger",
+    "utils",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-astropy = ">=6.0"
-numpy = "^1.26"
+[dependency-groups]
+dev = [
+    "jupyter>=1.0.0,<2",
+    "pytest>=8.2.0,<9",
+]
 
-ledger = {path = "../ledger", develop = true}
-utils = {path = "../utils", develop = true}
+[tool.uv]
 
-[tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
-pytest = "^8.2.0"
+[tool.uv.sources]
+ledger = { path = "../ledger", editable = true }
+utils = { path = "../utils", editable = true }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

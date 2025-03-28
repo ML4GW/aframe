@@ -43,7 +43,7 @@ class DataQualityDict(DataQualityDict):
         start: float,
         end: float,
         min_duration: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> SegmentList:
         flags = set(flags)
         open_flags = set(OPEN_DATA_FLAGS)
@@ -72,7 +72,7 @@ class DataQualityDict(DataQualityDict):
         start: float,
         end: float,
         min_duration: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> SegmentList:
         # if the requested time period
         # spans O3a to O3b, query the two

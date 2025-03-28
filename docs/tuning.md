@@ -20,7 +20,7 @@ cluster and launch the job.
 Setting up a tuning pipeline can be done with the `aframe-init` command line tool. It is very similar to setting up the {doc}`Sandbox </first_pipeline>` pipeline.
 
 ```console
-poetry run aframe-init offline  --mode tune --directory ~/aframe/my-first-tune/ 
+uv run aframe-init offline --mode tune --directory ~/aframe/my-first-tune/ 
 ```
 
 Similar to the `Sandbox` pipeline, `.cfg`, `.yaml` and `run.sh` files that configure the tuning experiment will be instantiated in the experiment directory.

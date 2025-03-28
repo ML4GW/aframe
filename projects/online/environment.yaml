@@ -5,7 +5,7 @@ dependencies:
   # python/env dependencies
   - python=3.10
   - pip
-  - poetry
+  - uv=0.6.10
   - jsonargparse
   - scipy
   - h5py

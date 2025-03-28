@@ -1,23 +1,28 @@
-[tool.poetry]
+[project]
 name = "ledger"
 version = "0.1.0"
 description = "Objects for storing and manipulating aframe data"
-authors = ["Ethan Marx <emarx@mit.edu>"]
+authors = [{ name = "Ethan Marx", email = "emarx@mit.edu" }]
+requires-python = ">=3.9,<3.13"
 license = "MIT"
-#readme = "README.md"
+dependencies = [
+    "h5py>=3.10.0,<4",
+    "numpy>=1.26.4,<2",
+    "pycbc>=2.5.1,<3",
+    "utils",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-h5py = "^3.10.0"
-numpy = "^1.26.4"
-pycbc = "^2.5.1"
+[dependency-groups]
+dev = [
+    "jupyter>=1.0.0,<2",
+    "pytest>=8.2.0,<9",
+]
 
-utils = {path = "../utils", develop = true}
+[tool.uv]
 
-[tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
-pytest = "^8.2.0"
+[tool.uv.sources]
+utils = { path = "../utils", editable = true }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

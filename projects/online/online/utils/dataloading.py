@@ -64,7 +64,7 @@ def get_prefix(datadir: Path):
         raise ValueError(f"No valid .gwf files in data directory '{datadir}'")
 
     t0 = max([int(i.group("start")) for i in matches])
-    prefixes = set([i.group("prefix") for i in matches])
+    prefixes = {i.group("prefix") for i in matches}
     if len(prefixes) > 1:
         raise ValueError(
             "Too many prefixes {} in data directory '{}'".format(
@@ -72,7 +72,7 @@ def get_prefix(datadir: Path):
             )
         )
 
-    durations = set([i.group("duration") for i in matches])
+    durations = {i.group("duration") for i in matches}
     if len(durations) > 1:
         raise ValueError(
             "Too many lengths {} in data directory '{}'".format(

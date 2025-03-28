@@ -3,7 +3,7 @@ Data
 Scripts for producing training and testing data for `Aframe`
 
 ## Environment
-The `data` project environment utilizes `Mamba` and `poetry`. `Mamba` is needed for installing
+The `data` project environment utilizes `Mamba` and `uv`. `Mamba` is needed for installing
 the LIGO frame reading libraries [`python-ldas-tools-framecpp`](https://anaconda.org/conda-forge/python-ldas-tools-framecpp/) and [https://anaconda.org/conda-forge/python-nds2-client](`python-nds2-client`), which are unavailable on PyPi.
 
 In the root of the `data` project, run 

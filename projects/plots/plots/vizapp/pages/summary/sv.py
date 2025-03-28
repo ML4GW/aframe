@@ -21,7 +21,7 @@ SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
 
 
 def get_prob(prior, ledger):
-    sample = dict(mass_1=ledger.mass_1_source, mass_2=ledger.mass_2_source)
+    sample = {"mass_1": ledger.mass_1_source, "mass_2": ledger.mass_2_source}
     return prior.prob(sample, axis=0)
 
 

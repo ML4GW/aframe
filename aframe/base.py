@@ -132,7 +132,7 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
     of the desired Sandbox class.
 
     `path` is the path to the specific sandbox image
-    (for singularity sandboxes)or environment (when using poetry / venv)
+    (for singularity sandboxes) or environment (when using poetry/venv)
     one wishes to run the task in.
     """
 

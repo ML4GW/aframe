@@ -18,7 +18,7 @@ The top level `aframe` repository contains the `environment <../../pyproject.tom
 In the root of this repository, simply run 
 
 ```
-poetry install
+uv sync
 ```
 
 to install this environment
@@ -48,7 +48,7 @@ A `Task` is considered complete if it's `output` "exists". Complete `Tasks` will
 `Tasks` can be run by specifying the python path to the `Task`, e.g.
 
 ```
-poetry run law run aframe.tasks.TrainLocal ...
+uv run law run aframe.tasks.TrainLocal ...
 ```
 
 ## Tips and Tricks
@@ -60,7 +60,7 @@ All `Aframe` `Tasks` (and pipelines) come with a built-in `--dev` arg which will
 ### Local Training
 
 ```
-poetry run law run aframe.Train \
+uv run law run aframe.Train \
     --gpus <ID of GPUs to train on> \
     --image ~/aframe/images/train.sif \
     --config /opt/aframe/projects/train/config.yaml \
@@ -75,7 +75,7 @@ This has taken care of setting some sensible defaults for you, and allows for si
 ### Remote Training
 
 ```
-poetry run law run aframe.Train \
+uv run law run aframe.Train \
     --gpus <ID of GPUs to train on> \
     --image ~/aframe/images/train.sif \
     --config /opt/aframe/projects/train/config.yaml \

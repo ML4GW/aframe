@@ -69,10 +69,10 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
             environment += f"{envvar}={os.getenv(envvar)} "
 
         # aws endpoint for s3 transfers
-        environment += f'AWS_ENDPOINT_URL={os.getenv("AWS_ENDPOINT_URL")} '
+        environment += f"AWS_ENDPOINT_URL={os.getenv('AWS_ENDPOINT_URL')} "
 
         # forward current path and law config
-        environment += f'PATH={os.getenv("PATH")} '
+        environment += f"PATH={os.getenv('PATH')} "
         environment += f"LAW_CONFIG_FILE={self.law_config} "
         environment += f"USER={os.getenv('USER')} "
 

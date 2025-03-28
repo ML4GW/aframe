@@ -46,13 +46,13 @@ In the specified directory, `aframe-init` will create default `.cfg` and `.yaml`
 While in the root directory, a sandbox pipeline can be initialized with
 
 ```console
-poetry run aframe-init offline  --mode sandbox --directory ~/aframe/my-first-run/ 
+uv run aframe-init offline  --mode sandbox --directory ~/aframe/my-first-run/ 
 ```
 
 You can also initialize a directory for launching the tune pipeline
 
 ```console
-poetry run aframe-init offline --mode tune --directory ~/aframe/my-first-tune-run/ 
+uv run aframe-init offline --mode tune --directory ~/aframe/my-first-tune-run/ 
 ```
 
 Now, you can navigate to the experiment directory and edit the configuration files as you wish.
@@ -78,7 +78,7 @@ export AFRAME_TMPDIR=/home/albert.einsteinaframe/my-first-run/tmp/
 # launch pipeline; modify the gpus, workers etc. to suit your needs
 # note that if you've made local code changes not in the containers
 # you'll need to add the --dev flag!
-LAW_CONFIG_FILE=/home/albert.einstein/aframe/my-first-run/sandbox.cfg poetry run --directory /home/albert.einstein/projects/aframev2 law run aframe.pipelines.sandbox.Sandbox --workers 5 --gpus 0
+LAW_CONFIG_FILE=/home/albert.einstein/aframe/my-first-run/sandbox.cfg uv run --directory /home/albert.einstein/projects/aframev2 law run aframe.pipelines.sandbox.Sandbox --workers 5 --gpus 0
 ```
 
 Environment variables are automatically set based on the specified experiment directory. These environment variables

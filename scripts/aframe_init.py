@@ -156,7 +156,7 @@ def create_offline_runfile(
     if pipeline == "review":
         pipeline = "sandbox"
     # make the below one string
-    cmd = f"LAW_CONFIG_FILE={config} poetry run --directory {root} "
+    cmd = f"LAW_CONFIG_FILE={config} uv run --directory {root} "
     cmd += f"law run aframe.pipelines.sandbox.{pipeline.capitalize()} "
     cmd += "--workers 5 --gpus 0"
     content = f"""

@@ -268,13 +268,7 @@ def main(
     detection_criterion: str,
     detection_thresholds: List[float],
     output_dir: Path,
-    pipelines: List[str] = [
-        "cwb",
-        "gstlal",
-        "mbta",
-        "pycbc_bbh",
-        "pycbc_hyperbank",
-    ],
+    pipelines: List[str] = None,
     sig_lognorm: float = 0.1,
     smax_ns: float = 0.4,
     smax_bh: float = 0.998,
@@ -282,12 +276,15 @@ def main(
     cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ):
     known_pipelines = ["cwb", "gstlal", "mbta", "pycbc_bbh", "pycbc_hyperbank"]
-    unknown_pipelines = set(pipelines) - set(known_pipelines)
-    if len(unknown_pipelines) > 0:
-        raise ValueError(
-            f"Pipelines must be from {known_pipelines}, "
-            f"got an unknown pipelines {unknown_pipelines}"
-        )
+    if pipelines is None:
+        pipelines = known_pipelines
+    else:
+        unknown_pipelines = set(pipelines) - set(known_pipelines)
+        if len(unknown_pipelines) > 0:
+            raise ValueError(
+                f"Pipelines must be from {known_pipelines}, "
+                f"got an unknown pipelines {unknown_pipelines}"
+            )
 
     if detection_criterion not in ["far", "pastro"]:
         raise ValueError(

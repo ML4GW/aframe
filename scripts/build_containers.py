@@ -84,7 +84,7 @@ def build(projects: List[str], container_root: Path, max_workers: int) -> None:
             f"Failed to build containers for the following projects: "
             f"{', '.join(failed_projects)}\n"
             f"To retry building these containers, run the following: "
-            f"poetry run build-containers {' '.join(failed_projects)}"
+            f"uv run build-containers {' '.join(failed_projects)}"
         )
     else:
         logging.info("All containers built successfully")

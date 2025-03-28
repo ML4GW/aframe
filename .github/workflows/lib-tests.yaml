@@ -48,9 +48,12 @@ jobs:
       volumes:
         - ${{ github.workspace }}:/github/workspace
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       # build the libraries environment
       -
@@ -61,9 +64,8 @@ jobs:
             apt-get update
             apt-get install -y build-essential
             apt-get clean
-            python -m pip install poetry
             cd $test_dir
-            poetry install
+            uv sync --all-extras
         shell: bash
 
       # run its unit tests inside that environment
@@ -73,5 +75,5 @@ jobs:
           test_dir: /github/workspace/libs/${{ matrix.library }}
         run: |
             cd $test_dir
-            poetry run pytest
+            uv run pytest
         shell: bash

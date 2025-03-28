@@ -19,7 +19,7 @@ class AutoencoderAframe(AframeBase):
         arch: AutoencoderArchitecture,
         max_shift: float = 0.005,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(arch, *args, **kwargs)
 

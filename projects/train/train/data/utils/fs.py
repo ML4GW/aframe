@@ -94,8 +94,9 @@ def download_training_data(bucket: str, data_dir: str):
     Download s3 data if it doesn't exist.
     """
     logging.info(
-        "Downloading data from S3 bucket {} to "
-        "local directory {}".format(bucket, data_dir)
+        "Downloading data from S3 bucket {} to local directory {}".format(
+            bucket, data_dir
+        )
     )
 
     # make a local directory to cache data if it

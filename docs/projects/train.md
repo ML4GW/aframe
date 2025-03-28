@@ -3,7 +3,7 @@ Train
 Training Aframe networks using [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) and hyper-parameter tuning using [Ray Tune](https://docs.ray.io/en/latest/tune/index.html) 
 
 ## Environment
-The `train` project environment is manged by `poetry`.
+The `train` project environment is manged by `uv`.
 
 In the root of the `train` project, run 
 ```bash
@@ -14,7 +14,7 @@ to build the `train` container.
 This project can also be installed locally via 
 
 ```
-poetry install
+uv sync
 ```
 
 ## Scripts
@@ -35,7 +35,7 @@ common to all use-cases is abstracted into base classes.
 To see a list of arguments one can locally run 
 
 ```bash
-poetry run python -m train --help
+uv run python -m train --help
 ```
 
 or inside the container
@@ -117,7 +117,7 @@ If you already have a ray cluster running somewhere, you can distribute your job
 Similarly, to see a list of arguments one can locally run 
 
 ```bash
-poetry run python -m train.tune --help
+uv run python -m train.tune --help
 ```
 
 or inside the container

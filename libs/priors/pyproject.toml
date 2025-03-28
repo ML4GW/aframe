@@ -1,21 +1,25 @@
-[tool.poetry]
+[project]
 name = "priors"
 version = "0.1.0"
 description = "Priors used for aframe analysis"
-authors = ["Ethan Jacob Marx <ethan.marx@ligo.org>"]
+authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
+requires-python = ">=3.9,<3.13"
 license = "MIT"
+dependencies = [
+    "astropy~=5.0",
+    "bilby>=2.2.2,<3",
+    "numpy>=1.26.4,<2",
+    "utils",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-astropy = "^5.0"
-bilby = "^2.2.2"
-numpy = "^1.26.4"
+[dependency-groups]
+dev = ["pytest~=7.3"]
 
-utils = {path = "../utils", develop = true}
+[tool.uv]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.3"
+[tool.uv.sources]
+utils = { path = "../utils", editable = true }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

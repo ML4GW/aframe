@@ -18,7 +18,7 @@ Remote experiments can be initialized using the `aframe-init` command line tool.
 To initialize an experiment directory for a remote run, specify the `--s3-bucket` argument `aframe-init`.
 
 ```bash
-poetry run aframe-init offline --mode sandbox --directory ~/aframe/my-first-remote-run --s3-bucket s3://my-bucket/my-first-remote-run
+uv run aframe-init offline --mode sandbox --directory ~/aframe/my-first-remote-run --s3-bucket s3://my-bucket/my-first-remote-run
 ```
 
 This will configure the `AFRAME_TRAIN_RUN_DIR` and `AFRAME_TRAIN_DATA_DIR` in the `run.sh` to point to the specified remote s3 bucket.
@@ -36,7 +36,7 @@ export AFRAME_TMPDIR=/home/albert.einstein/aframe/my-first-remote-run/tmp/
 # launch pipeline; modify the gpus, workers etc. to suit your needs
 # note that if you've made local code changes not in the containers
 # you'll need to add the --dev flag!
-LAW_CONFIG_FILE=/home/albert.einstein/aframe/my-first-remote-run/sandbox.cfg poetry run --directory /home/albert.einstein/projects/aframev2 law run aframe.pipelines.sandbox.Sandbox --workers 5 --gpus 0
+LAW_CONFIG_FILE=/home/albert.einstein/aframe/my-first-remote-run/sandbox.cfg uv run --directory /home/albert.einstein/projects/aframev2 law run aframe.pipelines.sandbox.Sandbox --workers 5 --gpus 0
 ```
 
 The `luigi`/`law` `Tasks` responsible for training data generation will automatically transfer your data to s3 storage, and launch a remote training job using kubernetes. 

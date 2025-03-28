@@ -21,7 +21,7 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 def get_prob(prior, ledger):
-    sample = dict(mass_1=ledger.mass_1, mass_2=ledger.mass_2)
+    sample = {"mass_1": ledger.mass_1, "mass_2": ledger.mass_2}
     return prior.prob(sample, axis=0)
 
 

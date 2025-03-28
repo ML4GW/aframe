@@ -1,24 +1,32 @@
-[tool.poetry]
+[project]
 name = "data"
 version = "0.0.1"
 description = "aframe data generation scripts"
-authors = ["Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+authors = [
+    { name = "Alec Gunny", email = "alecg@mit.edu" },
+    { name = "Ethan Marx", email = "emarx@mit.edu" },
+]
+requires-python = ">=3.9,<3.13"
 license = "MIT"
-#readme = "README.md"
+dependencies = [
+    "utils",
+    "ledger",
+    "priors",
+    "ml4gw>=0.7.2",
+    "aframe",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+[dependency-groups]
+dev = ["pytest>=8.2.1,<9"]
 
-# local deps
-utils = {path = "../../libs/utils", develop = true}
-ledger = {path = "../../libs/ledger", develop = true}
-priors = {path = "../../libs/priors", develop = true}
-ml4gw = ">=0.7.2"
-aframe = {path = "../..", develop = true}
+[tool.uv]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.2.1"
+[tool.uv.sources]
+utils = { path = "../../libs/utils", editable = true }
+ledger = { path = "../../libs/ledger", editable = true }
+priors = { path = "../../libs/priors", editable = true }
+aframe = { path = "../..", editable = true }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -22,8 +22,7 @@ class DropoutNd(nn.Module):
         super().__init__()
         if p < 0 or p >= 1:
             raise ValueError(
-                "dropout probability has to be in [0, 1), "
-                "but got {}".format(p)
+                "dropout probability has to be in [0, 1), but got {}".format(p)
             )
         self.p = p
         self.tie = tie
@@ -111,7 +110,7 @@ class S4DKernel(nn.Module):
             optim = {"weight_decay": 0.0}
             if lr is not None:
                 optim["lr"] = lr
-            setattr(getattr(self, name), "_optim", optim)
+            getattr(self, name)._optim = optim
 
 
 class S4D(nn.Module):
