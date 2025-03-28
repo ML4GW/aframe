@@ -24,7 +24,7 @@ apt-get clean
 /bin/bash /root/.bashrc
 micromamba create -p /opt/env -f /opt/aframe/projects/online/conda-lock.yml
 
-# install poetry so we can install local deps of deps editably
+# install uv so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
     pip install --no-build-isolation uv
 
