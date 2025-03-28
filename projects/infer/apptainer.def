@@ -20,7 +20,7 @@ cd /opt/aframe/projects/infer
 # Set venv dir outside of project for 
 # when binding the repo into the container
 export UV_PROJECT_ENVIRONMENT=/opt/.venv
-uv sync --frozen
+uv sync --frozen --all-extras
 
 %environment
 # Append venv dir to PATH so the 

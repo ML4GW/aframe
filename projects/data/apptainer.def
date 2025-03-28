@@ -30,7 +30,7 @@ micromamba run -p /opt/env python -m \
 export CONDA_PREFIX=/root/micromamba
 cd /opt/aframe/projects/data/
 micromamba run -p /opt/env \
-    uv export --frozen -o requirements.txt
+    uv export --frozen --all-extras -o requirements.txt
     
 # Needs to be pip sync to discover conda env
 micromamba run -p /opt/env \
