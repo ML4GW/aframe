@@ -1,6 +1,5 @@
 Bootstrap: docker
-From: python:3.10.12-slim-bullseye
-Stage: build
+From: ghcr.io/astral-sh/uv:0.6.10-python3.10-bookworm-slim
 
 %files
 . /opt/aframe/projects/plots
@@ -11,36 +10,18 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
-# installing the local package editably via pip
-# works, but none of the dependencies (e.g. ml4gw)
-# are installed editably. Instead, use poetry export
-# to export to a requirements.txt, and use sed 
-# to prepend the -e flag to all relevant 
-# local packages that require editable installs.
-# poetry has already done dependency resolution for us,
-# so turn that off with the --no-deps flag to increase performance.
-# Lastly, install the export project itself
-python -m pip install poetry==2.0.1 poetry-plugin-export
-cd /opt/aframe/projects/plots
-poetry export -o requirements.txt --without-hashes \
-    && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
-
-
-Bootstrap: docker
-From: python:3.10.12-slim-bullseye
-Stage: final
-
-%files from build
-/opt/aframe /opt/aframe
-
-%post
 # install git for pip installation
 apt-get update
-apt-get install -y --no-install-recommends git
 apt-get install -y build-essential
 apt-get clean
 
 cd /opt/aframe/projects/plots
-pip install -r requirements.txt --no-deps --no-cache-dir
-pip install pytest
-pip install -e . --no-deps --no-cache-dir
+# Set venv dir outside of project for 
+# when binding the repo into the container
+export UV_PROJECT_ENVIRONMENT=/opt/.venv
+uv sync --frozen
+
+%environment
+# Append venv dir to PATH so the 
+# environment is active by default
+export PATH="/opt/.venv/bin:$PATH"

@@ -3873,11 +3873,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "h5py", specifier = ">=3.6,<4.0" },
+    { name = "h5py", specifier = "~=3.6" },
     { name = "ml4gw", specifier = ">=0.7.2" },
-    { name = "numpy", specifier = ">=1.26.4,<2.0.0" },
+    { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "s3fs", specifier = ">=2024,<2025" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.0,<9" }]
 
 [[package]]
 name = "virtualenv"
