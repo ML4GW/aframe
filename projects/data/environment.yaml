@@ -5,7 +5,7 @@ dependencies:
   # python/env dependencies
   - python=3.9
   - pip
-  - poetry
+  - uv=0.6.10
   - jsonargparse
   # need these for utils lib
   # TODO: add constraints for better pinning

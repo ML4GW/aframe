@@ -15,8 +15,8 @@ to be lightweight, flexible and portable. Projects are meant to produce _artifac
 ```
 
 ## Building Containers
-Most projects are fully python based, and their environments are managed using [poetry](https://python-poetry.org/).
-The `data` project also requires the use of [`Mamba`](https://mamba.readthedocs.io/en/latest/).
+Most projects are fully python based, and their environments are managed using [uv](https://docs.astral.sh/uv/).
+The `data` and `online` project also requires the use of [`Mamba`](https://mamba.readthedocs.io/en/latest/).
 
 In the root directory of (most) projects is an `apptainer.def` file that containerizes 
 the project application using [Apptainer](https://apptainer.org/docs/user/latest/).
@@ -34,13 +34,13 @@ This is the location where `aframe` images will be stored. `luigi`/`law` tasks w
 The root `aframe` environment ships with a command line utility for building all of the project containers in parallel
 
 ```bash
-poetry run build-containers
+uv run build-containers
 ```
 By default, this will store the images in the location specified by the `AFRAME_CONTAINER_ROOT` environment variable.
 If you only want to build certain project containers, you can specify their names as arguments.
 
 ```bash
-poetry run build-containers data export 
+uv run build-containers data export 
 ```
 
 ## Executing a Container

@@ -26,23 +26,15 @@ micromamba create -p /opt/env -f /opt/aframe/projects/online/conda-lock.yml
 
 # install poetry so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
-    pip install --no-build-isolation \
-	poetry 'virtualenv==20.29.2' 
-
-micromamba run -p /opt/env \
-    poetry config virtualenvs.create false
+    pip install --no-build-isolation uv
 
 cd /opt/aframe/projects/online/
-# I don't know why, but doing this seems to make the 
-# python-ligo-lw install more consistent
-micromamba run -p /opt/env python -m \
-    pip uninstall -y virtualenv
-micromamba run -p /opt/env python -m \
-    pip install --no-build-isolation \
-	'virtualenv==20.29.2' 
-
 micromamba run -p /opt/env \
-    poetry install 
+    uv export --frozen -o requirements.txt
+
+# Needs to be pip sync to discover conda env
+micromamba run -p /opt/env \
+    uv pip sync requirements.txt
 
 # initialize our shell so that we can execute
 # commands in our environment at run time

@@ -9,13 +9,13 @@ Scripts for deploying `Aframe` and `AMPLFI` models for online analysis
 
 First build the online deployment apptainer image
 ```
-poetry run build-containers online
+uv run build-containers online
 ```
 
 Next, you can initialize an online run directory, which will add template `config.yaml` and `run.sh` files that will need to be populated with arguments specific to your analysis.
 
 ```
-poetry run aframe-init online --directory /path/to/online
+uv run aframe-init online --directory /path/to/online
 ```
 
 Once the files are populated correctly, the analysis can be launched via
