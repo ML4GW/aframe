@@ -55,20 +55,17 @@ utils = { path = "./libs/utils", editable = true }
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.black]
+[tool.ruff]
 line-length = 79
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.tox
-  | _build
-  | dist
-  | docs
-)/
-'''
+extend-exclude = ["docs"]
 
-[tool.isort]
-known_first_party = ["aframe", "train", "utils", "online", "data", "infer", "plots", "export", "ledger", "p_astro", "priors"]
-multi_line_output = 3
-include_trailing_comma = true
+[tool.ruff.lint]
+extend-safe-fixes = ["C408"]
+mccabe = {"max-complexity" = 18}
+select = ["B", "C", "E", "F", "W", "B9"]
+# ignore W605 and E203 for consistency with black
+ignore = ["W605", "E203"]
+
+# ignore asterisk imports and unused
+# import errors in __init__ files
+per-file-ignores =  {"**/__init__.py" = ["F401", "F403"]}
