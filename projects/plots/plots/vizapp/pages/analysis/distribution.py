@@ -51,19 +51,21 @@ class DistributionPlot:
         return background, _foreground
 
     def initialize_sources(self):
-        self.bar_source = ColumnDataSource(dict(center=[], top=[], width=[]))
+        self.bar_source = ColumnDataSource(
+            {"center": [], "top": [], "width": []}
+        )
         self.background_source = ColumnDataSource(
-            dict(
-                x=[],
-                detection_time=[],
-                detection_statistic=[],
-                shifts=[],
-                size=[],
-            )
+            {
+                "x": [],
+                "detection_time": [],
+                "detection_statistic": [],
+                "shifts": [],
+                "size": [],
+            }
         )
 
         self.foreground_source = ColumnDataSource(
-            dict(detection_statistic=[], snr=[])
+            {"detection_statistic": [], "snr": []}
         )
 
     def get_layout(self, height, width):
@@ -308,16 +310,16 @@ class DistributionPlot:
         x /= 3600
 
         self.background_source.data.update(
-            dict(
-                x=x
+            {
+                "x": x
                 + shifts.sum(
                     axis=-1
                 ),  # give unique time to events at same H1 time
-                detection_time=times,
-                detection_statistic=events,
-                shifts=shifts,
-                size=np.ones(len(events)) * 8,
-            )
+                "detection_time": times,
+                "detection_statistic": events,
+                "shifts": shifts,
+                "size": np.ones(len(events)) * 8,
+            }
         )
         self.background_source.selected.indices = []
 
@@ -368,13 +370,13 @@ class DistributionPlot:
         # clear the background plot until we select another
         # range of detection characteristics to plot
         self.background_source.data.update(
-            dict(
-                x=[],
-                detection_time=[],
-                detection_statistic=[],
-                shifts=[],
-                size=[],
-            )
+            {
+                "x": [],
+                "detection_time": [],
+                "detection_statistic": [],
+                "shifts": [],
+                "size": [],
+            }
         )
         self.bar_source.selected.indices = []
         self.foreground_source.selected.indices = []

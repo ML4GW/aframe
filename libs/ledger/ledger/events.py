@@ -70,7 +70,8 @@ class EventSet(Ledger):
         warnings.warn(
             "Detection statistic is not sorted. This function "
             "may take a long time for large datasets. To sort, "
-            "use the sort_by() function of this object."
+            "use the sort_by() function of this object.",
+            stacklevel=2,
         )
         try:
             len(threshold)
@@ -125,7 +126,8 @@ class EventSet(Ledger):
         warnings.warn(
             "Detection statistic is not sorted. This function "
             "may take a long time for large datasets. To sort, "
-            "use the sort_by() function of this object."
+            "use the sort_by() function of this object.",
+            stacklevel=2,
         )
         det_stats = np.sort(self.detection_statistic)
         return det_stats[-int(num_events)]
@@ -209,7 +211,7 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
             subobj = cls(
                 detection_statistic=evs.detection_statistic,
                 detection_time=evs.detection_time,
-                **kwargs
+                **kwargs,
             )
             obj.append(subobj)
 

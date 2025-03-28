@@ -106,17 +106,18 @@ def validate_repo(repo_dir):
         expected_crop,
         expected_batch_size,
     ):
-        for i, model in enumerate(repo_dir.iterdir()):
+        models = repo_dir.iterdir()
+        for model in models:
             config = load_config(model / "config.pbtxt")
             if model.name == "snapshotter":
                 try:
                     instance_group = config.instance_group[0]
-                except IndexError:
+                except IndexError as exc:
                     if expected_snapshots is not None:
                         raise ValueError(
                             "No instance group but expected snapshots "
                             f"is {expected_snapshots}"
-                        )
+                        ) from exc
                 else:
                     if expected_snapshots is None:
                         raise ValueError(
@@ -148,12 +149,12 @@ def validate_repo(repo_dir):
 
                 try:
                     instance_group = config.instance_group[0]
-                except IndexError:
+                except IndexError as exc:
                     if expected_instances is not None:
                         raise ValueError(
                             "No instance group but expected instances "
                             f"is {expected_instances}"
-                        )
+                        ) from exc
                 else:
                     if expected_instances is None:
                         raise ValueError(
@@ -197,7 +198,7 @@ def validate_repo(repo_dir):
             else:
                 raise ValueError(f"Unexpected model {model.name} in repo")
 
-        assert i == 3, f"Wrong number of models {i + 1}"
+        assert len(models) == 4, f"Wrong number of models {len(models)}"
 
     return fn
 

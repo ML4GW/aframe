@@ -93,6 +93,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
                     "your datset with chunked storage turned on.".format(
                         fnames
                     ),
+                    stacklevel=2,
                 )
 
         self.waveform_size = dset.shape[1]

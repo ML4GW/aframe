@@ -59,16 +59,10 @@ class SupervisedAframeS4(SupervisedAframe):
         )
 
         # Add parameters with special hyperparameters
-        hps = [
-            getattr(p, "_optim")
-            for p in all_parameters
-            if hasattr(p, "_optim")
-        ]
+        hps = [p._optim for p in all_parameters if hasattr(p, "_optim")]
         hps = [
             dict(s)
-            for s in sorted(
-                list(dict.fromkeys(frozenset(hp.items()) for hp in hps))
-            )
+            for s in sorted(dict.fromkeys(frozenset(hp.items()) for hp in hps))
         ]  # Unique dicts
         for hp in hps:
             params = [
@@ -80,6 +74,6 @@ class SupervisedAframeS4(SupervisedAframe):
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, self.trainer.estimated_stepping_batches
         )
-        scheduler_config = dict(scheduler=scheduler, interval="step")
+        scheduler_config = {"scheduler": scheduler, "interval": "step"}
 
-        return dict(optimizer=optimizer, lr_scheduler=scheduler_config)
+        return {"optimizer": optimizer, "lr_scheduler": scheduler_config}

@@ -64,7 +64,8 @@ extend-safe-fixes = ["C408"]
 mccabe = {"max-complexity" = 18}
 select = ["B", "C", "E", "F", "W", "B9"]
 # ignore W605 and E203 for consistency with black
-ignore = ["W605", "E203"]
+# ignore F722 for compatibility with jaxtyping
+ignore = ["W605", "E203", "F722"]
 
 # ignore asterisk imports and unused
 # import errors in __init__ files

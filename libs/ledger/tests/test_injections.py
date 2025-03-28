@@ -226,7 +226,7 @@ class TestLigoResponseSet:
         assert ligo_response_set.waveforms.shape == expected_shape
         assert ligo_response_set._waveforms.shape == expected_shape
         with patch("numpy.stack") as mock:
-            ligo_response_set.waveforms
+            _ = ligo_response_set.waveforms
         mock.assert_not_called()
 
     def test_get_times(self, ligo_response_set, N):
@@ -339,7 +339,7 @@ class TestLigoResponseSet:
 
     def test_append(self, ligo_response_set, N):
         ligo_response_set.injection_time = np.arange(N)
-        ligo_response_set.waveforms
+        _ = ligo_response_set.waveforms
 
         new = ligo_response_set[:6]
         new.num_injections = 13

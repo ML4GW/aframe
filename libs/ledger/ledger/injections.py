@@ -377,7 +377,7 @@ class _WaveformGenerator:
         stacked = np.stack([hp.data, hc.data])
         stacked = self.align_waveforms(stacked, t_final)
 
-        unstacked = {k: v for (k, v) in zip(["plus", "cross"], stacked)}
+        unstacked = dict(zip(["plus", "cross"], stacked))
 
         return unstacked
 
@@ -436,7 +436,7 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
                     polarizations[key][i] = value
         else:
             futures = ex.map(waveform_generator, param_list)
-            idx_map = {f: i for f, i in zip(futures, len(futures))}
+            idx_map = dict(zip(futures, len(futures)))
             for f in as_completed(futures):
                 i = idx_map.pop(f)
                 polars = f.result()
@@ -557,7 +557,7 @@ class InterferometerResponseSet(WaveformSet):
         and you could start to run out of memory fast.
         """
         with h5py.File(fname, "r") as f:
-            if all([i is None for i in [start, end, shifts]]):
+            if all(i is None for i in [start, end, shifts]):
                 return cls._load_with_idx(f, None)
 
             coalescence_time = f.attrs["coalescence_time"]
