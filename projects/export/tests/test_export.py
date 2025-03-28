@@ -106,7 +106,7 @@ def validate_repo(repo_dir):
         expected_crop,
         expected_batch_size,
     ):
-        models = repo_dir.iterdir()
+        models = list(repo_dir.iterdir())
         for model in models:
             config = load_config(model / "config.pbtxt")
             if model.name == "snapshotter":
