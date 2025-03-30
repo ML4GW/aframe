@@ -14,6 +14,7 @@ source = { editable = "../../" }
 dependencies = [
     { name = "boto3" },
     { name = "cloudpathlib" },
+    { name = "jsonargparse" },
     { name = "kr8s" },
     { name = "law" },
     { name = "luigi" },
@@ -29,6 +30,7 @@ dependencies = [
 requires-dist = [
     { name = "boto3", specifier = ">=1.34.4,<2" },
     { name = "cloudpathlib", specifier = ">=0.18.1,<0.19" },
+    { name = "jsonargparse", specifier = ">=4.27.1,<5" },
     { name = "kr8s", specifier = ">=0.10.0,<0.11" },
     { name = "law", specifier = ">=0.1.19" },
     { name = "luigi", specifier = "~=3.0" },
@@ -43,7 +45,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "conda-lock", specifier = ">=2.5.1,<3" },
-    { name = "jsonargparse", specifier = ">=4.27.1,<5" },
     { name = "jupyter", specifier = ">=1.0.0,<2" },
     { name = "pre-commit", specifier = ">=3.7.0,<4" },
 ]
@@ -1374,7 +1375,7 @@ requires-dist = [
     { name = "aframe", editable = "../../" },
     { name = "jsonargparse", specifier = "~=4.24" },
     { name = "ledger", editable = "../../libs/ledger" },
-    { name = "ml4gw-hermes", extras = ["serve", "torch"], specifier = ">=0.2.0" },
+    { name = "ml4gw-hermes", extras = ["torch"], specifier = ">=0.2.0" },
     { name = "ratelimiter", specifier = "~=1.2" },
     { name = "tqdm", specifier = "~=4.66" },
     { name = "urllib3", specifier = ">=1.25.4,<1.27" },

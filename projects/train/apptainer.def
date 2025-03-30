@@ -21,7 +21,10 @@ cd /opt/aframe/projects/train
 # Set venv dir outside of project for 
 # when binding the repo into the container
 export UV_PROJECT_ENVIRONMENT=/opt/env
-uv sync --frozen --all-extras
+
+# I think there might be a better way to do this
+uv export --frozen --all-extras -o requirements.txt
+uv pip sync requirements.txt --system
 
 %environment
 # Append venv dir to PATH so the 

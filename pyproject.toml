@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.26.4,<2",
     "cloudpathlib>=0.18.1,<0.19",
     "psutil>=5.9.8,<6",
+    "jsonargparse>=4.27.1,<5",
 ]
 
 [project.scripts]
@@ -29,7 +30,6 @@ aframe-init = "scripts.aframe_init:main"
 [dependency-groups]
 dev = [
     "jupyter>=1.0.0,<2",
-    "jsonargparse>=4.27.1,<5",
     "conda-lock>=2.5.1,<3",
     "pre-commit>=3.7.0,<4",
 ]

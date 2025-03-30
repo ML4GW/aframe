@@ -34,7 +34,7 @@ micromamba run -p /opt/env \
     
 # Needs to be pip sync to discover conda env
 micromamba run -p /opt/env \
-    uv pip sync requirements.txt
+    uv pip install -r requirements.txt
 
 # initialize our shell so that we can execute
 # commands in our environment at run time
