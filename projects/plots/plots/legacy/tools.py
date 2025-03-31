@@ -11,7 +11,7 @@ for i in range(10):
 
 
 def get_figure(**kwargs):
-    default_kwargs = dict(height=300, width=700, tools="")
+    default_kwargs = {"height": 300, "width": 700, "tools": ""}
     kwargs = default_kwargs | kwargs
     p = figure(**kwargs)
 
@@ -52,13 +52,15 @@ def make_grid(combos):
 
     plots = []
     if num_plots == 1:
-        kwargs = dict(
-            title=r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(*combos[0]),
-            x_axis_type="log",
-            tools="save",
-            width=380,
-            height=260,
-        )
+        kwargs = {
+            "title": r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(
+                *combos[0]
+            ),
+            "x_axis_type": "log",
+            "tools": "save",
+            "width": 380,
+            "height": 260,
+        }
 
         kwargs["x_axis_label"] = (
             r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
@@ -74,11 +76,11 @@ def make_grid(combos):
         return plots
 
     for i, combo in enumerate(combos):
-        kwargs = dict(
-            title=r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(*combo),
-            x_axis_type="log",
-            tools="save",
-        )
+        kwargs = {
+            "title": r"$$\text{{Log Normal }}m_1={}, m_2={}$$".format(*combo),
+            "x_axis_type": "log",
+            "tools": "save",
+        }
 
         kwargs["width"] = 350
         if not i % 2:

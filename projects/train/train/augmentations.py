@@ -226,8 +226,7 @@ class WaveformProjector(torch.nn.Module):
         if snrs is not None:
             if psds is None:
                 raise ValueError(
-                    "Must specify background PSDs if projecting "
-                    "to target SNR"
+                    "Must specify background PSDs if projecting to target SNR"
                 )
             responses = self.rescaler(responses, psds, snrs)
         return responses

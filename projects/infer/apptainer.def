@@ -1,6 +1,5 @@
 Bootstrap: docker
-From: python:3.10.12-slim-bullseye
-Stage: build
+From: ghcr.io/astral-sh/uv:0.6.10-python3.10-bookworm-slim
 
 %files
 # only copy precisely the files we need to keep things
@@ -13,37 +12,18 @@ Stage: build
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
-# installing the local package editably via pip
-# works, but none of the dependencies (e.g. ml4gw)
-# are installed editably, so we'll opt for using
-# the full poetry machinery without using a
-# virtual environment. Note that this can potentially
-# cause issues if the poetry install makes changes to
-# the virtualenv package in the base environment, so
-# we'll hard pin it to the value we need.
-# TODO: there's got to be a better solution here
-python -m pip install poetry==2.0.1 poetry-plugin-export
-cd /opt/aframe/projects/infer
-poetry export -o requirements.txt --without-hashes \
-    && sed -i 's|\(.*\) @ file://|-e |' requirements.txt
-
-Bootstrap: docker
-From: python:3.10.12-slim-bullseye
-Stage: final
-
-%files from build
-/opt/aframe /opt/aframe
-
-%post
-# install git for pip installation
 apt-get update
-apt-get install -y --no-install-recommends git
 apt-get install -y build-essential
 apt-get clean
 
-# install pytest so we can run unittests
-# inside the container during CI
 cd /opt/aframe/projects/infer
-pip install -r requirements.txt --no-deps --no-cache-dir
-pip install -e . --no-deps --no-cache-dir
-pip install pytest
+# Set venv dir outside of project for 
+# when binding the repo into the container
+export UV_PROJECT_ENVIRONMENT=/opt/env
+uv export --frozen --all-extras -o requirements.txt
+uv pip sync requirements.txt --system
+
+%environment
+# Append venv dir to PATH so the 
+# environment is active by default
+export PATH="/opt/env/bin:$PATH"

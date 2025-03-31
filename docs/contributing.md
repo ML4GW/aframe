@@ -51,14 +51,14 @@ For any code that you contribute, make sure to add unit tests which explicitly s
 To keep the code style consistent and neat throughout the repo, we implement [pre-commit hooks](https://pre-commit.com/) to statically lint and style-check any code that wants to get added to the upstream `main` branch. `pre-commit` is already installed in the root `Aframe` environment, so you can run 
 
 ```console
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 to install the hooks.
 
 Now any attempts to commit new code will require these tests to past first (and even do some reformatting for you if possible). To run the hooks on existing code, you can run 
 ```console
-poetry run pre-commit run --all
+uv run pre-commit run --all
 ```
 
 ### Non-automatable style guidelines

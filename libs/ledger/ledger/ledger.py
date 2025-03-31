@@ -75,9 +75,8 @@ class Ledger:
 
     def __iter__(self):
         fields = self._get_params()
-        return map(
-            lambda i: {k: self.__dict__[k][i] for k in fields},
-            range(len(self)),
+        return (
+            {k: self.__dict__[k][i] for k in fields} for i in range(len(self))
         )
 
     # for slicing and masking sets of parameters/waveforms
@@ -110,7 +109,9 @@ class Ledger:
 
     def sort_by(self, attr: str):
         if self.is_sorted_by(attr):
-            warnings.warn(f"Already sorted by {attr}, object is unchanged")
+            warnings.warn(
+                f"Already sorted by {attr}, object is unchanged", stacklevel=2
+            )
         idx = np.argsort(getattr(self, attr))
         return self[idx]
 
@@ -125,10 +126,10 @@ class Ledger:
 
                 try:
                     kind = attr.metadata["kind"]
-                except KeyError:
+                except KeyError as exc:
                     raise TypeError(
                         f"Couldn't save field {key} with no annotation"
-                    )
+                    ) from exc
 
                 if kind == "parameter":
                     params = self._get_group(f, "parameters")
@@ -168,10 +169,10 @@ class Ledger:
         for key, attr in cls.__dataclass_fields__.items():
             try:
                 kind = attr.metadata["kind"]
-            except KeyError:
+            except KeyError as exc:
                 raise TypeError(
                     f"Couldn't load field {key} with no 'kind' metadata"
-                )
+                ) from exc
 
             if kind == "metadata":
                 try:
@@ -180,8 +181,9 @@ class Ledger:
                     value = None
             elif kind not in ("parameter", "waveform"):
                 raise TypeError(
-                    "Couldn't load unknown annotation {} "
-                    "for field {}".format(kind, key)
+                    "Couldn't load unknown annotation {} for field {}".format(
+                        kind, key
+                    )
                 )
             else:
                 value = _try_get(kind + "s", key)
@@ -238,8 +240,9 @@ class Ledger:
             return ours
         elif ours != theirs:
             raise ValueError(
-                "Can't append {} with {} value {} "
-                "when ours is {}".format(cls.__name__, key, theirs, ours)
+                "Can't append {} with {} value {} when ours is {}".format(
+                    cls.__name__, key, theirs, ours
+                )
             )
         return ours
 

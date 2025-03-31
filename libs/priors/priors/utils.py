@@ -12,10 +12,10 @@ def mass_condition_uniform(reference_params, mass_1):
     `ConditionalUniform` to set the maximum value of `mass_2`
     to be whatever was drawn for `mass_1`
     """
-    return dict(
-        minimum=reference_params["minimum"],
-        maximum=mass_1,
-    )
+    return {
+        "minimum": reference_params["minimum"],
+        "maximum": mass_1,
+    }
 
 
 def mass_condition_powerlaw(reference_params, mass_1):
@@ -24,11 +24,11 @@ def mass_condition_powerlaw(reference_params, mass_1):
     `ConditionalPowerLaw` to set the maximum value of `mass_2`
     to be whatever was drawn for `mass_1`
     """
-    return dict(
-        alpha=reference_params["alpha"],
-        minimum=reference_params["minimum"],
-        maximum=mass_1,
-    )
+    return {
+        "alpha": reference_params["alpha"],
+        "minimum": reference_params["minimum"],
+        "maximum": mass_1,
+    }
 
 
 def mass_constraints(samples):

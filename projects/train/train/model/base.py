@@ -197,5 +197,5 @@ class AframeBase(pl.LightningModule):
             max_lr=self.hparams.learning_rate,
             total_steps=self.trainer.estimated_stepping_batches,
         )
-        scheduler_config = dict(scheduler=scheduler, interval="step")
-        return dict(optimizer=optimizer, lr_scheduler=scheduler_config)
+        scheduler_config = {"scheduler": scheduler, "interval": "step"}
+        return {"optimizer": optimizer, "lr_scheduler": scheduler_config}

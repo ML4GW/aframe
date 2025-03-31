@@ -1,43 +1,52 @@
-[tool.poetry]
+[project]
 name = "online"
 version = "0.0.1"
 description = "Deploy aframe models over live data"
-authors = ["Will Benoit <benoi090@umn.edu>", "Alec Gunny <alecg@mit.edu>", "Ethan Marx <emarx@mit.edu>"]
+authors = [
+    { name = "Will Benoit", email = "benoi090@umn.edu" },
+    { name = "Alec Gunny", email = "alecg@mit.edu" },
+    { name = "Ethan Marx", email = "emarx@mit.edu" },
+]
+requires-python = ">=3.10,<3.13"
 license = "MIT"
-#readme = "README.md"
+dependencies = [
+    "utils",
+    "ledger",
+    "p_astro",
+    "architectures",
+    "arrakis>=0.2.0,<0.3",
+    "amplfi",
+    "ml4gw>=0.7,<0.8",
+    "omegaconf>=2.3.0,<3",
+    "numpy<2.0.0",
+    "scipy<1.15",
+    "matplotlib==3.9.4",
+    "ligo-skymap>=2.2.2,<3",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13" 
+[project.scripts]
+online = "online.cli:cli"
 
-# local deps
-utils = {path = "../../libs/utils", develop = true}
-ledger = {path = "../../libs/ledger", develop = true}
-p_astro = {path = "../../libs/p_astro", develop = true}
-architectures = {path = "../../libs/architectures", develop = true}
+[dependency-groups]
+dev = [
+    "pytest>=8.2.1,<9",
+    "jupyter>=1.0.0,<2",
+]
 
-arrakis-python = "^0.1.0"
+[tool.uv]
 
-amplfi = {git = "https://github.com/ML4GW/amplfi.git"}
-ml4gw = "^0.7"
-omegaconf = "^2.3.0"
-numpy = "<2.0.0"
-scipy = "<1.15"
-# Restricting this because 3.10 breaks our plotting for some reason
-matplotlib = "3.9.4"
-ligo-skymap = "^2.2.2"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.2.1"
-jupyter = "^1.0.0"
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cu118"
-priority = "explicit"
+explicit = true
 
-[tool.poetry.scripts]
-online = "online.cli:cli" 
+[tool.uv.sources]
+utils = { path = "../../libs/utils", editable = true }
+ledger = { path = "../../libs/ledger", editable = true }
+p_astro = { path = "../../libs/p_astro", editable = true }
+architectures = { path = "../../libs/architectures", editable = true }
+amplfi = { git = "https://github.com/ML4GW/amplfi.git" }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

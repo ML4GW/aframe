@@ -86,7 +86,7 @@ def postprocess_samples(
     # parameters we want to keep
     posterior_params = ["chirp_mass", "mass_ratio", "distance"]
 
-    posterior = dict()
+    posterior = {}
     for param in posterior_params:
         idx = inference_params.index(param)
         posterior[param] = samples.T[idx].flatten()

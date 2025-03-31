@@ -6,6 +6,6 @@ DATAFIND_ENV_VARS = [
     "LIGO_USERNAME",
     "DEFAULT_SEGMENT_SERVER",
 ]
-from .fetch import Fetch
-from .segments import Query
-from .waveforms import TestingWaveforms, TrainingWaveforms, ValidationWaveforms
+from .fetch import Fetch  # noqa: E402
+from .segments import Query  # noqa: E402
+from .waveforms import TestingWaveforms, TrainingWaveforms, ValidationWaveforms  # noqa: E402

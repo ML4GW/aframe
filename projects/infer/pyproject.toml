@@ -1,39 +1,45 @@
-[tool.poetry]
+[project]
 name = "infer"
 version = "0.0.1"
 description = ""
-authors = ["Alec Gunny", "Ethan Marx", "Will Benoit"]
+authors = [
+    { name = "Alec Gunny" },
+    { name = "Ethan Marx" },
+    { name = "Will Benoit" },
+]
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "ratelimiter~=1.2",
+    "jsonargparse~=4.24",
+    "tqdm~=4.66",
+    "ml4gw-hermes[torch]>=0.2.0",
+    "aframe",
+    "utils",
+    "ledger",
+    "urllib3>=1.25.4,<1.27",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 infer = "infer.cli:main"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-ratelimiter = "^1.2"
-jsonargparse = "^4.24"
-tqdm = "^4.66"
+[dependency-groups]
+dev = [
+    "jupyter>=1.0.0,<2",
+    "pytest~=7.3",
+]
 
-# submodules
-ml4gw-hermes = {version=">=0.2.0", extras = ["serve", "torch"]}
+[tool.uv]
 
-# local deps
-aframe = {path = "../../", develop = true}
-utils = {path = "../../libs/utils", develop = true}
-ledger = {path = "../../libs/ledger", develop = true}
-
-
-# workaround for: https://github.com/python-poetry/poetry-plugin-export/issues/183
-urllib3 = ">=1.25.4,<1.27"
-
-[tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
-pytest = "^7.3"
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
+explicit = true
+
+[tool.uv.sources]
+aframe = { path = "../../", editable = true }
+utils = { path = "../../libs/utils", editable = true }
+ledger = { path = "../../libs/ledger", editable = true }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

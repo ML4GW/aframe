@@ -49,8 +49,10 @@ def data_iterator(
             )
             x = x[:, slc]
             block_buffer = block_buffer[:, BLOCK_SIZE:]
-            yield torch.Tensor(x).double(), float(
-                block.t0 - BLOCK_DURATION
-            ), last_ready
+            yield (
+                torch.Tensor(x).double(),
+                float(block.t0 - BLOCK_DURATION),
+                last_ready,
+            )
 
         last_ready = ready

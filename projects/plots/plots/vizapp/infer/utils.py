@@ -23,8 +23,9 @@ def get_strain_fname(data_dir: Path, time: float):
     # if no file found, raise error
     else:
         raise ValueError(
-            "No file containing event time {} in "
-            "data directory {}".format(time, data_dir)
+            "No file containing event time {} in data directory {}".format(
+                time, data_dir
+            )
         )
     return fname, t0, dur
 
