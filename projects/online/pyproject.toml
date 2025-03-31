@@ -15,8 +15,8 @@ dependencies = [
     "p_astro",
     "architectures",
     "arrakis>=0.2.0,<0.3",
-    "amplfi",
-    "ml4gw>=0.7,<0.8",
+    "amplfi>=0.4.0",
+    "ml4gw>=0.7.4",
     "omegaconf>=2.3.0,<3",
     "numpy<2.0.0",
     "scipy<1.15",
@@ -45,7 +45,6 @@ utils = { path = "../../libs/utils", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
 p_astro = { path = "../../libs/p_astro", editable = true }
 architectures = { path = "../../libs/architectures", editable = true }
-amplfi = { git = "https://github.com/ML4GW/amplfi.git" }
 
 [build-system]
 requires = ["hatchling"]
