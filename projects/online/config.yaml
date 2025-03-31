@@ -5,11 +5,11 @@ foreground_path: ${oc.env:ONLINE_FOREGROUND_FILE}
 rejected_path: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_hl_architecture: 
-  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
+  class_path: amplfi.train.architectures.NSF
   init_args:
-    hidden_features: 150
-    num_transforms: 80
-    num_blocks: 6
+    hidden_features: [512, 512, 512]
+    transforms: 20
+    randperm: true
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
@@ -24,11 +24,11 @@ amplfi_hl_architecture:
             groups: 8
 amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_architecture: 
-  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
+  class_path: amplfi.train.architectures.NSF
   init_args:
-    hidden_features: 150
-    num_transforms: 80
-    num_blocks: 6
+    hidden_features: [512, 512, 512]
+    transforms: 20
+    randperm: true
     context_dim: 8
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
