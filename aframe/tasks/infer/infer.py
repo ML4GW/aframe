@@ -44,7 +44,7 @@ class DeployInferLocal(InferBase):
     def model_repo_dir(self):
         return self.input()["model_repository"].path
 
-    def workflow_run_context(self):
+    def htcondor_workflow_run_context(self):
         """
         Law hook that provides a context manager
         in which the whole workflow is run.
