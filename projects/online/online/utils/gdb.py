@@ -16,8 +16,7 @@ from ligo.skymap.tool import ligo_skymap_from_samples
 from online.utils.searcher import Event
 
 if TYPE_CHECKING:
-    import numpy as np
-    from astropy import table
+    from astropy.io.fits import BinTableHDU
 
 GdbServer = Literal["local", "playground", "test", "production"]
 
@@ -70,8 +69,7 @@ class GraceDb(_GraceDb):
     def submit_low_latency_pe(
         self,
         result: bilby.core.result.Result,
-        mollview_map: "np.ndarray",
-        skymap: "table.Table",
+        skymap: "BinTableHDU",
         graceid: int,
         event_time: float,
     ):
@@ -98,7 +96,9 @@ class GraceDb(_GraceDb):
         mollview_fname = event_dir / "mollview_plot.png"
         fig = plt.figure()
         title = (f"{event_time:.3} sky map",)
-        hp.mollview(mollview_map, fig=fig, title=title, hold=True)
+        hp.mollview(
+            skymap.data["PROBDENSITY"], fig=fig, title=title, hold=True
+        )
         plt.close()
         fig.savefig(mollview_fname, dpi=300)
         logging.info("Submitting Mollview plot to GraceDB")

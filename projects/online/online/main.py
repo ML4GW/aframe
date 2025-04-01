@@ -5,7 +5,7 @@ from queue import Empty
 from typing import Iterable, List, Optional, Tuple
 
 import torch
-from amplfi.train.architectures.flows.base import FlowArchitecture
+from amplfi.train.architectures.flows import FlowArchitecture
 from amplfi.train.data.utils.utils import ParameterSampler
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
@@ -206,6 +206,7 @@ def search(
         # which will also automatically integrate the output
         integrated = output_buffer.update(y.cpu(), t0)
 
+        # if this frame was analysis ready,
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output

@@ -2,17 +2,12 @@ import logging
 from typing import TYPE_CHECKING
 
 import bilby
-import healpy as hp
 import lal
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 from amplfi.train.data.utils.utils import ParameterSampler
 from amplfi.train.priors import precessing_cbc_prior
-from amplfi.train.testing import nest2uniq
-from astropy import io, table
-from astropy import units as u
 from ml4gw.distributions import Cosine
 from torch.distributions import Uniform
 
@@ -82,6 +77,7 @@ def run_amplfi(
     # sample from the model and descale back to physical units
     logging.info("Starting sampling")
     samples = amplfi.sample(samples_per_event, context=(whitened, asds))
+    samples = samples.squeeze(1)
     logging.info("Descaling samples")
     samples = samples.transpose(1, 0)
     descaled_samples = std_scaler(samples, reverse=True)
@@ -135,42 +131,6 @@ def postprocess_samples(
         search_parameter_keys=inference_params,
     )
     return result
-
-
-def create_histogram_skymap(
-    ra_samples: np.ndarray,
-    dec_samples: np.ndarray,
-    nside: int = 32,
-) -> tuple[table.Table, plt.Figure]:
-    """Create a skymap from samples of right ascension
-    and declination using a naive histogram estimator.
-    """
-
-    num_samples = len(ra_samples)
-
-    # calculate number of samples in each pixel
-    npix = hp.nside2npix(nside)
-    ipix = hp.ang2pix(nside, dec_samples, ra_samples)
-    ipix = np.sort(ipix)
-    uniq, counts = np.unique(ipix, return_counts=True)
-    uniq_ipix = nest2uniq(nside, np.arange(npix))
-
-    # create empty map and then fill in non-zero pix with counts
-    m = np.zeros(npix)
-    m[np.in1d(range(npix), uniq)] = counts
-
-    post = m / num_samples
-    post /= hp.nside2pixarea(nside)
-    post /= u.sr
-
-    # convert to astropy table
-    t = table.Table(
-        [uniq_ipix, post],
-        names=["UNIQ", "PROBDENSITY"],
-        copy=False,
-    )
-    fits_table = io.fits.table_to_hdu(t)
-    return fits_table, m
 
 
 # TODO: need more robust way to
