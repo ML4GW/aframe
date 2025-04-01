@@ -17,14 +17,12 @@ from online.utils.dataloading import data_iterator
 from online.utils.gdb import GdbServer, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import (
-    create_histogram_skymap,
-    postprocess_samples,
-    run_amplfi,
-)
+from online.utils.pe import run_amplfi
+
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
+from online.subprocesses import amplfi_subprocess
 
 SECONDS_PER_DAY = 86400
 
@@ -86,6 +84,7 @@ def search(
     searcher: Searcher,
     event_queue: Queue,
     amplfi_queue: Queue,
+    error_queue: Queue,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
@@ -112,6 +111,10 @@ def search(
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
+        error = error_queue.get_nowait()
+
+        logging.error(error)
+
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array
         hl_ready = ready[0] and ready[1]
@@ -269,75 +272,6 @@ def pastro_subprocess(
         logging.info(f"Submitting p_astro: {pastro}")
         gdb.submit_pastro(float(pastro), graceid, event.gpstime)
         logging.info("Submitted p_astro")
-
-
-def amplfi_subprocess(
-    amplfi_queue: Queue,
-    server: GdbServer,
-    outdir: Path,
-    inference_params: List[str],
-    amplfi_parameter_sampler: ParameterSampler,
-    shared_samples: Array,
-    nside: int = 32,
-):
-    gdb = gracedb_factory(server, outdir)
-
-    while True:
-        arg = amplfi_queue.get()
-        if isinstance(arg, float):
-            event_time = arg
-            descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
-            )
-            logging.info("Post-processing samples")
-            result = postprocess_samples(
-                descaled_samples,
-                event_time,
-                inference_params,
-                amplfi_parameter_sampler,
-            )
-
-            logging.info("Creating low resolution skymap")
-            skymap, mollview_map = create_histogram_skymap(
-                result.posterior["ra"], result.posterior["dec"], nside
-            )
-            graceid = amplfi_queue.get()
-
-            logging.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(
-                result, mollview_map, skymap, graceid, event_time
-            )
-
-            logging.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
-            logging.info("Submitted all PE")
-        else:
-            graceid = arg
-            event_time = amplfi_queue.get()
-            descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
-            )
-            logging.info("Post-processing samples")
-            result = postprocess_samples(
-                descaled_samples,
-                event_time,
-                inference_params,
-                amplfi_parameter_sampler,
-            )
-
-            logging.info("Creating low resolution skymap")
-            skymap, mollview_map = create_histogram_skymap(
-                result.posterior["ra"], result.posterior["dec"], nside
-            )
-
-            logging.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(
-                result, mollview_map, skymap, graceid, event_time
-            )
-
-            logging.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
-            logging.info("Submitted all PE")
 
 
 def event_creation_subprocess(
@@ -511,11 +445,16 @@ def main(
             "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
         )
 
+    # queue that each subprocess will write
+    # to if they encounter any errors
+    error_queue = Queue()
+
     fftlength = fftlength or kernel_length + fduration
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
     amplfi_queue = Queue()
     args = (
+        error_queue,
         amplfi_queue,
         server,
         outdir,
@@ -524,6 +463,7 @@ def main(
         shared_samples,
         nside,
     )
+
     amplfi_process = Process(target=amplfi_subprocess, args=args)
     amplfi_process.start()
 
@@ -688,6 +628,7 @@ def main(
         whitener=whitener,
         snapshotter=snapshotter,
         searcher=searcher,
+        error_queue=error_queue,
         event_queue=event_queue,
         amplfi_queue=amplfi_queue,
         input_buffer=input_buffer,
