@@ -17,8 +17,7 @@ def event_creation_subprocess(
     logger = logging.getLogger("event-creation-subprocess")
     logger.info("event creation subprocess initialized")
 
-    write_dir = outdir / "events"
-    gdb = gracedb_factory(server, write_dir)
+    gdb = gracedb_factory(server, outdir)
 
     while True:
         event = event_queue.get()
@@ -27,7 +26,7 @@ def event_creation_subprocess(
 
         # write event information to disk
         # and submit it to gracedb
-        event.write(write_dir)
+        event.write(outdir)
         response = gdb.submit(event)
         # Get the event's graceid for submitting
         # further data products

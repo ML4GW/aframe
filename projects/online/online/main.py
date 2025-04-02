@@ -410,7 +410,7 @@ def main(
         "event creator",
         event_queue,
         server,
-        outdir,
+        outdir / "events",
         amplfi_queue,
         pastro_queue,
     )
@@ -428,7 +428,7 @@ def main(
         "amplfi",
         amplfi_queue,
         server,
-        outdir,
+        outdir / "events",
         inference_params,
         amplfi_parameter_sampler,
         shared_samples,
@@ -451,7 +451,7 @@ def main(
         rejected_path,
         astro_event_rate,
         server,
-        outdir,
+        outdir / "events",
     )
     pastro_process = Process(target=pastro_subprocess, args=args)
     pastro_process.start()

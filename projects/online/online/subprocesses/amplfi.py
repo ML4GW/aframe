@@ -20,6 +20,7 @@ def amplfi_subprocess(
     nside: int = 32,
 ):
     logger = logging.getLogger("amplfi-subprocess")
+
     gdb = gracedb_factory(server, outdir)
     logger.info("amplfi subprocess initialized")
     while True:
