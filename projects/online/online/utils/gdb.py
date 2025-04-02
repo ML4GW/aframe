@@ -73,7 +73,6 @@ class GraceDb(_GraceDb):
         event_time: float,
     ):
         event_dir = self.write_dir / f"event_{int(event_time)}"
-        event_dir.mkdir(exist_ok=True)
 
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
@@ -136,11 +135,11 @@ class GraceDb(_GraceDb):
         args = [
             str(filename),
             "-j",
-            str(1),
+            str(64),
             "-o",
             str(event_dir),
             "--maxpts",
-            str(1000),
+            str(10000),
         ]
 
         ligo_skymap_from_samples.main(args)
