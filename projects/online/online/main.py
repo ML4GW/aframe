@@ -220,7 +220,6 @@ def search(
         integrated = output_buffer.update(y.cpu(), t0)
 
         # if this frame was analysis ready,
-        # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
