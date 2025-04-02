@@ -118,6 +118,10 @@ def data_iterator(
     middle = "_".join(prefix.split("_")[1:])
 
     frame_buffer = np.zeros((len(ifos), 0))
+    # slice corresponds to middle second of
+    # a 3 second buffer; the middle second is
+    # yielded at each step to mitigate resampling
+    # edge effects
     slc = slice(-int(2 * sample_rate), -int(sample_rate))
     last_ready = [True] * len(ifos)
     while True:
@@ -167,10 +171,19 @@ def data_iterator(
                     state_vector = read_channel(fname, state_channel)
                     ifo_ready = ((state_vector.value & 3) == 3).all()
 
-                # if either ifo isn't ready, mark the whole thing
-                # as not ready
+                # some useful logging
+                # for when ifos enter and exit
+                # analyis ready mode
                 if not ifo_ready:
-                    logging.warning(f"IFO {ifo} not analysis ready")
+                    if last_ready[i]:
+                        logging.info(f"IFO {ifo} exiting analysis ready mode")
+                    else:
+                        logging.debug(f"IFO {ifo} not analysis ready")
+                else:
+                    if not last_ready[i]:
+                        logging.info(f"IFO {ifo} entering analysis ready mode")
+
+                # mark this ifos readiness in array
                 ready[i] &= ifo_ready
 
                 # continue so that we don't break the ifo for-loop
@@ -194,6 +207,10 @@ def data_iterator(
                 )
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
+                # yield last_ready, which corresponds to
+                # the data quality bits of the previous second
+                # of data, i.e. the middle second of the
+                # buffer that is being yielded as well
                 yield torch.Tensor(x).double(), t0 - 1, last_ready
 
             last_ready = ready

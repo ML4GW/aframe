@@ -173,7 +173,7 @@ def search(
             # being analysis ready, in which case perform updates
             # but don't search for events
             if X is not None:
-                logging.warning(
+                logging.debug(
                     "Frame {} is not analysis ready. Performing "
                     "inference but ignoring any triggers".format(t0)
                 )
@@ -317,8 +317,6 @@ def main(
             Directory to save output files
         datadir:
             Directory containing input strain data
-        ifos:
-            List of interferometer names
         inference_params:
             List of parameters on which the AMPLFI
             model was trained to perform inference
@@ -377,11 +375,14 @@ def main(
             Device to run inference on ("cpu" or "cuda")
     """
 
+    ifos = [channel.split(":")[0] for channel in channels]
     if ifos not in [["H1", "L1"], ["H1", "L1", "V1"]]:
         raise ValueError(
             f"Invalid interferometer configuration {ifos}. "
             "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
         )
+
+    logging.info(f"{','.join(ifos)} interferometer configuration set")
 
     fftlength = fftlength or kernel_length + fduration
 

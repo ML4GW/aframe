@@ -88,7 +88,7 @@ def pastro_subprocess(
         rejected_path,
         astro_event_rate=astro_event_rate,
     )
-    gdb = gracedb_factory(server, outdir)
+    gdb = gracedb_factory(server, outdir / "events")
     while True:
         event = pastro_queue.get()
         logger.info("Calculating p_astro")
