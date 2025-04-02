@@ -47,7 +47,7 @@ def authenticate_subprocess(refresh: int = 1000):
     last_auth = time.time() + refresh + 5
     while True:
         if last_auth - time.time() > refresh:
-            logging.debug("Authenticating...")
+            logger.debug("Authenticating...")
             authenticate()
             last_auth = time.time()
-            logging.debug("Authentication complete")
+            logger.debug("Authentication complete")
