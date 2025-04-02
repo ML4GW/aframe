@@ -13,7 +13,7 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GdbServer, authenticate
+from online.utils.gdb import GdbServer
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
@@ -377,11 +377,6 @@ def main(
         device:
             Device to run inference on ("cpu" or "cuda")
     """
-    # run kinit and htgettoken
-    if server != "local":
-        logging.info("Authenticating")
-        authenticate()
-        logging.info("Authentication complete")
 
     if ifos not in [["H1", "L1"], ["H1", "L1", "V1"]]:
         raise ValueError(
@@ -402,6 +397,11 @@ def main(
     pastro_queue = Queue()
     event_queue = Queue()
     amplfi_queue = Queue()
+
+    # subprocess for re-authenticating
+    args = (error_queue, "authenticate")
+    auth_process = Process(target=authenticate_subprocess, args=args)
+    auth_process.start()
 
     # create subprocess for uploading initial
     # detection information like FAR to gdb
@@ -455,11 +455,6 @@ def main(
     )
     pastro_process = Process(target=pastro_subprocess, args=args)
     pastro_process.start()
-
-    # subprocess for re-authenticating
-    args = (error_queue, "authenticate")
-    auth_process = Process(target=authenticate_subprocess, args=args)
-    auth_process.start()
 
     if state_channels is None:
         logging.info(
