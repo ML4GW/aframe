@@ -1,5 +1,4 @@
 import logging
-import time
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple
@@ -14,15 +13,18 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GdbServer, authenticate, gracedb_factory
+from online.utils.gdb import GdbServer, authenticate
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
-from online.utils.pastro import fit_or_load_pastro
 from online.utils.pe import run_amplfi
-
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
-from online.subprocesses import amplfi_subprocess
+from online.subprocesses import (
+    amplfi_subprocess,
+    pastro_subprocess,
+    event_creation_subprocess,
+)
+
 
 SECONDS_PER_DAY = 86400
 
@@ -111,9 +113,18 @@ def search(
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        error = error_queue.get_nowait()
-
-        logging.error(error)
+        # TODO:
+        # here we can handle any subprocess
+        # errors - I think at the least we
+        # need to send an email that
+        # something failed and the pipeline
+        # needs to be restarted
+        try:
+            error = error_queue.get_nowait()
+        except Empty:
+            pass
+        else:
+            logging.error(f"Error in subprocess {error}")
 
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array
@@ -242,76 +253,6 @@ def search(
             amplfi_queue.put(event.gpstime)
             searcher.detecting = False
         # TODO write buffers to disk:
-
-
-def pastro_subprocess(
-    pastro_queue: Queue,
-    server: GdbServer,
-    background_path: Path,
-    foreground_path: Path,
-    rejected_path: Path,
-    astro_event_rate: float,
-    outdir: Path,
-):
-    gdb = gracedb_factory(server, outdir)
-
-    logging.info("Fitting p_astro model or loading from cache")
-    pastro_model = fit_or_load_pastro(
-        outdir / "pastro.pkl",
-        background_path,
-        foreground_path,
-        rejected_path,
-        astro_event_rate=astro_event_rate,
-    )
-    logging.info("Loaded p_astro model")
-
-    while True:
-        event = pastro_queue.get()
-        logging.info("Calculating p_astro")
-        pastro = pastro_model(event.detection_statistic)
-        graceid = pastro_queue.get()
-        logging.info(f"Submitting p_astro: {pastro}")
-        gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-        logging.info("Submitted p_astro")
-
-
-def event_creation_subprocess(
-    event_queue: Queue,
-    server: GdbServer,
-    outdir: Path,
-    amplfi_queue: Queue,
-    pastro_queue: Queue,
-):
-    gdb = gracedb_factory(server, outdir)
-    last_auth = time.time()
-    while True:
-        try:
-            event = event_queue.get_nowait()
-            logging.info("Putting event in pastro queue")
-            pastro_queue.put(event)
-
-            # write event information to disk
-            # and submit it to gracedb
-            event.write(outdir)
-            response = gdb.submit(event)
-            # Get the event's graceid for submitting
-            # further data products
-            if server == "local":
-                # The local gracedb client just returns the filename
-                graceid = response
-            else:
-                graceid = response.json()["graceid"]
-            logging.info("Putting graceid in amplfi and pastro queues")
-            amplfi_queue.put(graceid)
-            pastro_queue.put(graceid)
-        except Empty:
-            time.sleep(1e-3)
-            # Re-authenticate every 1000 seconds so that
-            # the scitoken doesn't expire. Doing it in this
-            # loop as it's the earliest point of submission
-            if last_auth - time.time() > 1000:
-                authenticate()
-                last_auth = time.time()
 
 
 def main(
@@ -470,17 +411,17 @@ def main(
 
     pastro_queue = Queue()
     args = (
+        error_queue,
         pastro_queue,
-        server,
         background_path,
         foreground_path,
         rejected_path,
         astro_event_rate,
+        server,
         outdir,
     )
     pastro_process = Process(target=pastro_subprocess, args=args)
     pastro_process.start()
-
     event_queue = Queue()
     args = (event_queue, server, outdir, amplfi_queue, pastro_queue)
     event_process = Process(target=event_creation_subprocess, args=args)
@@ -624,7 +565,7 @@ def main(
         aframe_right_pad,
     )
 
-    logging.info("Beginning search")
+    logging.info("Beginning search...")
     search(
         whitener=whitener,
         snapshotter=snapshotter,

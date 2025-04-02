@@ -47,7 +47,8 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
         )
-        logging.info("Event created")
+
+        logging.debug("Event created")
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
@@ -74,24 +75,29 @@ class GraceDb(_GraceDb):
         event_time: float,
     ):
         event_dir = self.write_dir / f"event_{int(event_time)}"
+        event_dir.mkdir(exist_ok=True)
+
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
-        logging.info("Submitting skymap to GraceDB")
+
+        logging.debug("Submitting skymap to GraceDB")
         self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
-        logging.info("Skymap submitted")
+        logging.debug("Skymap submitted")
 
         posterior_fname = event_dir / "posterior_samples.dat"
         result.save_posterior_samples(posterior_fname)
+
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
             parameters=["chirp_mass", "mass_ratio", "distance"],
             filename=corner_fname,
         )
-        logging.info("Submitting corner plot to GraceDB")
+
+        logging.debug("Submitting corner plot to GraceDB")
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
-        logging.info("Corner plot submitted")
+        logging.debug("Corner plot submitted")
 
         mollview_fname = event_dir / "mollview_plot.png"
         fig = plt.figure()
@@ -101,14 +107,14 @@ class GraceDb(_GraceDb):
         )
         plt.close()
         fig.savefig(mollview_fname, dpi=300)
-        logging.info("Submitting Mollview plot to GraceDB")
+        logging.debug("Submitting Mollview plot to GraceDB")
         self.write_log(
             graceid,
             "Mollview projection",
             filename=mollview_fname,
             tag_name="sky_loc",
         )
-        logging.info("Mollview plot submitted")
+        logging.debug("Mollview plot submitted")
 
     def submit_ligo_skymap_from_samples(
         self,
@@ -125,7 +131,15 @@ class GraceDb(_GraceDb):
         # need to be set to take advantage of thread parallelism:
         # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
         # we might need to submit this via condor
-        args = [str(filename), "-j", str(8), "-o", str(event_dir)]
+        args = [
+            str(filename),
+            "-j",
+            str(1),
+            "-o",
+            str(event_dir),
+            "--maxpts",
+            str(1000),
+        ]
 
         ligo_skymap_from_samples.main(args)
         self.write_log(
@@ -134,7 +148,6 @@ class GraceDb(_GraceDb):
             filename=str(event_dir / "skymap.fits"),
             tag_name="sky_loc",
         )
-        logging.info("Ligo-skymap-from-samples skymap submitted")
 
     def submit_pastro(self, pastro: float, graceid: int, event_time: float):
         event_dir = self.write_dir / f"event_{int(event_time)}"

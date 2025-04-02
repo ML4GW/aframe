@@ -1,20 +1,21 @@
 import logging
 from typing import TYPE_CHECKING
 
-import bilby
 import lal
 import numpy as np
 import pandas as pd
 import torch
 from amplfi.train.data.utils.utils import ParameterSampler
 from amplfi.train.priors import precessing_cbc_prior
+from amplfi.utils.result import AmplfiResult
 from ml4gw.distributions import Cosine
 from torch.distributions import Uniform
+
+torch.set_num_threads(1)
 
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
-
     from online.utils.buffer import InputBuffer
 
 
@@ -24,9 +25,10 @@ def filter_samples(samples, parameter_sampler, inference_params):
     for i, param in enumerate(inference_params):
         prior = priors[param]
         curr_samples = samples[:, i]
-        mask = (prior.log_prob(curr_samples) == float("-inf")).to(
-            curr_samples.device
-        )
+        log_probs = prior.log_prob(curr_samples)
+        mask = log_probs == float("-inf")
+        mask = mask.to(curr_samples.device)
+
         logging.debug(
             f"Removed {mask.sum()}/{len(mask)} samples for parameter "
             f"{param} outside of prior range"
@@ -92,15 +94,13 @@ def postprocess_samples(
     event_time: float,
     inference_params: list[str],
     parameter_sampler: torch.nn.Module,
-) -> bilby.core.result.Result:
+) -> AmplfiResult:
     """
     Process samples into a bilby Result object
     that can be used for all downstream tasks
     """
     samples = filter_samples(samples, parameter_sampler, inference_params)
-    # convert samples from relative angle phi
-    # to physical right ascension value;
-    # convert declination from [-pi / 2, pi / 2] -> [0, pi]
+
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
     ra = (
@@ -110,7 +110,7 @@ def postprocess_samples(
         )
         - torch.pi
     )
-    dec = samples[..., dec_idx] + torch.pi / 2
+    dec = samples[..., dec_idx]
 
     # build bilby posterior object for
     # parameters we want to keep
@@ -121,11 +121,13 @@ def postprocess_samples(
         idx = inference_params.index(param)
         posterior[param] = samples.T[idx].flatten()
 
+    # TODO remove
+    posterior["phi"] = ra
     posterior["ra"] = ra
     posterior["dec"] = dec
     posterior = pd.DataFrame(posterior)
 
-    result = bilby.result.Result(
+    result = AmplfiResult(
         label=f"{event_time}",
         posterior=posterior,
         search_parameter_keys=inference_params,

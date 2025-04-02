@@ -64,7 +64,7 @@ class Event:
             f"detection_statistic={self.detection_statistic:0.2f}, "
             f"far={self.far:0.3e} Hz, "
             f"ifos={self.ifos}, "
-            f"channels={self.channels}"
+            f"channels={self.channels[:2]}"
             ")"
         )
 
@@ -145,10 +145,11 @@ class Searcher:
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
-        logging.info("Computing FAR")
+
+        logging.debug("Computing FAR")
         far = self.background.far(value)
         far /= SECONDS_PER_YEAR
-        logging.info("FAR computed")
+        logging.debug("FAR computed")
 
         logging.info(
             "Event coalescence time found to be {:0.3f} "

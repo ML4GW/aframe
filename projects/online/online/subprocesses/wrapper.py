@@ -13,7 +13,6 @@ def subprocess_wrapper(
         try:
             f(*args, **kwargs)
         except Exception as e:
-            error_queue.put(e)
-        return
+            error_queue.put(str(e))
 
     return wrapper
