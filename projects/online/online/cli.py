@@ -54,7 +54,7 @@ def configure_logging(logdir: Path, verbose: bool = False):
     # Create a timed rotating file handler
     handler = TimedRotatingFileHandler(
         filename=log_file,
-        interval="midnight",
+        when="midnight",
         backupCount=0,
         utc=False,
     )
