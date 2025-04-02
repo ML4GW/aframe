@@ -114,12 +114,19 @@ def create_online_runfile(path: Path):
     trap control_c SIGINT
 
     # trained model weights
-    export AMPLFI_WEIGHTS=
+    export AMPLFI_HL_WEIGHTS=
+    export AMPLFI_HLV_WEIGHTS=
     export AFRAME_WEIGHTS=
 
     # file containing timeslide events detected
     # by a model with the AFRAME_WEIGHTS above
     export ONLINE_BACKGROUND_FILE=
+    # file containing detected events from an
+    # injected campaign using AFRAME_WEIGHTS
+    export ONLINE_FOREGROUND_FILE=
+    # file containing events that were rejected
+    # during the injection simulation process
+    export ONLINE_REJECTED_FILE=
 
     # location where low latency data
     # is streamed, typically /dev/shm/kakfka
@@ -127,6 +134,9 @@ def create_online_runfile(path: Path):
 
     # where results and deployment logs will be writen
     export AFRAME_ONLINE_OUTDIR={path}
+
+    # Location of Aframe containers
+    export AFRAME_CONTAINER_ROOT=
 
     config={path}/config.yaml
 
