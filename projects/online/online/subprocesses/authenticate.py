@@ -1,6 +1,7 @@
 import time
 import subprocess
 import os
+import logging
 from online.subprocesses.wrapper import subprocess_wrapper
 
 
@@ -41,6 +42,8 @@ def authenticate_subprocess(refresh: int = 1000):
     every `refresh` seconds
 
     """
+    logger = logging.getLogger("authenticate-subprocess")
+    logger.info("authenticate subprocess initialized")
     # Re-authenticate every 1000 seconds so that
     # the scitoken doesn't expire. Doing it in this
     # loop as it's the earliest point of submission

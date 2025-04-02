@@ -14,11 +14,13 @@ def event_creation_subprocess(
     amplfi_queue: Queue,
     pastro_queue: Queue,
 ):
+    logger = logging.getLogger("event-creation-subprocess")
+    logger.info("event creation subprocess initialized")
     gdb = gracedb_factory(server, outdir)
 
     while True:
         event = event_queue.get()
-        logging.debug("Putting event in pastro queue")
+        logger.debug("Putting event in pastro queue")
         pastro_queue.put(event)
 
         # write event information to disk
@@ -32,6 +34,6 @@ def event_creation_subprocess(
             graceid = response
         else:
             graceid = response.json()["graceid"]
-        logging.debug("Putting graceid in amplfi and pastro queues")
+        logger.debug("Putting graceid in amplfi and pastro queues")
         amplfi_queue.put(graceid)
         pastro_queue.put(graceid)
