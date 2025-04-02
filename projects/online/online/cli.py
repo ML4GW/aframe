@@ -43,20 +43,31 @@ def configure_logging(logdir: Path, verbose: bool = False):
 
     logger = logging.getLogger()
 
+    # set logging to use UTC time
+    logging.Formatter.converter = lambda *args: datetime.now(
+        tz=timezone.utc
+    ).timetuple()
+
     timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     run_log_dir = logdir / timestamp
     run_log_dir.mkdir(exist_ok=True, parents=True)
 
-    # Set up the timed rotating file handler
+    # set up the timed rotating file handler
     formatter = logging.Formatter(log_format)
+
+    # ensure formatter also uses UTC time
+    formatter.converter = lambda *args: datetime.now(
+        tz=timezone.utc
+    ).timetuple()
+
     log_file = run_log_dir / "online.log"
 
-    # Create a timed rotating file handler
+    # create a timed rotating file handler
     handler = TimedRotatingFileHandler(
         filename=log_file,
         when="midnight",
         backupCount=0,
-        utc=False,
+        utc=True,
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -71,7 +82,7 @@ def configure_logging(logdir: Path, verbose: bool = False):
 def cli(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
-    # Create a new log file each time we start using the current UTC time
+    # create a new log directory each time we start using the current UTC time
     logdir = args.outdir / "logs"
     logdir.mkdir(exist_ok=True, parents=True)
 
