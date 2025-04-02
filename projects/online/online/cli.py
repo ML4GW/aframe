@@ -1,10 +1,12 @@
 import logging
-from datetime import datetime, timezone
 
+import sys
+from datetime import datetime, timezone
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 import jsonargparse
 
 from online.main import main
-from utils.logging import configure_logging
 
 
 def build_parser():
@@ -31,17 +33,50 @@ def build_parser():
     return parser
 
 
+def configure_logging(logdir: Path, verbose: bool = False):
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(
+        format=log_format,
+        level=logging.DEBUG if verbose else logging.INFO,
+        stream=sys.stdout,
+    )
+
+    logger = logging.getLogger()
+
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    run_log_dir = logdir / timestamp
+    run_log_dir.mkdir(exist_ok=True, parents=True)
+
+    # Set up the timed rotating file handler
+    formatter = logging.Formatter(log_format)
+    log_file = run_log_dir / "online.log"
+
+    # Create a timed rotating file handler
+    handler = TimedRotatingFileHandler(
+        filename=log_file,
+        interval="midnight",
+        backupCount=0,
+        utc=False,
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.info(f"Logging initialized in directory: {run_log_dir}")
+
+    # matplotlib and h5py have some debug-level logging
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("h5py").setLevel(logging.WARNING)
+
+
 def cli(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
     # Create a new log file each time we start using the current UTC time
     logdir = args.outdir / "logs"
     logdir.mkdir(exist_ok=True, parents=True)
-    log_suffix = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    configure_logging(logdir / f"deploy_{log_suffix}.log", args.verbose)
-    # matplotlib and h5py have some debug-level logging
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-    logging.getLogger("h5py").setLevel(logging.WARNING)
+
+    configure_logging(logdir, args.verbose)
+
     args.pop("config")
     args.pop("verbose")
     args = parser.instantiate_classes(args)
