@@ -23,6 +23,7 @@ from online.subprocesses import (
     amplfi_subprocess,
     pastro_subprocess,
     event_creation_subprocess,
+    authenticate_subprocess,
 )
 
 
@@ -120,11 +121,12 @@ def search(
         # something failed and the pipeline
         # needs to be restarted
         try:
-            error = error_queue.get_nowait()
+            name, error, tb = error_queue.get_nowait()
         except Empty:
             pass
         else:
-            logging.error(f"Error in subprocess {error}")
+            logging.error(f"Error in subprocess {name}: {error}")
+            logging.error(tb)
 
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array
@@ -387,16 +389,43 @@ def main(
             "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
         )
 
-    # queue that each subprocess will write
-    # to if they encounter any errors
-    error_queue = Queue()
-
     fftlength = fftlength or kernel_length + fduration
+
+    # initialize multiprocessing Array that will be used
+    # to pass amplfi samples between different subprocesses
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
+
+    # create various queues for message
+    # passing between subprocesses
+    error_queue = Queue()
+    pastro_queue = Queue()
+    event_queue = Queue()
     amplfi_queue = Queue()
+
+    # create subprocess for uploading initial
+    # detection information like FAR to gdb
     args = (
         error_queue,
+        "event creator",
+        event_queue,
+        server,
+        outdir,
+        amplfi_queue,
+        pastro_queue,
+    )
+    event_process = Process(target=event_creation_subprocess, args=args)
+    event_process.start()
+
+    # initialize amplfi subprocess which
+    # will recieve events via a queue
+    # and process posterior samples into
+    # various data products and upload them
+    # to gdb
+
+    args = (
+        error_queue,
+        "amplfi",
         amplfi_queue,
         server,
         outdir,
@@ -409,9 +438,13 @@ def main(
     amplfi_process = Process(target=amplfi_subprocess, args=args)
     amplfi_process.start()
 
-    pastro_queue = Queue()
+    # create a subprocess for calculating
+    # and uploading pastro to gdb
+    # once events are detected
+
     args = (
         error_queue,
+        "p_astro",
         pastro_queue,
         background_path,
         foreground_path,
@@ -422,10 +455,11 @@ def main(
     )
     pastro_process = Process(target=pastro_subprocess, args=args)
     pastro_process.start()
-    event_queue = Queue()
-    args = (event_queue, server, outdir, amplfi_queue, pastro_queue)
-    event_process = Process(target=event_creation_subprocess, args=args)
-    event_process.start()
+
+    # subprocess for re-authenticating
+    args = (error_queue, "authenticate")
+    auth_process = Process(target=authenticate_subprocess, args=args)
+    auth_process.start()
 
     if state_channels is None:
         logging.info(

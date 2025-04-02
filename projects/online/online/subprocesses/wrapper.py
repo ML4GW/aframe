@@ -1,4 +1,5 @@
 from multiprocessing import Queue
+import traceback
 
 
 def subprocess_wrapper(
@@ -9,10 +10,11 @@ def subprocess_wrapper(
     into a queue object
     """
 
-    def wrapper(error_queue: Queue, *args, **kwargs):
+    def wrapper(error_queue: Queue, name: str, *args, **kwargs):
         try:
             f(*args, **kwargs)
         except Exception as e:
-            error_queue.put(str(e))
+            tb = traceback.format_exc()
+            error_queue.put((name, str(e), tb))
 
     return wrapper

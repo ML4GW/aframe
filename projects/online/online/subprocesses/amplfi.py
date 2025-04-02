@@ -6,7 +6,7 @@ from torch.multiprocessing import Array, Queue
 from online.utils.gdb import GdbServer, gracedb_factory
 from online.utils.pe import postprocess_samples
 from astropy import io
-from .wrapper import subprocess_wrapper
+from online.subprocesses.wrapper import subprocess_wrapper
 
 
 @subprocess_wrapper
