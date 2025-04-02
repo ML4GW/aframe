@@ -42,7 +42,7 @@ amplfi_hlv_architecture:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-amplfi_hlv_weights: ${oc.env:AMPLFI_WEIGHTS}
+amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 amplfi_parameter_sampler: amplfi.utils.pe.parameter_sampler
 
 ifos: ["H1", "L1"]
