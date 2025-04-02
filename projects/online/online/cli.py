@@ -35,12 +35,10 @@ def cli(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
     # Create a new log file each time we start using the current UTC time
-    logdir = args.outdir / "log"
+    logdir = args.outdir / "logs"
     logdir.mkdir(exist_ok=True, parents=True)
     log_suffix = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    configure_logging(
-        args.outdir / "log" / f"deploy_{log_suffix}.log", args.verbose
-    )
+    configure_logging(logdir / f"deploy_{log_suffix}.log", args.verbose)
     # matplotlib and h5py have some debug-level logging
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("h5py").setLevel(logging.WARNING)
