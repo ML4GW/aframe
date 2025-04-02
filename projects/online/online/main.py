@@ -451,7 +451,7 @@ def main(
         rejected_path,
         astro_event_rate,
         server,
-        outdir / "events",
+        outdir,
     )
     pastro_process = Process(target=pastro_subprocess, args=args)
     pastro_process.start()
