@@ -44,11 +44,8 @@ def authenticate_subprocess(refresh: int = 1000):
     """
     logger = logging.getLogger("authenticate-subprocess")
     logger.info("authenticate subprocess initialized")
-    # Re-authenticate every 1000 seconds so that
-    # the scitoken doesn't expire. Doing it in this
-    # loop as it's the earliest point of submission
+    last_auth = time.time() + refresh + 5
     while True:
-        last_auth = time.time()
         if last_auth - time.time() > refresh:
             logging.debug("Authenticating...")
             authenticate()
