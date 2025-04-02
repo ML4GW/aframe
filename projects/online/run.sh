@@ -1,4 +1,16 @@
 #!/bin/bash
+
+
+control_c() {
+        kill $$
+        exit
+}
+trap control_c SIGINT
+
+# ligo skymap from samples
+export MKL_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+
 # trained model weights
 export AMPLFI_HL_WEIGHTS=
 export AMPLFI_HLV_WEIGHTS=
