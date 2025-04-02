@@ -4,6 +4,8 @@ import os
 import logging
 from online.subprocesses.wrapper import subprocess_wrapper
 
+logger = logging.getLogger("authenticate-subprocess")
+
 
 def authenticate():
     # TODO: don't hardcode keytab locations
@@ -42,7 +44,6 @@ def authenticate_subprocess(refresh: int = 1000):
     every `refresh` seconds
 
     """
-    logger = logging.getLogger("authenticate-subprocess")
     logger.info("authenticate subprocess initialized")
     last_auth = time.time() + refresh + 5
     while True:

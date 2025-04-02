@@ -8,6 +8,8 @@ from online.utils.pe import postprocess_samples
 from astropy import io
 from online.subprocesses.wrapper import subprocess_wrapper
 
+logger = logging.getLogger("amplfi-subprocess")
+
 
 @subprocess_wrapper
 def amplfi_subprocess(
@@ -19,8 +21,6 @@ def amplfi_subprocess(
     shared_samples: Array,
     nside: int = 32,
 ):
-    logger = logging.getLogger("amplfi-subprocess")
-
     gdb = gracedb_factory(server, outdir)
     logger.info("amplfi subprocess initialized")
     while True:

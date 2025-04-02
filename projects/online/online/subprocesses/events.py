@@ -5,6 +5,8 @@ from pathlib import Path
 from online.subprocesses.wrapper import subprocess_wrapper
 from online.utils.gdb import GdbServer, gracedb_factory
 
+logger = logging.getLogger("event-creation-subprocess")
+
 
 @subprocess_wrapper
 def event_creation_subprocess(
@@ -14,7 +16,6 @@ def event_creation_subprocess(
     amplfi_queue: Queue,
     pastro_queue: Queue,
 ):
-    logger = logging.getLogger("event-creation-subprocess")
     logger.info("event creation subprocess initialized")
 
     gdb = gracedb_factory(server, outdir)
