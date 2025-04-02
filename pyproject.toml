@@ -11,7 +11,7 @@ requires-python = ">=3.9,<3.13"
 dependencies = [
     "luigi~=3.0",
     "utils",
-    "ml4gw-hermes>=0.2.0",
+    "ml4gw-hermes>=0.2.1",
     "law>=0.1.20",
     "kr8s>=0.10.0,<0.11",
     "pykube-ng[oidc]>=23.6.0,<24",

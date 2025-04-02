@@ -12,7 +12,7 @@ dependencies = [
     "ratelimiter~=1.2",
     "jsonargparse~=4.24",
     "tqdm~=4.66",
-    "ml4gw-hermes[torch]>=0.2.0",
+    "ml4gw-hermes[torch]>=0.2.1",
     "aframe",
     "utils",
     "ledger",

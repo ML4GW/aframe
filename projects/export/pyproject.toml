@@ -9,7 +9,7 @@ dependencies = [
     "ml4gw>=0.7.3",
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
-    "ml4gw-hermes[torch]>=0.2.0",
+    "ml4gw-hermes[torch]>=0.2.1",
     "aframe",
     "utils",
     "jsonargparse>=4.27.1,<5",
