@@ -288,9 +288,10 @@ def amplfi_subprocess(
             )
 
             logging.info("Creating low resolution skymap")
-            skymap, mollview_map = create_histogram_skymap(
-                result.posterior["ra"], result.posterior["dec"], nside
-            )
+            result.calculate_skymap(
+                nside, 15
+            )  # TODO: add min_samples_per_pix to config
+            skymap, mollview_map = result.fits_table, result.mollview_map
             graceid = amplfi_queue.get()
 
             logging.info("Submitting posterior and low resolution skymap")
