@@ -101,7 +101,11 @@ class GraceDb(_GraceDb):
         fig = plt.figure()
         title = (f"{event_time:.3} sky map",)
         hp.mollview(
-            skymap.data["PROBDENSITY"], fig=fig, title=title, hold=True
+            skymap.data["PROBDENSITY"],
+            fig=fig,
+            title=title,
+            hold=True,
+            nest=True,
         )
         plt.close()
         fig.savefig(mollview_fname, dpi=300)
