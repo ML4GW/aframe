@@ -32,9 +32,9 @@ requires-dist = [
     { name = "cloudpathlib", specifier = ">=0.18.1,<0.19" },
     { name = "jsonargparse", specifier = ">=4.27.1,<5" },
     { name = "kr8s", specifier = ">=0.10.0,<0.11" },
-    { name = "law", specifier = ">=0.1.19" },
+    { name = "law", specifier = ">=0.1.20" },
     { name = "luigi", specifier = "~=3.0" },
-    { name = "ml4gw-hermes", specifier = ">=0.2.0" },
+    { name = "ml4gw-hermes", specifier = ">=0.2.1" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "psutil", specifier = ">=5.9.8,<6" },
     { name = "pykube-ng", extras = ["oidc"], specifier = ">=23.6.0,<24" },
@@ -507,7 +507,7 @@ requires-dist = [
     { name = "fsspec", extras = ["s3"], specifier = ">=2024,<2025" },
     { name = "jsonargparse", specifier = ">=4.27.1,<5" },
     { name = "ml4gw", specifier = ">=0.7.3" },
-    { name = "ml4gw-hermes", extras = ["torch"], specifier = ">=0.2.0" },
+    { name = "ml4gw-hermes", extras = ["torch"], specifier = ">=0.2.1" },
     { name = "nvidia-cudnn-cu11", specifier = "==8.9.6.50" },
     { name = "tensorrt", specifier = "==8.5.2.2" },
     { name = "urllib3", specifier = ">=1.25.4,<1.27" },
@@ -1038,7 +1038,7 @@ wheels = [
 
 [[package]]
 name = "ml4gw-hermes"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -1048,9 +1048,9 @@ dependencies = [
     { name = "tblib" },
     { name = "tritonclient", extra = ["all"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/03/75ed3d4b7bc1b8fea50c139a325b70386b4a7852b329cd8cec0e124e0126/ml4gw_hermes-0.2.0.tar.gz", hash = "sha256:e254f2b3dff8676e75d35c0eb0e7f41d76feb3a74614ab154493ac2f344294c5", size = 43060 }
+sdist = { url = "https://files.pythonhosted.org/packages/34/75/4f4930e02da76fe78eca85af9240a1ee901a791a55b264bb0d8048c24719/ml4gw_hermes-0.2.1.tar.gz", hash = "sha256:9349daecee00515f7ff812099eb2ac46472eb1af8ca4cea1adf2c12d4243507c", size = 42163 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/b7/9d7b67be9b09af2b04a236156781e84f2ef48dafeb76cb28f8e6c3e6d3a1/ml4gw_hermes-0.2.0-py3-none-any.whl", hash = "sha256:30e32135e44d7babed8f4636268a11c47b811a6250b3bc9dc8c066d929d1a388", size = 57589 },
+    { url = "https://files.pythonhosted.org/packages/73/db/82ff800c799e2b788cedf45b23d6128629737f556567777a4dc91452920d/ml4gw_hermes-0.2.1-py3-none-any.whl", hash = "sha256:b7ff0a1f917240cdf9763e771d5ae88857dc04d39f38c6f68e41d40e88cec28e", size = 57806 },
 ]
 
 [package.optional-dependencies]
