@@ -1,3 +1,4 @@
+import atexit
 import logging
 from pathlib import Path
 from queue import Empty
@@ -406,12 +407,16 @@ def main(
     event_queue = Queue()
     amplfi_queue = Queue()
 
+    subprocesses = []
+
     # subprocess for re-authenticating
     args = (error_queue, "authenticate")
     auth_process = Process(
-        target=authenticate_subprocess, args=args, daemon=True
+        target=authenticate_subprocess,
+        args=args,
     )
     auth_process.start()
+    subprocesses.append(auth_process)
 
     # create subprocess for uploading initial
     # detection information like FAR to gdb
@@ -425,9 +430,11 @@ def main(
         pastro_queue,
     )
     event_process = Process(
-        target=event_creation_subprocess, args=args, daemon=True
+        target=event_creation_subprocess,
+        args=args,
     )
     event_process.start()
+    subprocesses.append(event_process)
 
     # initialize amplfi subprocess which
     # will recieve events via a queue
@@ -447,8 +454,12 @@ def main(
         nside,
     )
 
-    amplfi_process = Process(target=amplfi_subprocess, args=args, daemon=True)
+    amplfi_process = Process(
+        target=amplfi_subprocess,
+        args=args,
+    )
     amplfi_process.start()
+    subprocesses.append(amplfi_process)
 
     # create a subprocess for calculating
     # and uploading pastro to gdb
@@ -465,8 +476,35 @@ def main(
         server,
         outdir,
     )
-    pastro_process = Process(target=pastro_subprocess, args=args, daemon=True)
+    pastro_process = Process(
+        target=pastro_subprocess,
+        args=args,
+    )
     pastro_process.start()
+    subprocesses.append(pastro_subprocess)
+
+    # Define a function to clean up all
+    # of these processes if we exit the
+    # main process
+    def cleanup_subprocesses():
+        for process in subprocesses:
+            try:
+                if process.is_alive():
+                    process.terminate()
+                    process.join()
+            except Exception as e:
+                # TODO: is there something better to do here?
+                # If there's an exception in cleaning up one
+                # subprocess, it shouldn't prevent the other
+                # subprocsses from getting terminated, but
+                # it still leaves something running.
+                logging.info(
+                    f"Terminating process failed with exception {str(e)}"
+                )
+
+    # Register cleanup function to run
+    # when the main process exits
+    atexit.register(cleanup_subprocesses)
 
     if state_channels is None:
         logging.info(
