@@ -5,7 +5,7 @@ from torch.multiprocessing import Queue
 
 from online.utils.gdb import GdbServer, gracedb_factory
 
-from .wrapper import subprocess_wrapper
+from .utils import subprocess_wrapper
 
 import pickle
 

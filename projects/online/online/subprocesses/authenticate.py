@@ -2,7 +2,7 @@ import time
 import subprocess
 import os
 import logging
-from online.subprocesses.wrapper import subprocess_wrapper
+from .utils import subprocess_wrapper
 
 logger = logging.getLogger("authenticate-subprocess")
 

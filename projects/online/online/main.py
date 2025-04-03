@@ -1,5 +1,6 @@
 import atexit
 import logging
+import signal
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple
@@ -25,10 +26,15 @@ from online.subprocesses import (
     pastro_subprocess,
     event_creation_subprocess,
     authenticate_subprocess,
+    cleanup_subprocesses,
+    signal_handler,
 )
 
 
 SECONDS_PER_DAY = 86400
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def load_model(model: Architecture, weights: Path):
@@ -171,7 +177,7 @@ def search(
                     )
                     for i, sample in enumerate(descaled_samples.flatten()):
                         shared_samples[i] = sample
-                    amplfi_queue.put(event.gpstime)
+                    amplfi_queue.put((event.gpstime, ifos))
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -260,7 +266,7 @@ def search(
             )
             for i, sample in enumerate(descaled_samples.flatten()):
                 shared_samples[i] = sample
-            amplfi_queue.put(event.gpstime)
+            amplfi_queue.put((event.gpstime, ifos))
             searcher.detecting = False
         # TODO write buffers to disk:
 
@@ -481,30 +487,11 @@ def main(
         args=args,
     )
     pastro_process.start()
-    subprocesses.append(pastro_subprocess)
-
-    # Define a function to clean up all
-    # of these processes if we exit the
-    # main process
-    def cleanup_subprocesses():
-        for process in subprocesses:
-            try:
-                if process.is_alive():
-                    process.terminate()
-                    process.join()
-            except Exception as e:
-                # TODO: is there something better to do here?
-                # If there's an exception in cleaning up one
-                # subprocess, it shouldn't prevent the other
-                # subprocsses from getting terminated, but
-                # it still leaves something running.
-                logging.info(
-                    f"Terminating process failed with exception {str(e)}"
-                )
+    subprocesses.append(pastro_process)
 
     # Register cleanup function to run
     # when the main process exits
-    atexit.register(cleanup_subprocesses)
+    atexit.register(cleanup_subprocesses, subprocesses)
 
     if state_channels is None:
         logging.info(

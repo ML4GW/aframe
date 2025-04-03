@@ -2,7 +2,7 @@ from queue import Queue
 import logging
 from pathlib import Path
 
-from online.subprocesses.wrapper import subprocess_wrapper
+from .utils import subprocess_wrapper
 from online.utils.gdb import GdbServer, gracedb_factory
 
 logger = logging.getLogger("event-creation-subprocess")

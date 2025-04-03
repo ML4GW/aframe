@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, List, Literal
 
 import bilby
 import healpy as hp
@@ -71,6 +71,7 @@ class GraceDb(_GraceDb):
         skymap: "BinTableHDU",
         graceid: int,
         event_time: float,
+        ifos: List[str],
     ):
         event_dir = self.write_dir / f"event_{int(event_time)}"
 
@@ -98,7 +99,7 @@ class GraceDb(_GraceDb):
 
         mollview_fname = event_dir / "mollview_plot.png"
         fig = plt.figure()
-        title = f"{event_time:.2f} sky map"
+        title = f"{event_time:.2f} {ifos} sky map"
         hp.mollview(
             skymap.data["PROBDENSITY"],
             fig=fig,
@@ -122,6 +123,7 @@ class GraceDb(_GraceDb):
         result: bilby.core.result.Result,
         graceid: int,
         event_time: float,
+        ifos: List[str],
     ):
         event_dir = self.write_dir / f"event_{int(event_time)}"
         filename = event_dir / "posterior_samples.dat"
@@ -140,6 +142,8 @@ class GraceDb(_GraceDb):
             str(event_dir),
             "--maxpts",
             str(10000),
+            "--instruments",
+            "|".join(ifos),
         ]
 
         ligo_skymap_from_samples.main(args)

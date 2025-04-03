@@ -6,7 +6,7 @@ from torch.multiprocessing import Array, Queue
 from online.utils.gdb import GdbServer, gracedb_factory
 from online.utils.pe import postprocess_samples
 from astropy import io
-from online.subprocesses.wrapper import subprocess_wrapper
+from .utils import subprocess_wrapper
 
 logger = logging.getLogger("amplfi-subprocess")
 
@@ -25,8 +25,8 @@ def amplfi_subprocess(
     logger.info("amplfi subprocess initialized")
     while True:
         arg = amplfi_queue.get()
-        if isinstance(arg, float):
-            event_time = arg
+        if isinstance(arg, tuple):
+            event_time, ifos = arg
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
@@ -45,14 +45,18 @@ def amplfi_subprocess(
             graceid = amplfi_queue.get()
 
             logger.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(result, fits_skymap, graceid, event_time)
+            gdb.submit_low_latency_pe(
+                result, fits_skymap, graceid, event_time, ifos
+            )
 
             logger.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
+            gdb.submit_ligo_skymap_from_samples(
+                result, graceid, event_time, ifos
+            )
             logger.info("Submitted all PE")
         else:
             graceid = arg
-            event_time = amplfi_queue.get()
+            event_time, ifos = amplfi_queue.get()
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
@@ -69,8 +73,12 @@ def amplfi_subprocess(
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(result, fits_skymap, graceid, event_time)
+            gdb.submit_low_latency_pe(
+                result, fits_skymap, graceid, event_time, ifos
+            )
 
             logger.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
+            gdb.submit_ligo_skymap_from_samples(
+                result, graceid, event_time, ifos
+            )
             logger.info("Submitted all PE")
