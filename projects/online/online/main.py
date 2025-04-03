@@ -113,7 +113,9 @@ def search(
     virgo_ready = [False] * (input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
-    for X, t0, ready in data_it:
+    for i, (X, t0, ready) in enumerate(data_it):
+        if i == 10:
+            raise ValueError("testing!")
         # TODO:
         # here we can handle any subprocess
         # errors - I think at the least we
@@ -403,7 +405,9 @@ def main(
 
     # subprocess for re-authenticating
     args = (error_queue, "authenticate")
-    auth_process = Process(target=authenticate_subprocess, args=args)
+    auth_process = Process(
+        target=authenticate_subprocess, args=args, daemon=True
+    )
     auth_process.start()
 
     # create subprocess for uploading initial
@@ -417,7 +421,9 @@ def main(
         amplfi_queue,
         pastro_queue,
     )
-    event_process = Process(target=event_creation_subprocess, args=args)
+    event_process = Process(
+        target=event_creation_subprocess, args=args, daemon=True
+    )
     event_process.start()
 
     # initialize amplfi subprocess which
@@ -438,7 +444,7 @@ def main(
         nside,
     )
 
-    amplfi_process = Process(target=amplfi_subprocess, args=args)
+    amplfi_process = Process(target=amplfi_subprocess, args=args, daemon=True)
     amplfi_process.start()
 
     # create a subprocess for calculating
@@ -456,7 +462,7 @@ def main(
         server,
         outdir,
     )
-    pastro_process = Process(target=pastro_subprocess, args=args)
+    pastro_process = Process(target=pastro_subprocess, args=args, daemon=True)
     pastro_process.start()
 
     if state_channels is None:
