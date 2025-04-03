@@ -113,9 +113,7 @@ def search(
     virgo_ready = [False] * (input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
-    for i, (X, t0, ready) in enumerate(data_it):
-        if i == 10:
-            raise ValueError("testing!")
+    for X, t0, ready in data_it:
         # TODO:
         # here we can handle any subprocess
         # errors - I think at the least we
