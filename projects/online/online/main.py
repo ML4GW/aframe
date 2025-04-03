@@ -207,7 +207,8 @@ def search(
         input_buffer.update(X, t0)
 
         # we have a frame that is analysis ready,
-        # so lets analyze it:
+        # so lets analyze it, taking the first two
+        # channels, which correspond to H1/L1
         X = X[:2].to(device)
 
         # update the snapshotter state and return
@@ -238,13 +239,16 @@ def search(
                 logging.info("Using HLV AMPLFI model")
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
+                ifos = ["H1", "L1", "V1"]
             else:
                 logging.info("Using HL AMPLFI model")
                 amplfi = amplfi_hl
                 scaler = scaler_hl
+                ifos = ["H1", "L1"]
             descaled_samples = run_amplfi(
                 event_time=event.gpstime,
                 input_buffer=input_buffer,
+                ifos=ifos,
                 samples_per_event=samples_per_event,
                 spectral_density=spectral_density,
                 amplfi_whitener=amplfi_whitener,
@@ -570,6 +574,7 @@ def main(
     # use them to fit (or load in a cached) a pastro model
     logging.info("Loading background distribution")
     background = EventSet.read(background_path)
+    logging.info("Background loaded")
 
     # if event set is not sorted by detection statistic, sort it
     # which will significantly speed up the far calculation
