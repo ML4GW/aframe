@@ -150,13 +150,16 @@ def search(
                         logging.info("Using HLV AMPLFI model")
                         amplfi = amplfi_hlv
                         scaler = scaler_hlv
+                        ifos = ["H1", "L1", "V1"]
                     else:
                         logging.info("Using HL AMPLFI model")
                         amplfi = amplfi_hl
                         scaler = scaler_hl
+                        ifos = ["H1", "L1"]
                     descaled_samples = run_amplfi(
                         event_time=event.gpstime,
                         input_buffer=input_buffer,
+                        ifos=ifos,
                         samples_per_event=samples_per_event,
                         spectral_density=spectral_density,
                         amplfi_whitener=amplfi_whitener,

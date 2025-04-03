@@ -47,6 +47,7 @@ def filter_samples(samples, parameter_sampler, inference_params):
 def run_amplfi(
     event_time: float,
     input_buffer: "InputBuffer",
+    ifos: list[str],
     samples_per_event: int,
     spectral_density: "SpectralDensity",
     amplfi_whitener: "Whiten",
@@ -55,7 +56,7 @@ def run_amplfi(
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
-    psd_strain, pe_strain = input_buffer.get_amplfi_data(event_time)
+    psd_strain, pe_strain = input_buffer.get_amplfi_data(event_time, ifos)
     psd_strain = psd_strain.to(device)
     pe_strain = pe_strain.to(device)[None]
     pe_psd = spectral_density(psd_strain)[None]
