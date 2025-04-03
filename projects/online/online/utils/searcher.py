@@ -64,7 +64,7 @@ class Event:
             f"detection_statistic={self.detection_statistic:0.2f}, "
             f"far={self.far:0.3e} Hz, "
             f"ifos={self.ifos}, "
-            f"channels={self.channels[:2]}"
+            f"channels={self.channels}"
             ")"
         )
 
@@ -109,8 +109,10 @@ class Searcher:
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
-        self.ifos = ifos
-        self.channels = channels
+        # Take only the first two ifos/channels for H1/L1
+        # Hard-coding this until there's an HLV Aframe model
+        self.ifos = ifos[:2]
+        self.channels = channels[:2]
         self.datadir = datadir
         self.ifo_suffix = ifo_suffix
 

@@ -125,8 +125,9 @@ def search(
         except Empty:
             pass
         else:
-            logging.error(f"Error in subprocess {name}: {error}")
+            logging.error(f"Error in subprocess {name}: {str(error)}")
             logging.error(tb)
+            raise error
 
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array

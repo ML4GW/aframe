@@ -15,6 +15,6 @@ def subprocess_wrapper(
             f(*args, **kwargs)
         except Exception as e:
             tb = traceback.format_exc()
-            error_queue.put((name, str(e), tb))
+            error_queue.put((name, e, tb))
 
     return wrapper

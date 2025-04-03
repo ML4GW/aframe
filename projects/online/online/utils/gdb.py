@@ -98,7 +98,7 @@ class GraceDb(_GraceDb):
 
         mollview_fname = event_dir / "mollview_plot.png"
         fig = plt.figure()
-        title = (f"{event_time:.3} sky map",)
+        title = f"{event_time:.2f} sky map"
         hp.mollview(
             skymap.data["PROBDENSITY"],
             fig=fig,
