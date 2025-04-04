@@ -3,6 +3,7 @@ import sys
 from multiprocessing import Process, Queue
 from typing import List
 import traceback
+import subprocess
 
 
 def subprocess_wrapper(
@@ -52,3 +53,64 @@ def signal_handler(signum, frame):
     """
     logging.debug(f"Received signal: {signum}")
     sys.exit(0)
+
+
+def run_subprocess_with_logging(
+    args: List[str], logger=None, log_stderr_on_success=False
+):
+    """
+    Run a subprocess, logging stdout via a python logger
+
+    If the subprocess succeeds (i.e return code 0),
+    stdout is always logged via the logger.
+    stderr can optionally be logged via the logger
+    too for processes that write
+    info to stderr on success,
+    which is the default for python logging
+
+    If the subprocess fails (i.e. non-zero return code)
+    stderr is written directly to sys.stderr
+
+    Args:
+        args:
+            Command line arguments for the subprocess
+        logger:
+            Logger to use (defaults to root logger if None)
+        log_stderr_on_success:
+            Whether to log stderr via logger when process succeeds
+
+    Yields:
+        The subprocess.CompletedProcess instance
+    """
+    if logger is None:
+        logger = logging.getLogger()
+
+    try:
+        # run the subprocess and capture output
+        result = subprocess.run(args, capture_output=True, text=True)
+
+        # if process succeeds
+        if result.returncode == 0:
+            # always log stdout
+            for line in result.stdout.splitlines():
+                logger.info(line)
+
+            # optionally log stderr too
+            if log_stderr_on_success and result.stderr:
+                for line in result.stderr.splitlines():
+                    logger.info(f"stderr: {line}")
+        # if process fails
+        else:
+            # write stderr directly to sys.stderr
+            sys.stderr.buffer.write(result.stderr)
+            sys.stderr.flush()
+
+        # yield the result
+        return result
+
+    # handle errors related to logging
+    # subprocess outputs
+    except Exception as e:
+        sys.stderr.write(f"Error running subprocess: {e}\n")
+        sys.stderr.flush()
+        raise

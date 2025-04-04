@@ -3,7 +3,7 @@ import logging
 import signal
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING
 
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
@@ -15,7 +15,6 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GdbServer
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
@@ -30,6 +29,8 @@ from online.subprocesses import (
     signal_handler,
 )
 
+if TYPE_CHECKING:
+    from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
 
@@ -297,13 +298,13 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: str = "frames",
-    state_channels: Optional[dict[str, str]] = None,
+    state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
-    server: GdbServer = "test",
+    server: "GdbServer" = "local",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
@@ -390,6 +391,7 @@ def main(
             Device to run inference on ("cpu" or "cuda")
     """
 
+    # validate ifos and state channels
     ifos = [channel.split(":")[0] for channel in channels]
     if ifos not in [["H1", "L1"], ["H1", "L1", "V1"]]:
         raise ValueError(
@@ -397,7 +399,29 @@ def main(
             "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
         )
 
-    logging.info(f"{','.join(ifos)} interferometer configuration set")
+    if state_channels is None:
+        logging.info(
+            "no state channels specified: not checking for data quality"
+        )
+
+    else:
+        logging.info(
+            "Checking state channels: "
+            f"{', '.join(state_channels)} for data quality"
+        )
+        state_channels = {
+            state_channel.split(":")[0]: state_channel
+            for state_channel in state_channels
+        }
+        if set(state_channels.keys()) != set(ifos):
+            raise ValueError(
+                f"Specified interferometer configuration {ifos} "
+                "but only specified state channels "
+                f"for {list(state_channels.keys())}"
+            )
+
+    logging.info(f"{', '.join(ifos)} interferometer configuration set")
+    logging.info(f"Uploading to GraceDb server: {server}")
 
     fftlength = fftlength or kernel_length + fduration
 
@@ -492,11 +516,6 @@ def main(
     # Register cleanup function to run
     # when the main process exits
     atexit.register(cleanup_subprocesses, subprocesses)
-
-    if state_channels is None:
-        logging.info(
-            "No state channels specified: not checking for data quality"
-        )
 
     if data_source == "ngdd":
         update_size = 1 / 16

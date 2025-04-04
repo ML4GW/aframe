@@ -47,7 +47,7 @@ def fit_or_load_pastro(
         logger.info("Loading p_astro model")
         with open(model_path, "rb") as f:
             pastro = pickle.load(f)
-        logger.info("Model loaded")
+        logger.info("p_astro model loaded")
     else:
         logger.info(
             "Loading background, foreground, and "

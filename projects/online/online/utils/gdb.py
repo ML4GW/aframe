@@ -3,14 +3,12 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Literal
-
 import bilby
 import healpy as hp
 import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-from ligo.skymap.tool import ligo_skymap_from_samples
-
+from ..subprocesses.utils import run_subprocess_with_logging
 from online.utils.searcher import Event
 
 if TYPE_CHECKING:
@@ -99,7 +97,7 @@ class GraceDb(_GraceDb):
 
         mollview_fname = event_dir / "mollview_plot.png"
         fig = plt.figure()
-        title = f"{event_time:.2f} {ifos} sky map"
+        title = f"{', '.join(ifos)} {event_time:.2f} sky map"
         hp.mollview(
             skymap.data["PROBDENSITY"],
             fig=fig,
@@ -135,6 +133,7 @@ class GraceDb(_GraceDb):
         # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
         # we might need to submit this via condor
         args = [
+            "ligo-skymap-from-samples",
             str(filename),
             "-j",
             str(64),
@@ -146,7 +145,15 @@ class GraceDb(_GraceDb):
             "|".join(ifos),
         ]
 
-        ligo_skymap_from_samples.main(args)
+        # TODO: ligo-skymap-from-samples doesnt clean up
+        # process pool on purpose so that overhead from
+        # initializing pool can be eliminated. Once
+        # we get our own resources we should take
+        # advantage of this
+
+        # run subprocess, passing any output to python logger
+        result = run_subprocess_with_logging(args, log_stderr_on_success=True)
+
         self.write_log(
             graceid,
             "ligo-skymap-from-samples",
