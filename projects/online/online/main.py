@@ -4,7 +4,7 @@ import signal
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING
-
+from online.utils.email_alerts import send_error_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
 from amplfi.train.data.utils.utils import ParameterSampler
@@ -111,6 +111,7 @@ def search(
     update_size: float,
     time_offset: float,
     device: str,
+    emails: Optional[list[str]] = None,
 ):
     integrated = None
 
@@ -122,12 +123,7 @@ def search(
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
-        # TODO:
-        # here we can handle any subprocess
-        # errors - I think at the least we
-        # need to send an email that
-        # something failed and the pipeline
-        # needs to be restarted
+        # handle any subprocess
         try:
             name, error, tb = error_queue.get_nowait()
         except Empty:
@@ -135,6 +131,8 @@ def search(
         else:
             logging.error(f"Error in subprocess {name}: {str(error)}")
             logging.error(tb)
+            if emails is not None:
+                send_error_email(name, error, tb, emails)
             raise error
 
         # if this frame was not analysis ready, assuming HLV ordering
@@ -309,6 +307,7 @@ def main(
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
     samples_per_event: int = 20000,
+    emails: Optional[list[str]] = None,
     nside: int = 32,
     device: str = "cpu",
 ):
@@ -674,6 +673,7 @@ def main(
         update_size=update_size,
         time_offset=time_offset,
         device=device,
+        emails=emails,
     )
 
 
