@@ -176,7 +176,7 @@ def search(
                     )
                     for i, sample in enumerate(descaled_samples.flatten()):
                         shared_samples[i] = sample
-                    amplfi_queue.put((event.gpstime, ifos))
+                    amplfi_queue.put(event)
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
@@ -265,7 +265,7 @@ def search(
             )
             for i, sample in enumerate(descaled_samples.flatten()):
                 shared_samples[i] = sample
-            amplfi_queue.put((event.gpstime, ifos))
+            amplfi_queue.put(event)
             searcher.detecting = False
         # TODO write buffers to disk:
 
@@ -308,6 +308,7 @@ def main(
     output_buffer_length: int = 8,
     samples_per_event: int = 20000,
     emails: Optional[list[str]] = None,
+    email_far_threshold: float = 1e-6,
     nside: int = 32,
     device: str = "cpu",
 ):
@@ -384,6 +385,11 @@ def main(
             Number of posterior samples to generate per event
             for creating skymaps and other parameter estimation
             data products
+        emails:
+            List of email addresses for sending pipeline failure
+            and alert emails
+        email_far_threshold:
+            FAR threshold in Hz at which an alert email will be sent
         nside:
             Healpix resolution for low-latency skymaps
         device:
@@ -484,6 +490,8 @@ def main(
         inference_params,
         amplfi_parameter_sampler,
         shared_samples,
+        emails,
+        email_far_threshold,
         nside,
     )
 

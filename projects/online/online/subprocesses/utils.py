@@ -98,7 +98,7 @@ def run_subprocess_with_logging(
             # optionally log stderr too
             if log_stderr_on_success and result.stderr:
                 for line in result.stderr.splitlines():
-                    logger.info(f"stderr: {line}")
+                    logger.info(line)
         # if process fails
         else:
             # write stderr directly to sys.stderr
