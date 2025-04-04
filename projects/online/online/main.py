@@ -4,7 +4,7 @@ import signal
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING
-from online.utils.email_alerts import send_error_email
+from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
 from amplfi.train.data.utils.utils import ParameterSampler
@@ -389,6 +389,10 @@ def main(
         device:
             Device to run inference on ("cpu" or "cuda")
     """
+
+    if emails is not None:
+        logging.info(f"Sending email alerts to {', '.join(emails)}")
+        send_init_email(emails, outdir)
 
     # validate ifos and state channels
     ifos = [channel.split(":")[0] for channel in channels]
