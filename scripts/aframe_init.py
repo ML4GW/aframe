@@ -114,6 +114,7 @@ def create_online_runfile(path: Path):
     trap control_c SIGINT
 
     # ligo skymap from samples
+    export TQDM_DISABLE=1
     export MKL_NUM_THREADS=1
     export OMP_NUM_THREADS=1
 
