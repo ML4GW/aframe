@@ -109,8 +109,10 @@ class Searcher:
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
-        self.ifos = ifos
-        self.channels = channels
+        # Take only the first two ifos/channels for H1/L1
+        # Hard-coding this until there's an HLV Aframe model
+        self.ifos = ifos[:2]
+        self.channels = channels[:2]
         self.datadir = datadir
         self.ifo_suffix = ifo_suffix
 
@@ -145,10 +147,11 @@ class Searcher:
             return None
 
         timestamp = t0 + idx / self.inference_sampling_rate
-        logging.info("Computing FAR")
+
+        logging.debug("Computing FAR")
         far = self.background.far(value)
         far /= SECONDS_PER_YEAR
-        logging.info("FAR computed")
+        logging.debug("FAR computed")
 
         logging.info(
             "Event coalescence time found to be {:0.3f} "
@@ -183,6 +186,9 @@ class Searcher:
         if self.detecting:
             idx = np.argmax(y)
             self.detecting = False
+            logging.info(
+                f"Detected event with detection statistic {max_val:0.3f}"
+            )
             return self.build_event(max_val, t0, idx)
 
         # otherwise, check if the event is above threshold
@@ -190,17 +196,22 @@ class Searcher:
             # if not, nothing to do here
             return None
 
-        logging.info(f"Detected event with detection statistic {max_val:0.3f}")
-
         # check if the integrated output is still
         # ramping as we get to the end of the frame
         idx = np.argmax(y)
         if idx < (len(y) - 1):
             # if not, assume the event is in this
             # frame and build an event around it
+            logging.info(
+                f"Detected event with detection statistic {max_val:0.3f}"
+            )
             return self.build_event(max_val, t0, idx)
         else:
             # otherwise, note that we're mid-event but
             # wait until the next frame to mark it
+            logging.info(
+                f"Event with detection statistic {max_val:0.3f} "
+                "found but still ramping, waiting for next frame"
+            )
             self.detecting = True
             return None

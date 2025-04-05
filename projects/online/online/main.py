@@ -1,11 +1,13 @@
+import atexit
 import logging
-import time
+import signal
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple
-
+from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING
+from online.utils.email_alerts import send_error_email, send_init_email
 import torch
-from amplfi.train.architectures.flows.base import FlowArchitecture
+from amplfi.train.architectures.flows import FlowArchitecture
+from amplfi.train.data.utils.utils import ParameterSampler
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
@@ -13,19 +15,27 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
-from online.utils.gdb import GdbServer, authenticate, gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
-from online.utils.pastro import fit_or_load_pastro
-from online.utils.pe import (
-    create_histogram_skymap,
-    postprocess_samples,
-    run_amplfi,
-)
+from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
+from online.subprocesses import (
+    amplfi_subprocess,
+    pastro_subprocess,
+    event_creation_subprocess,
+    authenticate_subprocess,
+    cleanup_subprocesses,
+    signal_handler,
+)
+
+if TYPE_CHECKING:
+    from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def load_model(model: Architecture, weights: Path):
@@ -85,6 +95,7 @@ def search(
     searcher: Searcher,
     event_queue: Queue,
     amplfi_queue: Queue,
+    error_queue: Queue,
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
@@ -100,6 +111,7 @@ def search(
     update_size: float,
     time_offset: float,
     device: str,
+    emails: Optional[list[str]] = None,
 ):
     integrated = None
 
@@ -111,6 +123,18 @@ def search(
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
+        # handle any subprocess
+        try:
+            name, error, tb = error_queue.get_nowait()
+        except Empty:
+            pass
+        else:
+            logging.error(f"Error in subprocess {name}: {str(error)}")
+            logging.error(tb)
+            if emails is not None:
+                send_error_email(name, error, tb, emails)
+            raise error
+
         # if this frame was not analysis ready, assuming HLV ordering
         # on ready array
         hl_ready = ready[0] and ready[1]
@@ -130,14 +154,19 @@ def search(
                     event_queue.put(event)
                     logging.info("Running AMPLFI")
                     if all(virgo_ready) and len(ready) == 3:
+                        logging.info("Using HLV AMPLFI model")
                         amplfi = amplfi_hlv
                         scaler = scaler_hlv
+                        ifos = ["H1", "L1", "V1"]
                     else:
+                        logging.info("Using HL AMPLFI model")
                         amplfi = amplfi_hl
                         scaler = scaler_hl
+                        ifos = ["H1", "L1"]
                     descaled_samples = run_amplfi(
                         event_time=event.gpstime,
                         input_buffer=input_buffer,
+                        ifos=ifos,
                         samples_per_event=samples_per_event,
                         spectral_density=spectral_density,
                         amplfi_whitener=amplfi_whitener,
@@ -145,15 +174,16 @@ def search(
                         std_scaler=scaler,
                         device=device,
                     )
-                    shared_samples = descaled_samples.flatten()  # noqa: F841
-                    amplfi_queue.put(event.gpstime)
+                    for i, sample in enumerate(descaled_samples.flatten()):
+                        shared_samples[i] = sample
+                    amplfi_queue.put(event)
                     searcher.detecting = False
 
             # check if this is because the frame stream stopped
             # being analysis ready, in which case perform updates
             # but don't search for events
             if X is not None:
-                logging.warning(
+                logging.debug(
                     "Frame {} is not analysis ready. Performing "
                     "inference but ignoring any triggers".format(t0)
                 )
@@ -184,7 +214,8 @@ def search(
         input_buffer.update(X, t0)
 
         # we have a frame that is analysis ready,
-        # so lets analyze it:
+        # so lets analyze it, taking the first two
+        # channels, which correspond to H1/L1
         X = X[:2].to(device)
 
         # update the snapshotter state and return
@@ -212,14 +243,19 @@ def search(
             event_queue.put(event)
             logging.info("Running AMPLFI")
             if all(virgo_ready) and len(ready) == 3:
+                logging.info("Using HLV AMPLFI model")
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
+                ifos = ["H1", "L1", "V1"]
             else:
+                logging.info("Using HL AMPLFI model")
                 amplfi = amplfi_hl
                 scaler = scaler_hl
+                ifos = ["H1", "L1"]
             descaled_samples = run_amplfi(
                 event_time=event.gpstime,
                 input_buffer=input_buffer,
+                ifos=ifos,
                 samples_per_event=samples_per_event,
                 spectral_density=spectral_density,
                 amplfi_whitener=amplfi_whitener,
@@ -227,144 +263,11 @@ def search(
                 std_scaler=scaler,
                 device=device,
             )
-            shared_samples = descaled_samples.flatten()  # noqa: F841
-            amplfi_queue.put(event.gpstime)
+            for i, sample in enumerate(descaled_samples.flatten()):
+                shared_samples[i] = sample
+            amplfi_queue.put(event)
             searcher.detecting = False
         # TODO write buffers to disk:
-
-
-def pastro_subprocess(
-    pastro_queue: Queue,
-    server: GdbServer,
-    background_path: Path,
-    foreground_path: Path,
-    rejected_path: Path,
-    astro_event_rate: float,
-    outdir: Path,
-):
-    gdb = gracedb_factory(server, outdir)
-
-    logging.info("Fitting p_astro model or loading from cache")
-    pastro_model = fit_or_load_pastro(
-        outdir / "pastro.pkl",
-        background_path,
-        foreground_path,
-        rejected_path,
-        astro_event_rate=astro_event_rate,
-    )
-    logging.info("Loaded p_astro model")
-
-    while True:
-        event = pastro_queue.get()
-        logging.info("Calculating p_astro")
-        pastro = pastro_model(event.detection_statistic)
-        graceid = pastro_queue.get()
-        logging.info(f"Submitting p_astro: {pastro}")
-        gdb.submit_pastro(float(pastro), graceid, event.gpstime)
-        logging.info("Submitted p_astro")
-
-
-def amplfi_subprocess(
-    amplfi_queue: Queue,
-    server: GdbServer,
-    outdir: Path,
-    inference_params: List[str],
-    shared_samples: Array,
-    nside: int = 32,
-):
-    gdb = gracedb_factory(server, outdir)
-
-    while True:
-        arg = amplfi_queue.get()
-        if isinstance(arg, float):
-            event_time = arg
-            descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
-            )
-
-            logging.info("Post-processing samples")
-            result = postprocess_samples(
-                descaled_samples, event_time, inference_params
-            )
-
-            logging.info("Creating low resolution skymap")
-            skymap, mollview_map = create_histogram_skymap(
-                result.posterior["ra"], result.posterior["dec"], nside
-            )
-            graceid = amplfi_queue.get()
-
-            logging.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(
-                result, mollview_map, skymap, graceid, event_time
-            )
-
-            logging.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
-            logging.info("Submitted all PE")
-        else:
-            graceid = arg
-            event_time = amplfi_queue.get()
-            descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
-            )
-
-            logging.info("Post-processing samples")
-            result = postprocess_samples(
-                descaled_samples, event_time, inference_params
-            )
-
-            logging.info("Creating low resolution skymap")
-            skymap, mollview_map = create_histogram_skymap(
-                result.posterior["ra"], result.posterior["dec"], nside
-            )
-
-            logging.info("Submitting posterior and low resolution skymap")
-            gdb.submit_low_latency_pe(
-                result, mollview_map, skymap, graceid, event_time
-            )
-
-            logging.info("Launching ligo-skymap-from-samples")
-            gdb.submit_ligo_skymap_from_samples(result, graceid, event_time)
-            logging.info("Submitted all PE")
-
-
-def event_creation_subprocess(
-    event_queue: Queue,
-    server: GdbServer,
-    outdir: Path,
-    amplfi_queue: Queue,
-    pastro_queue: Queue,
-):
-    gdb = gracedb_factory(server, outdir)
-    last_auth = time.time()
-    while True:
-        try:
-            event = event_queue.get_nowait()
-            logging.info("Putting event in pastro queue")
-            pastro_queue.put(event)
-
-            # write event information to disk
-            # and submit it to gracedb
-            event.write(outdir)
-            response = gdb.submit(event)
-            # Get the event's graceid for submitting
-            # further data products
-            if server == "local":
-                # The local gracedb client just returns the filename
-                graceid = response
-            else:
-                graceid = response.json()["graceid"]
-            logging.info("Putting graceid in amplfi and pastro queues")
-            amplfi_queue.put(graceid)
-            pastro_queue.put(graceid)
-        except Empty:
-            time.sleep(1e-3)
-            # Re-authenticate every 1000 seconds so that
-            # the scitoken doesn't expire. Doing it in this
-            # loop as it's the earliest point of submission
-            if last_auth - time.time() > 1000:
-                authenticate()
-                last_auth = time.time()
 
 
 def main(
@@ -373,6 +276,7 @@ def main(
     amplfi_hl_weights: Path,
     amplfi_hlv_architecture: FlowArchitecture,
     amplfi_hlv_weights: Path,
+    amplfi_parameter_sampler: ParameterSampler,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -392,16 +296,20 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: str = "frames",
+    state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
+    amplfi_highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
-    server: GdbServer = "test",
+    server: "GdbServer" = "local",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
     samples_per_event: int = 20000,
+    emails: Optional[list[str]] = None,
+    email_far_threshold: float = 1e-6,
     nside: int = 32,
     device: str = "cpu",
 ):
@@ -426,8 +334,6 @@ def main(
             Directory to save output files
         datadir:
             Directory containing input strain data
-        ifos:
-            List of interferometer names
         inference_params:
             List of parameters on which the AMPLFI
             model was trained to perform inference
@@ -480,55 +386,148 @@ def main(
             Number of posterior samples to generate per event
             for creating skymaps and other parameter estimation
             data products
+        emails:
+            List of email addresses for sending pipeline failure
+            and alert emails
+        email_far_threshold:
+            FAR threshold in Hz at which an alert email will be sent
         nside:
             Healpix resolution for low-latency skymaps
         device:
             Device to run inference on ("cpu" or "cuda")
     """
-    # run kinit and htgettoken
-    if server != "local":
-        logging.info("Authenticating")
-        authenticate()
-        logging.info("Authentication complete")
 
+    if emails is not None:
+        logging.info(f"Sending email alerts to {', '.join(emails)}")
+        send_init_email(emails, outdir)
+
+    # validate ifos and state channels
+    ifos = [channel.split(":")[0] for channel in channels]
     if ifos not in [["H1", "L1"], ["H1", "L1", "V1"]]:
         raise ValueError(
             f"Invalid interferometer configuration {ifos}. "
             "Must be ['H1', 'L1'] or ['H1', 'L1', 'V1']"
         )
 
+    if state_channels is None:
+        logging.info(
+            "no state channels specified: not checking for data quality"
+        )
+
+    else:
+        logging.info(
+            "Checking state channels: "
+            f"{', '.join(state_channels)} for data quality"
+        )
+        state_channels = {
+            state_channel.split(":")[0]: state_channel
+            for state_channel in state_channels
+        }
+        if set(state_channels.keys()) != set(ifos):
+            raise ValueError(
+                f"Specified interferometer configuration {ifos} "
+                "but only specified state channels "
+                f"for {list(state_channels.keys())}"
+            )
+
+    logging.info(f"{', '.join(ifos)} interferometer configuration set")
+    logging.info(f"Uploading to GraceDb server: {server}")
+
     fftlength = fftlength or kernel_length + fduration
+
+    # initialize multiprocessing Array that will be used
+    # to pass amplfi samples between different subprocesses
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
+
+    # create various queues for message
+    # passing between subprocesses
+    error_queue = Queue()
+    pastro_queue = Queue()
+    event_queue = Queue()
     amplfi_queue = Queue()
+
+    subprocesses = []
+
+    # subprocess for re-authenticating
+    args = (error_queue, "authenticate")
+    auth_process = Process(
+        target=authenticate_subprocess,
+        args=args,
+    )
+    auth_process.start()
+    subprocesses.append(auth_process)
+
+    # create subprocess for uploading initial
+    # detection information like FAR to gdb
     args = (
+        error_queue,
+        "event creator",
+        event_queue,
+        server,
+        outdir / "events",
+        amplfi_queue,
+        pastro_queue,
+    )
+    event_process = Process(
+        target=event_creation_subprocess,
+        args=args,
+    )
+    event_process.start()
+    subprocesses.append(event_process)
+
+    # initialize amplfi subprocess which
+    # will recieve events via a queue
+    # and process posterior samples into
+    # various data products and upload them
+    # to gdb
+
+    args = (
+        error_queue,
+        "amplfi",
         amplfi_queue,
         server,
-        outdir,
+        outdir / "events",
         inference_params,
+        amplfi_parameter_sampler,
         shared_samples,
+        emails,
+        email_far_threshold,
         nside,
     )
-    amplfi_process = Process(target=amplfi_subprocess, args=args)
-    amplfi_process.start()
 
-    pastro_queue = Queue()
+    amplfi_process = Process(
+        target=amplfi_subprocess,
+        args=args,
+    )
+    amplfi_process.start()
+    subprocesses.append(amplfi_process)
+
+    # create a subprocess for calculating
+    # and uploading pastro to gdb
+    # once events are detected
+
     args = (
+        error_queue,
+        "p_astro",
         pastro_queue,
-        server,
         background_path,
         foreground_path,
         rejected_path,
         astro_event_rate,
+        server,
         outdir,
     )
-    pastro_process = Process(target=pastro_subprocess, args=args)
+    pastro_process = Process(
+        target=pastro_subprocess,
+        args=args,
+    )
     pastro_process.start()
+    subprocesses.append(pastro_process)
 
-    event_queue = Queue()
-    args = (event_queue, server, outdir, amplfi_queue, pastro_queue)
-    event_process = Process(target=event_creation_subprocess, args=args)
-    event_process.start()
+    # Register cleanup function to run
+    # when the main process exits
+    atexit.register(cleanup_subprocesses, subprocesses)
 
     if data_source == "ngdd":
         update_size = 1 / 16
@@ -536,6 +535,7 @@ def main(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
+            state_channels=state_channels,
         )
     elif data_source == "frames":
         update_size = 1
@@ -545,6 +545,7 @@ def main(
             ifos=ifos,
             sample_rate=sample_rate,
             ifo_suffix=ifo_suffix,
+            state_channels=state_channels,
             timeout=10,
         )
     else:
@@ -600,7 +601,7 @@ def main(
     amplfi_whitener = Whiten(
         fduration=fduration,
         sample_rate=sample_rate,
-        highpass=highpass,
+        highpass=amplfi_highpass,
         lowpass=lowpass,
     ).to(device)
 
@@ -630,6 +631,7 @@ def main(
     # use them to fit (or load in a cached) a pastro model
     logging.info("Loading background distribution")
     background = EventSet.read(background_path)
+    logging.info("Background loaded")
 
     # if event set is not sorted by detection statistic, sort it
     # which will significantly speed up the far calculation
@@ -661,11 +663,12 @@ def main(
         aframe_right_pad,
     )
 
-    logging.info("Beginning search")
+    logging.info("Beginning search...")
     search(
         whitener=whitener,
         snapshotter=snapshotter,
         searcher=searcher,
+        error_queue=error_queue,
         event_queue=event_queue,
         amplfi_queue=amplfi_queue,
         input_buffer=input_buffer,
@@ -683,6 +686,7 @@ def main(
         update_size=update_size,
         time_offset=time_offset,
         device=device,
+        emails=emails,
     )
 
 
