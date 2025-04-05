@@ -299,6 +299,7 @@ def main(
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
+    amplfi_highpass: Optional[float] = None,
     lowpass: Optional[float] = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
@@ -600,7 +601,7 @@ def main(
     amplfi_whitener = Whiten(
         fduration=fduration,
         sample_rate=sample_rate,
-        highpass=highpass,
+        highpass=amplfi_highpass,
         lowpass=lowpass,
     ).to(device)
 

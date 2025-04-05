@@ -186,6 +186,9 @@ class Searcher:
         if self.detecting:
             idx = np.argmax(y)
             self.detecting = False
+            logging.info(
+                f"Detected event with detection statistic {max_val:0.3f}"
+            )
             return self.build_event(max_val, t0, idx)
 
         # otherwise, check if the event is above threshold
@@ -193,17 +196,22 @@ class Searcher:
             # if not, nothing to do here
             return None
 
-        logging.info(f"Detected event with detection statistic {max_val:0.3f}")
-
         # check if the integrated output is still
         # ramping as we get to the end of the frame
         idx = np.argmax(y)
         if idx < (len(y) - 1):
             # if not, assume the event is in this
             # frame and build an event around it
+            logging.info(
+                f"Detected event with detection statistic {max_val:0.3f}"
+            )
             return self.build_event(max_val, t0, idx)
         else:
             # otherwise, note that we're mid-event but
             # wait until the next frame to mark it
+            logging.info(
+                f"Event with detection statistic {max_val:0.3f} "
+                "found but still ramping, waiting for next frame"
+            )
             self.detecting = True
             return None
