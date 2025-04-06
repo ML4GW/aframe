@@ -72,6 +72,10 @@ class Event:
     def filename(self):
         return f"event_{int(self.gpstime)}.json"
 
+    @property
+    def event_dir(self):
+        return Path(f"event_{int(self.gpstime)}")
+
     def write(self, directory: Path):
         """
         Write event information to a local directory

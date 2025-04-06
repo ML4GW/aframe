@@ -111,6 +111,7 @@ def search(
     update_size: float,
     time_offset: float,
     device: str,
+    outdir: Path,
     emails: Optional[list[str]] = None,
 ):
     integrated = None
@@ -157,16 +158,16 @@ def search(
                         logging.info("Using HLV AMPLFI model")
                         amplfi = amplfi_hlv
                         scaler = scaler_hlv
-                        ifos = ["H1", "L1", "V1"]
+                        amplfi_ifos = ["H1", "L1", "V1"]
                     else:
                         logging.info("Using HL AMPLFI model")
                         amplfi = amplfi_hl
                         scaler = scaler_hl
-                        ifos = ["H1", "L1"]
+                        amplfi_ifos = ["H1", "L1"]
                     descaled_samples = run_amplfi(
                         event_time=event.gpstime,
                         input_buffer=input_buffer,
-                        ifos=ifos,
+                        ifos=amplfi_ifos,
                         samples_per_event=samples_per_event,
                         spectral_density=spectral_density,
                         amplfi_whitener=amplfi_whitener,
@@ -176,8 +177,12 @@ def search(
                     )
                     for i, sample in enumerate(descaled_samples.flatten()):
                         shared_samples[i] = sample
-                    amplfi_queue.put(event)
+                    amplfi_queue.put((event, amplfi_ifos))
                     searcher.detecting = False
+
+                    buffer_outdir = outdir / "events" / event.event_dir
+                    logging.info(f"Writing output buffer to {buffer_outdir}")
+                    output_buffer.write(buffer_outdir / "output.hdf5")
 
             # check if this is because the frame stream stopped
             # being analysis ready, in which case perform updates
@@ -246,16 +251,16 @@ def search(
                 logging.info("Using HLV AMPLFI model")
                 amplfi = amplfi_hlv
                 scaler = scaler_hlv
-                ifos = ["H1", "L1", "V1"]
+                amplfi_ifos = ["H1", "L1", "V1"]
             else:
                 logging.info("Using HL AMPLFI model")
                 amplfi = amplfi_hl
                 scaler = scaler_hl
-                ifos = ["H1", "L1"]
+                amplfi_ifos = ["H1", "L1"]
             descaled_samples = run_amplfi(
                 event_time=event.gpstime,
                 input_buffer=input_buffer,
-                ifos=ifos,
+                ifos=amplfi_ifos,
                 samples_per_event=samples_per_event,
                 spectral_density=spectral_density,
                 amplfi_whitener=amplfi_whitener,
@@ -265,9 +270,11 @@ def search(
             )
             for i, sample in enumerate(descaled_samples.flatten()):
                 shared_samples[i] = sample
-            amplfi_queue.put(event)
+            amplfi_queue.put((event, amplfi_ifos))
             searcher.detecting = False
-        # TODO write buffers to disk:
+            buffer_outdir = outdir / "events" / event.event_dir
+            logging.info(f"Writing output buffer to {buffer_outdir}")
+            output_buffer.write(buffer_outdir / "output.hdf5")
 
 
 def main(
@@ -310,6 +317,7 @@ def main(
     samples_per_event: int = 20000,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
+    auth_refresh: int = 1000,
     nside: int = 32,
     device: str = "cpu",
 ):
@@ -391,6 +399,9 @@ def main(
             and alert emails
         email_far_threshold:
             FAR threshold in Hz at which an alert email will be sent
+        auth_refresh:
+            Number of seconds between calls to authenticate,
+            that refreshes the scitoken credential
         nside:
             Healpix resolution for low-latency skymaps
         device:
@@ -450,7 +461,7 @@ def main(
     subprocesses = []
 
     # subprocess for re-authenticating
-    args = (error_queue, "authenticate")
+    args = (error_queue, "authenticate", auth_refresh)
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,
@@ -687,6 +698,7 @@ def main(
         time_offset=time_offset,
         device=device,
         emails=emails,
+        outdir=outdir,
     )
 
 

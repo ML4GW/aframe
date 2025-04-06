@@ -40,7 +40,7 @@ def authenticate():
 
 
 @subprocess_wrapper
-def authenticate_subprocess(refresh: int = 1000):
+def authenticate_subprocess(refresh: int = 300):
     """
     Authentication subprocess loop that will re-authenticate
     every `refresh` seconds

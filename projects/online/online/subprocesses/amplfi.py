@@ -30,8 +30,8 @@ def amplfi_subprocess(
     logger.info("amplfi subprocess initialized")
     while True:
         arg = amplfi_queue.get()
-        if isinstance(arg, Event):
-            event = arg
+        if isinstance(arg[0], Event):
+            event, amplfi_ifos = arg
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
@@ -55,17 +55,17 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.gpstime, event.ifos
+                result, fits_skymap, graceid, event.gpstime, amplfi_ifos
             )
 
             logger.info("Launching ligo-skymap-from-samples")
             gdb.submit_ligo_skymap_from_samples(
-                result, graceid, event.gpstime, event.ifos
+                result, graceid, event.gpstime, amplfi_ifos
             )
             logger.info("Submitted all PE")
         else:
             graceid = arg
-            event = amplfi_queue.get()
+            event, amplfi_ifos = amplfi_queue.get()
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples), (-1, len(inference_params))
             )
@@ -87,11 +87,11 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.gpstime, event.ifos
+                result, fits_skymap, graceid, event.gpstime, amplfi_ifos
             )
 
             logger.info("Launching ligo-skymap-from-samples")
             gdb.submit_ligo_skymap_from_samples(
-                result, graceid, event.gpstime, event.ifos
+                result, graceid, event.gpstime, amplfi_ifos
             )
             logger.info("Submitted all PE")

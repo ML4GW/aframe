@@ -129,12 +129,11 @@ class OutputBuffer(torch.nn.Module):
             (self.buffer_size,), device=self.device, requires_grad=False
         )
 
-    def write(self, write_path, event_time):
+    def write(self, path):
         start = self.t0
         stop = self.t0 + self.buffer_length
         time = np.linspace(start, stop, self.buffer_size)
-        with h5py.File(write_path, "w") as f:
-            f.attrs.create("event_time", data=event_time)
+        with h5py.File(path, "w") as f:
             f.create_dataset("time", data=time)
             f.create_dataset("output", data=self.output_buffer.cpu())
             f.create_dataset(
