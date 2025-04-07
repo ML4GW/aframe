@@ -102,7 +102,7 @@ def run_subprocess_with_logging(
         # if process fails
         else:
             # write stderr directly to sys.stderr
-            sys.stderr.buffer.write(result.stderr)
+            sys.stderr.write(result.stderr)
             sys.stderr.flush()
 
         # yield the result
