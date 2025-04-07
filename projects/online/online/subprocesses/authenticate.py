@@ -7,8 +7,6 @@ logger = logging.getLogger("authenticate-subprocess")
 
 
 def authenticate():
-    # TODO: don't hardcode keytab locations
-    token_path = os.getenv("BEARER_TOKEN_FILE")
     args = [
         "kinit",
         "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
@@ -34,8 +32,6 @@ def authenticate():
         "--scopes=gracedb.read",
         "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
         "--nooidc",
-        "-o",
-        token_path,
     ]
     run_subprocess_with_logging(
         args, logger=logger, log_stderr_on_success=False
