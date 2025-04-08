@@ -18,7 +18,7 @@ def event_creation_subprocess(
 ):
     logger.info("event creation subprocess initialized")
 
-    gdb = gracedb_factory(server, outdir)
+    gdb = gracedb_factory(server, outdir, reload_cred=True, reload_buffer=600)
 
     while True:
         event = event_queue.get()

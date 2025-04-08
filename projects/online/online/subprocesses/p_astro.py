@@ -88,7 +88,9 @@ def pastro_subprocess(
         rejected_path,
         astro_event_rate=astro_event_rate,
     )
-    gdb = gracedb_factory(server, outdir / "events")
+    gdb = gracedb_factory(
+        server, outdir / "events", reload_cred=True, reload_buffer=600
+    )
     while True:
         event = pastro_queue.get()
         logger.info("Calculating p_astro")
@@ -96,5 +98,5 @@ def pastro_subprocess(
         graceid = pastro_queue.get()
 
         logger.info(f"Submitting p_astro: {pastro}")
-        gdb.submit_pastro(float(pastro), graceid, event.gpstime)
+        gdb.submit_pastro(float(pastro), graceid, event.event_dir)
         logger.info("Submitted p_astro")
