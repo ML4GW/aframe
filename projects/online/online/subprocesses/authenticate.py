@@ -48,6 +48,7 @@ def authenticate_subprocess(refresh: int = 300):
     logger.info("authenticate subprocess initialized")
     last_auth = time.time() - refresh - 5
     while True:
+        time.sleep(1e-1)
         if time.time() - last_auth > refresh:
             logger.info("Authenticating...")
             authenticate()

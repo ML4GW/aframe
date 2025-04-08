@@ -172,6 +172,9 @@ class Searcher:
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
+        # reset state to not detecting
+        # after we've detected an event
+        self.detecting = False
         return event
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
@@ -184,18 +187,8 @@ class Searcher:
         *first sample* of the integration window.
         """
 
-        # if we're already mid-detection, take as
-        # the event the max in the current window
         max_val = y.max()
-        if self.detecting:
-            idx = np.argmax(y)
-            self.detecting = False
-            logging.info(
-                f"Detected event with detection statistic {max_val:0.3f}"
-            )
-            return self.build_event(max_val, t0, idx)
-
-        # otherwise, check if the event is above threshold
+        # check if the event is above threshold
         if not max_val >= self.threshold:
             # if not, nothing to do here
             return None

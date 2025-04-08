@@ -69,21 +69,16 @@ def get_time_offset(
     kernel_length: float,
     aframe_right_pad: float,
 ):
-    # offset the initial timestamp of our
-    # integrated outputs relative to the
-    # initial timestamp of the most recently
-    # loaded frames
     time_offset = (
-        1 / inference_sampling_rate  # end of the first kernel in batch
-        - fduration / 2  # account for whitening padding
-        - integration_window_length  # account for time to build peak
+        # end of the first kernel in batch
+        1 / inference_sampling_rate
+        # account for whitening padding
+        - fduration / 2
+        # distance coalescence time lies away from right edge
+        - aframe_right_pad
+        # account for time to build peak
+        - integration_window_length
     )
-
-    if aframe_right_pad > 0:
-        time_offset -= kernel_length - aframe_right_pad
-    elif aframe_right_pad < 0:
-        # Trigger distance parameter accounts for fduration already
-        time_offset -= abs(aframe_right_pad) - fduration / 2
 
     return time_offset
 
@@ -178,7 +173,6 @@ def search(
                     for i, sample in enumerate(descaled_samples.flatten()):
                         shared_samples[i] = sample
                     amplfi_queue.put((event, amplfi_ifos))
-                    searcher.detecting = False
 
                     buffer_outdir = outdir / "events" / event.event_dir
                     logging.info(f"Writing output buffer to {buffer_outdir}")
@@ -271,7 +265,7 @@ def search(
             for i, sample in enumerate(descaled_samples.flatten()):
                 shared_samples[i] = sample
             amplfi_queue.put((event, amplfi_ifos))
-            searcher.detecting = False
+
             buffer_outdir = outdir / "events" / event.event_dir
             logging.info(f"Writing output buffer to {buffer_outdir}")
             output_buffer.write(buffer_outdir / "output.hdf5")
