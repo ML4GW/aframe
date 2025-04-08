@@ -26,7 +26,7 @@ def amplfi_subprocess(
     email_far_threshold: float = 1e-6,
     nside: int = 32,
 ):
-    gdb = gracedb_factory(server, outdir)
+    gdb = gracedb_factory(server, outdir, reload_cred=True, reload_buffer=600)
     logger.info("amplfi subprocess initialized")
     while True:
         arg = amplfi_queue.get()
@@ -55,12 +55,12 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.gpstime, amplfi_ifos
+                result, fits_skymap, graceid, event.event_dir, amplfi_ifos
             )
 
             logger.info("Launching ligo-skymap-from-samples")
             gdb.submit_ligo_skymap_from_samples(
-                result, graceid, event.gpstime, amplfi_ifos
+                result, graceid, event.event_dir, amplfi_ifos
             )
             logger.info("Submitted all PE")
         else:
@@ -87,11 +87,14 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.gpstime, amplfi_ifos
+                result, fits_skymap, graceid, event.event_dir, amplfi_ifos
             )
 
             logger.info("Launching ligo-skymap-from-samples")
             gdb.submit_ligo_skymap_from_samples(
-                result, graceid, event.gpstime, amplfi_ifos
+                result, graceid, event.event_dir, amplfi_ifos
             )
+
+            logger.info("Submitting ligo.skymap mollweide plots")
+            gdb.submit_skymap_plots(graceid, event.event_dir)
             logger.info("Submitted all PE")
