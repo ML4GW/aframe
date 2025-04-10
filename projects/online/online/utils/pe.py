@@ -104,12 +104,9 @@ def postprocess_samples(
 
     phi_idx = inference_params.index("phi")
     dec_idx = inference_params.index("dec")
-    ra = (
-        torch.remainder(
-            lal.GreenwichMeanSiderealTime(event_time) + samples[..., phi_idx],
-            torch.as_tensor(2 * torch.pi),
-        )
-        - torch.pi
+    ra = torch.remainder(
+        lal.GreenwichMeanSiderealTime(event_time) + samples[..., phi_idx],
+        torch.as_tensor(2 * torch.pi),
     )
     dec = samples[..., dec_idx]
 
