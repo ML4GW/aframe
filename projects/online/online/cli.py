@@ -89,7 +89,6 @@ def cli(args=None):
     configure_logging(logdir, args.verbose)
 
     args.pop("config")
-    args.pop("verbose")
     args = parser.instantiate_classes(args)
 
     main(**vars(args))

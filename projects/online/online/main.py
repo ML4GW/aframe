@@ -315,6 +315,7 @@ def main(
     auth_refresh: int = 1200,
     nside: int = 32,
     device: str = "cpu",
+    verbose: bool = False,
 ):
     """
     Main function for launching real-time Aframe and AMPLFI pipeline.
@@ -403,6 +404,8 @@ def main(
             Healpix resolution for low-latency skymaps
         device:
             Device to run inference on ("cpu" or "cuda")
+        verbose:
+            If true, autheticate with debug flag set
     """
 
     if emails is not None:
@@ -458,7 +461,7 @@ def main(
     subprocesses = []
 
     # subprocess for re-authenticating
-    args = (error_queue, "authenticate", auth_refresh, True)
+    args = (error_queue, "authenticate", auth_refresh, verbose)
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,

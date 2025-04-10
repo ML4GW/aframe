@@ -94,7 +94,7 @@ def write_content(content: str, path: Path):
 
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
-    # bind XDG_RUNTIME_DIR for finding scitokens
+    # bind /local/aframe for finding scitokens
     cmd += "--bind /local/aframe "
     cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
@@ -102,6 +102,7 @@ def create_online_runfile(path: Path):
     cmd += "--env AFRAME_WEIGHTS=$AFRAME_WEIGHTS "
     cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
     cmd += "--env BEARER_TOKEN_FILE=$BEARER_TOKEN_FILE "
+    cmd += "--env SCITOKEN_FILE=$SCITOKEN_FILE "
     cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
     cmd += "--config $config 2>> monitoring.log"
 
@@ -121,9 +122,10 @@ def create_online_runfile(path: Path):
 
     # scitoken auth
     # it is recommended not to store token
-    # on /home/ filesystem: somewhere
-    # on /local/$USER is better
+    # on /home/ filesystem: should be in
+    # /local/$USER somewhere
     export BEARER_TOKEN_FILE=
+    export SCITOKEN_FILE=
 
     # trained model weights
     export AMPLFI_HL_WEIGHTS=
