@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -126,7 +125,7 @@ class Searcher:
         # of detecting an event between frames
         self.detecting = False
 
-        self.last_detection_time = time.time() - self.refractory_period
+        self.last_detection_time = 0
 
         # calculate the detection statistic threshold
         # corresponding to the requested FAR threshold
@@ -135,8 +134,8 @@ class Searcher:
         mask = background.detection_statistic >= self.threshold
         self.background = background[mask]
 
-    def check_refractory(self, value):
-        time_since_last = time.time() - self.last_detection_time
+    def check_refractory(self, timestamp, value):
+        time_since_last = timestamp - self.last_detection_time
         if time_since_last < self.refractory_period:
             logging.warning(
                 "Detected event with detection statistic {:0.3f} "
@@ -147,10 +146,10 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
-        if self.check_refractory(value):
-            return None
-
         timestamp = t0 + idx / self.inference_sampling_rate
+
+        if self.check_refractory(timestamp, value):
+            return None
 
         logging.debug("Computing FAR")
         far = self.background.far(value)
@@ -162,7 +161,7 @@ class Searcher:
             "with FAR {:0.3e} Hz".format(timestamp, far)
         )
 
-        self.last_detection_time = time.time()
+        self.last_detection_time = timestamp
         event = Event(
             gpstime=timestamp,
             detection_statistic=value,
