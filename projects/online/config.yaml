@@ -59,11 +59,12 @@ kernel_length: 1.5
 inference_sampling_rate: 512
 inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]
 psd_length: 64
-aframe_right_pad: -0.55
+aframe_right_pad: 0
 fduration: 1
-integration_window_length: 1
-amplfi_kernel_length: 4
-event_position: 3
+amplfi_duration: 2
+integration_window_length: 1.5
+amplfi_kernel_length: 3
+event_position: 2.5
 fftlength: null
 highpass: 32
 lowpass: null

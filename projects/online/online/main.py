@@ -294,6 +294,7 @@ def main(
     amplfi_kernel_length: float,
     event_position: float,
     fduration: float,
+    amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
     data_source: str = "frames",
@@ -311,7 +312,7 @@ def main(
     samples_per_event: int = 20000,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
-    auth_refresh: int = 1000,
+    auth_refresh: int = 1200,
     nside: int = 32,
     device: str = "cpu",
 ):
@@ -357,7 +358,9 @@ def main(
             Event position (in seconds) from the left edge
             of the analysis window used for parameter estimation
         fduration:
-            Length of whitening filter in seconds
+            Length of whitening filter in seconds for aframe model
+        amplfi_fduration:
+            Length of whitening filter in seconds for amplfi model
         integration_window_length:
             Length of output integration window in seconds
         astro_event_rate:
@@ -455,7 +458,7 @@ def main(
     subprocesses = []
 
     # subprocess for re-authenticating
-    args = (error_queue, "authenticate", auth_refresh)
+    args = (error_queue, "authenticate", auth_refresh, True)
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,
@@ -564,7 +567,7 @@ def main(
         ifos=ifos,
         sample_rate=sample_rate,
         buffer_length=input_buffer_length,
-        fduration=fduration,
+        fduration=amplfi_fduration,
         amplfi_kernel_length=amplfi_kernel_length,
         event_position=event_position,
         device="cpu",
@@ -604,7 +607,7 @@ def main(
         average="median",
     ).to(device)
     amplfi_whitener = Whiten(
-        fduration=fduration,
+        fduration=amplfi_fduration,
         sample_rate=sample_rate,
         highpass=amplfi_highpass,
         lowpass=lowpass,
