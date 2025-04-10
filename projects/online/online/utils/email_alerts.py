@@ -96,7 +96,7 @@ def send_init_email(recipients: list[str], outdir):
     body = f"""
     Aframe online deployment has been initialized at {date} UTC
 
-    The run directory is {outdir}
+    The run output directory is {outdir}
     """
 
     message.attach(MIMEText(body, "plain"))

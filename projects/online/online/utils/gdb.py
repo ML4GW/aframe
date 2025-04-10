@@ -12,6 +12,7 @@ from ligo.skymap.tool.ligo_skymap_plot_volume import (
     main as ligo_skymap_plot_volume,
 )
 from online.utils.searcher import Event
+import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
@@ -81,9 +82,6 @@ class GraceDb(_GraceDb):
         self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
         logging.debug("Skymap submitted")
 
-        posterior_fname = event_dir / "posterior_samples.dat"
-        result.save_posterior_samples(posterior_fname)
-
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
             parameters=["chirp_mass", "mass_ratio", "distance"],
@@ -121,11 +119,12 @@ class GraceDb(_GraceDb):
             str(event_dir),
             "--maxpts",
             str(10000),
-            "--instruments",
-            "|".join(ifos),
             "--fitsoutname",
             "ligo.skymap.fits",
+            "--instruments",
         ]
+
+        args.extend(ifos)
 
         # TODO: ligo-skymap-from-samples doesnt clean up
         # process pool on purpose so that overhead from
@@ -144,6 +143,8 @@ class GraceDb(_GraceDb):
         )
 
     def submit_skymap_plots(self, graceid: int, event_dir: Path):
+        plt.switch_backend("agg")
+
         event_dir = self.write_dir / event_dir
         amplfi_fname = str(event_dir / "amplfi.mollweide.png")
         ligo_skymap_fname = str(event_dir / "ligo.skymap.mollweide.png")
@@ -159,7 +160,7 @@ class GraceDb(_GraceDb):
                 amplfi_fname,
             ]
         )
-
+        plt.close()
         ligo_skymap_plot(
             [
                 str(event_dir / "ligo.skymap.fits"),
@@ -171,7 +172,7 @@ class GraceDb(_GraceDb):
                 ligo_skymap_fname,
             ]
         )
-
+        plt.close()
         ligo_skymap_plot_volume(
             [
                 str(event_dir / "ligo.skymap.fits"),
@@ -181,6 +182,7 @@ class GraceDb(_GraceDb):
             ]
         )
 
+        plt.close()
         self.write_log(
             graceid,
             "Molleweide projection of amplfi.fits",
