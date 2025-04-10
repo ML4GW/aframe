@@ -26,10 +26,10 @@ def amplfi_subprocess(
     email_far_threshold: float = 1e-6,
     nside: int = 32,
 ):
-    gdb = gracedb_factory(server, outdir, reload_cred=True, reload_buffer=600)
     logger.info("amplfi subprocess initialized")
     while True:
         arg = amplfi_queue.get()
+        gdb = gracedb_factory(server, outdir)
         if isinstance(arg[0], Event):
             event, amplfi_ifos = arg
             descaled_samples = torch.reshape(
