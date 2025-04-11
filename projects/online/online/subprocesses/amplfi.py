@@ -62,6 +62,9 @@ def amplfi_subprocess(
             gdb.submit_ligo_skymap_from_samples(
                 result, graceid, event.event_dir, amplfi_ifos
             )
+
+            logger.info("Submitting ligo.skymap mollweide plots")
+            gdb.submit_skymap_plots(graceid, event.event_dir)
             logger.info("Submitted all PE")
         else:
             graceid = arg
