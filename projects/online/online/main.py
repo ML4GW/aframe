@@ -1,9 +1,10 @@
 import atexit
+import numpy as np
 import logging
 import signal
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING
+from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING, Literal
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
@@ -15,6 +16,7 @@ from torch.multiprocessing import Array, Process, Queue
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
 from online.utils.dataloading import data_iterator
+from online.utils.gdb import gracedb_factory
 from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
@@ -28,11 +30,15 @@ from online.subprocesses import (
     cleanup_subprocesses,
     signal_handler,
 )
+from online.subprocesses.authenticate import authenticate
 
 if TYPE_CHECKING:
     from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
+# 3 hours; not sure where this is documented
+SCITOKEN_LIFETIME = 10800
+
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
@@ -83,6 +89,55 @@ def get_time_offset(
     return time_offset
 
 
+def process_event(
+    event_queue,
+    amplfi_queue,
+    event,
+    ifos_to_model,
+    ifos,
+    input_buffer,
+    output_buffer,
+    samples_per_event,
+    spectral_density,
+    amplfi_whitener,
+    psd_length,
+    shared_samples,
+    outdir,
+    device,
+):
+    logging.info("Putting event in event queue")
+    event_queue.put(event)
+
+    logging.info(f"Using {','.join(ifos)} AMPLFI model")
+    amplfi, scaler = ifos_to_model[tuple(ifos)]
+
+    amplfi_psd_strain, amplfi_strain = input_buffer.get_amplfi_data(
+        event.gpstime, ifos, psd_length
+    )
+    descaled_samples, whitened, asds, freqs = run_amplfi(
+        amplfi_strain,
+        amplfi_psd_strain,
+        samples_per_event=samples_per_event,
+        spectral_density=spectral_density,
+        amplfi_whitener=amplfi_whitener,
+        amplfi=amplfi,
+        std_scaler=scaler,
+        device=device,
+    )
+    for i, sample in enumerate(descaled_samples.flatten()):
+        shared_samples[i] = sample
+    amplfi_queue.put((event, ifos))
+
+    # save nn output, amplfi psds, and amplfi whitened strain
+    buffer_outdir = outdir / "events" / event.event_dir
+    logging.info(f"Writing output buffer to {buffer_outdir}")
+    output_buffer.write(buffer_outdir / "output.hdf5")
+
+    asd = torch.cat((freqs[None][None].cpu(), asds.cpu()), dim=1).numpy()
+    np.save(buffer_outdir / "asd.npy", asd)
+    np.save(buffer_outdir / "amplfi_whitened.npy", whitened.cpu())
+
+
 @torch.no_grad()
 def search(
     whitener: BatchWhitener,
@@ -94,11 +149,11 @@ def search(
     input_buffer: InputBuffer,
     output_buffer: OutputBuffer,
     aframe: Architecture,
-    amplfi_hl: FlowArchitecture,
-    scaler_hl: ChannelWiseScaler,
-    amplfi_hlv: FlowArchitecture,
-    scaler_hlv: ChannelWiseScaler,
+    ifos_to_model: dict[
+        tuple[str, ...], tuple[FlowArchitecture, ChannelWiseScaler]
+    ],
     spectral_density: SpectralDensity,
+    amplfi_psd_length: float,
     amplfi_whitener: Whiten,
     samples_per_event: int,
     shared_samples: Array,
@@ -145,38 +200,28 @@ def search(
                     integrated[-1], t0 - update_size, len(integrated) - 1
                 )
                 if event is not None:
-                    # maybe process event found in the previous frame
-                    logging.info("Putting event in event queue")
-                    event_queue.put(event)
-                    logging.info("Running AMPLFI")
+                    # if virgo is available use it for amplfi
                     if all(virgo_ready) and len(ready) == 3:
-                        logging.info("Using HLV AMPLFI model")
-                        amplfi = amplfi_hlv
-                        scaler = scaler_hlv
                         amplfi_ifos = ["H1", "L1", "V1"]
                     else:
-                        logging.info("Using HL AMPLFI model")
-                        amplfi = amplfi_hl
-                        scaler = scaler_hl
                         amplfi_ifos = ["H1", "L1"]
-                    descaled_samples = run_amplfi(
-                        event_time=event.gpstime,
-                        input_buffer=input_buffer,
-                        ifos=amplfi_ifos,
-                        samples_per_event=samples_per_event,
-                        spectral_density=spectral_density,
-                        amplfi_whitener=amplfi_whitener,
-                        amplfi=amplfi,
-                        std_scaler=scaler,
-                        device=device,
-                    )
-                    for i, sample in enumerate(descaled_samples.flatten()):
-                        shared_samples[i] = sample
-                    amplfi_queue.put((event, amplfi_ifos))
 
-                    buffer_outdir = outdir / "events" / event.event_dir
-                    logging.info(f"Writing output buffer to {buffer_outdir}")
-                    output_buffer.write(buffer_outdir / "output.hdf5")
+                    process_event(
+                        event_queue,
+                        amplfi_queue,
+                        event,
+                        ifos_to_model,
+                        amplfi_ifos,
+                        input_buffer,
+                        output_buffer,
+                        samples_per_event,
+                        spectral_density,
+                        amplfi_whitener,
+                        amplfi_psd_length,
+                        shared_samples,
+                        outdir,
+                        device,
+                    )
 
             # check if this is because the frame stream stopped
             # being analysis ready, in which case perform updates
@@ -194,6 +239,7 @@ def search(
                     "resetting states".format(t0)
                 )
 
+                state = snapshotter.reset()
                 input_buffer.reset()
                 output_buffer.reset()
 
@@ -238,37 +284,26 @@ def search(
 
         # if we found an event, process it!
         if event is not None:
-            logging.info("Putting event in event queue")
-            event_queue.put(event)
-            logging.info("Running AMPLFI")
             if all(virgo_ready) and len(ready) == 3:
-                logging.info("Using HLV AMPLFI model")
-                amplfi = amplfi_hlv
-                scaler = scaler_hlv
                 amplfi_ifos = ["H1", "L1", "V1"]
             else:
-                logging.info("Using HL AMPLFI model")
-                amplfi = amplfi_hl
-                scaler = scaler_hl
                 amplfi_ifos = ["H1", "L1"]
-            descaled_samples = run_amplfi(
-                event_time=event.gpstime,
-                input_buffer=input_buffer,
-                ifos=amplfi_ifos,
-                samples_per_event=samples_per_event,
-                spectral_density=spectral_density,
-                amplfi_whitener=amplfi_whitener,
-                amplfi=amplfi,
-                std_scaler=scaler,
-                device=device,
+            process_event(
+                event_queue,
+                amplfi_queue,
+                event,
+                ifos_to_model,
+                amplfi_ifos,
+                input_buffer,
+                output_buffer,
+                samples_per_event,
+                spectral_density,
+                amplfi_whitener,
+                amplfi_psd_length,
+                shared_samples,
+                outdir,
+                device,
             )
-            for i, sample in enumerate(descaled_samples.flatten()):
-                shared_samples[i] = sample
-            amplfi_queue.put((event, amplfi_ifos))
-
-            buffer_outdir = outdir / "events" / event.event_dir
-            logging.info(f"Writing output buffer to {buffer_outdir}")
-            output_buffer.write(buffer_outdir / "output.hdf5")
 
 
 def main(
@@ -290,6 +325,7 @@ def main(
     kernel_length: float,
     inference_sampling_rate: float,
     psd_length: float,
+    amplfi_psd_length: float,
     aframe_right_pad: float,
     amplfi_kernel_length: float,
     event_position: float,
@@ -297,7 +333,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
-    data_source: str = "frames",
+    data_source: Literal["frames", "ngdd"] = "frames",
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -312,7 +348,7 @@ def main(
     samples_per_event: int = 20000,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
-    auth_refresh: int = 1200,
+    auth_refresh: int = 9600,
     nside: int = 32,
     device: str = "cpu",
     verbose: bool = False,
@@ -442,9 +478,27 @@ def main(
             )
 
     logging.info(f"{', '.join(ifos)} interferometer configuration set")
+
+    # auth once up front before initializing gracedb client
+    authenticate()
     logging.info(f"Uploading to GraceDb server: {server}")
 
+    # Initialize GraceDB client
+    reload_buffer = SCITOKEN_LIFETIME - auth_refresh
+    if reload_buffer < 0:
+        raise ValueError(
+            f"Auth refresh time {auth_refresh} is longer than "
+            f"scitoken lifetime {SCITOKEN_LIFETIME}"
+        )
+    gdb = gracedb_factory(
+        server,
+        outdir / "events",
+        reload_cred=True,
+        reload_buffer=reload_buffer,
+    )
+
     fftlength = fftlength or kernel_length + fduration
+    logging.info(f"Using fftlength {fftlength} for PSD estimation")
 
     # initialize multiprocessing Array that will be used
     # to pass amplfi samples between different subprocesses
@@ -475,7 +529,7 @@ def main(
         error_queue,
         "event creator",
         event_queue,
-        server,
+        gdb,
         outdir / "events",
         amplfi_queue,
         pastro_queue,
@@ -497,8 +551,7 @@ def main(
         error_queue,
         "amplfi",
         amplfi_queue,
-        server,
-        outdir / "events",
+        gdb,
         inference_params,
         amplfi_parameter_sampler,
         shared_samples,
@@ -526,7 +579,7 @@ def main(
         foreground_path,
         rejected_path,
         astro_event_rate,
-        server,
+        gdb,
         outdir,
     )
     pastro_process = Process(
@@ -603,6 +656,14 @@ def main(
     )
     amplfi_hlv = amplfi_hlv.to(device)
     scaler_hlv = scaler_hlv.to(device)
+
+    # TODO: can have something like this
+    # in the config that is a mapping
+    # from ifos to model weights path
+    ifos_to_model = {
+        ("H1", "L1", "V1"): (amplfi_hlv, scaler_hlv),
+        ("H1", "L1"): (amplfi_hl, scaler_hl),
+    }
 
     spectral_density = SpectralDensity(
         sample_rate=sample_rate,
@@ -685,11 +746,9 @@ def main(
         input_buffer=input_buffer,
         output_buffer=output_buffer,
         aframe=aframe,
-        amplfi_hl=amplfi_hl,
-        scaler_hl=scaler_hl,
-        amplfi_hlv=amplfi_hlv,
-        scaler_hlv=scaler_hlv,
+        ifos_to_model=ifos_to_model,
         spectral_density=spectral_density,
+        amplfi_psd_length=amplfi_psd_length,
         amplfi_whitener=amplfi_whitener,
         samples_per_event=samples_per_event,
         shared_samples=shared_samples,
