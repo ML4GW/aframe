@@ -70,7 +70,9 @@ class InputBuffer(torch.nn.Module):
         update_duration = update.shape[-1] / self.sample_rate
         self.t0 = t0 - (self.buffer_length - update_duration)
 
-    def get_amplfi_data(self, event_time: float, ifos: list[str]):
+    def get_amplfi_data(
+        self, event_time: float, ifos: list[str], psd_length: float
+    ):
         window_start = (
             event_time - self.t0 - self.event_position - self.fduration / 2
         )
@@ -80,9 +82,12 @@ class InputBuffer(torch.nn.Module):
             + (self.amplfi_kernel_length + self.fduration) * self.sample_rate
         )
 
+        psd_start = window_start - int(psd_length * self.sample_rate)
+
         # get indices in tensor corresponding to requested ifos
         indices = torch.tensor([self.ifos.index(ifo) for ifo in ifos])
-        psd_data = self.input_buffer[indices, :window_start]
+
+        psd_data = self.input_buffer[indices, psd_start:window_start]
         window = self.input_buffer[indices, window_start:window_end]
 
         return psd_data, window
