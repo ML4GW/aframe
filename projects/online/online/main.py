@@ -387,7 +387,11 @@ def main(
         inference_sampling_rate:
             Rate at which to sample the output of the Aframe model
         psd_length:
-            Length of PSD estimation window in seconds
+            Length of PSD estimation window in seconds for PSD
+            used to whiten aframe data
+        amplfi_psd_length:
+            Length of PSD estimation window in seconds for PSD
+            used to whiten amplfi data
         aframe_right_pad:
             Time offset for trigger positioning in seconds
         amplfi_kernel_length:
@@ -406,7 +410,11 @@ def main(
         fftlength:
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
-            High-pass filter frequency in Hz
+            High-pass filter frequency in Hz to apply to data
+            analyzed by aframe
+        amplfi_highpass:
+            High-pass filter frequency in Hz to apply to data
+            analyzed by amplfi
         lowpass:
             Low-pass filter frequency in Hz
         refractory_period:
