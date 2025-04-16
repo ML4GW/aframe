@@ -7,7 +7,8 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
-from scipy.signal import resample
+from scipy import signal
+from gwpy.signal import filter_design
 
 PATH_LIKE = Union[str, Path]
 GWF_SAMPLE_RATE = 16384
@@ -21,6 +22,21 @@ patterns = {
 groups = {k: f"(?P<{k}>{v})" for k, v in patterns.items()}
 pattern = "{prefix}-{start}-{duration}.{suffix}".format(**groups)
 fname_re = re.compile(pattern)
+
+
+# reproduce exact parameters of
+# gwpys TimeSeries.resample() method,
+# when downsampling by integer factor
+def build_resample_filter(factor: int):
+    n = 60
+    filt = signal.firwin(n + 1, 1.0 / factor, window="hamming")
+    _, filt = filter_design.parse_filter(filt)
+    b, a = filt
+    return b, a
+
+
+def resample(data: np.ndarray, factor: int, b: float, a: float):
+    return signal.filtfilt(b, a, data, axis=1)[:, :: int(factor)]
 
 
 def parse_frame_name(fname: PATH_LIKE) -> Tuple[str, int, int]:
@@ -117,6 +133,16 @@ def data_iterator(
     prefix, length, t0 = get_prefix(datadir / ifo_dir)
     middle = "_".join(prefix.split("_")[1:])
 
+    # build resampling filter
+    factor = GWF_SAMPLE_RATE / sample_rate
+    if not factor.is_integer():
+        raise ValueError(
+            f"Specified sample rate {sample_rate} must "
+            f"evenly divide the frame sample rate {GWF_SAMPLE_RATE}"
+        )
+    factor = int(factor)
+    b, a = build_resample_filter(factor)
+
     frame_buffer = np.zeros((len(ifos), 0))
     # slice corresponds to middle second of
     # a 3 second buffer; the middle second is
@@ -202,16 +228,14 @@ def data_iterator(
             # Need at least 3 seconds to be able to crop out edge effects
             # from resampling and just yield the middle second
             if dur >= 3:
-                x = resample(
-                    frame_buffer, int(sample_rate * dur), axis=1, window="hann"
-                )
+                x = resample(frame_buffer, factor, b, a)
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
                 # yield last_ready, which corresponds to
                 # the data quality bits of the previous second
                 # of data, i.e. the middle second of the
                 # buffer that is being yielded as well
-                yield torch.Tensor(x).double(), t0 - 1, last_ready
+                yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
 
             last_ready = ready
             t0 += length
