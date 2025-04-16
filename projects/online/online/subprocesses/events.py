@@ -1,9 +1,12 @@
 from queue import Queue
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .utils import subprocess_wrapper
-from online.utils.gdb import GdbServer, gracedb_factory
+
+if TYPE_CHECKING:
+    from ligo.gracedb.rest import GraceDb
 
 logger = logging.getLogger("event-creation-subprocess")
 
@@ -11,7 +14,7 @@ logger = logging.getLogger("event-creation-subprocess")
 @subprocess_wrapper
 def event_creation_subprocess(
     event_queue: Queue,
-    server: GdbServer,
+    gdb: "GraceDb",
     outdir: Path,
     amplfi_queue: Queue,
     pastro_queue: Queue,
@@ -20,7 +23,6 @@ def event_creation_subprocess(
 
     while True:
         event = event_queue.get()
-        gdb = gracedb_factory(server, outdir)
         logger.debug("Putting event in pastro queue")
         pastro_queue.put(event)
 
@@ -30,7 +32,7 @@ def event_creation_subprocess(
         response = gdb.submit(event)
         # Get the event's graceid for submitting
         # further data products
-        if server == "local":
+        if gdb.server == "local":
             # The local gracedb client just returns the filename
             graceid = response
         else:
