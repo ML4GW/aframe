@@ -1,9 +1,8 @@
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from torch.multiprocessing import Queue
-
-from online.utils.gdb import GdbServer, gracedb_factory
 
 from .utils import subprocess_wrapper
 
@@ -14,6 +13,9 @@ from ledger.injections import InjectionParameterSet
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
 from p_astro.p_astro import Pastro
+
+if TYPE_CHECKING:
+    from ligo.gracedb.rest import GraceDb
 
 logger = logging.getLogger("pastro-process")
 
@@ -77,7 +79,7 @@ def pastro_subprocess(
     foreground_path,
     rejected_path,
     astro_event_rate,
-    server: GdbServer,
+    gdb: "GraceDb",
     outdir: Path,
 ):
     logger.info("pastro subprocess initialized")
@@ -90,7 +92,6 @@ def pastro_subprocess(
     )
     while True:
         event = pastro_queue.get()
-        gdb = gracedb_factory(server, outdir / "events")
         logger.info("Calculating p_astro")
         pastro = pastro_model(event.detection_statistic)
         graceid = pastro_queue.get()
