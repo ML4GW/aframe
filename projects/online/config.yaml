@@ -28,7 +28,6 @@ amplfi_hlv_architecture:
     hidden_features: [512, 512, 512, 512, 512]
     transforms: 20
     randperm: true
-    context_dim: 8
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
