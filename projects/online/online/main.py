@@ -90,20 +90,22 @@ def get_time_offset(
 
 
 def process_event(
-    event_queue,
-    amplfi_queue,
-    event,
-    ifos_to_model,
-    ifos,
-    input_buffer,
-    output_buffer,
-    samples_per_event,
-    spectral_density,
-    amplfi_whitener,
-    psd_length,
-    shared_samples,
-    outdir,
-    device,
+    event_queue: Queue,
+    amplfi_queue: Queue,
+    event: Queue,
+    ifos_to_model: dict[
+        tuple[str, ...], tuple[FlowArchitecture, ChannelWiseScaler]
+    ],
+    ifos: list[str],
+    input_buffer: InputBuffer,
+    output_buffer: OutputBuffer,
+    samples_per_event: int,
+    spectral_density: SpectralDensity,
+    amplfi_whitener: Whiten,
+    psd_length: float,
+    shared_samples: Array,
+    outdir: Path,
+    device: str,
 ):
     logging.info("Putting event in event queue")
     event_queue.put(event)
