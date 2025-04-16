@@ -16,7 +16,6 @@ torch.set_num_threads(1)
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
-    from online.utils.buffer import InputBuffer
 
 
 def filter_samples(samples, parameter_sampler, inference_params):
@@ -45,9 +44,8 @@ def filter_samples(samples, parameter_sampler, inference_params):
 
 
 def run_amplfi(
-    event_time: float,
-    input_buffer: "InputBuffer",
-    ifos: list[str],
+    amplfi_strain,
+    amplfi_psd_strain,
     samples_per_event: int,
     spectral_density: "SpectralDensity",
     amplfi_whitener: "Whiten",
@@ -56,26 +54,30 @@ def run_amplfi(
     device: torch.device,
 ):
     # get pe data from the buffer and whiten it
-    psd_strain, pe_strain = input_buffer.get_amplfi_data(event_time, ifos)
-    psd_strain = psd_strain.to(device)
-    pe_strain = pe_strain.to(device)[None]
-    pe_psd = spectral_density(psd_strain)[None]
-    whitened = amplfi_whitener(pe_strain, pe_psd)
+    amplfi_psd_strain = amplfi_psd_strain.to(device)
+    amplfi_strain = amplfi_strain.to(device)[None]
+    psd = spectral_density(amplfi_psd_strain)[None]
+    whitened = amplfi_whitener(amplfi_strain, psd)
 
     # construct and bandpass asd
     freqs = torch.fft.rfftfreq(
         whitened.shape[-1], d=1 / amplfi_whitener.sample_rate
     )
     num_freqs = len(freqs)
-    pe_psd = torch.nn.functional.interpolate(
-        pe_psd, size=(num_freqs,), mode="linear"
+    psd = torch.nn.functional.interpolate(
+        psd, size=(num_freqs,), mode="linear"
     )
 
     mask = freqs > amplfi_whitener.highpass
     if amplfi_whitener.lowpass is not None:
         mask *= freqs < amplfi_whitener.lowpass
-    pe_psd = pe_psd[:, :, mask]
-    asds = torch.sqrt(pe_psd)
+
+    freqs = freqs[mask]
+    psd = psd[:, :, mask]
+    asds = torch.sqrt(psd)
+
+    # copy asds for plotting later
+    out_asds = asds.clone().detach()
 
     # sample from the model and descale back to physical units
     logging.info("Starting sampling")
@@ -87,7 +89,7 @@ def run_amplfi(
     descaled_samples = descaled_samples.transpose(1, 0)
     logging.info("Finished AMPLFI")
 
-    return descaled_samples
+    return descaled_samples, whitened, out_asds, freqs
 
 
 def postprocess_samples(
