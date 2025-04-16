@@ -1,15 +1,16 @@
 import logging
-from pathlib import Path
 import torch
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from amplfi.train.data.utils.utils import ParameterSampler
 from torch.multiprocessing import Array, Queue
 from online.utils.searcher import Event
-from online.utils.gdb import GdbServer, gracedb_factory
 from online.utils.pe import postprocess_samples
 from astropy import io
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
+
+if TYPE_CHECKING:
+    from ligo.gracedb.rest import GraceDb
 
 logger = logging.getLogger("amplfi-subprocess")
 
@@ -17,8 +18,7 @@ logger = logging.getLogger("amplfi-subprocess")
 @subprocess_wrapper
 def amplfi_subprocess(
     amplfi_queue: Queue,
-    server: GdbServer,
-    outdir: Path,
+    gdb: "GraceDb",
     inference_params: list[str],
     amplfi_parameter_sampler: ParameterSampler,
     shared_samples: Array,
@@ -29,7 +29,6 @@ def amplfi_subprocess(
     logger.info("amplfi subprocess initialized")
     while True:
         arg = amplfi_queue.get()
-        gdb = gracedb_factory(server, outdir)
         if isinstance(arg[0], Event):
             event, amplfi_ifos = arg
             descaled_samples = torch.reshape(
@@ -51,7 +50,9 @@ def amplfi_subprocess(
 
             if emails is not None and event.far < email_far_threshold:
                 logger.info("Sending detection email")
-                send_detection_email(emails, result, event, graceid, server)
+                send_detection_email(
+                    emails, result, event, graceid, gdb.server
+                )
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
@@ -82,7 +83,9 @@ def amplfi_subprocess(
 
             if emails is not None and event.far < email_far_threshold:
                 logger.info("Sending detection email")
-                send_detection_email(emails, result, event, graceid, server)
+                send_detection_email(
+                    emails, result, event, graceid, gdb.server
+                )
 
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(nside, use_distance=False)
