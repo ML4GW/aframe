@@ -12,7 +12,6 @@ from online.main import main
 def build_parser():
     # use omegaconf to suppor env var interpolation
     parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
-    parser.add_argument("--verbose", type=bool, default=False)
     parser.add_function_arguments(main)
     parser.add_argument("--config", action="config")
 
