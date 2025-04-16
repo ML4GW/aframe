@@ -8,9 +8,6 @@ from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
-from ligo.skymap.tool.ligo_skymap_plot_volume import (
-    main as ligo_skymap_plot_volume,
-)
 from online.utils.searcher import Event
 import matplotlib.pyplot as plt
 
@@ -31,8 +28,9 @@ class GraceDb(_GraceDb):
             upon submission
     """
 
-    def __init__(self, *args, write_dir: Path, **kwargs):
+    def __init__(self, *args, server: GdbServer, write_dir: Path, **kwargs):
         super().__init__(*args, **kwargs, use_auth="scitoken")
+        self.server = server
         self.write_dir = write_dir
 
     def submit(self, event: Event):
@@ -173,16 +171,15 @@ class GraceDb(_GraceDb):
             ]
         )
         plt.close()
-        ligo_skymap_plot_volume(
-            [
-                str(event_dir / "ligo.skymap.fits"),
-                "--annotate",
-                "-o",
-                str(event_dir / "ligo.skymap.volume.png"),
-            ]
-        )
-
-        plt.close()
+        # ligo_skymap_plot_volume(
+        #    [
+        #        str(event_dir / "ligo.skymap.fits"),
+        #        "--annotate",
+        #        "-o",
+        #        str(event_dir / "ligo.skymap.volume.png"),
+        #    ]
+        # )
+        # plt.close()
         self.write_log(
             graceid,
             "Molleweide projection of amplfi.fits",
@@ -197,12 +194,12 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
         )
 
-        self.write_log(
-            graceid,
-            "Volume rendering of ligo.skymap.fits",
-            filename=str(event_dir / "ligo.skymap.volume.png"),
-            tag_name="sky_loc",
-        )
+        # self.write_log(
+        #    graceid,
+        #    "Volume rendering of ligo.skymap.fits",
+        #    filename=str(event_dir / "ligo.skymap.volume.png"),
+        #    tag_name="sky_loc",
+        # )
 
     def submit_pastro(self, pastro: float, graceid: int, event_dir: Path):
         event_dir = self.write_dir / event_dir
@@ -239,12 +236,14 @@ class LocalGraceDb(GraceDb):
 
 def gracedb_factory(server: GdbServer, write_dir: Path, **kwargs) -> GraceDb:
     if server == "local":
-        return LocalGraceDb(write_dir=write_dir)
+        return LocalGraceDb(server=server, write_dir=write_dir)
 
     if server in ["playground", "test"]:
-        server = f"https://gracedb-{server}.ligo.org/api/"
+        service_url = f"https://gracedb-{server}.ligo.org/api/"
     elif server == "production":
-        server = "https://gracedb.ligo.org/api/"
+        service_url = "https://gracedb.ligo.org/api/"
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
-    return GraceDb(service_url=server, write_dir=write_dir, **kwargs)
+    return GraceDb(
+        service_url=service_url, server=server, write_dir=write_dir, **kwargs
+    )
