@@ -1,23 +1,18 @@
 import json
 import logging
-import os
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
-
+from typing import TYPE_CHECKING, List, Literal
 import bilby
-import healpy as hp
-import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-from ligo.skymap.tool import ligo_skymap_from_samples
-
+from ..subprocesses.utils import run_subprocess_with_logging
+from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from online.utils.searcher import Event
+import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
-    import numpy as np
-    from astropy import table
+    from astropy.io.fits import BinTableHDU
 
 GdbServer = Literal["local", "playground", "test", "production"]
 
@@ -33,13 +28,14 @@ class GraceDb(_GraceDb):
             upon submission
     """
 
-    def __init__(self, *args, write_dir: Path, **kwargs):
+    def __init__(self, *args, server: GdbServer, write_dir: Path, **kwargs):
         super().__init__(*args, **kwargs, use_auth="scitoken")
+        self.server = server
         self.write_dir = write_dir
 
     def submit(self, event: Event):
         logging.info(f"Submitting trigger to file {event.filename}")
-        event_dir = self.write_dir / f"event_{int(event.gpstime)}"
+        event_dir = self.write_dir / event.event_dir
         filename = event_dir / event.filename
         logging.info("Creating event in GraceDB")
         response = self.create_event(
@@ -48,7 +44,8 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
         )
-        logging.info("Event created")
+
+        logging.debug("Event created")
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
@@ -70,53 +67,39 @@ class GraceDb(_GraceDb):
     def submit_low_latency_pe(
         self,
         result: bilby.core.result.Result,
-        mollview_map: "np.ndarray",
-        skymap: "table.Table",
+        skymap: "BinTableHDU",
         graceid: int,
-        event_time: float,
+        event_dir: Path,
+        ifos: List[str],
     ):
-        event_dir = self.write_dir / f"event_{int(event_time)}"
+        event_dir = self.write_dir / event_dir
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
-        logging.info("Submitting skymap to GraceDB")
-        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
-        logging.info("Skymap submitted")
 
-        posterior_fname = event_dir / "posterior_samples.dat"
-        result.save_posterior_samples(posterior_fname)
+        logging.debug("Submitting skymap to GraceDB")
+        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+        logging.debug("Skymap submitted")
+
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
             parameters=["chirp_mass", "mass_ratio", "distance"],
             filename=corner_fname,
         )
-        logging.info("Submitting corner plot to GraceDB")
+
+        logging.debug("Submitting corner plot to GraceDB")
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
-        logging.info("Corner plot submitted")
-
-        mollview_fname = event_dir / "mollview_plot.png"
-        fig = plt.figure()
-        title = (f"{event_time:.3} sky map",)
-        hp.mollview(mollview_map, fig=fig, title=title, hold=True)
-        plt.close()
-        fig.savefig(mollview_fname, dpi=300)
-        logging.info("Submitting Mollview plot to GraceDB")
-        self.write_log(
-            graceid,
-            "Mollview projection",
-            filename=mollview_fname,
-            tag_name="sky_loc",
-        )
-        logging.info("Mollview plot submitted")
+        logging.debug("Corner plot submitted")
 
     def submit_ligo_skymap_from_samples(
         self,
         result: bilby.core.result.Result,
         graceid: int,
-        event_time: float,
+        event_dir: Path,
+        ifos: List[str],
     ):
-        event_dir = self.write_dir / f"event_{int(event_time)}"
+        event_dir = self.write_dir / event_dir
         filename = event_dir / "posterior_samples.dat"
         result.save_posterior_samples(filename=filename)
 
@@ -125,19 +108,101 @@ class GraceDb(_GraceDb):
         # need to be set to take advantage of thread parallelism:
         # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
         # we might need to submit this via condor
-        args = [str(filename), "-j", 8, "-o", str(event_dir)]
+        args = [
+            "ligo-skymap-from-samples",
+            str(filename),
+            "-j",
+            str(64),
+            "-o",
+            str(event_dir),
+            "--maxpts",
+            str(10000),
+            "--fitsoutname",
+            "ligo.skymap.fits",
+            "--instruments",
+        ]
 
-        ligo_skymap_from_samples.main(args)
+        args.extend(ifos)
+
+        # TODO: ligo-skymap-from-samples doesnt clean up
+        # process pool on purpose so that overhead from
+        # initializing pool can be eliminated. Once
+        # we get our own resources we should take
+        # advantage of this
+
+        # run subprocess, passing any output to python logger
+        result = run_subprocess_with_logging(args, log_stderr_on_success=True)
+
         self.write_log(
             graceid,
             "ligo-skymap-from-samples",
-            filename=str(event_dir / "skymap.fits"),
+            filename=str(event_dir / "ligo.skymap.fits"),
             tag_name="sky_loc",
         )
-        logging.info("Ligo-skymap-from-samples skymap submitted")
 
-    def submit_pastro(self, pastro: float, graceid: int, event_time: float):
-        event_dir = self.write_dir / f"event_{int(event_time)}"
+    def submit_skymap_plots(self, graceid: int, event_dir: Path):
+        plt.switch_backend("agg")
+
+        event_dir = self.write_dir / event_dir
+        amplfi_fname = str(event_dir / "amplfi.mollweide.png")
+        ligo_skymap_fname = str(event_dir / "ligo.skymap.mollweide.png")
+
+        ligo_skymap_plot(
+            [
+                str(event_dir / "amplfi.fits"),
+                "--annotate",
+                "--contour",
+                "50",
+                "90",
+                "-o",
+                amplfi_fname,
+            ]
+        )
+        plt.close()
+        ligo_skymap_plot(
+            [
+                str(event_dir / "ligo.skymap.fits"),
+                "--annotate",
+                "--contour",
+                "50",
+                "90",
+                "-o",
+                ligo_skymap_fname,
+            ]
+        )
+        plt.close()
+        # ligo_skymap_plot_volume(
+        #    [
+        #        str(event_dir / "ligo.skymap.fits"),
+        #        "--annotate",
+        #        "-o",
+        #        str(event_dir / "ligo.skymap.volume.png"),
+        #    ]
+        # )
+        # plt.close()
+        self.write_log(
+            graceid,
+            "Molleweide projection of amplfi.fits",
+            filename=amplfi_fname,
+            tag_name="sky_loc",
+        )
+
+        self.write_log(
+            graceid,
+            "Molleweide projection of ligo.skymap.fits",
+            filename=ligo_skymap_fname,
+            tag_name="sky_loc",
+        )
+
+        # self.write_log(
+        #    graceid,
+        #    "Volume rendering of ligo.skymap.fits",
+        #    filename=str(event_dir / "ligo.skymap.volume.png"),
+        #    tag_name="sky_loc",
+        # )
+
+    def submit_pastro(self, pastro: float, graceid: int, event_dir: Path):
+        event_dir = self.write_dir / event_dir
         fname = event_dir / "aframe.pastro.json"
         pastro = {
             "BBH": pastro,
@@ -169,44 +234,16 @@ class LocalGraceDb(GraceDb):
         pass
 
 
-def gracedb_factory(server: GdbServer, write_dir: Path) -> GraceDb:
+def gracedb_factory(server: GdbServer, write_dir: Path, **kwargs) -> GraceDb:
     if server == "local":
-        return LocalGraceDb(write_dir=write_dir)
+        return LocalGraceDb(server=server, write_dir=write_dir)
 
     if server in ["playground", "test"]:
-        server = f"https://gracedb-{server}.ligo.org/api/"
+        service_url = f"https://gracedb-{server}.ligo.org/api/"
     elif server == "production":
-        server = "https://gracedb.ligo.org/api/"
+        service_url = "https://gracedb.ligo.org/api/"
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
-    return GraceDb(service_url=server, write_dir=write_dir)
-
-
-def authenticate():
-    # TODO: don't hardcode keytab locations
-    subprocess.run(
-        [
-            "kinit",
-            "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
-            "-k",
-            "-t",
-            os.path.expanduser(
-                "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
-            ),
-        ]
-    )
-    subprocess.run(
-        [
-            "htgettoken",
-            "-v",
-            "-a",
-            "vault.ligo.org",
-            "-i",
-            "igwn",
-            "-r",
-            "aframe-1-scitoken",
-            "--scopes=gracedb.read",
-            "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
-            "--nooidc",
-        ]
+    return GraceDb(
+        service_url=service_url, server=server, write_dir=write_dir, **kwargs
     )

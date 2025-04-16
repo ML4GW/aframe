@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,6 +71,10 @@ class Event:
     def filename(self):
         return f"event_{int(self.gpstime)}.json"
 
+    @property
+    def event_dir(self):
+        return Path(f"event_{int(self.gpstime)}")
+
     def write(self, directory: Path):
         """
         Write event information to a local directory
@@ -109,8 +112,10 @@ class Searcher:
     ) -> None:
         self.inference_sampling_rate = inference_sampling_rate
         self.refractory_period = refractory_period
-        self.ifos = ifos
-        self.channels = channels
+        # Take only the first two ifos/channels for H1/L1
+        # Hard-coding this until there's an HLV Aframe model
+        self.ifos = ifos[:2]
+        self.channels = channels[:2]
         self.datadir = datadir
         self.ifo_suffix = ifo_suffix
 
@@ -120,7 +125,7 @@ class Searcher:
         # of detecting an event between frames
         self.detecting = False
 
-        self.last_detection_time = time.time() - self.refractory_period
+        self.last_detection_time = 0
 
         # calculate the detection statistic threshold
         # corresponding to the requested FAR threshold
@@ -129,8 +134,8 @@ class Searcher:
         mask = background.detection_statistic >= self.threshold
         self.background = background[mask]
 
-    def check_refractory(self, value):
-        time_since_last = time.time() - self.last_detection_time
+    def check_refractory(self, timestamp, value):
+        time_since_last = timestamp - self.last_detection_time
         if time_since_last < self.refractory_period:
             logging.warning(
                 "Detected event with detection statistic {:0.3f} "
@@ -141,21 +146,22 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
-        if self.check_refractory(value):
+        timestamp = t0 + idx / self.inference_sampling_rate
+
+        if self.check_refractory(timestamp, value):
             return None
 
-        timestamp = t0 + idx / self.inference_sampling_rate
-        logging.info("Computing FAR")
+        logging.debug("Computing FAR")
         far = self.background.far(value)
         far /= SECONDS_PER_YEAR
-        logging.info("FAR computed")
+        logging.debug("FAR computed")
 
         logging.info(
             "Event coalescence time found to be {:0.3f} "
             "with FAR {:0.3e} Hz".format(timestamp, far)
         )
 
-        self.last_detection_time = time.time()
+        self.last_detection_time = timestamp
         event = Event(
             gpstime=timestamp,
             detection_statistic=value,
@@ -165,6 +171,9 @@ class Searcher:
             datadir=self.datadir,
             ifo_suffix=self.ifo_suffix,
         )
+        # reset state to not detecting
+        # after we've detected an event
+        self.detecting = False
         return event
 
     def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
@@ -177,20 +186,11 @@ class Searcher:
         *first sample* of the integration window.
         """
 
-        # if we're already mid-detection, take as
-        # the event the max in the current window
         max_val = y.max()
-        if self.detecting:
-            idx = np.argmax(y)
-            self.detecting = False
-            return self.build_event(max_val, t0, idx)
-
-        # otherwise, check if the event is above threshold
+        # check if the event is above threshold
         if not max_val >= self.threshold:
             # if not, nothing to do here
             return None
-
-        logging.info(f"Detected event with detection statistic {max_val:0.3f}")
 
         # check if the integrated output is still
         # ramping as we get to the end of the frame
@@ -198,9 +198,16 @@ class Searcher:
         if idx < (len(y) - 1):
             # if not, assume the event is in this
             # frame and build an event around it
+            logging.info(
+                f"Detected event with detection statistic {max_val:0.3f}"
+            )
             return self.build_event(max_val, t0, idx)
         else:
             # otherwise, note that we're mid-event but
             # wait until the next frame to mark it
+            logging.info(
+                f"Event with detection statistic {max_val:0.3f} "
+                "found but still ramping, waiting for next frame"
+            )
             self.detecting = True
             return None

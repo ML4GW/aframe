@@ -5,11 +5,11 @@ foreground_path: ${oc.env:ONLINE_FOREGROUND_FILE}
 rejected_path: ${oc.env:ONLINE_REJECTED_FILE}
 aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_hl_architecture: 
-  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
+  class_path: amplfi.train.architectures.flows.NSF
   init_args:
-    hidden_features: 150
-    num_transforms: 80
-    num_blocks: 6
+    hidden_features: [512, 512, 512]
+    transforms: 20
+    randperm: true
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
@@ -22,29 +22,30 @@ amplfi_hl_architecture:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
-amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_architecture: 
-  class_path: amplfi.train.architectures.flows.InverseAutoregressiveFlow
+  class_path: amplfi.train.architectures.flows.NSF
   init_args:
-    hidden_features: 150
-    num_transforms: 80
-    num_blocks: 6
-    context_dim: 8
+    hidden_features: [512, 512, 512, 512, 512]
+    transforms: 20
+    randperm: true
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
         num_ifos: 3
-        time_context_dim: 12
-        freq_context_dim: 32
+        time_context_dim: 20
+        freq_context_dim: 48
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
             groups: 8
+amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
-ifos: ["H1", "L1"]
-channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN"]
+amplfi_parameter_sampler: 
+    class_path: online.utils.pe.parameter_sampler
+channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN", "V1:Hrec_hoft_16384Hz"]
+state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
 sample_rate: 2048
 astro_event_rate: 31
@@ -52,17 +53,22 @@ kernel_length: 1.5
 inference_sampling_rate: 512
 inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]
 psd_length: 64
-aframe_right_pad: -0.55
+amplfi_psd_length: 10
+aframe_right_pad: 0.0
 fduration: 1
-integration_window_length: 1
-amplfi_kernel_length: 4
-event_position: 3
+amplfi_fduration: 2
+integration_window_length: 1.5
+amplfi_kernel_length: 3
+event_position: 2.5
 fftlength: null
 highpass: 32
 lowpass: null
 refractory_period: 8
-far_threshold: 1 
+far_threshold: 1 # per day
+email_far_threshold: 0.00000001 # Hz
+emails: null
 server: "local"
+auth_refresh: 1200
 ifo_suffix: 
 input_buffer_length: 75
 output_buffer_length: 8

@@ -70,7 +70,9 @@ class InputBuffer(torch.nn.Module):
         update_duration = update.shape[-1] / self.sample_rate
         self.t0 = t0 - (self.buffer_length - update_duration)
 
-    def get_amplfi_data(self, event_time: float):
+    def get_amplfi_data(
+        self, event_time: float, ifos: list[str], psd_length: float
+    ):
         window_start = (
             event_time - self.t0 - self.event_position - self.fduration / 2
         )
@@ -80,8 +82,13 @@ class InputBuffer(torch.nn.Module):
             + (self.amplfi_kernel_length + self.fduration) * self.sample_rate
         )
 
-        psd_data = self.input_buffer[:, :window_start]
-        window = self.input_buffer[:, window_start:window_end]
+        psd_start = window_start - int(psd_length * self.sample_rate)
+
+        # get indices in tensor corresponding to requested ifos
+        indices = torch.tensor([self.ifos.index(ifo) for ifo in ifos])
+
+        psd_data = self.input_buffer[indices, psd_start:window_start]
+        window = self.input_buffer[indices, window_start:window_end]
 
         return psd_data, window
 
@@ -127,12 +134,11 @@ class OutputBuffer(torch.nn.Module):
             (self.buffer_size,), device=self.device, requires_grad=False
         )
 
-    def write(self, write_path, event_time):
+    def write(self, path):
         start = self.t0
         stop = self.t0 + self.buffer_length
         time = np.linspace(start, stop, self.buffer_size)
-        with h5py.File(write_path, "w") as f:
-            f.attrs.create("event_time", data=event_time)
+        with h5py.File(path, "w") as f:
             f.create_dataset("time", data=time)
             f.create_dataset("output", data=self.output_buffer.cpu())
             f.create_dataset(

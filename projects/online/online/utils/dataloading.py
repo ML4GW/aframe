@@ -7,7 +7,8 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
-from scipy.signal import resample
+from scipy import signal
+from gwpy.signal import filter_design
 
 PATH_LIKE = Union[str, Path]
 GWF_SAMPLE_RATE = 16384
@@ -21,6 +22,21 @@ patterns = {
 groups = {k: f"(?P<{k}>{v})" for k, v in patterns.items()}
 pattern = "{prefix}-{start}-{duration}.{suffix}".format(**groups)
 fname_re = re.compile(pattern)
+
+
+# reproduce exact parameters of
+# gwpys TimeSeries.resample() method,
+# when downsampling by integer factor
+def build_resample_filter(factor: int):
+    n = 60
+    filt = signal.firwin(n + 1, 1.0 / factor, window="hamming")
+    _, filt = filter_design.parse_filter(filt)
+    b, a = filt
+    return b, a
+
+
+def resample(data: np.ndarray, factor: int, b: float, a: float):
+    return signal.filtfilt(b, a, data, axis=1)[:, :: int(factor)]
 
 
 def parse_frame_name(fname: PATH_LIKE) -> Tuple[str, int, int]:
@@ -107,6 +123,7 @@ def data_iterator(
     ifos: List[str],
     sample_rate: float,
     ifo_suffix: str = None,
+    state_channels: Optional[dict[str, str]] = None,
     timeout: Optional[float] = None,
 ) -> torch.Tensor:
     if ifo_suffix is not None:
@@ -116,7 +133,21 @@ def data_iterator(
     prefix, length, t0 = get_prefix(datadir / ifo_dir)
     middle = "_".join(prefix.split("_")[1:])
 
+    # build resampling filter
+    factor = GWF_SAMPLE_RATE / sample_rate
+    if not factor.is_integer():
+        raise ValueError(
+            f"Specified sample rate {sample_rate} must "
+            f"evenly divide the frame sample rate {GWF_SAMPLE_RATE}"
+        )
+    factor = int(factor)
+    b, a = build_resample_filter(factor)
+
     frame_buffer = np.zeros((len(ifos), 0))
+    # slice corresponds to middle second of
+    # a 3 second buffer; the middle second is
+    # yielded at each step to mitigate resampling
+    # edge effects
     slc = slice(-int(2 * sample_rate), -int(sample_rate))
     last_ready = [True] * len(ifos)
     while True:
@@ -155,17 +186,30 @@ def data_iterator(
                 x = read_channel(fname, f"{channel}")
                 frames.append(x.value)
 
-                if ifo in ["H1", "L1"]:
-                    state_channel = f"{ifo}:GDS-CALIB_STATE_VECTOR"
-                else:
-                    state_channel = "V1:DQ_ANALYSIS_STATE_VECTOR"
-                state_vector = read_channel(fname, state_channel)
-                ifo_ready = ((state_vector.value & 3) == 3).all()
+                # if state channels were specified,
+                # check that the 3rd bit is on.
+                # If left as `None` set ifo_ready
+                # to True by default.
+                # TODO: parameterize bitmask
+                ifo_ready = True
+                if state_channels is not None:
+                    state_channel = state_channels[ifo]
+                    state_vector = read_channel(fname, state_channel)
+                    ifo_ready = ((state_vector.value & 3) == 3).all()
 
-                # if either ifo isn't ready, mark the whole thing
-                # as not ready
+                # some useful logging
+                # for when ifos enter and exit
+                # analyis ready mode
                 if not ifo_ready:
-                    logging.warning(f"IFO {ifo} not analysis ready")
+                    if last_ready[i]:
+                        logging.info(f"IFO {ifo} exiting analysis ready mode")
+                    else:
+                        logging.debug(f"IFO {ifo} not analysis ready")
+                else:
+                    if not last_ready[i]:
+                        logging.info(f"IFO {ifo} entering analysis ready mode")
+
+                # mark this ifos readiness in array
                 ready[i] &= ifo_ready
 
                 # continue so that we don't break the ifo for-loop
@@ -184,12 +228,14 @@ def data_iterator(
             # Need at least 3 seconds to be able to crop out edge effects
             # from resampling and just yield the middle second
             if dur >= 3:
-                x = resample(
-                    frame_buffer, int(sample_rate * dur), axis=1, window="hann"
-                )
+                x = resample(frame_buffer, factor, b, a)
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
-                yield torch.Tensor(x).double(), t0 - 1, last_ready
+                # yield last_ready, which corresponds to
+                # the data quality bits of the previous second
+                # of data, i.e. the middle second of the
+                # buffer that is being yielded as well
+                yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
 
             last_ready = ready
             t0 += length
