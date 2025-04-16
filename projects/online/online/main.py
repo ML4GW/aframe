@@ -320,7 +320,6 @@ def main(
     rejected_path: Path,
     outdir: Path,
     datadir: Path,
-    ifos: List[str],
     inference_params: List[str],
     channels: List[str],
     sample_rate: float,

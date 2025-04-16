@@ -45,7 +45,6 @@ amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 amplfi_parameter_sampler: 
     class_path: online.utils.pe.parameter_sampler
-ifos: ["H1", "L1", "V1"]
 channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN", "V1:Hrec_hoft_16384Hz"]
 state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
@@ -55,9 +54,10 @@ kernel_length: 1.5
 inference_sampling_rate: 512
 inference_params: ["chirp_mass", "mass_ratio", "distance", "phic",  "inclination", "dec", "psi", "phi"]
 psd_length: 64
+amplfi_psd_length: 10
 aframe_right_pad: 0.0
 fduration: 1
-amplfi_duration: 2
+amplfi_fduration: 2
 integration_window_length: 1.5
 amplfi_kernel_length: 3
 event_position: 2.5
