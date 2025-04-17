@@ -19,14 +19,13 @@ if TYPE_CHECKING:
 
 
 def filter_samples(samples, parameter_sampler, inference_params):
-    net_mask = torch.ones(samples.shape[0], dtype=bool, device=samples.device)
+    net_mask = torch.ones(samples.shape[0], dtype=bool)
     priors = parameter_sampler.parameters
     for i, param in enumerate(inference_params):
         prior = priors[param]
         curr_samples = samples[:, i]
         log_probs = prior.log_prob(curr_samples)
         mask = log_probs == float("-inf")
-        mask = mask.to(curr_samples.device)
 
         logging.debug(
             f"Removed {mask.sum()}/{len(mask)} samples for parameter "

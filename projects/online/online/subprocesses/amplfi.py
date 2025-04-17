@@ -32,7 +32,7 @@ def amplfi_subprocess(
         if isinstance(arg[0], Event):
             event, amplfi_ifos = arg
             descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
+                torch.Tensor(shared_samples[:]), (-1, len(inference_params))
             )
             logger.info("Post-processing samples")
             result = postprocess_samples(
@@ -71,7 +71,7 @@ def amplfi_subprocess(
             graceid = arg
             event, amplfi_ifos = amplfi_queue.get()
             descaled_samples = torch.reshape(
-                torch.Tensor(shared_samples), (-1, len(inference_params))
+                torch.Tensor(shared_samples[:]), (-1, len(inference_params))
             )
             logger.info("Post-processing samples")
             result = postprocess_samples(

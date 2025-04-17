@@ -126,8 +126,7 @@ def process_event(
         std_scaler=scaler,
         device=device,
     )
-    for i, sample in enumerate(descaled_samples.flatten()):
-        shared_samples[i] = sample
+    shared_samples[:] = descaled_samples.cpu().numpy().flatten()
     amplfi_queue.put((event, ifos))
 
     # save nn output, amplfi psds, and amplfi whitened strain
