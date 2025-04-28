@@ -37,6 +37,7 @@ data:
     # preprocessing args
     batch_size: 384
     batches_per_epoch: 3700
+    num_files_per_batch: 10
     chunk_size: 10000
     chunks_per_epoch: 10
     # kernel_length:

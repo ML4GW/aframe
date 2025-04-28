@@ -64,6 +64,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         sample_rate: float,
         valid_frac: float,
         batches_per_epoch: int,
+        num_files_per_batch: int,
         # preprocessing args
         batch_size: int,
         kernel_length: float,
@@ -581,6 +582,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             batch_size=self.hparams.batch_size,
             batches_per_epoch=self.batches_per_epoch,
             coincident=False,
+            num_files_per_batch=self.num_files_per_batch,
         )
 
         pin_memory = isinstance(
@@ -593,7 +595,9 @@ class BaseAframeDataset(pl.LightningDataModule):
             f"Using {num_workers} workers for strain data loading"
         )
         dataloader = torch.utils.data.DataLoader(
-            dataset, num_workers=num_workers, pin_memory=pin_memory
+            dataset,
+            num_workers=0,
+            pin_memory=pin_memory,
         )
 
         # build iterator for waveform loading
@@ -622,9 +626,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # so we don't have to wait for waveforms
         waveform_loader = torch.utils.data.DataLoader(
             waveform_loader,
-            num_workers=2,
+            num_workers=0,
             pin_memory=pin_memory,
-            persistent_workers=True,
+            # persistent_workers=True,
         )
 
         # build a dataset that will sample from
