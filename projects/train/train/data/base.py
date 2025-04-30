@@ -582,7 +582,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             batch_size=self.hparams.batch_size,
             batches_per_epoch=self.batches_per_epoch,
             coincident=False,
-            num_files_per_batch=self.num_files_per_batch,
+            num_files_per_batch=self.hparams.num_files_per_batch,
         )
 
         pin_memory = isinstance(
