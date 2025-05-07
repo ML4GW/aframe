@@ -596,7 +596,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=0,
+            num_workers=num_workers,
             pin_memory=pin_memory,
         )
 
@@ -626,9 +626,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # so we don't have to wait for waveforms
         waveform_loader = torch.utils.data.DataLoader(
             waveform_loader,
-            num_workers=0,
+            num_workers=2,
             pin_memory=pin_memory,
-            # persistent_workers=True,
+            persistent_workers=True,
         )
 
         # build a dataset that will sample from
