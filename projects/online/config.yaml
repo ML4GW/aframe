@@ -62,6 +62,7 @@ amplfi_kernel_length: 3
 event_position: 2.5
 fftlength: null
 highpass: 32
+amplfi_highpass: 25
 lowpass: null
 refractory_period: 8
 far_threshold: 1 # per day
