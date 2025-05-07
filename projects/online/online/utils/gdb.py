@@ -81,7 +81,8 @@ class GraceDb(_GraceDb):
             graceid,
             "skymap",
             filename=skymap_fname,
-            tag_name=["sky_loc", "SKYMAP_READY"],
+            tag_name="sky_loc",
+            label="SKYMAP_READY",
         )
         logging.debug("Skymap submitted")
 
@@ -146,7 +147,8 @@ class GraceDb(_GraceDb):
             graceid,
             "ligo-skymap-from-samples",
             filename=str(event_dir / "ligo.skymap.fits"),
-            tag_name=["sky_loc", "SKYMAP_READY"],
+            tag_name="sky_loc",
+            label="SKYMAP_READY",
         )
 
     def submit_skymap_plots(self, graceid: int, event_dir: Path):
@@ -227,7 +229,8 @@ class GraceDb(_GraceDb):
             graceid,
             "Aframe p_astro",
             filename=fname,
-            tag_name=["p_astro", "PASTRO_READY"],
+            tag_name="p_astro",
+            label="PASTRO_READY",
         )
 
 
