@@ -77,12 +77,21 @@ class GraceDb(_GraceDb):
         skymap.writeto(skymap_fname)
 
         logging.debug("Submitting skymap to GraceDB")
-        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+        self.write_log(
+            graceid,
+            "skymap",
+            filename=skymap_fname,
+            tag_name=["sky_loc", "SKYMAP_READY"],
+        )
         logging.debug("Skymap submitted")
+
+        filename = event_dir / "amplfi.posterior_samples.hdf5"
+        result.save_to_file(filename=filename)
+        self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
-            parameters=["chirp_mass", "mass_ratio", "distance"],
+            parameters=["chirp_mass", "mass_ratio", "luminosity_distance"],
             filename=corner_fname,
         )
 
@@ -137,7 +146,7 @@ class GraceDb(_GraceDb):
             graceid,
             "ligo-skymap-from-samples",
             filename=str(event_dir / "ligo.skymap.fits"),
-            tag_name="sky_loc",
+            tag_name=["sky_loc", "SKYMAP_READY"],
         )
 
     def submit_skymap_plots(self, graceid: int, event_dir: Path):
@@ -218,7 +227,7 @@ class GraceDb(_GraceDb):
             graceid,
             "Aframe p_astro",
             filename=fname,
-            tag_name="p_astro",
+            tag_name=["p_astro", "PASTRO_READY"],
         )
 
 
