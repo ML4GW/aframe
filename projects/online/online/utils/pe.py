@@ -124,6 +124,7 @@ def postprocess_samples(
     posterior["phi"] = ra
     posterior["ra"] = ra
     posterior["dec"] = dec
+    posterior["distance"] = posterior["luminosity_distance"]
     posterior = pd.DataFrame(posterior)
 
     result = AmplfiResult(
