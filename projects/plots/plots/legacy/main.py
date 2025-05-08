@@ -170,7 +170,7 @@ def main(
 
     Tb = background.Tb / tools.SECONDS_PER_YEAR
     max_events = int(max_far * Tb)
-    x = np.arange(1, max_events + 1) / Tb
+    fars = np.arange(1, max_events + 1) / Tb
     thresholds = np.sort(background.detection_statistic)[-max_events:][::-1]
 
     weights = np.zeros((len(mass_combos), len(source_probs)))
@@ -201,27 +201,27 @@ def main(
         weights[i] = weight
 
     logging.info("Computing sensitive volume at thresholds")
-    y, err = compute.sensitive_volume(
+    aframe_sv, aframe_err = compute.sensitive_volume(
         foreground.detection_statistic, weights, thresholds
     )
-    y *= v0
-    err *= v0
+    aframe_sv *= v0
+    aframe_err *= v0
 
     output_dir.mkdir(exist_ok=True, parents=True)
     with h5py.File(output_dir / "sensitive_volume.h5", "w") as f:
         f.create_dataset("thresholds", data=thresholds)
-        f.create_dataset("fars", data=x)
+        f.create_dataset("fars", data=fars)
         for i, combo in enumerate(mass_combos):
             g = f.create_group("-".join(map(str, combo)))
-            g.create_dataset("sv", data=y[i])
-            g.create_dataset("err", data=err[i])
+            g.create_dataset("sv", data=aframe_sv[i])
+            g.create_dataset("err", data=aframe_err[i])
 
     logging.info("Calculating SV vs FAR for GWTC-3 pipelines")
     gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
         mass_combos=mass_combos,
         injection_file=INJECTION_FILE,
         detection_criterion="far",
-        detection_thresholds=x,
+        detection_thresholds=fars,
         output_dir=output_dir,
     )
 
@@ -232,12 +232,12 @@ def main(
         kwargs = {}
         if i == 0:
             kwargs["legend_label"] = "aframe"
-        p.line(x, y[i], line_width=1.5, line_color=color, **kwargs)
+        p.line(fars, aframe_sv[i], line_width=1.5, line_color=color, **kwargs)
         tools.plot_err_bands(
             p,
-            x,
-            y[i],
-            err[i],
+            fars,
+            aframe_sv[i],
+            aframe_err[i],
             line_color=color,
             line_width=0.8,
             fill_color=color,
@@ -252,10 +252,10 @@ def main(
 
             if i == 0:
                 kwargs["legend_label"] = pipeline
-            p.line(x, sv, line_width=1.5, line_color=color, **kwargs)
+            p.line(fars, sv, line_width=1.5, line_color=color, **kwargs)
             tools.plot_err_bands(
                 p,
-                x,
+                fars,
                 sv,
                 err,
                 line_color=color,
