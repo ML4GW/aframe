@@ -84,15 +84,16 @@ class EventSet(Ledger):
     @property
     def min_far(self):
         """
-        Lowest FAR in Hz that can be resolved given background
-        livetime analyzed
+        Lowest FAR in `yrs^{-1}` that can be resolved given
+        background livetime analyzed
         """
-        return 1 / self.Tb * SECONDS_IN_YEAR
+        return (1 / self.Tb) * SECONDS_IN_YEAR
 
     def far(self, threshold: F) -> F:
         """
-        Far in Hz for a given detection statistic threshold, or
-        the minimum FAR that can be resolved
+        For a given detection threshold, calculate the FAR in `yrs^{-1}`.
+        If the threshold is above the loudest background event,
+        return the minimum FAR that can be resolved
         given the accumulated background livetime
         """
         nb = self.nb(threshold)
