@@ -6,7 +6,7 @@ authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
 requires-python = ">=3.9,<3.13"
 license = "MIT"
 dependencies = [
-    "astropy~=5.0",
+    "astropy>=5.0",
     "bilby>=2.2.2,<3",
     "numpy>=1.26.4,<2",
     "utils",
