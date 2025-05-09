@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
+# igwn_auth_utils finds tokens only if they have at least 10 minutes left
+MIN_VALID_LIFETIME = 600
 # 3 hours; not sure where this is documented
 SCITOKEN_LIFETIME = 10800
 
@@ -492,17 +494,11 @@ def main(
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
-    reload_buffer = SCITOKEN_LIFETIME - auth_refresh
-    if reload_buffer < 0:
-        raise ValueError(
-            f"Auth refresh time {auth_refresh} is longer than "
-            f"scitoken lifetime {SCITOKEN_LIFETIME}"
-        )
     gdb = gracedb_factory(
         server,
         outdir / "events",
         reload_cred=True,
-        reload_buffer=reload_buffer,
+        reload_buffer=MIN_VALID_LIFETIME,
     )
 
     fftlength = fftlength or kernel_length + fduration
@@ -523,7 +519,13 @@ def main(
     subprocesses = []
 
     # subprocess for re-authenticating
-    args = (error_queue, "authenticate", auth_refresh, verbose)
+    minsecs = MIN_VALID_LIFETIME + auth_refresh + 100
+    if minsecs > SCITOKEN_LIFETIME:
+        raise ValueError(
+            f"Minimum requested token life {minsecs} is greater "
+            f"than scitoken lifetime {SCITOKEN_LIFETIME}"
+        )
+    args = (error_queue, "authenticate", auth_refresh, minsecs, verbose)
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,

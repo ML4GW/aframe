@@ -113,7 +113,7 @@ def postprocess_samples(
 
     # build bilby posterior object for
     # parameters we want to keep
-    posterior_params = ["chirp_mass", "mass_ratio", "distance"]
+    posterior_params = ["chirp_mass", "mass_ratio", "luminosity_distance"]
 
     posterior = {}
     for param in posterior_params:
@@ -124,6 +124,7 @@ def postprocess_samples(
     posterior["phi"] = ra
     posterior["ra"] = ra
     posterior["dec"] = dec
+    posterior["distance"] = posterior["luminosity_distance"]
     posterior = pd.DataFrame(posterior)
 
     result = AmplfiResult(
@@ -142,7 +143,9 @@ def parameter_sampler() -> ParameterSampler:
     base = precessing_cbc_prior()
     base.parameters["chirp_mass"] = Uniform(0, 150, validate_args=False)
     base.parameters["mass_ratio"] = Uniform(0, 0.999, validate_args=False)
-    base.parameters["distance"] = Uniform(0, 5000, validate_args=False)
+    base.parameters["luminosity_distance"] = Uniform(
+        0, 5000, validate_args=False
+    )
     base.parameters["dec"] = Cosine(validate_args=False)
     base.parameters["phi"] = Uniform(0, 2 * np.pi, validate_args=False)
     base.parameters["psi"] = Uniform(0, np.pi, validate_args=False)

@@ -51,7 +51,7 @@ sample_rate: 2048
 astro_event_rate: 31
 kernel_length: 1.5
 inference_sampling_rate: 512
-inference_params: ["chirp_mass", "mass_ratio", "distance", "phic", "inclination", "dec", "psi", "phi"]
+inference_params: ["chirp_mass", "mass_ratio", "luminosity_distance", "phic", "inclination", "dec", "psi", "phi"]
 psd_length: 64
 amplfi_psd_length: 10
 aframe_right_pad: 0.0
@@ -69,7 +69,7 @@ far_threshold: 1 # per day
 email_far_threshold: 0.00000001 # Hz
 emails: null
 server: "local"
-auth_refresh: 1200
+auth_refresh: 300
 ifo_suffix: 
 input_buffer_length: 75
 output_buffer_length: 8

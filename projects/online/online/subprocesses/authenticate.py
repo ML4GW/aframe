@@ -6,7 +6,7 @@ from .utils import subprocess_wrapper, run_subprocess_with_logging
 logger = logging.getLogger("authenticate-subprocess")
 
 
-def authenticate(debug: bool = False):
+def authenticate(minsecs: float = 1000, debug: bool = False):
     args = [
         "kinit",
         "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
@@ -31,6 +31,7 @@ def authenticate(debug: bool = False):
         "aframe-1-scitoken",
         "--scopes=gracedb.read",
         "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
+        f"--minsecs={minsecs}",
         "--nooidc",
     ]
 
@@ -43,7 +44,9 @@ def authenticate(debug: bool = False):
 
 
 @subprocess_wrapper
-def authenticate_subprocess(refresh: int, debug: bool = False):
+def authenticate_subprocess(
+    refresh: int, minsecs: float = 1000, debug: bool = False
+):
     """
     Authentication subprocess loop that will re-authenticate
     every `refresh` seconds
@@ -55,6 +58,6 @@ def authenticate_subprocess(refresh: int, debug: bool = False):
         time.sleep(1e-1)
         if time.time() - last_auth > refresh:
             logger.info("Authenticating...")
-            authenticate(debug)
+            authenticate(minsecs, debug)
             last_auth = time.time()
             logger.info("Authentication complete")

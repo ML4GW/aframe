@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Literal
 import bilby
+import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ..subprocesses.utils import run_subprocess_with_logging
@@ -77,12 +78,29 @@ class GraceDb(_GraceDb):
         skymap.writeto(skymap_fname)
 
         logging.debug("Submitting skymap to GraceDB")
-        self.write_log(graceid, "skymap", filename=skymap_fname, tag_name="pe")
+        self.write_log(
+            graceid,
+            "skymap",
+            filename=skymap_fname,
+            tag_name="sky_loc",
+            label="SKYMAP_READY",
+        )
         logging.debug("Skymap submitted")
+
+        # Write posterior samples to file, adhering to expected format
+        filename = event_dir / "amplfi.posterior_samples.hdf5"
+        posterior_df = result.posterior
+        columns = list(posterior_df.columns)
+        columns.remove("distance")
+        posterior_df = posterior_df[columns]
+        posterior_samples = posterior_df.to_records(index=False)
+        with h5py.File(filename, "w") as f:
+            f.create_dataset("posterior_samples", data=posterior_samples)
+        self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
-            parameters=["chirp_mass", "mass_ratio", "distance"],
+            parameters=["chirp_mass", "mass_ratio", "luminosity_distance"],
             filename=corner_fname,
         )
 
@@ -138,6 +156,7 @@ class GraceDb(_GraceDb):
             "ligo-skymap-from-samples",
             filename=str(event_dir / "ligo.skymap.fits"),
             tag_name="sky_loc",
+            label="SKYMAP_READY",
         )
 
     def submit_skymap_plots(self, graceid: int, event_dir: Path):
@@ -219,6 +238,7 @@ class GraceDb(_GraceDb):
             "Aframe p_astro",
             filename=fname,
             tag_name="p_astro",
+            label="PASTRO_READY",
         )
 
 
