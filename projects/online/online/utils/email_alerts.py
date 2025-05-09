@@ -49,7 +49,7 @@ def send_error_email(
 
 
 def send_detection_email(
-    recipients: list[str], result, event, graceid: str, server: str
+    recipients: list[str], result, event, graceid: str, gracedb_url: str
 ):
     # Create message
     message = MIMEMultipart()
@@ -57,14 +57,6 @@ def send_detection_email(
     message["From"] = SENDER_EMAIL
     message["To"] = ", ".join(recipients)
 
-    if server in ["playground", "test"]:
-        gracedb_url = (
-            f"https://gracedb-{server}.ligo.org/events/{graceid}/view"
-        )
-    elif server == "production":
-        gracedb_url = "https://gracedb.ligo.org/events/{graceid}/view"
-    else:
-        gracedb_url = graceid
     body = f"""
     Aframe has identified an event with the following properties
 

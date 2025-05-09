@@ -34,6 +34,18 @@ class GraceDb(_GraceDb):
         self.server = server
         self.write_dir = write_dir
 
+    def url(self, graceid):
+        if self.server in ["playground", "test"]:
+            gracedb_url = (
+                f"https://gracedb-{self.server}.ligo.org/events/{graceid}/view"
+            )
+        elif self.server == "production":
+            gracedb_url = f"https://gracedb.ligo.org/events/{graceid}/view"
+        else:
+            gracedb_url = graceid
+
+        return gracedb_url
+
     def submit(self, event: Event):
         logging.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / event.event_dir
@@ -47,6 +59,19 @@ class GraceDb(_GraceDb):
         )
 
         logging.debug("Event created")
+
+        # Get the event's graceid for submitting
+        # further data products
+        if self.server == "local":
+            # The local gracedb client just returns the filename
+            graceid = response
+        else:
+            graceid = response.json()["graceid"]
+
+        url = self.url(graceid)
+        filename = event_dir / "gracedb_url.txt"
+        with open(filename, "w") as f:
+            f.write(url)
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
@@ -63,7 +88,7 @@ class GraceDb(_GraceDb):
         with open(latency_fname, "w") as f:
             f.write(latency)
 
-        return response
+        return graceid
 
     def submit_low_latency_pe(
         self,
@@ -71,7 +96,6 @@ class GraceDb(_GraceDb):
         skymap: "BinTableHDU",
         graceid: int,
         event_dir: Path,
-        ifos: List[str],
     ):
         event_dir = self.write_dir / event_dir
         skymap_fname = event_dir / "amplfi.fits"

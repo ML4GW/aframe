@@ -29,14 +29,8 @@ def event_creation_subprocess(
         # write event information to disk
         # and submit it to gracedb
         event.write(outdir)
-        response = gdb.submit(event)
-        # Get the event's graceid for submitting
-        # further data products
-        if gdb.server == "local":
-            # The local gracedb client just returns the filename
-            graceid = response
-        else:
-            graceid = response.json()["graceid"]
+        graceid = gdb.submit(event)
+
         logger.debug("Putting graceid in amplfi and pastro queues")
         amplfi_queue.put(graceid)
         pastro_queue.put(graceid)
