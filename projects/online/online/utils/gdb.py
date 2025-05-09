@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Literal
 import bilby
 import h5py
-import numpy as np
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ..subprocesses.utils import run_subprocess_with_logging
@@ -90,14 +89,13 @@ class GraceDb(_GraceDb):
 
         # Write posterior samples to file, adhering to expected format
         filename = event_dir / "amplfi.posterior_samples.hdf5"
-        structure = [(key, "f8") for key in result.posterior.keys()]
-        dtype = np.dtype(structure)
-        posterior_samples = result.posterior.to_numpy()
-        structured_samples = np.zeros(posterior_samples.shape[0], dtype=dtype)
-        for i, key in enumerate(result.posterior.keys()):
-            structured_samples[key] = posterior_samples[:, i]
+        posterior_df = result.posterior
+        columns = list(posterior_df.columns)
+        columns.remove("distance")
+        posterior_df = posterior_df[columns]
+        posterior_samples = posterior_df.to_records(index=False)
         with h5py.File(filename, "w") as f:
-            f.create_dataset("posterior_samples", data=structured_samples)
+            f.create_dataset("posterior_samples", data=posterior_samples)
         self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
 
         corner_fname = event_dir / "corner_plot.png"
