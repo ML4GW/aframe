@@ -56,7 +56,10 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.event_dir, amplfi_ifos
+                result,
+                fits_skymap,
+                graceid,
+                event.event_dir,
             )
 
             logger.info("Launching ligo-skymap-from-samples")
@@ -93,7 +96,10 @@ def amplfi_subprocess(
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
-                result, fits_skymap, graceid, event.event_dir, amplfi_ifos
+                result,
+                fits_skymap,
+                graceid,
+                event.event_dir,
             )
 
             logger.info("Launching ligo-skymap-from-samples")
