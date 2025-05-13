@@ -286,6 +286,8 @@ def gracedb_factory(server: GdbServer, write_dir: Path, **kwargs) -> GraceDb:
         service_url = f"https://gracedb-{server}.ligo.org/api/"
     elif server == "production":
         service_url = "https://gracedb.ligo.org/api/"
+    elif server == "test01":
+        service_url = "https://gracedb-test01.igwn.org/api/"
     else:
         raise ValueError(f"Unknown GraceDB server: {server}")
     return GraceDb(
