@@ -63,10 +63,10 @@ def make_grid(combos):
         }
 
         kwargs["x_axis_label"] = (
-            r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
+            r"$$\text{False Alarm Rate " r"[yr}^{-1}\text{]}$$"
         )
         kwargs["x_axis_label"] = (
-            r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
+            r"$$\text{False Alarm Rate " r"[yr}^{-1}\text{]}$$"
         )
         p = get_figure(**kwargs)
         p.outline_line_color = "#ffffff"
@@ -95,7 +95,7 @@ def make_grid(combos):
             # lower plots need space for x-axis label
             kwargs["height"] += 30
             kwargs["x_axis_label"] = (
-                r"$$\text{False Alarm Rate " r"[years}^{-1}\text{]}$$"
+                r"$$\text{False Alarm Rate " r"[yr}^{-1}\text{]}$$"
             )
 
         # share x range between all plots
