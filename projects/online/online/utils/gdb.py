@@ -246,7 +246,7 @@ class GraceDb(_GraceDb):
 
     def submit_pastro(self, pastro: float, graceid: int, event_dir: Path):
         event_dir = self.write_dir / event_dir
-        fname = event_dir / "aframe.pastro.json"
+        fname = event_dir / "aframe.p_astro.json"
         pastro = {
             "BBH": pastro,
             "Terrestrial": 1 - pastro,
