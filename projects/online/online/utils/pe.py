@@ -35,7 +35,9 @@ def get_redshifts(distances, num_pts=10000):
     max_dist = np.max(distances)
     z_min = cosmology.z_at_value(func=func, fval=min_dist * u.Mpc)
     z_max = cosmology.z_at_value(func=func, fval=max_dist * u.Mpc)
-    z_steps = np.linspace(z_min - (0.1*z_min), z_max + (0.1*z_max), num_pts)
+    z_steps = np.linspace(
+        z_min - (0.1 * z_min), z_max + (0.1 * z_max), num_pts
+    )
     lum_dists = cosmology.Planck18.luminosity_distance(z_steps)
     s = interp1d(lum_dists, z_steps)
     redshifts = s(distances)
@@ -145,8 +147,8 @@ def postprocess_samples(
         posterior[param] = samples.T[idx].flatten()
 
     # add source frame chirp mass information
-    z_vals = get_redshifts(posterior['luminosity_distance'])
-    posterior['chirp_mass_source'] = posterior['chirp_mass'] / (1 + z_vals)
+    z_vals = get_redshifts(posterior["luminosity_distance"])
+    posterior["chirp_mass_source"] = posterior["chirp_mass"] / (1 + z_vals)
 
     # TODO remove
     posterior["phi"] = ra
