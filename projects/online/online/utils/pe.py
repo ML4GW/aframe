@@ -30,13 +30,13 @@ def get_redshifts(distances, num_pts=10000):
     This process is much faster compared to astropy.cosmology
     APIs with lesser than a percent difference.
     """
-    func = cosmology.Planck15.luminosity_distance
+    func = cosmology.Planck18.luminosity_distance
     min_dist = np.min(distances)
     max_dist = np.max(distances)
     z_min = cosmology.z_at_value(func=func, fval=min_dist * u.Mpc)
     z_max = cosmology.z_at_value(func=func, fval=max_dist * u.Mpc)
     z_steps = np.linspace(z_min - (0.1*z_min), z_max + (0.1*z_max), num_pts)
-    lum_dists = cosmology.Planck15.luminosity_distance(z_steps)
+    lum_dists = cosmology.Planck18.luminosity_distance(z_steps)
     s = interp1d(lum_dists, z_steps)
     redshifts = s(distances)
     return redshifts
