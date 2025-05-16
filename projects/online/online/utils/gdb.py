@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
 
-GdbServer = Literal["local", "playground", "test", "production"]
+GdbServer = Literal["local", "playground", "test", "test01", "production"]
 
 
 class GraceDb(_GraceDb):
