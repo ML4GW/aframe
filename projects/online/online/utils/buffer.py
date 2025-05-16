@@ -113,8 +113,8 @@ class OutputBuffer(torch.nn.Module):
         super().__init__()
         self.device = device
         self.inference_sampling_rate = inference_sampling_rate
-        self.integrator_size = int(
-            integration_window_length * inference_sampling_rate
+        self.integrator_size = (
+            int(integration_window_length * inference_sampling_rate) + 1
         )
         self.window = torch.ones((1, 1, self.integrator_size), device=device)
         self.window /= self.integrator_size
