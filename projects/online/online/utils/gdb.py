@@ -160,7 +160,7 @@ class GraceDb(_GraceDb):
             "--maxpts",
             str(10000),
             "--fitsoutname",
-            "ligo.skymap.fits",
+            "amplfi.multiorder.fits",
             "--instruments",
         ]
 
@@ -178,7 +178,7 @@ class GraceDb(_GraceDb):
         self.write_log(
             graceid,
             "ligo-skymap-from-samples",
-            filename=str(event_dir / "ligo.skymap.fits"),
+            filename=str(event_dir / "amplfi.multiorder.fits"),
             tag_name="sky_loc",
             label="SKYMAP_READY",
         )
@@ -187,8 +187,8 @@ class GraceDb(_GraceDb):
         plt.switch_backend("agg")
 
         event_dir = self.write_dir / event_dir
-        amplfi_fname = str(event_dir / "amplfi.mollweide.png")
-        ligo_skymap_fname = str(event_dir / "ligo.skymap.mollweide.png")
+        amplfi_fname = str(event_dir / "amplfi.flattened.png")
+        ligo_skymap_fname = str(event_dir / "amplfi.multiorder.png")
 
         ligo_skymap_plot(
             [
@@ -204,7 +204,7 @@ class GraceDb(_GraceDb):
         plt.close()
         ligo_skymap_plot(
             [
-                str(event_dir / "ligo.skymap.fits"),
+                str(event_dir / "amplfi.multiorder.fits"),
                 "--annotate",
                 "--contour",
                 "50",
@@ -216,10 +216,10 @@ class GraceDb(_GraceDb):
         plt.close()
         # ligo_skymap_plot_volume(
         #    [
-        #        str(event_dir / "ligo.skymap.fits"),
+        #        str(event_dir / "amplfi.multiorder.fits"),
         #        "--annotate",
         #        "-o",
-        #        str(event_dir / "ligo.skymap.volume.png"),
+        #        str(event_dir / "amplfi.multiorder.volume.png"),
         #    ]
         # )
         # plt.close()
@@ -232,15 +232,15 @@ class GraceDb(_GraceDb):
 
         self.write_log(
             graceid,
-            "Molleweide projection of ligo.skymap.fits",
+            "Molleweide projection of amplfi.multiorder.fits",
             filename=ligo_skymap_fname,
             tag_name="sky_loc",
         )
 
         # self.write_log(
         #    graceid,
-        #    "Volume rendering of ligo.skymap.fits",
-        #    filename=str(event_dir / "ligo.skymap.volume.png"),
+        #    "Volume rendering of amplfi.multiorder.fits",
+        #    filename=str(event_dir / "amplfi.multiorder.volume.png"),
         #    tag_name="sky_loc",
         # )
 
