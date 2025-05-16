@@ -1,9 +1,11 @@
 import logging
 from typing import TYPE_CHECKING
 
+from astropy import cosmology, units as u
 import lal
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 import torch
 from amplfi.train.data.utils.utils import ParameterSampler
 from amplfi.train.priors import precessing_cbc_prior
@@ -16,6 +18,30 @@ torch.set_num_threads(1)
 if TYPE_CHECKING:
     from amplfi.train.architectures.flows.base import FlowArchitecture
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
+
+
+def get_redshifts(distances, num_pts=10000):
+    """
+    Compute redshift using the Planck18 cosmology. Implementation
+    taken from https://git.ligo.org/emfollow/em-properties/em-bright/-/blob/main/ligo/em_bright/em_bright.py
+
+    This function accepts distance values in Mpc and computes
+    redshifts by interpolating the distance-redshift relation.
+    This process is much faster compared to astropy.cosmology
+    APIs with lesser than a percent difference.
+    """
+    func = cosmology.Planck18.luminosity_distance
+    min_dist = np.min(distances)
+    max_dist = np.max(distances)
+    z_min = cosmology.z_at_value(func=func, fval=min_dist * u.Mpc)
+    z_max = cosmology.z_at_value(func=func, fval=max_dist * u.Mpc)
+    z_steps = np.linspace(
+        z_min - (0.1 * z_min), z_max + (0.1 * z_max), num_pts
+    )
+    lum_dists = cosmology.Planck18.luminosity_distance(z_steps)
+    s = interp1d(lum_dists, z_steps)
+    redshifts = s(distances)
+    return redshifts
 
 
 def filter_samples(samples, parameter_sampler, inference_params):
@@ -119,6 +145,10 @@ def postprocess_samples(
     for param in posterior_params:
         idx = inference_params.index(param)
         posterior[param] = samples.T[idx].flatten()
+
+    # add source frame chirp mass information
+    z_vals = get_redshifts(posterior["luminosity_distance"])
+    posterior["chirp_mass_source"] = posterior["chirp_mass"] / (1 + z_vals)
 
     # TODO remove
     posterior["phi"] = ra
