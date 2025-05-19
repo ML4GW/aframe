@@ -133,6 +133,7 @@ def process_event(
 
     # save nn output, amplfi psds, and amplfi whitened strain
     buffer_outdir = outdir / "events" / event.event_dir
+    buffer_outdir.mkdir(exist_ok=True, parents=True)
     logging.info(f"Writing output buffer to {buffer_outdir}")
     output_buffer.write(buffer_outdir / "output.hdf5")
 
