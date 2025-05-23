@@ -43,7 +43,7 @@ def amplfi_subprocess(
             )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=False)
+            skymap = result.to_skymap(nside, use_distance=True)
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             graceid = amplfi_queue.get()
@@ -91,7 +91,7 @@ def amplfi_subprocess(
                 )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=False)
+            skymap = result.to_skymap(nside, use_distance=True)
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
