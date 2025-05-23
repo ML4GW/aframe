@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 import time
@@ -5,7 +6,6 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import List
 
-import h5py
 import law
 import luigi
 import numpy as np
@@ -162,14 +162,26 @@ class Infer(AframeSingularityTask):
             [Path(targets["foreground"].path) for targets in self.targets]
         )
 
+    @property
+    def metadata_files(self):
+        return np.array(
+            [Path(targets["metadata"].path) for targets in self.targets]
+        )
+
     @classmethod
-    def get_shifts(cls, files: List[Path]):
-        shifts = []
-        for f in files:
-            with h5py.File(f) as f:
-                shift = f["parameters"]["shift"][0]
-                shifts.append(shift)
-        return shifts
+    def get_metadata(cls, files: List[Path]):
+        num_files = len(files)
+        background_lengths = np.zeros(num_files)
+        foreground_lengths = np.zeros(num_files)
+        shifts = np.zeros(num_files)
+        for i, f in enumerate(files):
+            with open(f, "r") as f:
+                data = json.load(f)
+            background_lengths[i] = data["background_length"]
+            foreground_lengths[i] = data["foreground_length"]
+            shifts[i] = data["shifts"]
+
+        return background_lengths, foreground_lengths, shifts
 
     def run(self):
         import shutil
@@ -177,21 +189,37 @@ class Infer(AframeSingularityTask):
         from ledger.events import EventSet, RecoveredInjectionSet
 
         # separate 0lag and background events into different files
-        shifts = self.get_shifts(self.background_files)
+        background_lengths, foreground_lengths, shifts = self.get_shifts(
+            self.metadata_files
+        )
         zero_lag = np.array(
             [all(shift == [0] * len(self.ifos)) for shift in shifts]
         )
 
         zero_lag_files = self.background_files[zero_lag]
         back_files = self.background_files[~zero_lag]
+        zero_lag_length = sum(background_lengths[zero_lag])
+        background_length = sum(background_lengths[~zero_lag])
+        foreground_length = sum(foreground_lengths)
 
-        EventSet.aggregate(back_files, self.background_output, clean=False)
+        EventSet.aggregate(
+            back_files,
+            self.background_output,
+            clean=False,
+            length=background_length,
+        )
         RecoveredInjectionSet.aggregate(
-            self.foreground_files, self.foreground_output, clean=False
+            self.foreground_files,
+            self.foreground_output,
+            clean=False,
+            length=foreground_length,
         )
         if len(zero_lag_files) > 0:
             EventSet.aggregate(
-                zero_lag_files, self.zero_lag_output, clean=False
+                zero_lag_files,
+                self.zero_lag_output,
+                clean=False,
+                length=zero_lag_length,
             )
 
         # Sort background events for later use.

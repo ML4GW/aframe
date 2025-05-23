@@ -277,17 +277,19 @@ class Ledger:
         dtype: np.dtype = np.float64,
         clean: bool = True,
         chunks: Optional[tuple] = None,
+        length: Optional[int] = None,
     ) -> None:
         """
         Aggregate the data from the files of many smaller
         ledgers into a single larger ledger file
         """
-        # iterate through all the files once up front
-        # to see how many rows the output ledger will have
-        length = 0
-        for source in files:
-            with h5py.File(source, "r") as f:
-                length += f.attrs["length"]
+        if length is not None:
+            # iterate through all the files once up front
+            # to see how many rows the output ledger will have
+            length = 0
+            for source in files:
+                with h5py.File(source, "r") as f:
+                    length += f.attrs["length"]
 
         # now open the output file and start
         # writing to it iteratively
