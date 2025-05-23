@@ -25,6 +25,7 @@ def amplfi_subprocess(
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
     nside: int = 32,
+    use_distance: bool = True,
 ):
     logger.info("amplfi subprocess initialized")
     while True:
@@ -43,7 +44,7 @@ def amplfi_subprocess(
             )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=False)
+            skymap = result.to_skymap(nside, use_distance=use_distance)
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             graceid = amplfi_queue.get()
@@ -91,7 +92,7 @@ def amplfi_subprocess(
                 )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=False)
+            skymap = result.to_skymap(nside, use_distance=use_distance)
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
