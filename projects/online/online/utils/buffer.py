@@ -136,7 +136,7 @@ class OutputBuffer(torch.nn.Module):
 
     def write(self, path):
         start = self.t0
-        stop = self.t0 + self.buffer_length
+        stop = self.t0 + self.buffer_length - 1 / self.inference_sampling_rate
         time = np.linspace(start, stop, self.buffer_size)
         with h5py.File(path, "w") as f:
             f.create_dataset("time", data=time)
@@ -149,7 +149,7 @@ class OutputBuffer(torch.nn.Module):
     def integrate(self, x: torch.Tensor):
         x = x.view(1, 1, -1)
         y = torch.nn.functional.conv1d(x, self.window, padding="valid")
-        return y[0, 0]
+        return y[0, 0, 1:]
 
     def update(self, update: torch.Tensor, t0: float):
         # first append update to the output buffer
