@@ -177,7 +177,7 @@ class OutputBuffer(torch.nn.Module):
         significance_output = torch.nn.functional.conv1d(
             x, self.significance_window, padding="valid"
         )
-        return timing_output[..., 1:], significance_output[..., 1:]
+        return timing_output[0, 0, 1:], significance_output[0, 0, 1:]
 
     def update(self, update: torch.Tensor, t0: float):
         # first append update to the output buffer
