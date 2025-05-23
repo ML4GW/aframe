@@ -353,6 +353,7 @@ def main(
     email_far_threshold: float = 1e-6,
     auth_refresh: int = 9600,
     nside: int = 32,
+    use_distance: bool = True,
     device: str = "cpu",
     verbose: bool = False,
 ):
@@ -449,6 +450,8 @@ def main(
             that refreshes the scitoken credential
         nside:
             Healpix resolution for low-latency skymaps
+        use_distance:
+            If true, use distance samples to create a 3D skymap
         device:
             Device to run inference on ("cpu" or "cuda")
         verbose:
@@ -569,6 +572,7 @@ def main(
         emails,
         email_far_threshold,
         nside,
+        use_distance,
     )
 
     amplfi_process = Process(
