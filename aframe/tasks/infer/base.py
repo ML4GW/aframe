@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -87,8 +88,8 @@ class InferBase(
         return self.tmp_dir / "background.hdf5"
 
     @property
-    def zero_lag_output(self):
-        return self.tmp_dir / "0lag.hdf5"
+    def metadata_output(self):
+        return self.tmp_dir / "metadata.json"
 
     @property
     def background_fnames(self):
@@ -120,7 +121,7 @@ class InferBase(
         )
         return num_shifts
 
-    @law.dynamic_workflow_condition
+    @law.dynamic_workflow_condition(cache_met_condition=True)
     def workflow_condition(self) -> bool:
         return self.workflow_input()["data"].collection.exists()
 
@@ -167,6 +168,7 @@ class InferBase(
         outputs = {}
         outputs["foreground"] = law.LocalFileTarget(self.foreground_output)
         outputs["background"] = law.LocalFileTarget(self.background_output)
+        outputs["metadata"] = law.LocalFileTarget(self.metadata_output)
         return outputs
 
     def run(self):
@@ -211,3 +213,11 @@ class InferBase(
 
         background.write(self.background_output)
         foreground.write(self.foreground_output)
+
+        metadata = {
+            "background_length": len(background),
+            "foreground_length": len(foreground),
+            "shifts": shifts,
+        }
+        with open(self.metadata_output, "w") as f:
+            json.dump(metadata, f)
