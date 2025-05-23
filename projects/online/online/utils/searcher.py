@@ -103,14 +103,14 @@ class Searcher:
         self,
         background: EventSet,
         far_threshold: float,
-        inference_sampling_rate: float,
+        online_inference_rate: float,
         refractory_period: float,
         ifos: List[str],
         channels: str,
         datadir: Path,
         ifo_suffix: Optional[str] = None,
     ) -> None:
-        self.inference_sampling_rate = inference_sampling_rate
+        self.online_inference_rate = online_inference_rate
         self.refractory_period = refractory_period
         # Take only the first two ifos/channels for H1/L1
         # Hard-coding this until there's an HLV Aframe model
@@ -146,7 +146,7 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
-        timestamp = t0 + idx / self.inference_sampling_rate
+        timestamp = t0 + idx / self.online_inference_rate
 
         if self.check_refractory(timestamp, value):
             return None
@@ -176,17 +176,24 @@ class Searcher:
         self.detecting = False
         return event
 
-    def search(self, y: np.ndarray, t0: float) -> Optional[Event]:
+    def search(
+        self,
+        significance_outputs: np.ndarray,
+        timing_outputs: np.ndarray,
+        t0: float,
+    ) -> Optional[Event]:
         """
         Search for above-threshold events in the
         timeseries of integrated network outputs
-        `y`. `t0` should represent the timestamp
-        of the last sample of *input* to the
-        *neural network* that represents the
+        `significance_outputs` and use the peak
+        index of `timing_outputs` to estimate a
+        merger time. `t0` should represent the
+        timestamp of the last sample of *input*
+        to the *neural network* that represents the
         *first sample* of the integration window.
         """
 
-        max_val = y.max()
+        max_val = significance_outputs.max()
         # check if the event is above threshold
         if not max_val >= self.threshold:
             # if not, nothing to do here
@@ -194,8 +201,8 @@ class Searcher:
 
         # check if the integrated output is still
         # ramping as we get to the end of the frame
-        idx = np.argmax(y)
-        if idx < (len(y) - 1):
+        idx = np.argmax(timing_outputs)
+        if idx < (len(timing_outputs) - 1):
             # if not, assume the event is in this
             # frame and build an event around it
             logging.info(
