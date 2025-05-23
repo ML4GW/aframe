@@ -199,4 +199,4 @@ class OutputBuffer(torch.nn.Module):
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
         timing_cpu = timing_output.detach().cpu().numpy()
         significance_cpu = significance_output.detach().cpu().numpy()
-        return timing_cpu, significance_cpu
+        return significance_cpu, timing_cpu

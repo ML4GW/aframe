@@ -203,7 +203,7 @@ def search(
                 event = searcher.build_event(
                     significance_outputs[-1],
                     t0 - update_size,
-                    len(significance_outputs) - 1,
+                    len(timing_outputs) - 1,
                 )
                 if event is not None:
                     # if virgo is available use it for amplfi
