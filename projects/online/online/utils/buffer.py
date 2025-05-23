@@ -190,7 +190,7 @@ class OutputBuffer(torch.nn.Module):
         update_duration = len(update) / self.online_inference_rate
         self.t0 = t0 - (self.buffer_length - update_duration)
 
-        integration_size = self.integrator_size + len(update)
+        integration_size = self.timing_integrator_size + len(update)
         y = self.output_buffer[-integration_size:]
         timing_output, significance_output = self.integrate(y)
         self.integrated_buffer = torch.cat(
