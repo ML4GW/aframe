@@ -242,8 +242,8 @@ class InferBase(
             with h5py.File(self.timeseries_output, "w") as f:
                 f.attrs["t0"] = postprocessor.t0
                 f.attrs["shifts"] = postprocessor.shifts
-                f.create_dataset("background", data=background)
-                f.create_dataset("foreground", data=foreground)
+                f.create_dataset("background", data=background_ts)
+                f.create_dataset("foreground", data=foreground_ts)
         else:
             background, foreground = outputs
 
