@@ -6,6 +6,7 @@ from pathlib import Path
 import h5py
 import law
 import luigi
+import numpy as np
 from luigi.util import inherits
 
 import utils.data as data_utils
@@ -243,6 +244,8 @@ class InferBase(
                 f.attrs["t0"] = postprocessor.t0
                 f.attrs["shifts"] = postprocessor.shifts
                 f.create_dataset("background", data=background_ts)
+                if foreground_ts is None:
+                    foreground_ts = np.zeros(0)
                 f.create_dataset("foreground", data=foreground_ts)
         else:
             background, foreground = outputs
