@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Union
 
 import h5py
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 PATH = Union[str, bytes, os.PathLike]
 
