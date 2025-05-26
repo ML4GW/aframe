@@ -181,6 +181,13 @@ class Infer(AframeSingularityTask):
         return None
 
     def get_metadata(self):
+        """
+        Read in shift and length metadata from the metadata
+        files created by each `DeployInferLocal` condor job.
+        This data is read from the metadata files rather than
+        the hdf5 files because the read operation is O(1000)
+        times faster this way
+        """
         files = self.metadata_files
         num_files = len(files)
         background_lengths = np.zeros(num_files)

@@ -253,6 +253,10 @@ class InferBase(
         background.write(self.background_output)
         foreground.write(self.foreground_output)
 
+        # Create metadata files to store key information.
+        # Although this information is also contained in
+        # the hdf5 files that get created, reading these
+        # json files seems to be O(1000) times faster.
         metadata = {
             "background_length": len(background),
             "foreground_length": len(foreground),
