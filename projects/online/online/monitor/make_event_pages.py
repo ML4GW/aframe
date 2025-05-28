@@ -1,10 +1,7 @@
-import argparse
 import base64
 import json
 import shutil
-import time
 from pathlib import Path
-from tqdm import tqdm
 
 import h5py
 import matplotlib.pyplot as plt
@@ -178,34 +175,11 @@ def process_event_outputs(event: Path, outdir: Path):
 
 
 def main(event_dir: Path, outdir: Path):
-    if not outdir.exists():
-        outdir.mkdir(parents=True, exist_ok=True)
-    while True:
-        new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
-        if new_events:
-            for event in tqdm(new_events):
-                try:
-                    url = process_event_outputs(event, outdir)
-                    generate_html(event, url, outdir)
-                except FileNotFoundError:
-                    continue
-        time.sleep(60)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process event outputs")
-    parser.add_argument(
-        "--event_dir",
-        type=Path,
-        required=True,
-        help="Directory containing event directories",
-    )
-    parser.add_argument(
-        "--outdir",
-        type=Path,
-        required=True,
-        help="Output directory for processed data",
-    )
-    args = parser.parse_args()
-
-    main(args.event_dir, args.outdir)
+    new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
+    if new_events:
+        for event in new_events:
+            try:
+                url = process_event_outputs(event, outdir)
+                generate_html(event, url, outdir)
+            except FileNotFoundError:
+                continue
