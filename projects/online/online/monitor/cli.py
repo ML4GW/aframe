@@ -5,8 +5,12 @@ import argparse
 import time
 from pathlib import Path
 
+from utils.logging import configure_logging
+
 
 def cli():
+    configure_logging()
+
     parser = argparse.ArgumentParser(description="Process event outputs")
     parser.add_argument(
         "--run_dir",
