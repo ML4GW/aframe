@@ -11,12 +11,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def html_header(label: str) -> str:
+plot_name_dict = {
+    "aframe_response": "Aframe response",
+    "amplfi.flattened": "AMPLFI low-latency skymap",
+    "amplfi.multiorder": "AMPLFI ligo-skymap-from-samples",
+    "asds": "Background ASDs",
+    "corner_plot": "Source parameter posteriors",
+}
+
+
+def html_header(label: str, url: str) -> str:
     """
     Generate the HTML header with a title.
 
     Args:
         label: Title for the HTML page.
+        url: URL for GraceDB page
 
     Returns:
         str: HTML header string.
@@ -62,7 +72,9 @@ def html_header(label: str) -> str:
         </style>
     </head>
     <body>
-        <h1>{label}</h1>
+        <h1>
+            <a href={url}>{url}</a>
+        </h1>
         <div class="gallery">
     """
     return html_header
@@ -98,12 +110,13 @@ def embed_image(image_path: Path, caption: str) -> str:
     '''
 
 
-def generate_html(event: Path, outdir: Path):
+def generate_html(event: Path, url: str, outdir: Path):
     """
     Generate an HTML summary page for the event.
 
     Args:
         eventdir: Directory containing event data.
+        url: URL to GraceDB page of event
         outdir: Output directory for the HTML file.
     """
     eventdir = outdir / event.stem
@@ -111,9 +124,9 @@ def generate_html(event: Path, outdir: Path):
     html_file = eventdir / f"{event.stem}.html"
 
     with open(html_file, "w") as f:
-        f.write(html_header(event))
-        for png in plotsdir.glob("*.png"):
-            caption = png.stem
+        f.write(html_header(event.name, url))
+        for png in sorted(plotsdir.glob("*.png")):
+            caption = plot_name_dict[png.stem]
             f.write(embed_image(png, caption))
         f.write(html_footer())
 
@@ -159,6 +172,10 @@ def process_event_outputs(event: Path, outdir: Path):
     plt.savefig(plotsdir / "asds.png", dpi=150)
     plt.close()
 
+    with open(event / "gracedb_url.txt", "r") as f:
+        url = f.readline()
+    return url
+
 
 def main(event_dir: Path, outdir: Path):
     if not outdir.exists():
@@ -168,8 +185,8 @@ def main(event_dir: Path, outdir: Path):
         if new_events:
             for event in tqdm(new_events):
                 try:
-                    process_event_outputs(event, outdir)
-                    generate_html(event, outdir)
+                    url = process_event_outputs(event, outdir)
+                    generate_html(event, url, outdir)
                 except FileNotFoundError:
                     continue
         time.sleep(60)
