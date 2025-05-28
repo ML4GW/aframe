@@ -22,6 +22,9 @@ def cli():
     )
     args = parser.parse_args()
 
+    if not args.outdir.exists():
+        args.outdir.mkdir(exist_ok=True, parents=True)
+
     event_dir = args.run_dir / "output" / "events"
     while True:
         make_event_pages(event_dir, args.outdir)
