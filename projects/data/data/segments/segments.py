@@ -1,3 +1,4 @@
+import subprocess
 from typing import Iterable, Optional
 
 from gwpy.segments import DataQualityDict, DataQualityFlag, SegmentList
@@ -5,6 +6,27 @@ from gwpy.segments import DataQualityDict, DataQualityFlag, SegmentList
 OPEN_DATA_FLAGS = ["H1_DATA", "L1_DATA", "V1_DATA"]
 O3A_END = 1253977218
 O3B_START = 1256655618
+
+
+def authenticate():
+    """
+    Generate a SciToken with permission to read segments
+    from DQSegDB.
+
+    See https://computing.docs.ligo.org/guide/auth/scitokens/
+    for details
+    """
+
+    args = [
+        "htgettoken",
+        "-a",
+        "vault.ligo.org",
+        "--audience",
+        "https://segments.ligo.org",
+        "--scopes",
+        "dqsegdb.read",
+    ]
+    subprocess.run(args)
 
 
 class DataQualityDict(DataQualityDict):
@@ -53,6 +75,8 @@ class DataQualityDict(DataQualityDict):
 
         segments = cls()
         if flags:
+            # Authenticate only if we need to query non-open flags
+            authenticate()
             segments.update(cls.query_non_open(flags, start, end, **kwargs))
         if open_data_flags:
             segments.update(
