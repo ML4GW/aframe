@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import psutil
 
@@ -84,4 +85,5 @@ def generate_html(run_dir: Path, outdir: Path):
 
 
 def main(run_dir: Path, outdir: Path):
+    logging.info("Updating summary page")
     generate_html(run_dir, outdir)

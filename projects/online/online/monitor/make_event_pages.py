@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 import h5py
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -177,8 +178,12 @@ def process_event_outputs(event: Path, outdir: Path):
 
 
 def main(event_dir: Path, outdir: Path):
+    outdir = outdir / "events"
+    if not outdir.exists():
+        outdir.mkdir(exist_ok=True, parents=True)
     new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
     if new_events:
+        logging.info(f"Processing {len(new_events)} new events")
         for event in sorted(new_events):
             try:
                 url = process_event_outputs(event, outdir)
