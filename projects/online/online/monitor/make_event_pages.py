@@ -11,7 +11,9 @@ import numpy as np
 plot_name_dict = {
     "aframe_response": "Aframe response",
     "amplfi.flattened": "AMPLFI low-latency skymap",
+    "amplfi.mollweide": "AMPLFI low-latency skymap",
     "amplfi.multiorder": "AMPLFI ligo-skymap-from-samples",
+    "ligo.skymap.mollweide": "AMPLFI ligo-skymap-from-samples",
     "asds": "Background ASDs",
     "corner_plot": "Source parameter posteriors",
 }
@@ -177,7 +179,7 @@ def process_event_outputs(event: Path, outdir: Path):
 def main(event_dir: Path, outdir: Path):
     new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
     if new_events:
-        for event in new_events:
+        for event in sorted(new_events):
             try:
                 url = process_event_outputs(event, outdir)
                 generate_html(event, url, outdir)
