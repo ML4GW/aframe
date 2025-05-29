@@ -395,7 +395,9 @@ def main(
         kernel_length:
             Length of Aframe analysis kernel in seconds
         online_inference_rate:
-            Rate at which to sample the output of the Aframe model
+            Rate at which to sample the output of the Aframe model,
+            which determines the timing resolution for the merger
+            time of detected events
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
