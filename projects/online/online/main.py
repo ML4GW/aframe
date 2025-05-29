@@ -71,7 +71,7 @@ def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
 
 
 def get_time_offset(
-    inference_sampling_rate: float,
+    online_inference_rate: float,
     fduration: float,
     integration_window_length: float,
     kernel_length: float,
@@ -79,7 +79,7 @@ def get_time_offset(
 ):
     time_offset = (
         # end of the first kernel in batch
-        1 / inference_sampling_rate
+        1 / online_inference_rate
         # account for whitening padding
         - fduration / 2
         # distance coalescence time lies away from right edge
@@ -168,7 +168,7 @@ def search(
     outdir: Path,
     emails: Optional[list[str]] = None,
 ):
-    integrated = None
+    significance_outputs, timing_outputs = None, None
 
     # flag that declares if the most previous frame
     # was analysis ready or not
@@ -201,7 +201,9 @@ def search(
                 # we won't get to see the peak of the event
                 # so build the event with what we have
                 event = searcher.build_event(
-                    integrated[-1], t0 - update_size, len(integrated) - 1
+                    significance_outputs[-1],
+                    t0 - update_size,
+                    len(timing_outputs) - 1,
                 )
                 if event is not None:
                     # if virgo is available use it for amplfi
@@ -277,14 +279,18 @@ def search(
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
-        integrated = output_buffer.update(y.cpu(), t0)
+        significance_outputs, timing_outputs = output_buffer.update(
+            y.cpu(), t0
+        )
 
         # if this frame was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
         if snapshotter.full_psd_present and hl_ready:
-            event = searcher.search(integrated, t0 + time_offset)
+            event = searcher.search(
+                significance_outputs, timing_outputs, t0 + time_offset
+            )
 
         # if we found an event, process it!
         if event is not None:
@@ -326,7 +332,8 @@ def main(
     channels: List[str],
     sample_rate: float,
     kernel_length: float,
-    inference_sampling_rate: float,
+    online_inference_rate: float,
+    offline_inference_rate: float,
     psd_length: float,
     amplfi_psd_length: float,
     aframe_right_pad: float,
@@ -387,8 +394,13 @@ def main(
             Input data sample rate in Hz
         kernel_length:
             Length of Aframe analysis kernel in seconds
-        inference_sampling_rate:
-            Rate at which to sample the output of the Aframe model
+        online_inference_rate:
+            Rate at which to sample the output of the Aframe model,
+            which determines the timing resolution for the merger
+            time of detected events
+        offline_inference_rate:
+            Rate at which inference was performed offline when
+            establishing the background and foreground distributions
         psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten aframe data
@@ -645,7 +657,8 @@ def main(
     )
 
     output_buffer = OutputBuffer(
-        inference_sampling_rate=inference_sampling_rate,
+        online_inference_rate=online_inference_rate,
+        offline_inference_rate=offline_inference_rate,
         integration_window_length=integration_window_length,
         buffer_length=output_buffer_length,
         device="cpu",
@@ -695,8 +708,8 @@ def main(
     whitener = BatchWhitener(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
-        inference_sampling_rate=inference_sampling_rate,
-        batch_size=update_size * inference_sampling_rate,
+        inference_sampling_rate=online_inference_rate,
+        batch_size=update_size * online_inference_rate,
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
@@ -711,7 +724,7 @@ def main(
         kernel_length=kernel_length,
         fduration=fduration,
         sample_rate=sample_rate,
-        inference_sampling_rate=inference_sampling_rate,
+        inference_sampling_rate=online_inference_rate,
     ).to(device)
 
     # load in background, foreground, and rejected injections;
@@ -734,7 +747,7 @@ def main(
     searcher = Searcher(
         background=background,
         far_threshold=far_threshold,
-        inference_sampling_rate=inference_sampling_rate,
+        online_inference_rate=online_inference_rate,
         refractory_period=refractory_period,
         ifos=ifos,
         channels=channels,
@@ -743,7 +756,7 @@ def main(
     )
 
     time_offset = get_time_offset(
-        inference_sampling_rate,
+        online_inference_rate,
         fduration,
         integration_window_length,
         kernel_length,

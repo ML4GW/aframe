@@ -98,28 +98,50 @@ class OutputBuffer(torch.nn.Module):
     A buffer for storing raw and integrated neural network output
 
     Args:
-        inference_sampling_rate: The sampling rate of the neural network
-        integration_window_length: The length of the integration window
-        buffer_length: The length of the buffer in seconds
+        online_inference_rate:
+            Rate at which Aframe's output is sampled online
+        offline_inference_rate:
+            Rate at which inference was performed offline when
+            establishing the background and foreground distributions
+        integration_window_length:
+            The length of the integration window in seconds
+        buffer_length:
+            The length of the buffer in seconds
     """
 
     def __init__(
         self,
-        inference_sampling_rate: float,
+        online_inference_rate: float,
+        offline_inference_rate: float,
         integration_window_length: float,
         buffer_length: float,
         device: str,
     ):
         super().__init__()
         self.device = device
-        self.inference_sampling_rate = inference_sampling_rate
-        self.integrator_size = (
-            int(integration_window_length * inference_sampling_rate) + 1
+        self.online_inference_rate = online_inference_rate
+        self.timing_integrator_size = (
+            int(integration_window_length * online_inference_rate) + 1
         )
-        self.window = torch.ones((1, 1, self.integrator_size), device=device)
-        self.window /= self.integrator_size
+        self.timing_window = torch.ones(
+            (1, 1, self.timing_integrator_size), device=device
+        )
+        self.timing_window /= self.timing_integrator_size
+
+        significance_integrator_size = (
+            int(integration_window_length * offline_inference_rate) + 1
+        )
+        self.significance_window = torch.ones(
+            (1, 1, significance_integrator_size), device=device
+        )
+        self.significance_window /= significance_integrator_size
+
+        self.online_offline_stride = int(
+            online_inference_rate / offline_inference_rate
+        )
+
         self.buffer_length = buffer_length
-        self.buffer_size = int(buffer_length * inference_sampling_rate)
+        self.buffer_size = int(buffer_length * online_inference_rate)
 
         self.output_buffer = torch.zeros((self.buffer_size,), device=device)
 
@@ -136,7 +158,7 @@ class OutputBuffer(torch.nn.Module):
 
     def write(self, path):
         start = self.t0
-        stop = self.t0 + self.buffer_length - 1 / self.inference_sampling_rate
+        stop = self.t0 + self.buffer_length - 1 / self.online_inference_rate
         time = np.linspace(start, stop, self.buffer_size)
         with h5py.File(path, "w") as f:
             f.create_dataset("time", data=time)
@@ -148,8 +170,14 @@ class OutputBuffer(torch.nn.Module):
 
     def integrate(self, x: torch.Tensor):
         x = x.view(1, 1, -1)
-        y = torch.nn.functional.conv1d(x, self.window, padding="valid")
-        return y[0, 0, 1:]
+        timing_output = torch.nn.functional.conv1d(
+            x, self.timing_window, padding="valid"
+        )
+        x = x[..., :: self.online_offline_stride]
+        significance_output = torch.nn.functional.conv1d(
+            x, self.significance_window, padding="valid"
+        )
+        return timing_output[0, 0, 1:], significance_output[0, 0, 1:]
 
     def update(self, update: torch.Tensor, t0: float):
         # first append update to the output buffer
@@ -159,15 +187,16 @@ class OutputBuffer(torch.nn.Module):
 
         # t0 corresponds to the time of the first sample in the update
         # self.t0 corresponds to the earliest time in the buffer
-        update_duration = len(update) / self.inference_sampling_rate
+        update_duration = len(update) / self.online_inference_rate
         self.t0 = t0 - (self.buffer_length - update_duration)
 
-        integration_size = self.integrator_size + len(update)
+        integration_size = self.timing_integrator_size + len(update)
         y = self.output_buffer[-integration_size:]
-        integrated = self.integrate(y)
+        timing_output, significance_output = self.integrate(y)
         self.integrated_buffer = torch.cat(
-            [self.integrated_buffer, integrated]
+            [self.integrated_buffer, timing_output]
         )
         self.integrated_buffer = self.integrated_buffer[-self.buffer_size :]
-        integrated_cpu = integrated.detach().cpu().numpy()
-        return integrated_cpu
+        timing_cpu = timing_output.detach().cpu().numpy()
+        significance_cpu = significance_output.detach().cpu().numpy()
+        return significance_cpu, timing_cpu
