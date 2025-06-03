@@ -46,7 +46,12 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         [X], waveforms = next(iter(trainer.train_dataloader))
         X = X.to(device)
         X, y = trainer.datamodule.augment(X, waveforms)
-        trace = torch.jit.trace(module.model.to("cpu"), X.to("cpu"))
+
+        if isinstance(X, tuple):
+            X = [x.to("cpu") for x in X]
+        else:
+            X = X.to("cpu")
+        trace = torch.jit.trace(module.model.to("cpu"), X)
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
@@ -75,7 +80,7 @@ class SaveAugmentedBatch(Callback):
             waveforms = trainer.datamodule.slice_waveforms(waveforms)
             X = X.to(device)
 
-            X, y = trainer.datamodule.augment(X, waveforms)
+            (X, X_fft), y = trainer.datamodule.augment(X, waveforms)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -83,7 +88,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, psds = trainer.datamodule.build_val_batches(
                 background, signals
             )
 
@@ -93,6 +98,7 @@ class SaveAugmentedBatch(Callback):
                     with io.BytesIO() as f:
                         with h5py.File(f, "w") as h5file:
                             h5file["X"] = X.cpu().numpy()
+                            h5file["X_fft"] = X_fft.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
                         s3_file.write(f.getvalue())
 
@@ -101,10 +107,12 @@ class SaveAugmentedBatch(Callback):
                         with h5py.File(f, "w") as h5file:
                             h5file["X_bg"] = X_bg.cpu().numpy()
                             h5file["X_inj"] = X_inj.cpu().numpy()
+                            h5file["psds"] = psds.cpu().numpy()
                         s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
                     f["X"] = X.cpu().numpy()
+                    f["X_fft"] = X_fft.cpu().numpy()
                     f["y"] = y.cpu().numpy()
 
                 with h5py.File(
@@ -112,6 +120,7 @@ class SaveAugmentedBatch(Callback):
                 ) as f:
                     f["X_bg"] = X_bg.cpu().numpy()
                     f["X_inj"] = X_inj.cpu().numpy()
+                    f["psds"] = psds.cpu().numpy()
 
             # while we're here let's log the wandb url
             # associated with the run
