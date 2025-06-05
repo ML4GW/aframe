@@ -68,17 +68,11 @@ def logging_subprocess(queue: Queue, log_dir: "Path", verbose: bool = False):
     """
     configure_logging(log_dir, verbose)
     while True:
-        try:
-            record = queue.get()
-            if record is None:
-                break
-            logger = logging.getLogger(record.name)
-            logger.handle(record)
-        except Exception:
-            import sys
-            import traceback
-
-            traceback.print_exc(file=sys.stderr)
+        record = queue.get()
+        if record is None:
+            break
+        logger = logging.getLogger(record.name)
+        logger.handle(record)
 
 
 def setup_logging(
