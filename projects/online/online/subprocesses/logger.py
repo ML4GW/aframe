@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def configure_logging(logdir: Path, verbose: bool = False):
+def configure_logging(logdir: "Path", verbose: bool = False):
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     logging.basicConfig(
@@ -58,7 +58,7 @@ def configure_logging(logdir: Path, verbose: bool = False):
     logging.getLogger("h5py").setLevel(logging.WARNING)
 
 
-def logging_subprocess(queue: Queue, log_dir: Path, verbose: bool = False):
+def logging_subprocess(queue: Queue, log_dir: "Path", verbose: bool = False):
     """
     Logging subprocess that will be started in a separate Process.
     Ingests and processes logs from a `Queue` that is populated via
@@ -79,7 +79,7 @@ def logging_subprocess(queue: Queue, log_dir: Path, verbose: bool = False):
             traceback.print_exc(file=sys.stderr)
 
 
-def setup_logging(log_dir: Path, verbose: bool = True) -> Queue:
+def setup_logging(log_dir: "Path", verbose: bool = True) -> Queue:
     """
     Called in the main thread to setup a logging queue and
     initiate the logging subprocess
@@ -94,7 +94,7 @@ def setup_logging(log_dir: Path, verbose: bool = True) -> Queue:
     # logger subprocess
     log_queue = Queue()
 
-    listener = Process(target=logging_subprocess, args=(log_queue))
+    listener = Process(target=logging_subprocess, args=(log_queue, log_dir))
     listener.start()
 
     h = QueueHandler(log_queue)
