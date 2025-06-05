@@ -27,6 +27,7 @@ from online.subprocesses import (
     pastro_subprocess,
     event_creation_subprocess,
     authenticate_subprocess,
+    setup_logging,
     cleanup_subprocesses,
     signal_handler,
 )
@@ -470,6 +471,9 @@ def main(
             If true, autheticate with debug flag set
     """
 
+    log_queue = setup_logging(outdir / "logs", verbose=verbose)
+    level = logging.DEBUG if verbose else logging.INFO
+
     if emails is not None:
         logging.info(f"Sending email alerts to {', '.join(emails)}")
         send_init_email(emails, outdir)
@@ -527,6 +531,10 @@ def main(
 
     # create various queues for message
     # passing between subprocesses
+
+    # Note: the first 4 of each subprocess args
+    # below correspond to arguments passed to
+    # `online.subprocess.utils.subprocess_wrapper`
     error_queue = Queue()
     pastro_queue = Queue()
     event_queue = Queue()
@@ -541,7 +549,15 @@ def main(
             f"Minimum requested token life {minsecs} is greater "
             f"than scitoken lifetime {SCITOKEN_LIFETIME}"
         )
-    args = (error_queue, "authenticate", auth_refresh, minsecs, verbose)
+    args = (
+        error_queue,
+        log_queue,
+        level,
+        "authenticate",
+        auth_refresh,
+        minsecs,
+        verbose,
+    )
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,
@@ -553,6 +569,8 @@ def main(
     # detection information like FAR to gdb
     args = (
         error_queue,
+        log_queue,
+        level,
         "event creator",
         event_queue,
         gdb,
@@ -575,6 +593,8 @@ def main(
 
     args = (
         error_queue,
+        log_queue,
+        level,
         "amplfi",
         amplfi_queue,
         gdb,
@@ -600,6 +620,8 @@ def main(
 
     args = (
         error_queue,
+        log_queue,
+        level,
         "p_astro",
         pastro_queue,
         background_path,
