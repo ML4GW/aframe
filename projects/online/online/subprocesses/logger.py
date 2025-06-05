@@ -79,7 +79,9 @@ def logging_subprocess(queue: Queue, log_dir: "Path", verbose: bool = False):
             traceback.print_exc(file=sys.stderr)
 
 
-def setup_logging(log_dir: "Path", verbose: bool = True) -> Queue:
+def setup_logging(
+    log_dir: "Path", verbose: bool = True
+) -> tuple[Queue, Process]:
     """
     Called in the main thread to setup a logging queue and
     initiate the logging subprocess
@@ -102,4 +104,4 @@ def setup_logging(log_dir: "Path", verbose: bool = True) -> Queue:
     root.addHandler(h)
     root.setLevel(verbose)
 
-    return log_queue
+    return log_queue, listener

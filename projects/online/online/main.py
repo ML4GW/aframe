@@ -471,7 +471,11 @@ def main(
             If true, autheticate with debug flag set
     """
 
-    log_queue = setup_logging(outdir / "logs", verbose=verbose)
+    subprocesses = []
+    log_queue, logging_subprocess = setup_logging(
+        outdir / "logs", verbose=verbose
+    )
+    subprocesses.append(logging_subprocess)
     level = logging.DEBUG if verbose else logging.INFO
 
     if emails is not None:
@@ -539,8 +543,6 @@ def main(
     pastro_queue = Queue()
     event_queue = Queue()
     amplfi_queue = Queue()
-
-    subprocesses = []
 
     # subprocess for re-authenticating
     minsecs = MIN_VALID_LIFETIME + auth_refresh + 100
