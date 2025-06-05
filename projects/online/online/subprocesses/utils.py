@@ -2,7 +2,7 @@ import logging
 import sys
 from logging.handlers import QueueHandler
 from multiprocessing import Process, Queue
-from typing import Union
+from typing import Union, Optional
 import traceback
 import subprocess
 
@@ -18,19 +18,20 @@ def subprocess_wrapper(
 
     def wrapper(
         error_queue: Queue,
-        log_queue: Queue,
         level: Union[int, str],
         name: str,
+        log_queue: Optional[Queue],
         *args,
         **kwargs,
     ):
         # add a queue handler to the root logger;
         # in python logging, any child loggers
         # will by default inherit the parent logger handler
-        h = QueueHandler(log_queue)
-        root = logging.getLogger()
-        root.addHandler(h)
-        root.setLevel(level)
+        if log_queue is not None:
+            h = QueueHandler(log_queue)
+            root = logging.getLogger()
+            root.addHandler(h)
+            root.setLevel(level)
 
         try:
             f(*args, **kwargs)

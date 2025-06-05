@@ -4,6 +4,7 @@ from logging.handlers import TimedRotatingFileHandler, QueueHandler
 from datetime import datetime, timezone
 import sys
 from multiprocessing import Process, Queue
+from online.subprocesses.utils import subprocess_wrapper
 
 if TYPE_CHECKING:
     from multiprocessing import Queue
@@ -58,6 +59,7 @@ def configure_logging(logdir: "Path", verbose: bool = False):
     logging.getLogger("h5py").setLevel(logging.WARNING)
 
 
+@subprocess_wrapper
 def logging_subprocess(queue: Queue, log_dir: "Path", verbose: bool = False):
     """
     Logging subprocess that will be started in a separate Process.
@@ -80,7 +82,7 @@ def logging_subprocess(queue: Queue, log_dir: "Path", verbose: bool = False):
 
 
 def setup_logging(
-    log_dir: "Path", verbose: bool = True
+    log_dir: "Path", error_queue: Queue, level: bool = True
 ) -> tuple[Queue, Process]:
     """
     Called in the main thread to setup a logging queue and
@@ -95,13 +97,13 @@ def setup_logging(
     # from subprocesses, and pass them to main
     # logger subprocess
     log_queue = Queue()
-
-    listener = Process(target=logging_subprocess, args=(log_queue, log_dir))
+    args = (error_queue, level, "logging", None, log_queue, log_dir)
+    listener = Process(target=logging_subprocess, args=args)
     listener.start()
 
     h = QueueHandler(log_queue)
     root = logging.getLogger()
     root.addHandler(h)
-    root.setLevel(verbose)
+    root.setLevel(level)
 
     return log_queue, listener

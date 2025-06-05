@@ -471,12 +471,25 @@ def main(
             If true, autheticate with debug flag set
     """
 
+    # create various queues for message
+    # passing between subprocesses
+    error_queue = Queue()
+    pastro_queue = Queue()
+    event_queue = Queue()
+    amplfi_queue = Queue()
+
+    # create subprocess list for responsibly
+    # shuting down sbuprocesses if pipeline crashes
     subprocesses = []
+
+    # initialize logging subprocess which will
+    # ingest a queue of logs populated by other
+    # subprocesses and the main thread
+    level = logging.DEBUG if verbose else logging.INFO
     log_queue, logging_subprocess = setup_logging(
-        outdir / "logs", verbose=verbose
+        outdir / "logs", error_queue, level
     )
     subprocesses.append(logging_subprocess)
-    level = logging.DEBUG if verbose else logging.INFO
 
     if emails is not None:
         logging.info(f"Sending email alerts to {', '.join(emails)}")
@@ -533,16 +546,9 @@ def main(
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
 
-    # create various queues for message
-    # passing between subprocesses
-
     # Note: the first 4 of each subprocess args
     # below correspond to arguments passed to
     # `online.subprocess.utils.subprocess_wrapper`
-    error_queue = Queue()
-    pastro_queue = Queue()
-    event_queue = Queue()
-    amplfi_queue = Queue()
 
     # subprocess for re-authenticating
     minsecs = MIN_VALID_LIFETIME + auth_refresh + 100
