@@ -24,8 +24,11 @@ def subprocess_wrapper(
         *args,
         **kwargs,
     ):
+        # add a queue handler to the root logger;
+        # in python logging, any child loggers
+        # will by default inherit the parent logger handler
         h = QueueHandler(log_queue)
-        root = logging.getLogger(name)
+        root = logging.getLogger()
         root.addHandler(h)
         root.setLevel(level)
 
