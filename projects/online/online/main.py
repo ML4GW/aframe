@@ -559,9 +559,9 @@ def main(
         )
     args = (
         error_queue,
-        log_queue,
         level,
         "authenticate",
+        log_queue,
         auth_refresh,
         minsecs,
         verbose,
@@ -577,9 +577,9 @@ def main(
     # detection information like FAR to gdb
     args = (
         error_queue,
-        log_queue,
         level,
         "event creator",
+        log_queue,
         event_queue,
         gdb,
         outdir / "events",
@@ -601,9 +601,9 @@ def main(
 
     args = (
         error_queue,
-        log_queue,
         level,
         "amplfi",
+        log_queue,
         amplfi_queue,
         gdb,
         inference_params,
@@ -628,9 +628,9 @@ def main(
 
     args = (
         error_queue,
-        log_queue,
         level,
         "p_astro",
+        log_queue,
         pastro_queue,
         background_path,
         foreground_path,
