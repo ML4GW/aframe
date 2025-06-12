@@ -16,7 +16,7 @@ from torch.distributions import Uniform
 torch.set_num_threads(1)
 
 if TYPE_CHECKING:
-    from amplfi.train.architectures.flows.base import FlowArchitecture
+    from amplfi.train.architectures.flows import FlowArchitecture
     from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 
 

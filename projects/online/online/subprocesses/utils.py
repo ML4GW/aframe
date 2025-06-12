@@ -1,7 +1,8 @@
 import logging
 import sys
+from logging.handlers import QueueHandler
 from multiprocessing import Process, Queue
-from typing import List
+from typing import Union, Optional
 import traceback
 import subprocess
 
@@ -11,10 +12,30 @@ def subprocess_wrapper(
 ):
     """
     Wraps a callable so that errors are propogated
-    into a queue object
+    into a queue object, and logs are passed to a log_queue
+    object for downstream handling by logger subprocess
     """
 
-    def wrapper(error_queue: Queue, name: str, *args, **kwargs):
+    def wrapper(
+        error_queue: Queue,
+        level: Union[int, str],
+        name: str,
+        log_queue: Optional[Queue],
+        *args,
+        **kwargs,
+    ):
+        # add a queue handler to the root logger;
+        # in python logging, any child loggers
+        # will by default inherit the parent logger handler
+        if log_queue is not None:
+            h = QueueHandler(log_queue)
+            root = logging.getLogger()
+            # clear already inherited handlers so
+            # duplicate logs arent sent
+            root.handlers.clear()
+            root.addHandler(h)
+            root.setLevel(level)
+
         try:
             f(*args, **kwargs)
         except Exception as e:
@@ -25,7 +46,7 @@ def subprocess_wrapper(
 
 
 def cleanup_subprocesses(
-    subprocesses: List[Process],
+    subprocesses: list[Process],
 ):
     """
     Terminate and clean up subprocesses if the
@@ -56,7 +77,7 @@ def signal_handler(signum, frame):
 
 
 def run_subprocess_with_logging(
-    args: List[str], logger=None, log_stderr_on_success=False
+    args: list[str], logger=None, log_stderr_on_success=False
 ):
     """
     Run a subprocess, logging stdout via a python logger

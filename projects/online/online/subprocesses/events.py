@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from .utils import subprocess_wrapper
 
 if TYPE_CHECKING:
-    from ligo.gracedb.rest import GraceDb
+    from online.utils.gdb import GraceDb
 
 logger = logging.getLogger("event-creation-subprocess")
 
@@ -21,6 +21,8 @@ def event_creation_subprocess(
 ):
     logger.info("event creation subprocess initialized")
 
+    # override with subprocesses logger
+    gdb.logger = logger
     while True:
         event = event_queue.get()
         logger.debug("Putting event in pastro queue")

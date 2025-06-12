@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List, Literal, Optional
 import bilby
 import h5py
 from gwpy.time import tconvert
@@ -27,12 +27,25 @@ class GraceDb(_GraceDb):
         write_dir:
             Local directory where event data will be written
             upon submission
+        logger:
+            Optional logger object to emit logs
     """
 
-    def __init__(self, *args, server: GdbServer, write_dir: Path, **kwargs):
+    def __init__(
+        self,
+        *args,
+        server: GdbServer,
+        write_dir: Path,
+        logger: Optional[logging.Logger] = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs, use_auth="scitoken")
         self.server = server
         self.write_dir = write_dir
+        if logger is None:
+            self.logger = logging.getLogger()
+        else:
+            self.logger = logger
 
     def url(self, graceid):
         if self.server in ["playground", "test"]:
@@ -47,10 +60,10 @@ class GraceDb(_GraceDb):
         return gracedb_url
 
     def submit(self, event: Event):
-        logging.info(f"Submitting trigger to file {event.filename}")
+        self.logger.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / event.event_dir
         filename = event_dir / event.filename
-        logging.info("Creating event in GraceDB")
+        self.logger.info("Creating event in GraceDB")
         response = self.create_event(
             group="CBC",
             pipeline="aframe",
@@ -58,7 +71,7 @@ class GraceDb(_GraceDb):
             search="AllSky",
         )
 
-        logging.debug("Event created")
+        self.logger.debug("Event created")
 
         # Get the event's graceid for submitting
         # further data products
@@ -101,7 +114,7 @@ class GraceDb(_GraceDb):
         skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
 
-        logging.debug("Submitting skymap to GraceDB")
+        self.logger.debug("Submitting skymap to GraceDB")
         self.write_log(
             graceid,
             "skymap",
@@ -109,7 +122,7 @@ class GraceDb(_GraceDb):
             tag_name="sky_loc",
             label="SKYMAP_READY",
         )
-        logging.debug("Skymap submitted")
+        self.logger.debug("Skymap submitted")
 
         # Write posterior samples to file, adhering to expected format
         filename = event_dir / "amplfi.posterior_samples.hdf5"
@@ -128,11 +141,11 @@ class GraceDb(_GraceDb):
             filename=corner_fname,
         )
 
-        logging.debug("Submitting corner plot to GraceDB")
+        self.logger.debug("Submitting corner plot to GraceDB")
         self.write_log(
             graceid, "Corner plot", filename=corner_fname, tag_name="pe"
         )
-        logging.debug("Corner plot submitted")
+        self.logger.debug("Corner plot submitted")
 
     def submit_ligo_skymap_from_samples(
         self,
@@ -173,7 +186,9 @@ class GraceDb(_GraceDb):
         # advantage of this
 
         # run subprocess, passing any output to python logger
-        result = run_subprocess_with_logging(args, log_stderr_on_success=True)
+        result = run_subprocess_with_logging(
+            args, logger=self.logger, log_stderr_on_success=True
+        )
 
         self.write_log(
             graceid,

@@ -27,6 +27,7 @@ from online.subprocesses import (
     pastro_subprocess,
     event_creation_subprocess,
     authenticate_subprocess,
+    setup_logging,
     cleanup_subprocesses,
     signal_handler,
 )
@@ -262,6 +263,7 @@ def search(
             in_spec = True
 
         # update our input buffer with latest strain data
+        logging.debug("Updating input buffer")
         input_buffer.update(X, t0)
 
         # we have a frame that is analysis ready,
@@ -271,14 +273,19 @@ def search(
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
+        logging.debug("Updating snapshotter")
         batch, state = snapshotter(X[None], state)
 
         # whiten the batch, and analyze with aframe
+        logging.debug("Whitening data")
         whitened = whitener(batch)
+
+        logging.debug("Performing inference")
         y = aframe(whitened)[:, 0]
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
+        logging.debug("Updating output buffer")
         significance_outputs, timing_outputs = output_buffer.update(
             y.cpu(), t0
         )
@@ -288,6 +295,7 @@ def search(
         # search for events in the integrated output
         event = None
         if snapshotter.full_psd_present and hl_ready:
+            logging.debug("Searching for event...")
             event = searcher.search(
                 significance_outputs, timing_outputs, t0 + time_offset
             )
@@ -470,6 +478,26 @@ def main(
             If true, autheticate with debug flag set
     """
 
+    # create various queues for message
+    # passing between subprocesses
+    error_queue = Queue()
+    pastro_queue = Queue()
+    event_queue = Queue()
+    amplfi_queue = Queue()
+
+    # create subprocess list for responsibly
+    # shuting down sbuprocesses if pipeline crashes
+    subprocesses = []
+
+    # initialize logging subprocess which will
+    # ingest a queue of logs populated by other
+    # subprocesses and the main thread
+    level = logging.DEBUG if verbose else logging.INFO
+    log_queue, logging_subprocess = setup_logging(
+        outdir / "logs", error_queue, level
+    )
+    subprocesses.append(logging_subprocess)
+
     if emails is not None:
         logging.info(f"Sending email alerts to {', '.join(emails)}")
         send_init_email(emails, outdir)
@@ -525,14 +553,9 @@ def main(
     data = torch.randn(samples_per_event * len(inference_params))
     shared_samples = Array("d", data)
 
-    # create various queues for message
-    # passing between subprocesses
-    error_queue = Queue()
-    pastro_queue = Queue()
-    event_queue = Queue()
-    amplfi_queue = Queue()
-
-    subprocesses = []
+    # Note: the first 4 of each subprocess args
+    # below correspond to arguments passed to
+    # `online.subprocess.utils.subprocess_wrapper`
 
     # subprocess for re-authenticating
     minsecs = MIN_VALID_LIFETIME + auth_refresh + 100
@@ -541,7 +564,15 @@ def main(
             f"Minimum requested token life {minsecs} is greater "
             f"than scitoken lifetime {SCITOKEN_LIFETIME}"
         )
-    args = (error_queue, "authenticate", auth_refresh, minsecs, verbose)
+    args = (
+        error_queue,
+        level,
+        "authenticate",
+        log_queue,
+        auth_refresh,
+        minsecs,
+        verbose,
+    )
     auth_process = Process(
         target=authenticate_subprocess,
         args=args,
@@ -553,7 +584,9 @@ def main(
     # detection information like FAR to gdb
     args = (
         error_queue,
+        level,
         "event creator",
+        log_queue,
         event_queue,
         gdb,
         outdir / "events",
@@ -575,7 +608,9 @@ def main(
 
     args = (
         error_queue,
+        level,
         "amplfi",
+        log_queue,
         amplfi_queue,
         gdb,
         inference_params,
@@ -600,7 +635,9 @@ def main(
 
     args = (
         error_queue,
+        level,
         "p_astro",
+        log_queue,
         pastro_queue,
         background_path,
         foreground_path,
