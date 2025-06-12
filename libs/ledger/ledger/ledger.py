@@ -309,7 +309,7 @@ class Ledger:
                 each source file.
 
         """
-        if length is not None:
+        if length is None:
             # iterate through all the files once up front
             # to see how many rows the output ledger will have
             length = 0
