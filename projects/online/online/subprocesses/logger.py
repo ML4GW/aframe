@@ -56,6 +56,7 @@ def configure_logging(logdir: "Path", verbose: bool = False):
     # matplotlib and h5py have some debug-level
     # logging we want to suppress
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
     logging.getLogger("h5py").setLevel(logging.WARNING)
 
 
