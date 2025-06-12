@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Union
 
 import h5py
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 PATH = Union[str, bytes, os.PathLike]
 
@@ -277,17 +277,45 @@ class Ledger:
         dtype: np.dtype = np.float64,
         clean: bool = True,
         chunks: Optional[tuple] = None,
+        length: Optional[int] = None,
     ) -> None:
         """
         Aggregate the data from the files of many smaller
         ledgers into a single larger ledger file
+
+        Args:
+            files:
+                List of Paths to all of the smaller files to
+                aggregate. All files must be structured as
+                expected by the `cls` object
+            fname:
+                Name of the file into which the smaller files
+                will be aggregated
+            dtype:
+                The datatype to use for storing parameters
+                or waveforms data
+            clean:
+                If true, remove the source files when the
+                aggregation process completes
+            chunks:
+                Shape to chunk waveforms into for efficient
+                reading
+            length:
+                The total length of the final `Ledger` object.
+                If unspecified, this will be determined from
+                the `length` attribute of the source files.
+                If the final length is known in advance,
+                specifying it here saves a read operation of
+                each source file.
+
         """
-        # iterate through all the files once up front
-        # to see how many rows the output ledger will have
-        length = 0
-        for source in files:
-            with h5py.File(source, "r") as f:
-                length += f.attrs["length"]
+        if length is None:
+            # iterate through all the files once up front
+            # to see how many rows the output ledger will have
+            length = 0
+            for source in tqdm(files):
+                with h5py.File(source, "r") as f:
+                    length += f.attrs["length"]
 
         # now open the output file and start
         # writing to it iteratively
