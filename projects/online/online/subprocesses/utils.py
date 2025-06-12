@@ -30,6 +30,9 @@ def subprocess_wrapper(
         if log_queue is not None:
             h = QueueHandler(log_queue)
             root = logging.getLogger()
+            # clear already inherited handlers so
+            # duplicate logs arent sent
+            root.handlers.clear()
             root.addHandler(h)
             root.setLevel(level)
 
