@@ -10,7 +10,7 @@ from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
 
 if TYPE_CHECKING:
-    from ligo.gracedb.rest import GraceDb
+    from online.utils.gdb import GraceDb
 
 logger = logging.getLogger("amplfi-subprocess")
 
@@ -28,6 +28,9 @@ def amplfi_subprocess(
     use_distance: bool = True,
 ):
     logger.info("amplfi subprocess initialized")
+    # override with subprocesses logger
+    gdb.logger = logger
+
     while True:
         arg = amplfi_queue.get()
         if isinstance(arg[0], Event):

@@ -15,7 +15,7 @@ from p_astro.foreground import KdeForeground
 from p_astro.p_astro import Pastro
 
 if TYPE_CHECKING:
-    from ligo.gracedb.rest import GraceDb
+    from online.utils.gdb import GraceDb
 
 logger = logging.getLogger("pastro-process")
 
@@ -83,6 +83,9 @@ def pastro_subprocess(
     outdir: Path,
 ):
     logger.info("pastro subprocess initialized")
+
+    # override with subprocesses logger
+    gdb.logger = logger
     pastro_model = fit_or_load_pastro(
         outdir / "pastro.pkl",
         background_path,
