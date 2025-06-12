@@ -111,7 +111,7 @@ class GraceDb(_GraceDb):
         event_dir: Path,
     ):
         event_dir = self.write_dir / event_dir
-        skymap_fname = event_dir / "amplfi.multiorder.fits"
+        skymap_fname = event_dir / "amplfi.fits"
         skymap.writeto(skymap_fname)
 
         self.logger.debug("Submitting skymap to GraceDB")
