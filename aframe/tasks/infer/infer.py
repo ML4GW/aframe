@@ -246,6 +246,7 @@ class Infer(AframeSingularityTask):
         zero_lag_length = sum(background_lengths[zero_lag])
         background_length = sum(background_lengths[~zero_lag])
         foreground_length = sum(foreground_lengths)
+        foreground_mask = foreground_lengths > 0
 
         logging.info("Aggregating background files")
         EventSet.aggregate(
@@ -256,7 +257,7 @@ class Infer(AframeSingularityTask):
         )
         logging.info("Aggregating foreground files")
         RecoveredInjectionSet.aggregate(
-            self.foreground_files,
+            self.foreground_files[foreground_mask],
             self.foreground_output,
             clean=False,
             length=foreground_length,
