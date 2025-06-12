@@ -263,6 +263,7 @@ def search(
             in_spec = True
 
         # update our input buffer with latest strain data
+        logging.debug("Updating input buffer")
         input_buffer.update(X, t0)
 
         # we have a frame that is analysis ready,
@@ -272,14 +273,19 @@ def search(
 
         # update the snapshotter state and return
         # unfolded batch of overlapping windows
+        logging.debug("Updating snapshotter")
         batch, state = snapshotter(X[None], state)
 
         # whiten the batch, and analyze with aframe
+        logging.debug("Whitening data")
         whitened = whitener(batch)
+
+        logging.debug("Performing inference")
         y = aframe(whitened)[:, 0]
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
+        logging.debug("Updating output buffer")
         significance_outputs, timing_outputs = output_buffer.update(
             y.cpu(), t0
         )
@@ -289,6 +295,7 @@ def search(
         # search for events in the integrated output
         event = None
         if snapshotter.full_psd_present and hl_ready:
+            logging.debug("Searching for event...")
             event = searcher.search(
                 significance_outputs, timing_outputs, t0 + time_offset
             )
