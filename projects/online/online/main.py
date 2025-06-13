@@ -367,7 +367,8 @@ def main(
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
     auth_refresh: int = 9600,
-    nside: int = 32,
+    nside: int = 64,
+    min_samples_per_pix: int = 5,
     use_distance: bool = True,
     device: str = "cpu",
     verbose: bool = False,
@@ -468,6 +469,10 @@ def main(
         auth_refresh:
             Number of seconds between calls to authenticate,
             that refreshes the scitoken credential
+        min_samples_per_pix:
+            Minimum number of samples per healpix pixel
+            required to estimate parameters of the distance
+            ansatz
         nside:
             Healpix resolution for low-latency skymaps
         use_distance:
@@ -619,6 +624,7 @@ def main(
         emails,
         email_far_threshold,
         nside,
+        min_samples_per_pix,
         use_distance,
     )
 

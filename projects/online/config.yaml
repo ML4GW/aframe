@@ -69,6 +69,8 @@ refractory_period: 8
 far_threshold: 1 # per day
 email_far_threshold: 0.00000001 # Hz
 emails: null
+nside: 64
+min_samples_per_pix: 5
 server: "local"
 auth_refresh: 300
 ifo_suffix: 
