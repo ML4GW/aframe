@@ -111,6 +111,9 @@ class GraceDb(_GraceDb):
         )
         logging.debug("Skymap submitted")
 
+        # rename so we can later write kde file
+        skymap_fname.rename(event_dir / "amplfi.multiorder.fits,0")
+
         # Write posterior samples to file, adhering to expected format
         filename = event_dir / "amplfi.posterior_samples.hdf5"
         posterior_df = result.posterior
@@ -187,8 +190,8 @@ class GraceDb(_GraceDb):
         plt.switch_backend("agg")
 
         event_dir = self.write_dir / event_dir
-        amplfi_fname = str(event_dir / "amplfi.flattened.png")
-        ligo_skymap_fname = str(event_dir / "amplfi.multiorder.png")
+        amplfi_fname = str(event_dir / "amplfi.histogram.png")
+        ligo_skymap_fname = str(event_dir / "amplfi.kde.png")
 
         ligo_skymap_plot(
             [
