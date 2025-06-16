@@ -116,6 +116,7 @@ class LDGCondorWorkflow(htcondor.HTCondorWorkflow):
         environment = self.build_environment()
         environment += '"'
 
+        config.custom_content.append(("use_oauth_services", "scitokens"))
         config.custom_content.append(("environment", environment))
         config.custom_content.append(("stream_error", "True"))
         config.custom_content.append(("stream_output", "True"))
