@@ -24,7 +24,8 @@ def amplfi_subprocess(
     shared_samples: Array,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
-    nside: int = 32,
+    nside: int = 64,
+    min_samples_per_pix: int = 5,
     use_distance: bool = True,
 ):
     logger.info("amplfi subprocess initialized")
@@ -47,7 +48,9 @@ def amplfi_subprocess(
             )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=use_distance)
+            skymap = result.to_skymap(
+                nside, min_samples_per_pix, use_distance=use_distance
+            )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             graceid = amplfi_queue.get()
