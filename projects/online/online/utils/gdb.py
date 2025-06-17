@@ -210,7 +210,7 @@ class GraceDb(_GraceDb):
 
         ligo_skymap_plot(
             [
-                str(event_dir / "amplfi.fits"),
+                str(event_dir / "amplfi.multiorder.fits,0"),
                 "--annotate",
                 "--contour",
                 "50",
