@@ -20,40 +20,33 @@ def segments_from_paths(paths: List[Path]):
     return segments
 
 
-def calc_shifts_required(Tb: float, T: float, delta: float) -> int:
-    r"""
-    Calculate the number of shifts required to generate Tb
-    seconds of background.
-
-    Solve:
-    $$\sum_{i=1}^{N}(T - i\delta) \geq T_b$$
-    for the lowest value of N, where \delta is the
-    shift increment.
-
-    TODO: generalize to multiple ifos and negative
-    shifts, since e.g. you can in theory get the same
-    amount of Tb with fewer shifts if for each shift
-    you do its positive and negative. This should just
-    amount to adding a factor of 2 * number of ifo
-    combinations in front of the sum above.
-    """
-
-    if Tb == 0:
-        return 0
-    discriminant = (delta / 2 - T) ** 2 - 2 * delta * Tb
-    N = (T - delta / 2 - discriminant**0.5) / delta
-    return math.ceil(N)
-
-
 def get_num_shifts_from_Tb(
-    segments: List[Tuple[float, float]], Tb: float, shift: float
+    segments: List[Tuple[float, float]],
+    Tb: float,
+    shift: float,
+    psd_length: float,
 ) -> int:
     """
     Calculates the number of required time shifts based on a list
     of background segments and the desired total background duration.
     """
-    T = sum([stop - start for start, stop in segments])
-    return calc_shifts_required(Tb, T, shift)
+    # If Tb is zero, we want to do only zero-lag
+    if Tb == 0:
+        return 0
+    livetime = 0
+    num_shifts = 0
+
+    # Subtract off time lost due to PSD burn-in
+    durations = [stop - start - psd_length for start, stop in segments]
+    # Increment the number of shifts we do until
+    # enough background time is accumulated
+    while livetime < Tb:
+        num_shifts += 1
+        for dur in durations:
+            dur -= shift * num_shifts
+            if dur > 0:
+                livetime += dur
+    return num_shifts
 
 
 def get_num_shifts_from_num_signals(
