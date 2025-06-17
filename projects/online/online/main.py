@@ -383,6 +383,9 @@ def main(
             AMPLFI model architecture for parameter estimation
         amplfi_weights:
             Path to trained AMPLFI model weights
+        amplfi_parameter_sampler:
+            ParameterSampler object that is used to filter
+            parameters outside of the defined parameter space
         background_path:
             Path to background noise events dataset
             used for Aframe FAR calculation
