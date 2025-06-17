@@ -13,11 +13,11 @@ init_args:
         low: 0.0 
         high: 0.999
         validate_args: false
-    distance: 
+    luminosity_distance: 
       class_path: torch.distributions.Uniform
       init_args:
         low: 0 
-        high: 3100 
+        high: 10000 
         validate_args: false
     inclination: 
       class_path: ml4gw.distributions.Sine
