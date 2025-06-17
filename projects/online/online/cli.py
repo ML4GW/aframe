@@ -5,7 +5,7 @@ from online.main import main
 def build_parser():
     # use omegaconf to suppor env var interpolation
     parser = jsonargparse.ArgumentParser(parser_mode="omegaconf")
-    parser.add_function_arguments(main)
+    parser.add_function_arguments(main, fail_untyped=False, sub_configs=True)
     parser.add_argument("--config", action="config")
 
     parser.link_arguments(
