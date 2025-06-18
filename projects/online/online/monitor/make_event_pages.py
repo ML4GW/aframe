@@ -7,7 +7,9 @@ import h5py
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
+from gwpy.timeseries import TimeSeries
 
+IFOS = ["H1", "L1", "V1"]
 
 plot_name_dict = {
     "aframe_response": "Aframe response",
@@ -18,6 +20,7 @@ plot_name_dict = {
     "asds": "Background ASDs",
     "corner_plot": "Source parameter posteriors",
 }
+plot_name_dict |= {f"{ifo}_qtransform": f"{ifo} Q-transform" for ifo in IFOS}
 
 
 def html_header(label: str, url: str) -> str:
@@ -26,7 +29,7 @@ def html_header(label: str, url: str) -> str:
 
     Args:
         label: Title for the HTML page.
-        url: URL for GraceDB page
+        url: URL for GraceDB page of event
 
     Returns:
         str: HTML header string.
@@ -131,7 +134,7 @@ def generate_html(event: Path, url: str, outdir: Path):
         f.write(html_footer())
 
 
-def process_event_outputs(event: Path, outdir: Path):
+def process_event_outputs(event: Path, outdir: Path, online_args: dict) -> str:
     eventdir = outdir / event.stem
     plotsdir = eventdir / "plots"
     eventdir.mkdir(parents=True, exist_ok=True)
@@ -161,8 +164,7 @@ def process_event_outputs(event: Path, outdir: Path):
     freqs = asds[0]
     asds = asds[1:]
 
-    ifos = ["H1", "L1", "V1"]
-    for i, ifo in enumerate(ifos[: len(asds)]):
+    for i, ifo in enumerate(IFOS[: len(asds)]):
         plt.plot(freqs, asds[i], label=ifo)
     plt.xlabel("Frequency (Hz)")
     plt.ylabel("ASD (strain/Hz^0.5)")
@@ -172,21 +174,34 @@ def process_event_outputs(event: Path, outdir: Path):
     plt.savefig(plotsdir / "asds.png", dpi=150)
     plt.close()
 
+    whitened = np.load(event / "amplfi_whitened.npy")[0]
+
+    sample_rate = online_args["sample_rate"]
+    t0 = gpstime - online_args["event_position"]
+    for i, ifo in enumerate(IFOS[: len(whitened)]):
+        ts = TimeSeries(whitened[i], sample_rate=sample_rate, t0=t0)
+        qplot = ts.q_transform(whiten=False).plot(epoch=gpstime)
+        ax = qplot.gca()
+        ax.set_yscale("log")
+        qplot.savefig(plotsdir / f"{ifo}_qtransform.png", dpi=150)
+        plt.close()
+
     with open(event / "gracedb_url.txt", "r") as f:
         url = f.readline()
     return url
 
 
-def main(event_dir: Path, outdir: Path):
+def main(run_dir: Path, outdir: Path, online_args: dict):
+    event_dir = run_dir / "output" / "events"
     outdir = outdir / "events"
     if not outdir.exists():
         outdir.mkdir(exist_ok=True, parents=True)
     new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
     if new_events:
         logging.info(f"Processing {len(new_events)} new events")
-        for event in sorted(new_events):
+        for event in sorted(new_events)[:1]:
             try:
-                url = process_event_outputs(event, outdir)
+                url = process_event_outputs(event, outdir, online_args)
                 generate_html(event, url, outdir)
             except FileNotFoundError:
                 continue

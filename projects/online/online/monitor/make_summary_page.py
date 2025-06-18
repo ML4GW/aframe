@@ -84,6 +84,6 @@ def generate_html(run_dir: Path, outdir: Path):
         f.write(html)
 
 
-def main(run_dir: Path, outdir: Path):
+def main(run_dir: Path, outdir: Path, online_args: dict = None):
     logging.info("Updating summary page")
     generate_html(run_dir, outdir)
