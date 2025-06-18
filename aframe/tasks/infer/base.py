@@ -116,7 +116,10 @@ class InferBase(
         # given the duration of the background segments
         segments = data_utils.segments_from_paths(self.background_fnames)
         num_shifts = data_utils.get_num_shifts_from_Tb(
-            segments, self.Tb, max(self.shifts)
+            segments,
+            self.Tb,
+            max(self.shifts),
+            self.psd_length,
         )
         return num_shifts
 
