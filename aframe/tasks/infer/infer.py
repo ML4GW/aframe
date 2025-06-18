@@ -1,9 +1,10 @@
+import json
+import logging
 import os
 import socket
 import time
 from contextlib import ExitStack
 from pathlib import Path
-from typing import List
 
 import h5py
 import law
@@ -124,6 +125,7 @@ class Infer(AframeSingularityTask):
         self.foreground_output = self.output_dir / "foreground.hdf5"
         self.background_output = self.output_dir / "background.hdf5"
         self.zero_lag_output = self.output_dir / "0lag.hdf5"
+        self.timeseries_output = self.output_dir / "timeseries.hdf5"
 
     def output(self):
         output = {}
@@ -131,6 +133,8 @@ class Infer(AframeSingularityTask):
         output["background"] = law.LocalFileTarget(self.background_output)
         if self.zero_lag:
             output["zero_lag"] = law.LocalFileTarget(self.zero_lag_output)
+        if self.return_timeseries:
+            output["timeseries"] = law.LocalFileTarget(self.timeseries_output)
         return output
 
     def requires(self):
@@ -162,14 +166,69 @@ class Infer(AframeSingularityTask):
             [Path(targets["foreground"].path) for targets in self.targets]
         )
 
-    @classmethod
-    def get_shifts(cls, files: List[Path]):
-        shifts = []
-        for f in files:
-            with h5py.File(f) as f:
-                shift = f["parameters"]["shift"][0]
-                shifts.append(shift)
-        return shifts
+    @property
+    def metadata_files(self):
+        return np.array(
+            [Path(targets["metadata"].path) for targets in self.targets]
+        )
+
+    @property
+    def timeseries_files(self):
+        if self.return_timeseries:
+            return np.array(
+                [Path(targets["timeseries"].path) for targets in self.targets]
+            )
+        return None
+
+    def get_metadata(self):
+        """
+        Read in shift and length metadata from the metadata
+        files created by each `DeployInferLocal` condor job.
+        This data is read from the metadata files rather than
+        the hdf5 files because the read operation is O(1000)
+        times faster this way
+        """
+        files = self.metadata_files
+        num_files = len(files)
+        background_lengths = np.zeros(num_files)
+        foreground_lengths = np.zeros(num_files)
+        shifts = np.zeros((num_files, len(self.shifts)))
+        for i, f in enumerate(files):
+            with open(f, "r") as f:
+                data = json.load(f)
+            background_lengths[i] = data["background_length"]
+            foreground_lengths[i] = data["foreground_length"]
+            shifts[i] = data["shifts"]
+
+        return background_lengths, foreground_lengths, shifts
+
+    def aggregate_timeseries(self):
+        index = []
+        with h5py.File(self.timeseries_output, "w") as f:
+            ts_group = f.create_group("timeseries")
+            for ts in self.timeseries_files:
+                with h5py.File(ts, "r") as g:
+                    t0 = g.attrs["t0"]
+                    shifts = g.attrs["shifts"]
+                    background = g["background"][:]
+                    foreground = g["foreground"][:]
+                    ts_id = f"{t0}_{shifts}"
+                    subgroup = ts_group.create_group(ts_id)
+                    subgroup.create_dataset("background", data=background)
+                    subgroup.create_dataset("foreground", data=foreground)
+                    index.append((t0, shifts, f"/timeseries/{ts_id}"))
+
+            # Create an index to make it easier to look up
+            # specific segments and shifts
+            dtype = np.dtype(
+                [
+                    ("t0", np.float64),
+                    ("shifts", np.int32, (len(shifts),)),
+                    ("path", h5py.string_dtype(encoding="utf-8")),
+                ]
+            )
+            index_array = np.array(index, dtype=dtype)
+            f.create_dataset("index", data=index_array)
 
     def run(self):
         import shutil
@@ -177,22 +236,43 @@ class Infer(AframeSingularityTask):
         from ledger.events import EventSet, RecoveredInjectionSet
 
         # separate 0lag and background events into different files
-        shifts = self.get_shifts(self.background_files)
+        background_lengths, foreground_lengths, shifts = self.get_metadata()
         zero_lag = np.array(
             [all(shift == [0] * len(self.ifos)) for shift in shifts]
         )
 
         zero_lag_files = self.background_files[zero_lag]
         back_files = self.background_files[~zero_lag]
+        zero_lag_length = sum(background_lengths[zero_lag])
+        background_length = sum(background_lengths[~zero_lag])
+        foreground_length = sum(foreground_lengths)
+        foreground_mask = foreground_lengths > 0
 
-        EventSet.aggregate(back_files, self.background_output, clean=False)
+        logging.info("Aggregating background files")
+        EventSet.aggregate(
+            back_files,
+            self.background_output,
+            clean=False,
+            length=background_length,
+        )
+        logging.info("Aggregating foreground files")
         RecoveredInjectionSet.aggregate(
-            self.foreground_files, self.foreground_output, clean=False
+            self.foreground_files[foreground_mask],
+            self.foreground_output,
+            clean=False,
+            length=foreground_length,
         )
         if len(zero_lag_files) > 0:
+            logging.info("Aggregating zero lag files")
             EventSet.aggregate(
-                zero_lag_files, self.zero_lag_output, clean=False
+                zero_lag_files,
+                self.zero_lag_output,
+                clean=False,
+                length=zero_lag_length,
             )
+        if self.return_timeseries:
+            logging.info("Aggregating timeseries files")
+            self.aggregate_timeseries()
 
         # Sort background events for later use.
         # TODO: any benefit to sorting foreground for SV calculation?
