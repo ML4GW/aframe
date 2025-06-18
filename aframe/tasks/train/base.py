@@ -101,12 +101,13 @@ class TrainBase(law.Task):
         # logging, profiling, etc.) should be specified in the
         # train projects config.yaml file.
         fftlength = self.fftlength or "null"
+        lowpass = self.lowpass or "null"
         args.append("--data.sample_rate=" + str(self.sample_rate))
         args.append("--data.kernel_length=" + str(self.kernel_length))
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.fftlength=" + str(fftlength))
         args.append("--data.highpass=" + str(self.highpass))
-        args.append("--data.lowpass=" + str(self.lowpass))
+        args.append("--data.lowpass=" + str(lowpass))
         if self.q is not None:
             args.append("--data.q=" + str(self.q))
         return args
