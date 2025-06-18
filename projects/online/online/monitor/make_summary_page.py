@@ -1,6 +1,15 @@
-import logging
 from pathlib import Path
 import psutil
+import pandas as pd
+from gwpy.time import tconvert
+from datetime import datetime, timezone
+
+from .html import html_header, html_footer, embed_image
+from .plotting import latency_plot
+
+plot_name_dict = {
+    "aframe_latency": "Aframe detection latency",
+}
 
 
 def get_pipeline_status(expected_process_count: int = 6):
@@ -44,8 +53,24 @@ def get_data_status(run_dir: Path):
     return True
 
 
-def generate_html(run_dir: Path, outdir: Path):
+def update_summary_plots(plotsdir: Path, df: pd.DataFrame):
+    """
+    Update summary plots based on the DataFrame of events.
+
+    Args:
+        plotsdir: Output directory where the plots will be saved.
+        df: DataFrame containing event data.
+    """
+    latency_plot(plotsdir, df)
+
+
+def main(
+    run_dir: Path, outdir: Path, start_time: float, df: pd.DataFrame = None
+):
     html_file = outdir / "summary.html"
+    plotsdir = outdir / "plots"
+    if not plotsdir.exists():
+        plotsdir.mkdir(exist_ok=True, parents=True)
 
     pipeline_status = get_pipeline_status()
     if pipeline_status:
@@ -65,32 +90,34 @@ def generate_html(run_dir: Path, outdir: Path):
         data_status = "Not analysis-ready"
         data_color = "red"
 
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-    <meta charset="UTF-8">
-    <title>Status Page</title>
-    <style>
-        .green {{
-        color: green;
-        }}
-        .red {{
-        color: red;
-        }}
-    </style>
-    </head>
-    <body>
-    <p>Aframe: <span class={pipeline_color}>{pipeline_status}</span></p>
-    <p>Data: <span class={data_color}>{data_status}</span></p>
-    </body>
-    </html>
-    """
+    if df is not None:
+        update_summary_plots(plotsdir, df)
+
+    date_format = "%Y-%m-%d %H:%M:%S"
+    start_time = tconvert(start_time).strftime(date_format)
+    current_time = datetime.now(timezone.utc).strftime(date_format)
 
     with open(html_file, "w") as f:
-        f.write(html)
-
-
-def main(run_dir: Path, outdir: Path, online_args: dict = None):
-    logging.info("Updating summary page")
-    generate_html(run_dir, outdir)
+        f.write(html_header("Aframe Online Status Summary"))
+        f.write(f"""
+            <style>
+                .green {{
+                color: green;
+                }}
+                .red {{
+                color: red;
+                }}
+            </style>
+            <body>
+                <p> Monitoring events after: {start_time} UTC</p>
+                <p> Last updated at: {current_time} UTC</p>
+                <p> Aframe:
+                    <span class={pipeline_color}>{pipeline_status}</span>
+                </p>
+                <p> Data: <span class={data_color}>{data_status}</span></p>
+            </body>
+            """)
+        for png in sorted(plotsdir.glob("*.png")):
+            caption = plot_name_dict[png.stem]
+            f.write(embed_image(png, caption))
+        f.write(html_footer())

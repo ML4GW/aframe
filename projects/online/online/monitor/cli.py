@@ -1,7 +1,5 @@
-from .make_event_pages import main as make_event_pages
-from .make_summary_page import main as make_summary_page
+from .main import main
 
-import time
 from pathlib import Path
 
 import yaml
@@ -26,6 +24,12 @@ def cli():
         required=True,
         help="Output directory for processed data",
     )
+    parser.add_argument(
+        "--start_time",
+        type=float,
+        default=None,
+        help="Earliest GPS time to consider for processing events.",
+    )
     args = parser.parse_args()
 
     # Load in online configuration to get various values
@@ -39,10 +43,7 @@ def cli():
     if not args.outdir.exists():
         args.outdir.mkdir(exist_ok=True, parents=True)
 
-    while True:
-        make_event_pages(**vars(args), online_args=online_args)
-        make_summary_page(**vars(args), online_args=online_args)
-        time.sleep(60)
+    main(**vars(args), online_args=online_args)
 
 
 if __name__ == "__main__":
