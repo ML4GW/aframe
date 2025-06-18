@@ -14,7 +14,9 @@ IFOS = ["H1", "L1", "V1"]
 plot_name_dict = {
     "aframe_response": "Aframe response",
     "amplfi.flattened": "AMPLFI low-latency skymap",
+    "amplfi.histogram": "AMPLFI low-latency skymap",
     "amplfi.mollweide": "AMPLFI low-latency skymap",
+    "amplfi.kde": "AMPLFI ligo-skymap-from-samples",
     "amplfi.multiorder": "AMPLFI ligo-skymap-from-samples",
     "ligo.skymap.mollweide": "AMPLFI ligo-skymap-from-samples",
     "asds": "Background ASDs",
@@ -199,7 +201,7 @@ def main(run_dir: Path, outdir: Path, online_args: dict):
     new_events = set(event_dir.iterdir()).difference(set(outdir.iterdir()))
     if new_events:
         logging.info(f"Processing {len(new_events)} new events")
-        for event in sorted(new_events)[:1]:
+        for event in sorted(new_events)[-1:]:
             try:
                 url = process_event_outputs(event, outdir, online_args)
                 generate_html(event, url, outdir)

@@ -3,7 +3,7 @@ from pathlib import Path
 import psutil
 
 
-def get_pipeline_status(expected_process_count: int = 5):
+def get_pipeline_status(expected_process_count: int = 6):
     online_processes = 0
     for p in psutil.process_iter(["username", "name"]):
         if p.info["username"] == "aframe" and p.info["name"] == "online":
@@ -25,15 +25,22 @@ def get_data_status(run_dir: Path):
         lines = f.readlines()
 
     failure_lines = [
-        "H1 exiting analysis ready mode",
-        "L1 exiting analysis ready mode",
-        "H1 not analysis ready",
-        "L1 not analysis ready",
+        "H1 exiting analysis ready mode\n",
+        "L1 exiting analysis ready mode\n",
+        "H1 not analysis ready\n",
+        "L1 not analysis ready\n",
     ]
 
-    for line in lines:
+    ready_line = "is ready again, resetting states\n"
+
+    # Go through the lines in reverse order and
+    # return the state based on whichever condition
+    # we find first
+    for line in lines[::-1]:
         if any(line.endswith(failure) for failure in failure_lines):
             return False
+        if line.endswith(ready_line):
+            return True
     return True
 
 
