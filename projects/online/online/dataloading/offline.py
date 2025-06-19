@@ -55,7 +55,7 @@ class OfflineFrameFileLoader:
         return self.find_intersection()
 
     def find_intersection(self):
-        """Find the overlapping time range across all directories."""
+        """Find the overlapping time range across all ifos"""
         ranges = []
 
         for ifo, frame_metadata in self.frame_metadata.items():
