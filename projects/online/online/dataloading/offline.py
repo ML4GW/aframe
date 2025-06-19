@@ -112,11 +112,14 @@ class OfflineFrameFileLoader:
             end=end,
         )
 
-        # resample state vector channel,
-        # which for Virgo is sampled at 1 Hz
-        # while at Hanford/ Livingston its sampled at 16 Hz
-        data = data.resample({state_channel: 16.0})
-        return data
+        state = data.pop(state_channel)
+        sample_rate = state.sample_rate.value
+        state = state.value
+
+        if sample_rate == 1.0:
+            state = np.repeat(state, 16)
+
+        return data.pop(strain_channel), state
 
     def generate_chunks(
         self, chunk_length: int
@@ -136,11 +139,11 @@ class OfflineFrameFileLoader:
             for ifo, strain_channel, state_channel in zip(
                 self.ifos, self.strain_channels, self.state_channels
             ):
-                data = self.read_data(
+                ifo_strain, ifo_state = self.read_data(
                     ifo, strain_channel, state_channel, chunk_start, chunk_end
                 )
-                strain.append(data[strain_channel].value)
-                state.append(data[state_channel].value)
+                strain.append(ifo_strain.value)
+                state.append(ifo_state)
 
             strain = np.stack(strain)
             state = np.stack(state)
@@ -195,8 +198,10 @@ def offline_data_iterator(
 
         # yield one second per duration
         for i in range(int(CHUNK_LENGTH)):
+            logging.debug(f"Reading frames from timestamp {t0}")
             frames = []
             frame_slc = slice(int(i * sample_rate), int((i + 1) * sample_rate))
+            state_vector_slc = slice(int(i * 16), int((i + 1) * 16))
             for j, ifo in enumerate(ifos):
                 frames.append(strain[j, frame_slc])
                 # if state channels were specified,
@@ -206,8 +211,8 @@ def offline_data_iterator(
                 # TODO: parameterize bitmask
                 ifo_ready = True
                 if state_channels is not None:
-                    state_vector = state[j, frame_slc]
-                    ifo_ready = ((state_vector.value & 3) == 3).all()
+                    state_vector = state[j, state_vector_slc]
+                    ifo_ready = ((state_vector & 3) == 3).all()
 
                 # some useful logging
                 # for when ifos enter and exit

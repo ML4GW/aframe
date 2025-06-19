@@ -231,7 +231,6 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
             else:
                 raise
 
-        """
         if len(x) != x.sample_rate.value:
             logging.warning(
                 "Channel {} in file {} got corrupted with "
@@ -242,7 +241,6 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
             del x
             time.sleep(1e-1)
             continue
-        """
 
         return x
     else:
