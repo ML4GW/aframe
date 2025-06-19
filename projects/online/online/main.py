@@ -217,7 +217,6 @@ def search(
                         amplfi_ifos = ["H1", "L1", "V1"]
                     else:
                         amplfi_ifos = ["H1", "L1"]
-                    amplfi_ifos = ["H1", "L1"]
                     process_event(
                         event_queue,
                         amplfi_queue,
@@ -312,7 +311,6 @@ def search(
             else:
                 amplfi_ifos = ["H1", "L1"]
 
-            amplfi_ifos = ["H1", "L1"]
             process_event(
                 event_queue,
                 amplfi_queue,
