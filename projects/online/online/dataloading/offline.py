@@ -62,7 +62,7 @@ class OfflineFrameFileLoader:
             starts = list(frame_metadata.keys())
             start = min(starts)
             last_timestamp = max(starts)
-            end = frame_metadata[last_timestamp]["end_time"]
+            end = frame_metadata[last_timestamp]["end"]
             logging.info(
                 f"Data in {self.directories[ifo]} spans {start} to {end}"
             )
