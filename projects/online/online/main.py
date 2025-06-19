@@ -239,9 +239,10 @@ def search(
             # but don't search for events
             if X is not None:
                 logging.debug(
-                    "Frame {} is not analysis ready. Performing "
-                    "inference but ignoring any triggers".format(t0)
+                    "Frame {} is not analysis ready. Using dummy values "
+                    "for inference any ignoring any triggers".format(t0)
                 )
+                pass
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
@@ -284,8 +285,14 @@ def search(
         logging.debug("Whitening data")
         whitened = whitener(batch)
 
-        logging.debug("Performing inference")
-        y = aframe(whitened)[:, 0]
+        # only actually perform inference
+        # if HL is ready, otherwise use dummy values
+        # (significant performance speed up)
+        if hl_ready:
+            logging.debug("Performing inference")
+            y = aframe(whitened)[:, 0]
+        else:
+            y = torch.ones(whitened.shape[0])
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output

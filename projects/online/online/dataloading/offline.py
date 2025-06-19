@@ -11,6 +11,7 @@ from typing import List, Optional, Generator
 from gwpy.timeseries import TimeSeriesDict
 import logging
 import torch
+import multiprocessing as mp
 
 
 class OfflineFrameFileLoader:
@@ -132,7 +133,7 @@ class OfflineFrameFileLoader:
         while chunk_start + chunk_length <= self.end:
             chunk_end = min(self.end, chunk_start + chunk_length)
 
-            logging.info(f"Loading chunk {chunk_start} to {chunk_end}")
+            logging.debug(f"Loading chunk {chunk_start} to {chunk_end}")
             strain = []
             state = []
 
@@ -150,6 +151,28 @@ class OfflineFrameFileLoader:
             yield strain, state, chunk_start
 
             chunk_start = chunk_end
+
+
+def chunk_loader_worker(
+    datadir: Path,
+    ifo_suffix: str,
+    ifos: list[str],
+    strain_channels: list[str],
+    state_channels: list[str],
+    chunk_size: int,
+    queue: mp.Queue,
+):
+    """
+    Worker function that runs in a separate process to load data chunks.
+    """
+    chunk_loader = OfflineFrameFileLoader(
+        datadir, ifo_suffix, ifos, strain_channels, state_channels
+    )
+
+    for strain, state, t0 in chunk_loader.generate_chunks(chunk_size):
+        queue.put((strain, state, t0))
+
+    queue.put(None)
 
 
 def offline_data_iterator(
@@ -186,18 +209,38 @@ def offline_data_iterator(
 
     last_ready = [True] * len(ifos)
 
-    chunk_loader = OfflineFrameFileLoader(
-        datadir, ifo_suffix, ifos, channels, list(state_channels.values())
-    )
+    queue = mp.Queue()
 
     CHUNK_LENGTH = 4096
-    for strain, state, t0 in chunk_loader.generate_chunks(CHUNK_LENGTH):
+    # load chunks in separate process
+    loader_process = mp.Process(
+        target=chunk_loader_worker,
+        args=(
+            datadir,
+            ifo_suffix,
+            ifos,
+            channels,
+            list(state_channels.values()) if state_channels else [],
+            CHUNK_LENGTH,
+            queue,
+        ),
+    )
+
+    loader_process.start()
+
+    while True:
+        chunk_data = queue.get()
+        if chunk_data is None:
+            break
+
+        strain, state, t0 = chunk_data
+        logging.info(f"Analysing chunk starting at {t0}")
         # now, mimic online deployment by yielding 1 second
         # increments from the pre-loaded data
-        ready = [True] * len(ifos)
 
         # yield one second per duration
         for i in range(int(CHUNK_LENGTH)):
+            ready = [True] * len(ifos)
             logging.debug(f"Reading frames from timestamp {t0}")
             frames = []
             frame_slc = slice(
