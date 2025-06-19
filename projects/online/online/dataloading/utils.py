@@ -5,7 +5,6 @@ from gwpy.signal import filter_design
 import numpy as np
 from pathlib import Path
 
-
 PATH_LIKE = Union[str, Path]
 GWF_SAMPLE_RATE = 16384
 
