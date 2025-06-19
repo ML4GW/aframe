@@ -7,11 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import torch
-from amplfi.train.data.utils.utils import ParameterSampler
-from amplfi.train.priors import precessing_cbc_prior
 from amplfi.utils.result import AmplfiResult
-from ml4gw.distributions import Cosine
-from torch.distributions import Uniform
 
 torch.set_num_threads(1)
 
@@ -163,20 +159,3 @@ def postprocess_samples(
         search_parameter_keys=inference_params,
     )
     return result
-
-
-# TODO: need more robust way to
-# specify the parameter sampler,
-# either from the config,
-# or by loading in from checkpoint
-def parameter_sampler() -> ParameterSampler:
-    base = precessing_cbc_prior()
-    base.parameters["chirp_mass"] = Uniform(0, 150, validate_args=False)
-    base.parameters["mass_ratio"] = Uniform(0, 0.999, validate_args=False)
-    base.parameters["luminosity_distance"] = Uniform(
-        0, 5000, validate_args=False
-    )
-    base.parameters["dec"] = Cosine(validate_args=False)
-    base.parameters["phi"] = Uniform(0, 2 * np.pi, validate_args=False)
-    base.parameters["psi"] = Uniform(0, np.pi, validate_args=False)
-    return base

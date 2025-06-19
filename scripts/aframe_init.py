@@ -28,6 +28,7 @@ REVIEW_CONFIGS = [
 
 ONLINE_CONFIGS = [
     root / "projects" / "online" / "config.yaml",
+    root / "projects" / "online" / "prior.yaml",
     root / "projects" / "online" / "crontab",
 ]
 
