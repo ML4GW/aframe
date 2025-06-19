@@ -8,7 +8,9 @@ import pandas as pd
 IFOS = ["H1", "L1", "V1"]
 
 
-def aframe_response_plot(event: Path, plotsdir: Path, gpstime: float) -> None:
+def aframe_response_plot(
+    event: Path, plotsdir: Path, gpstime: float, far: float
+) -> None:
     """
     Create a plot of Aframe's response
 
@@ -16,6 +18,7 @@ def aframe_response_plot(event: Path, plotsdir: Path, gpstime: float) -> None:
         event: Path to the event directory
         plotsdir: Directory to save the plots
         gpstime: GPS time of the event
+        far: False alarm rate of the event
     """
     with h5py.File(event / "output.hdf5", "r") as f:
         time = f["time"][:]
@@ -29,7 +32,7 @@ def aframe_response_plot(event: Path, plotsdir: Path, gpstime: float) -> None:
     plt.xlabel("GPS time")
     plt.ylabel("Detection statistic")
     plt.legend()
-    plt.title("Aframe Response")
+    plt.title(f"Aframe Response (FAR: {far:.2e} Hz)")
     plt.savefig(plotsdir / "aframe_response.png", dpi=150)
     plt.close()
 
