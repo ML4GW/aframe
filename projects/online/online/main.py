@@ -15,9 +15,12 @@ from torch.multiprocessing import Array, Process, Queue
 
 from ledger.events import EventSet
 from online.utils.buffer import InputBuffer, OutputBuffer
-from online.utils.dataloading import data_iterator
+from online.dataloading import (
+    data_iterator,
+    offline_data_iterator,
+    ngdd_data_iterator,
+)
 from online.utils.gdb import gracedb_factory
-from online.utils.ngdd import data_iterator as ngdd_data_iterator
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
@@ -214,7 +217,7 @@ def search(
                         amplfi_ifos = ["H1", "L1", "V1"]
                     else:
                         amplfi_ifos = ["H1", "L1"]
-
+                    amplfi_ifos = ["H1", "L1"]
                     process_event(
                         event_queue,
                         amplfi_queue,
@@ -308,6 +311,8 @@ def search(
                 amplfi_ifos = ["H1", "L1", "V1"]
             else:
                 amplfi_ifos = ["H1", "L1"]
+
+            amplfi_ifos = ["H1", "L1"]
             process_event(
                 event_queue,
                 amplfi_queue,
@@ -374,6 +379,7 @@ def main(
     use_distance: bool = True,
     device: str = "cpu",
     verbose: bool = False,
+    mode: Literal["online", "offline"] = "online",
 ):
     """
     Main function for launching real-time Aframe and AMPLFI pipeline.
@@ -486,6 +492,13 @@ def main(
             Device to run inference on ("cpu" or "cuda")
         verbose:
             If true, autheticate with debug flag set
+        mode:
+            `online` or `offline`. In `online` mode, frames are
+            expected to be streamed as 1 second frame files in real time.
+            In `offline` mode, static frame files
+            are analyzed as if they were "streamed" online. Useful for
+            mimicking an online analysis over mock data challenges with
+            performance capabilities that are faster than realtime.
     """
 
     # create various queues for message
@@ -507,6 +520,14 @@ def main(
         outdir / "logs", error_queue, level
     )
     subprocesses.append(logging_subprocess)
+
+    if mode == "offline":
+        logging.warning(
+            "Running in 'offline' mode: Turning email "
+            "notifications off and setting GraceDB server to `local`"
+        )
+        server = "local"
+        emails = None
 
     if emails is not None:
         logging.info(f"Sending email alerts to {', '.join(emails)}")
@@ -678,15 +699,26 @@ def main(
         )
     elif data_source == "frames":
         update_size = 1
-        data_it = data_iterator(
-            datadir=datadir,
-            channels=channels,
-            ifos=ifos,
-            sample_rate=sample_rate,
-            ifo_suffix=ifo_suffix,
-            state_channels=state_channels,
-            timeout=10,
-        )
+        if mode == "online":
+            data_it = data_iterator(
+                datadir=datadir,
+                channels=channels,
+                ifos=ifos,
+                sample_rate=sample_rate,
+                ifo_suffix=ifo_suffix,
+                state_channels=state_channels,
+                timeout=10,
+            )
+        if mode == "offline":
+            data_it = offline_data_iterator(
+                datadir=datadir,
+                channels=channels,
+                ifos=ifos,
+                sample_rate=sample_rate,
+                ifo_suffix=ifo_suffix,
+                state_channels=state_channels,
+            )
+
     else:
         raise ValueError(
             f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
@@ -777,7 +809,7 @@ def main(
 
     # load in background, foreground, and rejected injections;
     # use them to fit (or load in a cached) a pastro model
-    logging.info("Loading background distribution")
+    logging.info(f"Loading background distribution at {background_path}")
     background = EventSet.read(background_path)
     logging.info("Background loaded")
 
