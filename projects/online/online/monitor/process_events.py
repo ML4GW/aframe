@@ -53,8 +53,12 @@ def update_dataframe(event: Path, outdir: Path) -> pd.DataFrame:
 
     # Load Aframe latency
     latency_path = event / "latency.log"
-    latencies = np.genfromtxt(latency_path, delimiter=",")
-    event_dict["latency"] = float(latencies[1, -1])
+    try:
+        latencies = np.genfromtxt(latency_path, delimiter=",")
+        latency = float(latencies[1, -1])
+    except FileNotFoundError:
+        latency = -1
+    event_dict["latency"] = latency
 
     # Append to the existing DataFrame or create a new one
     if df_file.exists():

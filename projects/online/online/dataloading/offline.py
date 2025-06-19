@@ -229,23 +229,23 @@ def offline_data_iterator(
                 # mark this ifos readiness in array
                 ready[j] &= ifo_ready
 
-            else:
-                logging.debug("Read successful")
+        else:
+            logging.debug("Read successful")
 
-                frame = np.stack(frames)
-                frame_buffer = np.append(frame_buffer, frame, axis=1)
-                dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
-                # Need at least 3 seconds to be able to crop out edge effects
-                # from resampling and just yield the middle second
-                if dur >= 3:
-                    x = resample(frame_buffer, factor, b, a)
-                    x = x[:, buffer_slc]
-                    frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
-                    # yield last_ready, which corresponds to
-                    # the data quality bits of the previous second
-                    # of data, i.e. the middle second of the
-                    # buffer that is being yielded as well
-                    yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
+            frame = np.stack(frames)
+            frame_buffer = np.append(frame_buffer, frame, axis=1)
+            dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
+            # Need at least 3 seconds to be able to crop out edge effects
+            # from resampling and just yield the middle second
+            if dur >= 3:
+                x = resample(frame_buffer, factor, b, a)
+                x = x[:, buffer_slc]
+                frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
+                # yield last_ready, which corresponds to
+                # the data quality bits of the previous second
+                # of data, i.e. the middle second of the
+                # buffer that is being yielded as well
+                yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
 
-                last_ready = ready
-                t0 += 1
+            last_ready = ready
+            t0 += 1
