@@ -14,6 +14,9 @@ import torch
 import multiprocessing as mp
 
 
+STATE_VECTOR_SAMPLE_RATE = 16
+
+
 class OfflineFrameFileLoader:
     def __init__(
         self,
@@ -117,8 +120,11 @@ class OfflineFrameFileLoader:
         sample_rate = state.sample_rate.value
         state = state.value
 
-        if sample_rate == 1.0:
-            state = np.repeat(state, 16)
+        # TODO:
+        # this logic here is hardcoded to Virgo
+        # which has state vector sample rate of 1.
+        if sample_rate != STATE_VECTOR_SAMPLE_RATE:
+            state = np.repeat(state, STATE_VECTOR_SAMPLE_RATE)
 
         return data.pop(strain_channel), state
 
