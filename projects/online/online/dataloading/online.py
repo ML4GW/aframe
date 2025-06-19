@@ -1,71 +1,18 @@
 import logging
-import re
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
-
+from typing import List, Optional, Generator
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
-from scipy import signal
-from gwpy.signal import filter_design
-
-PATH_LIKE = Union[str, Path]
-GWF_SAMPLE_RATE = 16384
-
-patterns = {
-    "prefix": "[a-zA-Z0-9_:-]+",
-    "start": "[0-9]{10}",
-    "duration": "[1-9][0-9]*",
-    "suffix": "(gwf)|(hdf5)|(h5)",
-}
-groups = {k: f"(?P<{k}>{v})" for k, v in patterns.items()}
-pattern = "{prefix}-{start}-{duration}.{suffix}".format(**groups)
-fname_re = re.compile(pattern)
-
-
-# reproduce exact parameters of
-# gwpys TimeSeries.resample() method,
-# when downsampling by integer factor
-def build_resample_filter(factor: int):
-    n = 60
-    filt = signal.firwin(n + 1, 1.0 / factor, window="hamming")
-    _, filt = filter_design.parse_filter(filt)
-    b, a = filt
-    return b, a
-
-
-def resample(data: np.ndarray, factor: int, b: float, a: float):
-    return signal.filtfilt(b, a, data, axis=1)[:, :: int(factor)]
-
-
-def parse_frame_name(fname: PATH_LIKE) -> Tuple[str, int, int]:
-    """Use the name of a frame file to infer its initial timestamp and length
-
-    Expects frame names to follow a standard nomenclature
-    where the name of the frame file ends {prefix}_{timestamp}-{length}.gwf
-
-    Args:
-        fname: The name of the frame file
-    Returns:
-        The prefix of the frame file name
-        The initial GPS timestamp of the frame file
-        The length of the frame file in seconds
-    """
-
-    if isinstance(fname, Path):
-        fname = fname.name
-
-    match = fname_re.search(fname)
-    if match is None:
-        raise ValueError(f"Could not parse frame filename {fname}")
-
-    prefix, start, duration, *_ = match.groups()
-    return prefix, int(start), int(duration)
-
-
-def _is_gwf(match):
-    return match is not None and match.group("suffix") == "gwf"
+from online.dataloading.utils import (
+    resample,
+    build_resample_filter,
+    fname_re,
+    PATH_LIKE,
+    GWF_SAMPLE_RATE,
+    is_gwf,
+)
 
 
 def get_prefix(datadir: Path):
@@ -74,7 +21,7 @@ def get_prefix(datadir: Path):
 
     fnames = map(str, datadir.iterdir())
     matches = map(fname_re.search, fnames)
-    matches = list(filter(_is_gwf, matches))
+    matches = list(filter(is_gwf, matches))
 
     if len(matches) == 0:
         raise ValueError(f"No valid .gwf files in data directory '{datadir}'")
@@ -102,7 +49,7 @@ def reset_t0(datadir, last_t0):
     tick = time.time()
     while True:
         matches = [fname_re.search(i.name) for i in datadir.iterdir()]
-        t0s = np.array([int(i.group("start")) for i in matches if _is_gwf(i)])
+        t0s = np.array([int(i.group("start")) for i in matches if is_gwf(i)])
         if t0s.size > 0:
             t0 = max(t0s)
             logging.info(f"Resetting timestamp to {t0}")
@@ -125,7 +72,7 @@ def data_iterator(
     ifo_suffix: str = None,
     state_channels: Optional[dict[str, str]] = None,
     timeout: Optional[float] = None,
-) -> torch.Tensor:
+) -> Generator[tuple[torch.Tensor, float, list[bool]], None, None]:
     if ifo_suffix is not None:
         ifo_dir = "_".join([ifos[0], ifo_suffix])
     else:
@@ -284,6 +231,7 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
             else:
                 raise
 
+        """
         if len(x) != x.sample_rate.value:
             logging.warning(
                 "Channel {} in file {} got corrupted with "
@@ -294,6 +242,7 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
             del x
             time.sleep(1e-1)
             continue
+        """
 
         return x
     else:

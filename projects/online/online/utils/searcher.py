@@ -10,7 +10,7 @@ import numpy as np
 from gwpy.time import tconvert
 
 from ledger.events import EventSet
-from online.utils.dataloading import get_prefix
+from online.dataloading.online import get_prefix
 
 SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
 
