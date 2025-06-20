@@ -103,8 +103,7 @@ def get_data_status(run_dir: Path):
     if not get_pipeline_status():
         return
     log_dir = sorted((run_dir / "output" / "logs").iterdir())[-1]
-    log_file = sorted(log_dir.iterdir())[-1]
-
+    log_file = log_dir / "online.log"
     # Given the current logging, I don't think
     # there's anything more efficient than loading
     # the entire log file. The files change each
