@@ -197,6 +197,8 @@ def search(
         virgo_ready.append(ready[-1])
         virgo_ready.pop(0)
         if not hl_ready:
+            in_spec = False
+
             if searcher.detecting:
                 # if we were in the middle of a detection,
                 # we won't get to see the peak of the event
