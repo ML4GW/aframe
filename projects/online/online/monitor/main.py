@@ -72,6 +72,8 @@ def main(
                 tb += update_time - previous_update_time
             previous_update_time = update_time
             make_summary_page(run_dir, outdir, start_time, df, tb)
+        else:
+            logging.info("Skipping summary page update")
 
         # Sleep for a minute before checking for new events again
         time.sleep(update_cadence)

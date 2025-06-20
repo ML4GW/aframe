@@ -1,7 +1,8 @@
 import psutil
 from pathlib import Path
 from gwpy.time import tconvert
-from datetime import datetime
+from datetime import datetime, timezone
+import pytz
 
 
 def get_log_files(log_dir: Path, start_time: float) -> list:
@@ -16,8 +17,18 @@ def get_log_files(log_dir: Path, start_time: float) -> list:
         List of log file paths.
     """
     all_log_files = sorted(log_dir.glob("**/*.log*"))
+    modified_times = [f.stat().st_mtime for f in all_log_files]
+    modified_datetimes = [
+        datetime.fromtimestamp(mtime, tz=pytz.timezone("US/Pacific"))
+        for mtime in modified_times
+    ]
+    modified_utc_datetimes = [
+        dt.astimezone(timezone.utc) for dt in modified_datetimes
+    ]
     relevant_log_files = [
-        f for f in all_log_files if f.stat().st_mtime >= start_time
+        f
+        for f, dt in zip(all_log_files, modified_utc_datetimes)
+        if dt >= start_time
     ]
     return sorted(relevant_log_files)
 
@@ -25,8 +36,7 @@ def get_log_files(log_dir: Path, start_time: float) -> list:
 def get_timestamp_from_log_statement(log_statement: str) -> float:
     datetime_string = log_statement.split(" - ")[0]
     datetime_string = datetime_string.replace(",", ".")
-    datetime_string = datetime.fromisoformat(datetime_string)
-    return datetime_string.timestamp()
+    return datetime.fromisoformat(datetime_string).replace(tzinfo=timezone.utc)
 
 
 def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
@@ -61,7 +71,7 @@ def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
         segment.append(get_timestamp_from_log_statement(line))
         live_segments.append(segment)
     return (
-        sum([stop - start for start, stop in live_segments])
+        sum([(stop - start).total_seconds() for start, stop in live_segments])
         if live_segments
         else 0.0
     )
@@ -69,8 +79,10 @@ def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
 
 def estimate_tb(run_dir: Path, start_time: float) -> float:
     log_dir = run_dir / "output" / "logs"
-    start_time = tconvert(start_time).timestamp()
+    start_time = tconvert(start_time).replace(tzinfo=timezone.utc)
     log_files = get_log_files(log_dir, start_time)
+    if not log_files:
+        return 0.0
     log_text = []
     for log_file in log_files:
         with open(log_file, "r") as f:
