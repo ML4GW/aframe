@@ -5,7 +5,10 @@ from typing import List
 import pandas as pd
 import numpy as np
 import h5py
+from gwpy.time import tconvert
+import logging
 
+from .make_event_page import main as make_event_page
 from .plotting import aframe_response_plot, asd_plot, whitened_plot
 
 IFOS = ["H1", "L1", "V1"]
@@ -24,9 +27,7 @@ def get_plots(
     whitened_plot(event, plotsdir, gpstime, online_args)
 
 
-def update_dataframe(event: Path, outdir: Path) -> pd.DataFrame:
-    df_file = outdir / "event_data.parquet"
-
+def update_dataframe(event: Path, df_file: Path) -> pd.DataFrame:
     # Build event_dict from files
     url_path = event / "gracedb_url.txt"
     if url_path.exists():
@@ -41,11 +42,12 @@ def update_dataframe(event: Path, outdir: Path) -> pd.DataFrame:
     event_data_path = event / f"{event.stem}.json"
     if event_data_path.exists():
         with event_data_path.open("r") as f:
-            metadata = json.load(f)
+            event_data = json.load(f)
         event_dict.update(
             {
-                "gpstime": metadata.get("gpstime"),
-                "far": metadata.get("far"),
+                "gpstime": event_data.get("gpstime"),
+                "datetime": tconvert(event_data.get("gpstime")),
+                "far": event_data.get("far"),
             }
         )
 
@@ -97,8 +99,19 @@ def update_dataframe(event: Path, outdir: Path) -> pd.DataFrame:
 def process_events(
     events: List[Path], outdir: Path, online_args: dict
 ) -> pd.DataFrame:
+    df_file = outdir / "event_data.parquet"
+
+    if not events:
+        logging.info("No new detected events")
+        if df_file.exists():
+            df = pd.read_parquet(df_file)
+        else:
+            df = None
+        return df
+
+    logging.info(f"Processing {len(events)} new events")
     for event in events:
-        df = update_dataframe(event, outdir)
+        df = update_dataframe(event, df_file)
         with open(event / f"{event.stem}.json", "r") as f:
             data = json.load(f)
             gpstime = data.get("gpstime")
@@ -109,5 +122,8 @@ def process_events(
             get_plots(event, eventdir, gpstime, far, online_args)
         except FileNotFoundError:
             continue
+
+        for event, url in zip(events, df["url"]):
+            make_event_page(event, url, outdir)
 
     return df

@@ -4,6 +4,9 @@ from .html import html_header, html_footer, embed_image
 
 IFOS = ["H1", "L1", "V1"]
 
+# Some repeated captions to account for different
+# file names we've used in the past. Eventually,
+# we can remove the older ones
 plot_name_dict = {
     "aframe_response": "Aframe response",
     "amplfi.flattened": "AMPLFI low-latency skymap",
