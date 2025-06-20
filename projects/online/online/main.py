@@ -873,6 +873,9 @@ def main(
         outdir=outdir,
     )
 
+    if mode == "offline":
+        logging.info("Offline analysis complete")
+
 
 if __name__ == "__main__":
     main()
