@@ -27,6 +27,7 @@ dependencies = [
 
 [project.scripts]
 online = "online.cli:cli"
+monitor = "online.monitor.cli:cli"
 
 [dependency-groups]
 dev = [

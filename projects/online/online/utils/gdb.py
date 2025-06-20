@@ -88,18 +88,23 @@ class GraceDb(_GraceDb):
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
-        t_write = event.get_frame_write_time()
+        try:
+            t_write = event.get_frame_write_time()
+        except (ValueError, FileNotFoundError) as e:
+            logging.warning(str(e))
+        else:
+            # time to submit since event occured and since the file was written
+            total_latency = submission_time - event.gpstime
+            write_latency = t_write - event.gpstime
+            aframe_latency = submission_time - t_write
 
-        # time to submit since event occured and since the file was written
-        total_latency = submission_time - event.gpstime
-        write_latency = t_write - event.gpstime
-        aframe_latency = submission_time - t_write
-
-        latency_fname = event_dir / "latency.log"
-        latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
-        latency += f"{total_latency},{write_latency},{aframe_latency}"
-        with open(latency_fname, "w") as f:
-            f.write(latency)
+            latency_fname = event_dir / "latency.log"
+            latency = (
+                "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
+            )
+            latency += f"{total_latency},{write_latency},{aframe_latency}"
+            with open(latency_fname, "w") as f:
+                f.write(latency)
 
         return graceid
 
