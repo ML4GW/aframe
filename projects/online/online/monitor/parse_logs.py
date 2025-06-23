@@ -34,7 +34,7 @@ def get_log_files(log_dir: Path, start_time: float) -> list:
 
 
 def get_timestamp_from_log_statement(log_statement: str) -> float:
-    datetime_string = log_statement.split(" - ")[0]
+    datetime_string = log_statement[:23]
     datetime_string = datetime_string.replace(",", ".")
     return datetime.fromisoformat(datetime_string).replace(tzinfo=timezone.utc)
 
