@@ -86,9 +86,19 @@ class GraceDb(_GraceDb):
         with open(filename, "w") as f:
             f.write(url)
 
-        # record latencies for this event
+        # record latencies for this event;
+        # TODO: determine underlying issue here
+        # Handle issue where sometimes the pipeline lags,
+        # and the frame file has already left the buffer
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
-        t_write = event.get_frame_write_time()
+        try:
+            t_write = event.get_frame_write_time()
+        except FileNotFoundError:
+            self.logger.warning(
+                "Could not find frame file to evaluate write time. "
+                "Using rounded down event gpstime instead."
+            )
+            t_write = int(event.gpstime)
 
         # time to submit since event occured and since the file was written
         total_latency = submission_time - event.gpstime

@@ -11,33 +11,39 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+# custom formatter that adds processing time
+class TimestampFormatter(logging.Formatter):
+    def format(self, record):
+        # original log timestamp using UTC converter
+        recorded = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        recorded = recorded.strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+
+        # time log is processed by logging subprocess
+        processed = datetime.now(tz=timezone.utc)
+        processed = processed.strftime("%H:%M:%S,%f")[:-3]
+
+        message = (
+            f"{recorded} ({processed}) - {record.name} - "
+            f"{record.levelname} - {record.getMessage()}"
+        )
+        return message
+
+
 def configure_logging(logdir: "Path", verbose: bool = False):
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-    logging.basicConfig(
-        format=log_format,
-        level=logging.DEBUG if verbose else logging.INFO,
-        stream=sys.stdout,
-    )
-
     logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
 
-    # set logging to use UTC time
-    logging.Formatter.converter = lambda *args: datetime.now(
-        tz=timezone.utc
-    ).timetuple()
+    # set up stdout handler with custom formatter
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(TimestampFormatter())
+    logger.addHandler(stdout_handler)
 
     timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     run_log_dir = logdir / timestamp
     run_log_dir.mkdir(exist_ok=True, parents=True)
 
     # set up the timed rotating file handler
-    formatter = logging.Formatter(log_format)
-
-    # ensure formatter also uses UTC time
-    formatter.converter = lambda *args: datetime.now(
-        tz=timezone.utc
-    ).timetuple()
+    formatter = TimestampFormatter()
 
     log_file = run_log_dir / "online.log"
 
