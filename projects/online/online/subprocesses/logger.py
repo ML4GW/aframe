@@ -30,13 +30,13 @@ class TimestampFormatter(logging.Formatter):
 
 
 def configure_logging(logdir: "Path", verbose: bool = False):
-    logging.basicConfig(
-        format="%(message)s",
-        level=logging.DEBUG if verbose else logging.INFO,
-        stream=sys.stdout,
-    )
-
     logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+
+    # set up stdout handler with custom formatter
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(TimestampFormatter())
+    logger.addHandler(stdout_handler)
 
     timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     run_log_dir = logdir / timestamp
