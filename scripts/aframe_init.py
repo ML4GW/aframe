@@ -106,6 +106,11 @@ def create_online_runfile(path: Path):
     cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
     cmd += "--config $config 2>> monitoring.log"
 
+    monitor_cmd = "apptainer run "
+    monitor_cmd += f" --bind {path} "
+    monitor_cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/monitor "
+    monitor_cmd += f"--run_dir {path} --outdir $MONITOR_OUTDIR"
+
     content = f"""
     #!/bin/bash
 
@@ -153,6 +158,10 @@ def create_online_runfile(path: Path):
     export AFRAME_CONTAINER_ROOT=
 
     config={path}/config.yaml
+
+    # Fill out and uncomment the following to perform monitoring
+    # export MONITOR_OUTDIR=
+    # {monitor_cmd}
 
     export CUDA_VISIBLE_DEVICES=
     crash_count=0

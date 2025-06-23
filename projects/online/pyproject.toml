@@ -23,6 +23,7 @@ dependencies = [
     "matplotlib==3.9.4",
     "ligo-skymap>=2.2.2,<3",
     "ligo-gracedb>=2.14.1",
+    "tables>=3.9",
 ]
 
 [project.scripts]

@@ -84,14 +84,14 @@ def update_dataframe(event: Path, df_file: Path) -> pd.DataFrame:
 
     # Append to the existing DataFrame or create a new one
     if df_file.exists():
-        prev_df = pd.read_parquet(df_file)
+        prev_df = pd.read_hdf(df_file)
         df = pd.concat(
             [prev_df, pd.DataFrame([event_dict])], ignore_index=True
         )
     else:
         df = pd.DataFrame([event_dict])
 
-    df.to_parquet(df_file, index=False)
+    df.to_hdf(df_file, key="event_data", index=False)
 
     return df
 
@@ -99,12 +99,12 @@ def update_dataframe(event: Path, df_file: Path) -> pd.DataFrame:
 def process_events(
     events: List[Path], outdir: Path, online_args: dict
 ) -> pd.DataFrame:
-    df_file = outdir / "event_data.parquet"
+    df_file = outdir / "event_data.hdf5"
 
     if not events:
         logging.info("No new detected events")
         if df_file.exists():
-            df = pd.read_parquet(df_file)
+            df = pd.read_hdf(df_file)
         else:
             df = None
         return df

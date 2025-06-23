@@ -49,6 +49,8 @@ def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
 
     # Cut out any lines before the start time
     for i, line in enumerate(log_text):
+        if not line.startswith("202"):
+            continue
         if get_timestamp_from_log_statement(line) >= start_time:
             log_text = log_text[i:]
             break
@@ -59,6 +61,8 @@ def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
     # and it shouldn't throw the calculation off by much
     segment = [get_timestamp_from_log_statement(log_text[0])]
     for line in log_text:
+        if not line.startswith("202"):
+            continue
         if line.endswith(reset_line) and not segment:
             segment.append(get_timestamp_from_log_statement(line))
             continue
