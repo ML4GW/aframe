@@ -110,7 +110,7 @@ def create_online_runfile(path: Path):
     monitor_cmd = "apptainer run "
     monitor_cmd += f" --bind {path} "
     monitor_cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/monitor "
-    monitor_cmd += f"--run_dir {path} --outdir $MONITOR_OUTDIR"
+    monitor_cmd += f"--run_dir {path} --outdir $MONITOR_OUTDIR &"
 
     content = f"""
     #!/bin/bash
