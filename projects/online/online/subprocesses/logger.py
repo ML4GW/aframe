@@ -23,8 +23,8 @@ class TimestampFormatter(logging.Formatter):
         processed = processed.strftime("%H:%M:%S,%f")[:-3]
 
         message = (
-            f"{recorded} ({processed}) - {record.name} "
-            f"- {record.levelname} - {record.getMessage()}"
+            f"{recorded} ({processed}) - {record.name} - "
+            f"{record.levelname} - {record.getMessage()}"
         )
         return message
 
