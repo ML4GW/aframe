@@ -86,7 +86,10 @@ class GraceDb(_GraceDb):
         with open(filename, "w") as f:
             f.write(url)
 
-        # record latencies for this event
+        # record latencies for this event;
+        # TODO: determine underlying issue here
+        # Handle issue where sometimes the pipeline lags,
+        # and the frame file has already left the buffer
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
         try:
             t_write = event.get_frame_write_time()
