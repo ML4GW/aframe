@@ -88,7 +88,14 @@ class GraceDb(_GraceDb):
 
         # record latencies for this event
         submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
-        t_write = event.get_frame_write_time()
+        try:
+            t_write = event.get_frame_write_time()
+        except FileNotFoundError:
+            self.logger.warning(
+                "Could not find frame file to evaluate write time. "
+                "Using rounded down event gpstime instead."
+            )
+            t_write = int(event.gpstime)
 
         # time to submit since event occured and since the file was written
         total_latency = submission_time - event.gpstime
