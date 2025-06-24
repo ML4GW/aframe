@@ -126,9 +126,6 @@ class GraceDb(_GraceDb):
         latency_fname = event_dir / "latency.log"
         latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
         latency += f"{total_latency},{write_latency},{aframe_latency}"
-        latency_fname = event_dir / "latency.log"
-        latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
-        latency += f"{total_latency},{write_latency},{aframe_latency}"
         with open(latency_fname, "w") as f:
             f.write(latency)
 
