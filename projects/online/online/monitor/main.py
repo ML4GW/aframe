@@ -2,20 +2,21 @@ from pathlib import Path
 import logging
 import time
 
-from .make_summary_page import main as make_summary_page
-from .process_events import process_events
-from .parse_logs import estimate_tb, get_pipeline_status
+from .utils.parse_logs import estimate_tb, pipeline_online
+from .pages import EventPage, SummaryPage
 
 from gwpy.time import tconvert
 from datetime import datetime, timezone
 
+logging.getLogger("aframe-monitor")
+
 
 def main(
     run_dir: Path,
-    outdir: Path,
+    out_dir: Path,
     online_args: dict,
     start_time: float = None,
-    update_cadence: int = 60,
+    update_cadence: int = 10,
 ):
     """
     Main function to monitor the online search for new events and process them.
@@ -31,9 +32,6 @@ def main(
 
     """
     detected_event_dir = run_dir / "output" / "events"
-    output_event_dir = outdir / "events"
-    if not output_event_dir.exists():
-        output_event_dir.mkdir(exist_ok=True, parents=True)
 
     if start_time is None:
         start_time = float(tconvert(datetime.now(timezone.utc)))
@@ -44,23 +42,22 @@ def main(
 
     previous_update_time = time.time()
 
+    summary_page = SummaryPage(start_time, run_dir, out_dir)
     while True:
-        # Check for new events that haven't been processed
-        detected_events = {
-            event.name
+        detected_events = [
+            event
             for event in detected_event_dir.iterdir()
             if float(event.name.split("_")[1]) >= start_time
-        }
-        processed_events = {event.name for event in output_event_dir.iterdir()}
-        new_events = [
-            detected_event_dir / event
-            for event in detected_events - processed_events
         ]
 
-        df = process_events(sorted(new_events), output_event_dir, online_args)
+        # The event page will be created/updated only if the event directory
+        # is missing expected plots. Otherwise it will be skipped.
+        for event in detected_events:
+            event_page = EventPage(event, online_args, run_dir, out_dir)
+            event_page.create()
 
-        # df will be None only if there are no previously processed events
-        if df is not None:
+        # The dataframe file will not exist until the first event is processed
+        if summary_page.dataframe_file.exists():
             logging.info("Updating summary page")
             update_time = time.time()
             # If the pipeline is running, update `tb` with the time
@@ -68,10 +65,10 @@ def main(
             # to the current time so that inactive time is not counted
             # down the line. This isn't super precise, but it shouldn't be
             # off by more than `update_cadence` seconds.
-            if get_pipeline_status():
+            if pipeline_online():
                 tb += update_time - previous_update_time
             previous_update_time = update_time
-            make_summary_page(run_dir, outdir, start_time, df, tb)
+            summary_page.create(tb)
         else:
             logging.info("Skipping summary page update")
 
