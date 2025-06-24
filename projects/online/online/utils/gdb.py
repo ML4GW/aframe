@@ -118,13 +118,19 @@ class GraceDb(_GraceDb):
             )
             t_write = int(event.gpstime)
 
-            latency_fname = event_dir / "latency.log"
-            latency = (
-                "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
-            )
-            latency += f"{total_latency},{write_latency},{aframe_latency}"
-            with open(latency_fname, "w") as f:
-                f.write(latency)
+        # time to submit since event occured and since the file was written
+        total_latency = submission_time - event.gpstime
+        write_latency = t_write - event.gpstime
+        aframe_latency = submission_time - t_write
+
+        latency_fname = event_dir / "latency.log"
+        latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
+        latency += f"{total_latency},{write_latency},{aframe_latency}"
+        latency_fname = event_dir / "latency.log"
+        latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
+        latency += f"{total_latency},{write_latency},{aframe_latency}"
+        with open(latency_fname, "w") as f:
+            f.write(latency)
 
         return graceid
 
