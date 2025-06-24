@@ -54,6 +54,10 @@ class GraceDb(_GraceDb):
             )
         elif self.server == "production":
             gracedb_url = f"https://gracedb.ligo.org/events/{graceid}/view"
+        elif self.server == "test01":
+            gracedb_url = (
+                f"https://gracedb-test01.igwn.org/events/{graceid}/view"
+            )
         else:
             gracedb_url = graceid
 
