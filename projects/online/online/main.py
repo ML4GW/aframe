@@ -20,7 +20,6 @@ from online.dataloading import (
     offline_data_iterator,
     ngdd_data_iterator,
 )
-from online.utils.gdb import gracedb_factory
 from online.utils.pe import run_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
@@ -574,8 +573,7 @@ def main(
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
-    gdb = gracedb_factory(
-        server,
+    gdb = server.create_gracedb(
         outdir / "events",
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
