@@ -105,30 +105,40 @@ class EventPage(MonitorPage):
         )
 
     def get_event_data(self, event: Path) -> pd.DataFrame:
-        event_dict = {}
+        event_dict = {
+            "event": None,
+            "url": None,
+            "gpstime": None,
+            "datetime": None,
+            "far": None,
+            "p_bbh": None,
+            "total latency": None,
+            "frame write latency": None,
+            "aframe latency": None,
+            "chirp_mass_mean": None,
+            "chirp_mass_median": None,
+            "mass_ratio_mean": None,
+            "mass_ratio_median": None,
+            "distance_mean": None,
+            "distance_median": None,
+        }
 
         # Build event_dict from files
         url_path = event / "gracedb_url.txt"
         if url_path.exists():
             with url_path.open("r") as f:
                 url = f.readline().strip()  # Strip newline
-            event_dict = {
-                "event": url.split("/")[-2],
-                "url": url,
-            }
+            event_dict["event"] = url.split("/")[-2]
+            event_dict["url"] = url
 
         # Load main event metadata
         event_data_path = event / f"{event.stem}.json"
         if event_data_path.exists():
             with event_data_path.open("r") as f:
                 event_data = json.load(f)
-            event_dict.update(
-                {
-                    "gpstime": event_data.get("gpstime"),
-                    "datetime": tconvert(event_data.get("gpstime")),
-                    "far": event_data.get("far"),
-                }
-            )
+            event_dict["gpstime"] = event_data.get("gps_time")
+            event_dict["datetime"] = tconvert(event_data.get("gps_time"))
+            event_dict["far"] = event_data.get("far")
 
         # Load p_astro
         pastro_path = event / "aframe.p_astro.json"
@@ -140,13 +150,9 @@ class EventPage(MonitorPage):
         latency_path = event / "latency.log"
         if latency_path.exists():
             latencies = np.genfromtxt(latency_path, delimiter=",")[1]
-            event_dict.update(
-                {
-                    "total latency": latencies[0],
-                    "frame write latency": latencies[1],
-                    "aframe latency": latencies[2],
-                }
-            )
+            event_dict["total latency"] = latencies[0]
+            event_dict["frame write latency"] = latencies[1]
+            event_dict["aframe latency"] = latencies[2]
 
         # Load posterior data
         posterior_path = event / "amplfi.posterior_samples.hdf5"
@@ -156,16 +162,12 @@ class EventPage(MonitorPage):
                 chirp_mass = posterior["chirp_mass"]
                 mass_ratio = posterior["mass_ratio"]
                 distance = posterior["luminosity_distance"]
-            event_dict.update(
-                {
-                    "chirp_mass_mean": np.mean(chirp_mass),
-                    "chirp_mass_median": np.median(chirp_mass),
-                    "mass_ratio_mean": np.mean(mass_ratio),
-                    "mass_ratio_median": np.median(mass_ratio),
-                    "distance_mean": np.mean(distance),
-                    "distance_median": np.median(distance),
-                }
-            )
+                event_dict["chirp_mass_mean"] = np.mean(chirp_mass)
+                event_dict["chirp_mass_median"] = np.median(chirp_mass)
+                event_dict["mass_ratio_mean"] = np.mean(mass_ratio)
+                event_dict["mass_ratio_median"] = np.median(mass_ratio)
+                event_dict["distance_mean"] = np.mean(distance)
+                event_dict["distance_median"] = np.median(distance)
 
         return event_dict
 
