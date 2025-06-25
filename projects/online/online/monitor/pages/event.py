@@ -1,5 +1,4 @@
 import json
-import logging
 import shutil
 from pathlib import Path
 
@@ -20,13 +19,9 @@ IFOS = ["H1", "L1", "V1"]
 
 class EventPage(MonitorPage):
     def __init__(
-        self,
-        source_event: Path,
-        online_args: dict,
-        run_dir: Path,
-        out_dir: Path,
+        self, source_event: Path, online_args: dict, *args, **kwargs
     ) -> None:
-        super().__init__(run_dir, out_dir)
+        super().__init__(*args, **kwargs)
         self.source_event = source_event
         self.online_args = online_args
         self.event_dir = self.output_event_dir / source_event.name
@@ -82,9 +77,6 @@ class EventPage(MonitorPage):
         return False
 
     def get_plots(self):
-        """
-        Generate and save plots for the event.
-        """
         # Copy existing PNG files to the plots directory
         for png in self.source_event.glob("*.png"):
             shutil.copy(png, self.plots_dir / png.name)
@@ -136,8 +128,8 @@ class EventPage(MonitorPage):
         if event_data_path.exists():
             with event_data_path.open("r") as f:
                 event_data = json.load(f)
-            event_dict["gpstime"] = event_data.get("gps_time")
-            event_dict["datetime"] = tconvert(event_data.get("gps_time"))
+            event_dict["gpstime"] = event_data.get("gpstime")
+            event_dict["datetime"] = tconvert(event_data.get("gpstime"))
             event_dict["far"] = event_data.get("far")
 
         # Load p_astro
@@ -193,9 +185,6 @@ class EventPage(MonitorPage):
         df.to_hdf(self.dataframe_file, key="event_data", index=False)
 
     def write_html(self) -> None:
-        """
-        Write the HTML file for the event page.
-        """
         with open(self.html_file, "w") as f:
             f.write(self.html_header(self.source_event.name))
             f.write(self.html_body())
@@ -203,12 +192,12 @@ class EventPage(MonitorPage):
 
     def create(self) -> None:
         """
-        Create the event page by generating plots and writing the HTML file.
+        Create or update the event page
         """
         self.event_dir.mkdir(exist_ok=True, parents=True)
 
         if self.missing_plots():
-            logging.info(f"Processing new event: {self.source_event.name}")
+            self.logger.info(f"Processing {self.source_event.name}")
             self.get_plots()
             self.write_html()
             self.update_dataframe()

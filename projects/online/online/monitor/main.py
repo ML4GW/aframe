@@ -1,14 +1,12 @@
-from pathlib import Path
 import logging
 import time
+from pathlib import Path
 
 from .utils.parse_logs import estimate_tb, pipeline_online
 from .pages import EventPage, SummaryPage
 
 from gwpy.time import tconvert
 from datetime import datetime, timezone
-
-logging.getLogger("aframe-monitor")
 
 
 def main(
@@ -17,6 +15,7 @@ def main(
     online_args: dict,
     start_time: float = None,
     update_cadence: int = 10,
+    logger: logging.Logger = None,
 ):
     """
     Main function to monitor the online search for new events and process them.
@@ -29,8 +28,12 @@ def main(
             If None, the current GPS time is used.
         update_cadence:
             The interval in seconds to check for new events.
+        logger: Logger object for standardizing logging output
 
     """
+    if logger is None:
+        logger = logging.getLogger()
+
     detected_event_dir = run_dir / "output" / "events"
 
     if start_time is None:
@@ -38,11 +41,11 @@ def main(
 
     # Estimate analysis live time since the given start time
     tb = estimate_tb(run_dir, start_time)
-    logging.info(f"Estimated analysis live time: {tb:.2f} seconds")
+    logger.info(f"Estimated analysis live time: {tb:.2f} seconds")
 
     previous_update_time = time.time()
 
-    summary_page = SummaryPage(start_time, run_dir, out_dir)
+    summary_page = SummaryPage(start_time, run_dir, out_dir, logger)
     while True:
         detected_events = [
             event
@@ -53,12 +56,14 @@ def main(
         # The event page will be created/updated only if the event directory
         # is missing expected plots. Otherwise it will be skipped.
         for event in detected_events:
-            event_page = EventPage(event, online_args, run_dir, out_dir)
+            event_page = EventPage(
+                event, online_args, run_dir, out_dir, logger
+            )
             event_page.create()
 
         # The dataframe file will not exist until the first event is processed
         if summary_page.dataframe_file.exists():
-            logging.info("Updating summary page")
+            logger.info("Updating summary page")
             update_time = time.time()
             # If the pipeline is running, update `tb` with the time
             # since the last update. If not, set the previous update time
@@ -70,7 +75,7 @@ def main(
             previous_update_time = update_time
             summary_page.create(tb)
         else:
-            logging.info("Skipping summary page update")
+            logger.info("Skipping summary page update")
 
         # Sleep for a minute before checking for new events again
         time.sleep(update_cadence)

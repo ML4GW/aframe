@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pandas as pd
 from gwpy.time import tconvert
@@ -15,14 +14,17 @@ from online.monitor.utils.parse_logs import data_ready, pipeline_online
 
 class SummaryPage(MonitorPage):
     def __init__(
-        self, start_time: float, run_dir: Path, out_dir: Path
+        self,
+        start_time: float,
+        *args,
+        **kwargs,
     ) -> None:
-        super().__init__(run_dir, out_dir)
+        super().__init__(*args, **kwargs)
         self.start_time = start_time
-        self.plots_dir = out_dir / "plots"
+        self.plots_dir = self.out_dir / "plots"
         if not self.plots_dir.exists():
             self.plots_dir.mkdir(exist_ok=True, parents=True)
-        self.html_file = out_dir / "summary.html"
+        self.html_file = self.out_dir / "summary.html"
 
     @property
     def plot_name_dict(self) -> dict:
@@ -86,10 +88,6 @@ class SummaryPage(MonitorPage):
         event_rate_plots(self.plots_dir, df)
 
     def write_html(self) -> None:
-        """
-        Generate the summary HTML page with embedded images and event data.
-        """
-
         with open(self.html_file, "w") as f:
             f.write(self.html_header("Aframe Online Status Summary"))
             f.write(self.html_body())

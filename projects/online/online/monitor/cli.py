@@ -8,8 +8,6 @@ from jsonargparse import ArgumentParser
 
 from utils.logging import configure_logging
 
-logger = logging.getLogger("aframe-monitor")
-
 
 def cli():
     parser = ArgumentParser(description="Process event outputs")
@@ -49,6 +47,7 @@ def cli():
         args.out_dir.mkdir(exist_ok=True, parents=True)
 
     configure_logging(filename=args.out_dir / args.log_file)
+    logger = logging.getLogger("aframe-monitor")
     args.pop("log_file")
 
     # Load in online configuration to get various values
@@ -59,7 +58,7 @@ def cli():
     with open(config, "r") as f:
         online_args = yaml.safe_load(f)
 
-    main(**vars(args), online_args=online_args)
+    main(**vars(args), online_args=online_args, logger=logger)
 
 
 if __name__ == "__main__":

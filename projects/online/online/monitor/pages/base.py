@@ -1,11 +1,15 @@
 import base64
+import logging
 from pathlib import Path
 
 
 class MonitorPage:
-    def __init__(self, run_dir: Path, out_dir: Path) -> None:
+    def __init__(
+        self, run_dir: Path, out_dir: Path, logger: logging.Logger
+    ) -> None:
         self.run_dir = run_dir
         self.out_dir = out_dir
+        self.logger = logger
 
         self.source_event_dir = run_dir / "output" / "events"
         self.log_dir = run_dir / "output" / "logs"
