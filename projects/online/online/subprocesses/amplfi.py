@@ -35,6 +35,9 @@ def amplfi_subprocess(
     while True:
         arg = amplfi_queue.get()
         if isinstance(arg[0], Event):
+            event: Event
+            amplfi_ifos: list[str]
+
             event, amplfi_ifos = arg
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples[:]), (-1, len(inference_params))
@@ -79,7 +82,10 @@ def amplfi_subprocess(
             logger.info("Submitted all PE")
         else:
             graceid = arg
+            event: Event
+            amplfi_ifos: list[str]
             event, amplfi_ifos = amplfi_queue.get()
+
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples[:]), (-1, len(inference_params))
             )

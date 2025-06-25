@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Literal, Optional
+from typing import TYPE_CHECKING, List, Optional
 import bilby
 import h5py
 from gwpy.time import tconvert
@@ -15,7 +15,37 @@ import matplotlib.pyplot as plt
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
 
-GdbServer = Literal["local", "playground", "test", "test01", "production"]
+from enum import Enum
+
+
+class GdbServer(Enum):
+    """Enum for GraceDB servers."""
+
+    local = None
+    playground = "https://gracedb-playground.ligo.org/"
+    test = "https://gracedb-test.ligo.org/"
+    production = "https://gracedb.ligo.org/"
+    test01 = "https://gracedb-test01.igwn.org/"
+
+    @property
+    def service_url(self) -> str:
+        return self.value + "api/"
+
+    def gevent_url(self, graceid: str) -> str:
+        """Get the URL for a specific event on this server."""
+        return self.value + f"events/{graceid}/view"
+
+    def create_gracedb(self, write_dir: Path, **kwargs) -> "GraceDb":
+        """Create a GraceDb client instance for this server."""
+        if self == GdbServer.local:
+            return LocalGraceDb(server=self.name, write_dir=write_dir)
+
+        return GraceDb(
+            service_url=self.service_url,
+            server=self.name,
+            write_dir=write_dir,
+            **kwargs,
+        )
 
 
 class GraceDb(_GraceDb):
@@ -47,22 +77,6 @@ class GraceDb(_GraceDb):
         else:
             self.logger = logger
 
-    def url(self, graceid):
-        if self.server in ["playground", "test"]:
-            gracedb_url = (
-                f"https://gracedb-{self.server}.ligo.org/events/{graceid}/view"
-            )
-        elif self.server == "production":
-            gracedb_url = f"https://gracedb.ligo.org/events/{graceid}/view"
-        elif self.server == "test01":
-            gracedb_url = (
-                f"https://gracedb-test01.igwn.org/events/{graceid}/view"
-            )
-        else:
-            gracedb_url = graceid
-
-        return gracedb_url
-
     def submit(self, event: Event):
         self.logger.info(f"Submitting trigger to file {event.filename}")
         event_dir = self.write_dir / event.event_dir
@@ -79,13 +93,13 @@ class GraceDb(_GraceDb):
 
         # Get the event's graceid for submitting
         # further data products
-        if self.server == "local":
+        if self.server == GdbServer.local:
             # The local gracedb client just returns the filename
             graceid = response
         else:
             graceid = response.json()["graceid"]
 
-        url = self.url(graceid)
+        url = self.server.gevent_url(graceid)
         filename = event_dir / "gracedb_url.txt"
         with open(filename, "w") as f:
             f.write(url)
@@ -308,20 +322,3 @@ class LocalGraceDb(GraceDb):
 
     def write_log(self, *args, **kwargs):
         pass
-
-
-def gracedb_factory(server: GdbServer, write_dir: Path, **kwargs) -> GraceDb:
-    if server == "local":
-        return LocalGraceDb(server=server, write_dir=write_dir)
-
-    if server in ["playground", "test"]:
-        service_url = f"https://gracedb-{server}.ligo.org/api/"
-    elif server == "production":
-        service_url = "https://gracedb.ligo.org/api/"
-    elif server == "test01":
-        service_url = "https://gracedb-test01.igwn.org/api/"
-    else:
-        raise ValueError(f"Unknown GraceDB server: {server}")
-    return GraceDb(
-        service_url=service_url, server=server, write_dir=write_dir, **kwargs
-    )
