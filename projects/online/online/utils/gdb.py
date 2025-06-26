@@ -41,7 +41,6 @@ class GdbServer(Enum):
             return LocalGraceDb(server=self.name, write_dir=write_dir)
 
         return GraceDb(
-            service_url=self.service_url,
             server=self,
             write_dir=write_dir,
             **kwargs,
@@ -69,7 +68,12 @@ class GraceDb(_GraceDb):
         logger: Optional[logging.Logger] = None,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs, use_auth="scitoken")
+        super().__init__(
+            *args,
+            **kwargs,
+            service_url=server.service_url,
+            use_auth="scitoken",
+        )
         self.server = server
         self.write_dir = write_dir
         if logger is None:
