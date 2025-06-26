@@ -67,7 +67,7 @@ def asd_plot(event: Path, plotsdir: Path) -> None:
     plt.close()
 
 
-def whitened_plot(
+def q_plots(
     event: Path, plotsdir: Path, gpstime: float, online_args: dict
 ) -> None:
     """
@@ -105,7 +105,7 @@ def latency_plot(plotsdir: Path, df: pd.DataFrame) -> None:
         df: DataFrame containing event data
     """
     plt.figure(figsize=(10, 6))
-    latency = df["latency"].dropna()
+    latency = df["aframe latency"].dropna()
     median = latency.median()
     ninetieth_percentile = latency.quantile(0.9)
     bins = np.logspace(

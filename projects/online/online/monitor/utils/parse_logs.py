@@ -95,7 +95,7 @@ def estimate_tb(run_dir: Path, start_time: float) -> float:
     return get_tb_from_log_text(log_text, start_time)
 
 
-def get_pipeline_status(expected_process_count: int = 6):
+def pipeline_online(expected_process_count: int = 6):
     online_processes = 0
     for p in psutil.process_iter(["username", "name"]):
         if p.info["username"] == "aframe" and p.info["name"] == "online":
@@ -103,8 +103,8 @@ def get_pipeline_status(expected_process_count: int = 6):
     return online_processes == expected_process_count
 
 
-def get_data_status(run_dir: Path):
-    if not get_pipeline_status():
+def data_ready(run_dir: Path):
+    if not pipeline_online():
         return
     log_dir = sorted((run_dir / "output" / "logs").iterdir())[-1]
     log_file = log_dir / "online.log"
