@@ -61,7 +61,11 @@ def amplfi_subprocess(
             if emails is not None and event.far < email_far_threshold:
                 logger.info(f"Sending detection email for {graceid}")
                 send_detection_email(
-                    emails, result, event, graceid, gdb.url(graceid)
+                    emails,
+                    result,
+                    event,
+                    graceid,
+                    gdb.server.gevent_url(graceid),
                 )
 
             logger.info(
@@ -104,7 +108,11 @@ def amplfi_subprocess(
             if emails is not None and event.far < email_far_threshold:
                 logger.info("Sending detection email")
                 send_detection_email(
-                    emails, result, event, graceid, gdb.url(graceid)
+                    emails,
+                    result,
+                    event,
+                    graceid,
+                    gdb.server.gevent_url(graceid),
                 )
 
             logger.info("Creating low resolution skymap")
