@@ -99,6 +99,6 @@ def pastro_subprocess(
         pastro = pastro_model(event.detection_statistic)
         graceid = pastro_queue.get()
 
-        logger.info(f"Submitting p_astro: {pastro}")
+        logger.info(f"Submitting p_astro: {pastro} for {graceid}")
         gdb.submit_pastro(float(pastro), graceid, event.event_dir)
-        logger.info("Submitted p_astro")
+        logger.info(f"Submitted p_astro for {graceid}")
