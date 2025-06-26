@@ -42,7 +42,7 @@ class GdbServer(Enum):
 
         return GraceDb(
             service_url=self.service_url,
-            server=self.name,
+            server=self,
             write_dir=write_dir,
             **kwargs,
         )
