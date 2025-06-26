@@ -4,6 +4,8 @@ from gwpy.time import tconvert
 from datetime import datetime, timezone
 import pytz
 
+EXPECTED_PROCESS_COUNT = 6
+
 
 def get_log_files(log_dir: Path, start_time: float) -> list:
     """
@@ -100,7 +102,7 @@ def pipeline_online():
     for p in psutil.process_iter(["username", "name"]):
         if p.info["username"] == "aframe" and p.info["name"] == "online":
             online_processes += 1
-    return online_processes > 1
+    return online_processes >= EXPECTED_PROCESS_COUNT
 
 
 def data_ready(run_dir: Path):
