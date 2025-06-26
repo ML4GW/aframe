@@ -207,22 +207,34 @@ def event_rate_plots(plotsdir: Path, df: pd.DataFrame) -> None:
         warnings.simplefilter("ignore", category=UserWarning)
         past_day = past_day.tz_convert(timezone.utc)
         past_week = past_week.tz_convert(timezone.utc)
-        past_day.resample("1h").size().plot()
+        if len(past_day) > 0:
+            past_day.resample("1h").size().plot()
+        else:
+            plt.figure()
         plt.xlabel("Time")
         plt.ylabel("Events per hour")
         plt.savefig(
-            plotsdir / "event_rate_past_day.png", dpi=150, bbox_inches="tight"
+            plotsdir / "event_rate_past_day.png",
+            dpi=150,
+            bbox_inches="tight",
         )
         plt.close()
 
-        past_week.resample("4h").size().plot()
+        if len(past_week) > 0:
+            past_week.resample("4h").size().plot()
+        else:
+            plt.figure()
         plt.xlabel("Time")
         plt.ylabel("Events per 4 hours")
         plt.savefig(
-            plotsdir / "event_rate_past_week.png", dpi=150, bbox_inches="tight"
+            plotsdir / "event_rate_past_week.png",
+            dpi=150,
+            bbox_inches="tight",
         )
         plt.close()
 
+        # If this plotting function is getting called, df will always have
+        # at least one entry
         df.resample("1d").size().plot()
         plt.xlabel("Time")
         plt.ylabel("Events per day")
