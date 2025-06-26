@@ -239,7 +239,7 @@ def search(
             if X is not None:
                 logging.debug(
                     "Frame {} is not analysis ready. Using dummy values "
-                    "for inference any ignoring any triggers".format(t0)
+                    "for inference and ignoring any triggers".format(t0)
                 )
                 pass
             # or if it's because frames were dropped within the stream
