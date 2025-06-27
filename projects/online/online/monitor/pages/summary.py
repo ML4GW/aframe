@@ -21,6 +21,20 @@ class SummaryPage(MonitorPage):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.start_time = start_time
+        if self.start_time is None:
+            if self.dataframe_file.exists():
+                df = pd.read_hdf(self.dataframe_file)
+                self.start_time = min(df["gpstime"])
+                self.logger.info(
+                    "start_time was None, setting start_time to the oldest "
+                    f"event time in {self.dataframe_file}, {self.start_time}"
+                )
+            else:
+                self.start_time = float(tconvert(datetime.now(timezone.utc)))
+                self.logger.info(
+                    "start_time was None, setting start_time to current time"
+                )
+
         self.plots_dir = self.out_dir / "plots"
         if not self.plots_dir.exists():
             self.plots_dir.mkdir(exist_ok=True, parents=True)
