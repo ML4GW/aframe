@@ -4,7 +4,7 @@ import logging
 import signal
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING, Literal
+from typing import Iterable, List, Optional, Tuple, Literal
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
@@ -34,9 +34,7 @@ from online.subprocesses import (
     signal_handler,
 )
 from online.subprocesses.authenticate import authenticate
-
-if TYPE_CHECKING:
-    from online.utils.gdb import GdbServer
+from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
 # igwn_auth_utils finds tokens only if they have at least 10 minutes left
@@ -530,7 +528,7 @@ def main(
             "Running in 'offline' mode: Turning email "
             "notifications off and setting GraceDB server to `local`"
         )
-        server = "local"
+        server = GdbServer.local
         emails = None
 
     if emails is not None:
@@ -578,7 +576,7 @@ def main(
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
     )
-
+    logging.info("finished")
     fftlength = fftlength or kernel_length + fduration
     logging.info(f"Using fftlength {fftlength} for PSD estimation")
 
