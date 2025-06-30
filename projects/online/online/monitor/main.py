@@ -46,12 +46,12 @@ def main(
         detected_events = [
             event
             for event in detected_event_dir.iterdir()
-            if float(event.name.split("_")[1]) >= summary_page.start_time
+            if float(event.name.split("_")[1])
         ]
 
         # The event page will be created/updated only if the event directory
         # is missing expected plots. Otherwise it will be skipped.
-        for event in detected_events:
+        for event in sorted(detected_events):
             event_page = EventPage(
                 event, online_args, run_dir, out_dir, logger
             )

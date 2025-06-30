@@ -97,6 +97,12 @@ class SummaryPage(MonitorPage):
             tb: Total time in seconds that the pipeline has been running.
         """
         df = pd.read_hdf(self.dataframe_file)
+        df = df[df["gpstime"] >= self.start_time]
+        if df.empty:
+            self.logger.warning(
+                "No events found in the DataFrame after the start time."
+            )
+            return
         latency_plot(self.plots_dir, df)
         ifar_plot(self.plots_dir, df, tb)
         event_rate_plots(self.plots_dir, df)
