@@ -382,6 +382,7 @@ def main(
     device: str = "cpu",
     verbose: bool = False,
     mode: Literal["online", "offline"] = "online",
+    matmul_precision: Literal["highest", "high", "medium"] = "highest",
 ):
     """
     Main function for launching real-time Aframe and AMPLFI pipeline.
@@ -501,7 +502,11 @@ def main(
             are analyzed as if they were "streamed" online. Useful for
             mimicking an online analysis over mock data challenges with
             performance capabilities that are faster than realtime.
-    """
+        matmul_precision:
+            See https://docs.pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html
+            Setting precision to 'high' or 'medium' can significantly
+            reduce sampling times. Default is 'highest'.
+    """  # noqa: E501
 
     # create various queues for message
     # passing between subprocesses
@@ -522,6 +527,9 @@ def main(
         outdir / "logs", error_queue, level
     )
     subprocesses.append(logging_subprocess)
+
+    logging.info(f"Setting matmul precision to {matmul_precision}")
+    torch.set_float32_matmul_precision(matmul_precision)
 
     if mode == "offline":
         logging.warning(
