@@ -584,7 +584,6 @@ def main(
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
     )
-    logging.info("finished")
     fftlength = fftlength or kernel_length + fduration
     logging.info(f"Using fftlength {fftlength} for PSD estimation")
 
