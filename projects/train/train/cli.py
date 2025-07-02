@@ -9,6 +9,7 @@ class AframeCLI(LightningCLI):
     def __init__(self, *args, **kwargs):
         # hack into init to hardcode
         # the WandbSaveConfig callback
+        kwargs["parser_kwargs"] = {"parser_mode": "omegaconf"}
         kwargs["save_config_callback"] = WandbSaveConfig
         super().__init__(*args, **kwargs)
 
@@ -36,6 +37,18 @@ class AframeCLI(LightningCLI):
         parser.link_arguments(
             "data.init_args.valid_stride",
             "model.init_args.metric.init_args.stride",
+        )
+
+        parser.link_arguments(
+            "data.init_args.sample_rate",
+            "data.init_args.waveform_sampler.init_args.sample_rate",
+            apply_on="parse",
+        )
+
+        parser.link_arguments(
+            "data.init_args.fduration",
+            "data.init_args.waveform_sampler.init_args.fduration",
+            apply_on="parse",
         )
 
 
