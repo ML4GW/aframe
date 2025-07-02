@@ -43,19 +43,24 @@ class SupervisedAframeDataset(BaseAframeDataset):
         return self.hparams.waveform_prob + self.swap_prob + self.mute_prob
 
     @torch.no_grad()
-    def augment(self, X, waveforms):
+    def inject(self, X):
         X, psds = self.psd_estimator(X)
         X = self.inverter(X)
         X = self.reverser(X)
         # sample enough waveforms to do true injections,
         # swapping, and muting
 
-        *params, polarizations, mask = self.waveform_sampler(
-            X, self.sample_prob, waveforms
+        rvs = torch.rand(size=X.shape[:1], device=X.device)
+        mask = rvs < self.sample_prob
+
+        dec, psi, phi = self.sample_extrinsic(X[mask])
+        hc, hp = self.waveform_sampler.sample(X[mask])
+
+        snrs = self.snr_sampler.sample((mask.sum().item(),)).to(X.device)
+        responses = self.projector(
+            dec, psi, phi, snrs, psds[mask], cross=hc, plus=hp
         )
-        N = len(params[0])
-        snrs = self.snr_sampler.sample((N,)).to(X.device)
-        responses = self.projector(*params, snrs, psds[mask], **polarizations)
+        responses = self.slice_waveforms(responses)
         kernels = sample_kernels(
             responses, kernel_size=X.size(-1), coincident=True
         )
