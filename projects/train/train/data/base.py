@@ -28,7 +28,6 @@ TransformedDist = torch.distributions.TransformedDistribution
 
 # TODO:
 # Make the coalescence point/right pad parameterization consistent
-# Ensure coalescence point placement is the same for training and validation
 
 
 # TODO: using this right now because

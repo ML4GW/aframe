@@ -42,6 +42,7 @@ class WaveformSampler(torch.nn.Module):
         with h5py.File(val_waveform_file) as f:
             key = list(f["waveforms"].keys())[0]
             self.num_val_waveforms = len(f["waveforms"][key])
+            self.right_pad = f.attrs["duration"] - f.attrs["coalescence_time"]
 
     @property
     def duration(self):
