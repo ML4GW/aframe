@@ -30,6 +30,7 @@ def rejection_sample(
     lowpass: float,
     snr_threshold: float,
     psd: Union[Path, torch.Tensor],
+    max_num_samples: int,
 ) -> Tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
@@ -54,13 +55,15 @@ def rejection_sample(
     # loop until we've generated enough signals
     # with large enough snr to fill the segment,
     # keeping track of the number of signals rejected
-    num_injections, idx = 0, 0
+    num_injections, total_accepted = 0, 0
     rejected_params = InjectionParameterSet()
-    while num_signals > 0:
-        params = prior.sample(num_signals)
+    # Start by simulating the desired number of accepted signals
+    num_samples = num_signals
+    while total_accepted < num_signals:
+        params = prior.sample(num_samples)
         if not detector_frame_prior:
             params = convert_to_detector_frame(params)
-        if num_signals == 1:
+        if num_samples == 1:
             params = {k: params[k] for k in prior.keys() if k in params}
 
         polarization_set = WaveformPolarizationSet.from_parameters(
@@ -107,6 +110,19 @@ def rejection_sample(
         num_injections += len(snrs)
         mask = snrs >= snr_threshold
 
+        num_accepted = mask.sum()
+        total_accepted += num_accepted
+        # If we've generated more signals than we need,
+        # figure out where to cut off the arrays
+        if num_signals < total_accepted:
+            target_accepted = num_signals - (total_accepted - num_accepted)
+            idx = np.where(np.cumsum(mask) == target_accepted)[0][0] + 1
+            mask = mask[:idx]
+            projected = projected[:idx]
+            params = {k: v[:idx] for k, v in params.items()}
+            num_accepted = mask.sum()
+            total_accepted = num_signals
+
         # first record any parameters that were
         # rejected during sampling to a separate object
         rejected = {}
@@ -125,7 +141,7 @@ def rejection_sample(
             continue
 
         # insert our accepted parameters into the output array
-        start, end = idx, idx + num_accepted
+        start, end = total_accepted - num_accepted, total_accepted
         for key, value in params.items():
             parameters[key][start:end] = value[mask]
 
@@ -135,15 +151,23 @@ def rejection_sample(
 
         for i, ifo in enumerate(ifos):
             key = ifo.lower()
-            parameters[key][start:end] = signals[:, i]
+            parameters[ifo][start:end] = signals[:, i]
 
-        # subtract off the number of samples we accepted
-        # from the number we'll need to sample next time,
-        # that way we never overshoot our number of desired
-        # accepted samples and therefore risk overestimating
-        # our total number of injections
-        idx += num_accepted
-        num_signals -= num_accepted
+        # Estimate how many more samples need to be generated
+        # to reach our desired number of accepted samples.
+        samples_remaining = num_signals - total_accepted
+        # Prevent division by zero if no samples were accepted
+        acceptance_rate = max(1, num_accepted) / num_samples
+        num_samples = int(np.ceil(samples_remaining / acceptance_rate))
+        # To make sure we don't exceed memory limits,
+        # don't generate more than `max_num_samples`
+        num_samples = min(num_samples, max_num_samples)
+
+        # To make sure we don't waste time repeatedly
+        # generating a small number of samples, always
+        # generate at least the initial number of signals.
+        # TODO: Is there a more efficient lower bound?
+        num_samples = max(num_samples, num_signals)
 
     parameters["coalescence_time"] = coalescence_time
     parameters["sample_rate"] = sample_rate
