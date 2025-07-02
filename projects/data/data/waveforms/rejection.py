@@ -151,7 +151,7 @@ def rejection_sample(
 
         for i, ifo in enumerate(ifos):
             key = ifo.lower()
-            parameters[ifo][start:end] = signals[:, i]
+            parameters[key][start:end] = signals[:, i]
 
         # Estimate how many more samples need to be generated
         # to reach our desired number of accepted samples.
