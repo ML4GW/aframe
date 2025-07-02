@@ -28,6 +28,7 @@ def testing_waveforms(
     lowpass: float,
     snr_threshold: float,
     psd_file: Path,
+    max_num_samples: int,
     output_dir: Path,
     jitter: float = 0.1,
     seed: Optional[int] = None,
@@ -88,6 +89,9 @@ def testing_waveforms(
         psd_file:
             Background file from which to calculate PSDs used for
             estimating waveforms SNR
+        max_num_samples:
+            Maximum number of samples to generate at once in the rejection
+            sampling process.
         output_dir:
             Directory to which the waveform file and rejected parameter
             file will be written
@@ -120,10 +124,10 @@ def testing_waveforms(
         buffer,
         waveform_duration,
     )
-    n_samples = len(injection_times)
+    num_signals = len(injection_times)
 
     # add random jitter to injection times
-    jitter = np.random.uniform(-jitter, jitter, size=n_samples)
+    jitter = np.random.uniform(-jitter, jitter, size=num_signals)
     injection_times += jitter
 
     # calculate psd that will be used for snr calculation
@@ -133,19 +137,20 @@ def testing_waveforms(
 
     # perform the rejection sampling
     parameters, rejected_params = rejection_sample(
-        n_samples,
-        prior,
-        ifos,
-        minimum_frequency,
-        reference_frequency,
-        sample_rate,
-        waveform_duration,
-        waveform_approximant,
-        right_pad,
-        highpass,
-        lowpass,
-        snr_threshold,
-        psds,
+        num_signals=num_signals,
+        prior=prior,
+        ifos=ifos,
+        minimum_frequency=minimum_frequency,
+        reference_frequency=reference_frequency,
+        sample_rate=sample_rate,
+        waveform_duration=waveform_duration,
+        waveform_approximant=waveform_approximant,
+        right_pad=right_pad,
+        highpass=highpass,
+        lowpass=lowpass,
+        snr_threshold=snr_threshold,
+        psds=psds,
+        max_num_samples=max_num_samples,
     )
 
     # create the ResponseSet dataclass based on the passed ifos
@@ -158,7 +163,7 @@ def testing_waveforms(
     # now, set the injection times and shifts,
     # and create the ResponseSet object
     parameters["injection_time"] = injection_times
-    parameters["shift"] = np.array([shifts for _ in range(n_samples)])
+    parameters["shift"] = np.array([shifts for _ in range(num_signals)])
 
     output_dir.mkdir(parents=True, exist_ok=True)
     response_set = ResponseSet(**parameters)
