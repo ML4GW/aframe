@@ -25,6 +25,7 @@ dependencies = [
     "ml4gw>=0.7.2",
     "aframe",
     "ledger",
+    "priors",
     "architectures",
     "bayesian-optimization>=1.4.3,<2",
     "filelock>=3.13.1,<4",
@@ -49,6 +50,7 @@ explicit = true
 utils = { path = "../../libs/utils", editable = true }
 aframe = { path = "../..", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
+priors = { path = "../../libs/priors", editable = true }
 architectures = { path = "../../libs/architectures", editable = true }
 
 [build-system]

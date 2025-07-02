@@ -38,8 +38,6 @@ data:
     batch_size: 384
     batches_per_epoch: 3700
     num_files_per_batch: 10
-    chunk_size: 10000
-    chunks_per_epoch: 10
     # kernel_length:
     psd_length: 8
     # fduration:
@@ -68,8 +66,32 @@ data:
          # max_snr: 100
          # alpha: -3
          # decay_steps: 989
+    waveform_sampler: 
+      class_path: train.data.waveforms.generator.cbc.CBCGenerator
+      init_args:
+        training_prior: priors.priors.end_o3_ratesandpops
+        val_waveform_file: ${oc.env:AFRAME_DATADIR}/train/val_waveforms.hdf5
+        approximant: ml4gw.waveforms.IMRPhenomPv2
+        f_min: 20
+        f_ref: 40
+        right_pad: 0.5
+        kernel_length: 8
+    # Extrinsic parameter distributions
+    dec: 
+      class_path: ml4gw.distributions.Cosine
+    psi: 
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 3.14159
+        validate_args: false
+    phi: 
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 6.28318
+        validate_args: false
     # validation args
-    valid_frac: 0.25
     valid_stride: 0.5
     num_valid_views: 5
     valid_livetime: 57600 
