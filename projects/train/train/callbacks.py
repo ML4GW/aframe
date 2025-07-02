@@ -43,7 +43,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         )
 
         device = pl_module.device
-        [X], waveforms = next(iter(trainer.train_dataloader))
+        [X] = next(iter(trainer.train_dataloader))
         X = X.to(device)
         X, y = trainer.datamodule.augment(X, waveforms)
         if isinstance(X, tuple):
@@ -75,8 +75,7 @@ class SaveAugmentedBatch(Callback):
             save_dir = trainer.logger.save_dir
 
             # build training batch by hand
-            [X], waveforms = next(iter(trainer.train_dataloader))
-            waveforms = trainer.datamodule.slice_waveforms(waveforms)
+            [X] = next(iter(trainer.train_dataloader))
             X = X.to(device)
 
             X, y = trainer.datamodule.augment(X, waveforms)
@@ -86,13 +85,14 @@ class SaveAugmentedBatch(Callback):
                 X = (X,)
 
             # build val batch by hand
-            [background, _, _], [signals] = next(
+            [background, _, _], [cross, plus] = next(
                 iter(trainer.datamodule.val_dataloader())
             )
             background = background.to(device)
-            signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
-                background, signals
+            cross = cross.to(device)
+            plus = plus.to(device)
+            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
+                background, cross, plus
             )
             # Make background and injected validation data into
             # tuples for consistency if necessary
