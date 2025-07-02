@@ -4,8 +4,8 @@ from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
-    def build_val_batches(self, background, signals):
-        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+    def build_val_batches(self, background, cross, plus):
+        X_bg, X_inj, psds = super().build_val_batches(background, cross, plus)
         X_bg = self.whitener(X_bg, psds)
         # whiten each view of injections
         X_fg = []
@@ -16,7 +16,7 @@ class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_fg = torch.stack(X_fg)
         return X_bg, X_fg
 
-    def augment(self, X, waveforms):
-        X, y, psds = super().augment(X, waveforms)
+    def inject(self, X):
+        X, y, psds = super().inject(X)
         X = self.whitener(X, psds)
         return X, y
