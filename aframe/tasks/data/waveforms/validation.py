@@ -54,6 +54,13 @@ class DeployValidationWaveforms(
         default=paths().condor_dir / "validation_waveforms",
     )
 
+    max_num_samples = luigi.IntParameter(
+        description="Maximum number of waveforms to simulate "
+        "during each pass of rejection sampling. Determined "
+        "by memory limitations.",
+        default=3000,
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -106,9 +113,7 @@ class DeployValidationWaveforms(
         # read in psd
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
-            psds = load_psds(
-                psd_file, self.ifos, df=1 / self.waveform_duration
-            )
+            psd = load_psds(psd_file, self.ifos, df=1 / self.waveform_duration)
 
         # load in prior
         prior = load_prior(self.prior)
@@ -116,19 +121,20 @@ class DeployValidationWaveforms(
         # rejection sample waveforms, build
         # waveform set and write to tmp output path
         parameters, _ = rejection_sample(
-            num_signals,
-            prior,
-            self.ifos,
-            self.minimum_frequency,
-            self.reference_frequency,
-            self.sample_rate,
-            self.waveform_duration,
-            self.waveform_approximant,
-            self.coalescence_time,
-            self.highpass,
-            self.lowpass,
-            self.snr_threshold,
-            psds,
+            num_signals=num_signals,
+            prior=prior,
+            ifos=self.ifos,
+            minimum_frequency=self.minimum_frequency,
+            reference_frequency=self.reference_frequency,
+            sample_rate=self.sample_rate,
+            waveform_duration=self.waveform_duration,
+            waveform_approximant=self.waveform_approximant,
+            coalescence_time=self.coalescence_time,
+            highpass=self.highpass,
+            lowpass=self.lowpass,
+            snr_threshold=self.snr_threshold,
+            psd=psd,
+            max_num_samples=self.max_num_samples,
         )
         waveform_set = cls(**parameters)
         waveform_set.write(self.output().path)
