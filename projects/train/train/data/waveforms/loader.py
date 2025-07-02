@@ -29,7 +29,6 @@ class WaveformLoader(WaveformSampler):
 
         with h5py.File(training_waveform_file) as f:
             self.num_train_waveforms = len(f["waveforms"]["cross"])
-            self.right_pad = f.attrs["duration"] - f.attrs["coalescence_time"]
 
     def get_train_waveforms(self, world_size, rank, device):
         """
@@ -42,6 +41,15 @@ class WaveformLoader(WaveformSampler):
             waveforms = []
             for key in f["waveforms"].keys():
                 waveforms.append(torch.Tensor(f["waveforms"][key][start:stop]))
+
+            if (
+                self.right_pad
+                != f.attrs["duration"] - f.attrs["coalescence_time"]
+            ):
+                raise ValueError(
+                    "Training and validation waveform files do not have "
+                    "the same coalescence time and/or duration"
+                )
 
         self.train_waveforms = torch.stack(waveforms, dim=0).to(device)
 

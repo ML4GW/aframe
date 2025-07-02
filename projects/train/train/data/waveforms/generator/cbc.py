@@ -36,15 +36,11 @@ class CBCGenerator(WaveformGenerator):
                 is generated
             f_ref:
                 Reference frequency
-            right_pad:
-                Position in seconds where coalesence is placed
-                relative to the right edge of the window
             **kwargs:
                 Keyword arguments passed to
                 `aframe.train.train.data.waveforms.generator.WaveformGenerator`
         """
         super().__init__(*args, **kwargs)
-        self.right_pad = right_pad
         self.approximant = approximant
         self.f_ref = f_ref
         self.waveform_generator = TimeDomainCBCWaveformGenerator(
@@ -53,7 +49,7 @@ class CBCGenerator(WaveformGenerator):
             self.kernel_length,
             f_min,
             f_ref,
-            right_pad,
+            self.right_pad,
         )
 
     def convert(self, parameters):
