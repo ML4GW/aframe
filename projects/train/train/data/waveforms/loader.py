@@ -42,13 +42,10 @@ class WaveformLoader(WaveformSampler):
             for key in f["waveforms"].keys():
                 waveforms.append(torch.Tensor(f["waveforms"][key][start:stop]))
 
-            if (
-                self.right_pad
-                != f.attrs["duration"] - f.attrs["coalescence_time"]
-            ):
+            if self.right_pad != f.attrs["right_pad"]:
                 raise ValueError(
                     "Training and validation waveform files do not have "
-                    "the same coalescence time and/or duration"
+                    "the same right pad"
                 )
 
         self.train_waveforms = torch.stack(waveforms, dim=0).to(device)

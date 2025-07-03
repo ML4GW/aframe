@@ -56,7 +56,7 @@ class DeployTrainingWaveforms(
             minimum_frequency=self.minimum_frequency,
             reference_frequency=self.reference_frequency,
             waveform_approximant=self.waveform_approximant,
-            coalescence_time=self.coalescence_time,
+            right_pad=self.right_pad,
         )
         chunks = (min(64, num_signals), waveforms.get_waveforms().shape[-1])
         with self.output().open("w") as f:
