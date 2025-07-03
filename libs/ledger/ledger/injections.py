@@ -1,21 +1,21 @@
-from concurrent.futures import Executor, as_completed
 from dataclasses import dataclass, make_dataclass
 from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
-from astropy.cosmology import z_at_value
-from astropy.units import Mpc
-from lalsimulation import (
-    SimInspiralTransformPrecessingNewInitialConditions,
-    SimInspiralTransformPrecessingWvf2PE,
-)
-from pycbc.waveform import get_td_waveform
+import torch
+from ml4gw.waveforms.conversion import bilby_spins_to_lalsim
+from ml4gw.waveforms.generator import TimeDomainCBCWaveformGenerator
+from ml4gw.waveforms import IMRPhenomD, IMRPhenomPv2, TaylorF2
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 from utils.cosmology import DEFAULT_COSMOLOGY
 
-MSUN = 1.988409902147041637325262574352366540e30
+APPROXIMANTS = {
+    "IMRPhenomD": IMRPhenomD,
+    "IMRPhenomPv2": IMRPhenomPv2,
+    "TaylorF2": TaylorF2,
+}
 
 
 def chirp_mass(m1, m2):
@@ -82,152 +82,35 @@ class ExtrinsicParameterSet(Ledger):
 
 @dataclass
 class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
-    def convert_to_lal_param_set(self, reference_frequency: float):
-        mass_1_si = self.mass_1 * MSUN
-        mass_2_si = self.mass_2 * MSUN
-        inclination = np.zeros(len(self))
-        spin1x = np.zeros(len(self))
-        spin1y = np.zeros(len(self))
-        spin1z = np.zeros(len(self))
-        spin2x = np.zeros(len(self))
-        spin2y = np.zeros(len(self))
-        spin2z = np.zeros(len(self))
-
-        for i in range(len(self)):
-            (
-                inclination[i],
-                spin1x[i],
-                spin1y[i],
-                spin1z[i],
-                spin2x[i],
-                spin2y[i],
-                spin2z[i],
-            ) = SimInspiralTransformPrecessingNewInitialConditions(
-                self.theta_jn[i],
-                self.phi_jl[i],
-                self.tilt_1[i],
-                self.tilt_2[i],
-                self.phi_12[i],
-                self.a_1[i],
-                self.a_2[i],
-                mass_1_si[i],
-                mass_2_si[i],
-                reference_frequency,
-                self.phase[i],
-            )
-
-        return LALParameterSet(
-            mass1=self.mass_1,
-            mass2=self.mass_2,
-            spin1x=spin1x,
-            spin1y=spin1y,
-            spin1z=spin1z,
-            spin2x=spin2x,
-            spin2y=spin2y,
-            spin2z=spin2z,
-            inclination=inclination,
-            luminosity_distance=self.luminosity_distance,
-            phase=self.phase,
-            ra=self.ra,
-            dec=self.dec,
-            psi=self.psi,
+    def generation_params(self, reference_frequency: float):
+        incl, s1x, s1y, s1z, s2x, s2y, s2z = bilby_spins_to_lalsim(
+            torch.Tensor(self.theta_jn),
+            torch.Tensor(self.phi_jl),
+            torch.Tensor(self.tilt_1),
+            torch.Tensor(self.tilt_2),
+            torch.Tensor(self.phi_12),
+            torch.Tensor(self.a_1),
+            torch.Tensor(self.a_2),
+            torch.Tensor(self.mass_1),
+            torch.Tensor(self.mass_2),
+            reference_frequency,
+            torch.Tensor(self.phase),
         )
-
-
-@dataclass
-class LALParameterSet(Ledger):
-    # No underscores in masses because of format PyCBC expects
-    mass1: np.ndarray = parameter()
-    mass2: np.ndarray = parameter()
-    spin1x: np.ndarray = parameter()
-    spin1y: np.ndarray = parameter()
-    spin1z: np.ndarray = parameter()
-    spin2x: np.ndarray = parameter()
-    spin2y: np.ndarray = parameter()
-    spin2z: np.ndarray = parameter()
-    inclination: np.ndarray = parameter()
-    luminosity_distance: np.ndarray = parameter()
-    phase: np.ndarray = parameter()
-    ra: np.ndarray = parameter()
-    dec: np.ndarray = parameter()
-    psi: np.ndarray = parameter()
-
-    @property
-    def redshift(self, cosmology=DEFAULT_COSMOLOGY):
-        return z_at_value(
-            cosmology.luminosity_distance, self.luminosity_distance * Mpc
-        ).value
-
-    @property
-    def generation_params(self):
-        params = {
-            "mass1": self.mass1,
-            "mass2": self.mass2,
-            "spin1x": self.spin1x,
-            "spin1y": self.spin1y,
-            "spin1z": self.spin1z,
-            "spin2x": self.spin2x,
-            "spin2y": self.spin2y,
-            "spin2z": self.spin2z,
-            "inclination": self.inclination,
-            "distance": self.luminosity_distance,
-            "coa_phase": self.phase,
+        return {
+            "chirp_mass": torch.Tensor(self.chirp_mass),
+            "mass_ratio": torch.Tensor(self.mass_ratio),
+            "mass_1": torch.Tensor(self.mass_1),
+            "mass_2": torch.Tensor(self.mass_2),
+            "s1x": s1x,
+            "s1y": s1y,
+            "s1z": s1z,
+            "s2x": s2x,
+            "s2y": s2y,
+            "s2z": s2z,
+            "distance": torch.Tensor(self.luminosity_distance),
+            "inclination": incl,
+            "phic": torch.Tensor(self.phase),
         }
-        return params
-
-    def convert_to_bilby_param_set(self, reference_frequency: float):
-        theta_jn = np.zeros(len(self))
-        phi_jl = np.zeros(len(self))
-        tilt_1 = np.zeros(len(self))
-        tilt_2 = np.zeros(len(self))
-        phi_12 = np.zeros(len(self))
-        a_1 = np.zeros(len(self))
-        a_2 = np.zeros(len(self))
-
-        for i in range(len(self)):
-            (
-                theta_jn[i],
-                phi_jl[i],
-                tilt_1[i],
-                tilt_2[i],
-                phi_12[i],
-                a_1[i],
-                a_2[i],
-            ) = SimInspiralTransformPrecessingWvf2PE(
-                self.inclination[i],
-                self.spin1x[i],
-                self.spin1y[i],
-                self.spin1z[i],
-                self.spin2x[i],
-                self.spin2y[i],
-                self.spin2z[i],
-                self.mass1[i],
-                self.mass2[i],
-                reference_frequency,
-                self.phase[i],
-            )
-
-        # When the spin magnitude is 0, the conversion function sets
-        # the tilts to pi/2. To me, 0 is a more sensible value
-        tilt_1[a_1 == 0] = 0
-        tilt_2[a_2 == 0] = 0
-
-        return BilbyParameterSet(
-            mass_1=self.mass1,
-            mass_2=self.mass2,
-            a_1=a_1,
-            a_2=a_2,
-            tilt_1=tilt_1,
-            tilt_2=tilt_2,
-            phi_12=phi_12,
-            phi_jl=phi_jl,
-            ra=self.ra,
-            dec=self.dec,
-            redshift=self.redshift,
-            psi=self.psi,
-            theta_jn=theta_jn,
-            phase=self.phase,
-        )
 
 
 @dataclass
@@ -285,103 +168,6 @@ class InjectionMetadata(Ledger):
         return super().compare_metadata(key, ours, theirs)
 
 
-@dataclass(frozen=True)
-class _WaveformGenerator:
-    """Thin wrapper so that we can potentially parallelize this"""
-
-    waveform_approximant: str
-    sample_rate: float
-    waveform_duration: float
-    coalescence_time: float
-    minimum_frequency: float
-    reference_frequency: float
-
-    def shift_coalescence(self, waveforms: np.ndarray, t_final: float):
-        """
-        Shift a pair of polarizations such that the coalescence point is moved
-        to the time specified by self.coalescence_time. The shift is
-        accomplished by rolling the array
-
-        Args:
-            waveforms:
-                The stacked polarizations of a waveform. These are generated
-                by PyCBC's `get_td_waveform`, which places the coalescence
-                point at t = 0
-            t_final:
-                The ending time of the signal array. This time is relative
-                to the coalescence point
-
-        Returns:
-            The stacked, shifted polarizations
-        """
-        shift_time = (
-            t_final
-            - (self.waveform_duration - self.coalescence_time)
-            + 1 / self.sample_rate
-        )
-        shift_idx = int(shift_time * self.sample_rate)
-        return np.roll(waveforms, shift_idx, axis=-1)
-
-    def align_waveforms(self, waveforms: np.ndarray, t_final: float):
-        """
-        Adjust a pair of polarizations such that the arrays have the desired
-        length and the coalescence point is at the desired time. Waveforms
-        generated by PyCBC have different lengths based on the waveform
-        parameters, and so may be longer or shorter than
-        `self.waveform_duration`. If the generated signal is shorter, it
-        will be zero-padded on the left and then shifted. If it is longer,
-        it will be shifted and then cropped.
-
-        Args:
-            waveforms:
-                The stacked polarizations of a waveform. These are generated
-                by PyCBC's `get_td_waveform`, which places the coalescence
-                point at t = 0
-            t_final:
-                The ending time of the signal array. This time is relative
-                to the coalescence point
-
-        Returns:
-            The stacked, shifted polarizations padded or cropped to the
-            appropriate length
-        """
-        waveform_length = int(self.sample_rate * self.waveform_duration)
-        if waveforms.shape[-1] < waveform_length:
-            pad = waveform_length - waveforms.shape[-1]
-            waveforms = np.pad(waveforms, ((0, 0), (pad, 0)))
-            waveforms = self.shift_coalescence(waveforms, t_final)
-        elif waveforms.shape[-1] >= waveform_length:
-            waveforms = self.shift_coalescence(waveforms, t_final)
-            waveforms = waveforms[:, -waveform_length:]
-        return waveforms
-
-    def __call__(self, params: Dict[str, float]):
-        # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/transforms/detection/waveform.py?ref_type=heads#L112 # noqa
-        freq_limit = 1899.0 / (params["mass1"] + params["mass2"])
-        if self.minimum_frequency > freq_limit:
-            minimum_frequency = freq_limit
-            reference_frequency = freq_limit
-        else:
-            minimum_frequency = self.minimum_frequency
-            reference_frequency = self.reference_frequency
-
-        hp, hc = get_td_waveform(
-            approximant=self.waveform_approximant,
-            f_lower=minimum_frequency,
-            f_ref=reference_frequency,
-            delta_t=1 / self.sample_rate,
-            **params,
-        )
-
-        t_final = hp.sample_times.data[-1]
-        stacked = np.stack([hp.data, hc.data])
-        stacked = self.align_waveforms(stacked, t_final)
-
-        unstacked = dict(zip(["plus", "cross"], stacked))
-
-        return unstacked
-
-
 @dataclass
 class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
     cross: np.ndarray = waveform()
@@ -404,7 +190,6 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         waveform_duration: float,
         waveform_approximant: str,
         coalescence_time: float,
-        ex: Optional[Executor] = None,
     ):
         if waveform_duration < coalescence_time:
             raise ValueError(
@@ -412,36 +197,22 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
                 f"got values of {coalescence_time} and {waveform_duration}"
             )
 
-        waveform_generator = _WaveformGenerator(
-            waveform_approximant=waveform_approximant,
+        approximant = APPROXIMANTS[waveform_approximant]
+        waveform_generator = TimeDomainCBCWaveformGenerator(
+            approximant=approximant(),
             sample_rate=sample_rate,
-            waveform_duration=waveform_duration,
-            coalescence_time=coalescence_time,
-            minimum_frequency=minimum_frequency,
-            reference_frequency=reference_frequency,
+            duration=waveform_duration,
+            f_min=minimum_frequency,
+            f_ref=reference_frequency,
+            right_pad=waveform_duration - coalescence_time,
         )
 
-        waveform_length = int(sample_rate * waveform_duration)
+        generation_params = params.generation_params(reference_frequency)
+        hc, hp = waveform_generator(**generation_params)
         polarizations = {
-            "plus": np.zeros((len(params), waveform_length)),
-            "cross": np.zeros((len(params), waveform_length)),
+            "plus": hp.numpy(),
+            "cross": hc.numpy(),
         }
-
-        lal_params = params.convert_to_lal_param_set(reference_frequency)
-        param_list = transpose(lal_params.generation_params)
-        # give flexibility if we want to parallelize or not
-        if ex is None:
-            for i, polars in enumerate(map(waveform_generator, param_list)):
-                for key, value in polars.items():
-                    polarizations[key][i] = value
-        else:
-            futures = ex.map(waveform_generator, param_list)
-            idx_map = dict(zip(futures, len(futures)))
-            for f in as_completed(futures):
-                i = idx_map.pop(f)
-                polars = f.result()
-                for key, value in polars.items():
-                    polarizations[key][i] = value
 
         d = {k: getattr(params, k) for k in params.__dataclass_fields__}
         polarizations.update(d)
