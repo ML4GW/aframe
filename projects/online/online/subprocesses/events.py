@@ -33,6 +33,6 @@ def event_creation_subprocess(
         event.write(outdir)
         graceid = gdb.submit(event)
 
-        logger.debug("Putting graceid in amplfi and pastro queues")
+        logger.debug(f"Putting graceid {graceid} in amplfi and pastro queues")
         amplfi_queue.put(graceid)
         pastro_queue.put(graceid)
