@@ -14,12 +14,10 @@ from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
 
-from ledger.injections import WaveformSet, waveform_class_factory
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
 from train.metrics import get_timeslides
 from train.data.waveforms.sampler import WaveformSampler
-from utils import x_per_y
 from utils.preprocessing import PsdEstimator
 
 Tensor = torch.Tensor
@@ -310,15 +308,6 @@ class BaseAframeDataset(pl.LightningDataModule):
     # Utilities for initial data loading and preparation
     # ================================================ #
 
-    @property
-    def waveform_set_cls(self):
-        cls = waveform_class_factory(
-            self.hparams.ifos,
-            WaveformSet,
-            "WaveformSet",
-        )
-        return cls
-
     def prepare_data(self):
         """
         Download s3 data if it doesn't exist.
@@ -367,16 +356,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         waveforms = waveforms[..., signal_start:signal_stop]
 
         return waveforms
-
-    def get_slice_bounds(self, total, world_size, rank) -> tuple[int, int]:
-        """
-        Figure which chunk of waveforms we should be
-        slicing given our rank and world size
-        """
-        per_dev = x_per_y(abs(total), world_size)
-        start = rank * per_dev
-        stop = (rank + 1) * per_dev
-        return start, stop
 
     def load_val_background(self, fnames: list[str]):
         self._logger.info("Loading validation background data")

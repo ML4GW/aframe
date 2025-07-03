@@ -13,6 +13,7 @@ class CBCGenerator(WaveformGenerator):
         self,
         *args,
         approximant: Callable,
+        duration: float,
         f_min: float,
         f_ref: float,
         **kwargs,
@@ -30,6 +31,8 @@ class CBCGenerator(WaveformGenerator):
                 A callable that takes parameter tensors
                 and returns the cross and plus polarizations.
                 For example, `ml4gw.waveforms.IMRPhenomD()`
+            duration:
+                Duration of the waveform in seconds
             f_min:
                 Lowest frequency at which waveform signal content
                 is generated
@@ -45,7 +48,7 @@ class CBCGenerator(WaveformGenerator):
         self.waveform_generator = TimeDomainCBCWaveformGenerator(
             approximant,
             self.sample_rate,
-            self.kernel_length,
+            duration,
             f_min,
             f_ref,
             self.right_pad,
