@@ -51,6 +51,12 @@ class AframeCLI(LightningCLI):
             apply_on="parse",
         )
 
+        parser.link_arguments(
+            "data.init_args.ifos",
+            "data.init_args.waveform_sampler.init_args.ifos",
+            apply_on="parse",
+        )
+
 
 def main(args=None):
     cli = AframeCLI(

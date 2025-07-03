@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import h5py
 import torch
 
 from .sampler import WaveformSampler
@@ -27,8 +26,13 @@ class WaveformLoader(WaveformSampler):
         super().__init__(*args, **kwargs)
         self.training_waveform_file = training_waveform_file
 
-        with h5py.File(training_waveform_file) as f:
-            self.num_train_waveforms = len(f["waveforms"]["cross"])
+        waveform_set = self.waveform_set_cls.read(training_waveform_file)
+        if waveform_set.right_pad != self.right_pad:
+            raise ValueError(
+                "Training waveform file does not have the same "
+                "right pad as validation waveform file"
+            )
+        self.num_train_waveforms = len(waveform_set)
 
     def get_train_waveforms(self, world_size, rank, device):
         """
@@ -37,18 +41,9 @@ class WaveformLoader(WaveformSampler):
         start, stop = self.get_slice_bounds(
             self.num_train_waveforms, world_size, rank
         )
-        with h5py.File(self.val_waveform_file) as f:
-            waveforms = []
-            for key in f["waveforms"].keys():
-                waveforms.append(torch.Tensor(f["waveforms"][key][start:stop]))
-
-            if self.right_pad != f.attrs["right_pad"]:
-                raise ValueError(
-                    "Training and validation waveform files do not have "
-                    "the same right pad"
-                )
-
-        self.train_waveforms = torch.stack(waveforms, dim=0).to(device)
+        waveform_set = self.waveform_set_cls.read(self.training_waveform_file)
+        waveforms = torch.Tensor(waveform_set.waveforms[start:stop])
+        self.train_waveforms = waveforms.to(device)
 
     def sample(self, X: torch.Tensor):
         """

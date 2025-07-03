@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import List
 
-import h5py
 import torch
 from utils import x_per_y
+
+from ledger.injections import WaveformSet, waveform_class_factory
 
 Distribution = torch.distributions.Distribution
 
@@ -12,12 +14,8 @@ class WaveformSampler(torch.nn.Module):
     Base object defining methods that waveform producing classes
     should implement. Should not be instantiated on its own.
     Args:
-        fduration:
-            Desired length in seconds of the time domain
-            response of the whitening filter built from PSDs.
-            See `ml4gw.spectral.truncate_inverse_power_spectrum`
-        kernel_length:
-            Length in seconds of window passed to neural network.
+        ifos:
+            List of interferometers that are being trained on.
         sample_rate:
             Sample rate in Hz of generated waveforms
         val_waveform_file:
@@ -27,22 +25,28 @@ class WaveformSampler(torch.nn.Module):
     def __init__(
         self,
         *args,
-        fduration: float,
-        kernel_length: float,
+        ifos: List[str],
         sample_rate: float,
         val_waveform_file: Path,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.fduration = fduration
-        self.kernel_length = kernel_length
+        self.ifos = ifos
         self.sample_rate = sample_rate
         self.val_waveform_file = val_waveform_file
 
-        with h5py.File(val_waveform_file) as f:
-            key = list(f["waveforms"].keys())[0]
-            self.num_val_waveforms = len(f["waveforms"][key])
-            self.right_pad = f.attrs["right_pad"]
+        waveform_set = self.waveform_set_cls.read(val_waveform_file)
+        self.num_val_waveforms = len(waveform_set)
+        self.right_pad = waveform_set.right_pad
+
+    @property
+    def waveform_set_cls(self):
+        cls = waveform_class_factory(
+            self.ifos,
+            WaveformSet,
+            "WaveformSet",
+        )
+        return cls
 
     def get_slice_bounds(self, total, world_size, rank) -> tuple[int, int]:
         """
@@ -63,12 +67,8 @@ class WaveformSampler(torch.nn.Module):
         start, stop = self.get_slice_bounds(
             self.num_val_waveforms, world_size, rank
         )
-        with h5py.File(self.val_waveform_file) as f:
-            waveforms = []
-            for key in f["waveforms"].keys():
-                waveforms.append(torch.Tensor(f["waveforms"][key][start:stop]))
-
-        return torch.stack(waveforms, dim=0)
+        waveform_set = self.waveform_set_cls.read(self.val_waveform_file)
+        return torch.Tensor(waveform_set.waveforms[start:stop])
 
     def get_test_waveforms(self):
         raise NotImplementedError
