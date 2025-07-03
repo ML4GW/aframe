@@ -23,7 +23,7 @@ def testing_waveforms(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str,
-    coalescence_time: float,
+    right_pad: float,
     highpass: float,
     lowpass: float,
     snr_threshold: float,
@@ -71,9 +71,10 @@ def testing_waveforms(
             Duration of waveform in seconds
         waveform_approximant:
             Name of the waveform approximant to use.
-        coalescence_time:
+        right_pad:
             Location of the defining point of the signal within
-            the generated waveform
+            the generated waveform relative to the right edge
+            of the waveform (in seconds).
         highpass:
             The frequency to use for a highpass filter, specified
             in Hz
@@ -140,7 +141,7 @@ def testing_waveforms(
         sample_rate,
         waveform_duration,
         waveform_approximant,
-        coalescence_time,
+        right_pad,
         highpass,
         lowpass,
         snr_threshold,
