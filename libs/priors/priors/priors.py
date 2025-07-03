@@ -154,7 +154,9 @@ def end_o3_ratesandpops(
         detector_frame_prior:
             Boolean indicating which frame masses are defined in
     """
-    prior = ConditionalPriorDict(uniform_extrinsic())
+    prior = ConditionalPriorDict(
+        uniform_extrinsic(), conversion_function=mass_constraints
+    )
     prior["mass_1"] = PowerLaw(alpha=-2.35, minimum=5, maximum=100, unit=msun)
     prior["mass_2"] = ConditionalPowerLaw(
         condition_func=mass_condition_powerlaw,
@@ -163,6 +165,7 @@ def end_o3_ratesandpops(
         maximum=100,
         unit=msun,
     )
+    prior["mass_ratio"] = Constraint(0.02, 0.999)
     prior["redshift"] = UniformComovingVolume(
         0, 2, name="redshift", cosmology=cosmology
     )
