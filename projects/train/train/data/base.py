@@ -28,6 +28,7 @@ TransformedDist = torch.distributions.TransformedDistribution
 
 # TODO:
 # Make the coalescence point/right pad parameterization consistent
+# Move waveform slicing to the waveform sampler?
 
 
 # TODO: using this right now because

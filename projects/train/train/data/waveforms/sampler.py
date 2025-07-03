@@ -44,14 +44,6 @@ class WaveformSampler(torch.nn.Module):
             self.num_val_waveforms = len(f["waveforms"][key])
             self.right_pad = f.attrs["duration"] - f.attrs["coalescence_time"]
 
-    @property
-    def duration(self):
-        """
-        Length of kernel before whitening removes
-        fduration / 2 from each side
-        """
-        return self.fduration + self.kernel_length
-
     def get_slice_bounds(self, total, world_size, rank) -> tuple[int, int]:
         """
         Determine waveform indices to load for this device
