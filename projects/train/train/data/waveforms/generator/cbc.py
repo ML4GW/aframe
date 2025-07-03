@@ -15,7 +15,6 @@ class CBCGenerator(WaveformGenerator):
         approximant: Callable,
         f_min: float,
         f_ref: float,
-        right_pad: float,
         **kwargs,
     ):
         """
@@ -59,9 +58,8 @@ class CBCGenerator(WaveformGenerator):
             if key in parameters:
                 parameters[key] *= 1 + parameters["redshift"]
         parameter_set = BilbyParameterSet(**parameters)
-        generation_params = parameter_set.generation_params(
-            reference_frequency=self.f_ref
-        )
+        lal_params = parameter_set.convert_to_lal_param_set(self.f_ref)
+        generation_params = lal_params.ml4gw_generation_params
         return generation_params
 
     def forward(self, **parameters) -> torch.Tensor:

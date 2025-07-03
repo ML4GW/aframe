@@ -91,7 +91,7 @@ class SaveAugmentedBatch(Callback):
             background = background.to(device)
             cross = cross.to(device)
             plus = plus.to(device)
-            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
+            X_bg, X_inj = trainer.datamodule.build_val_batches(
                 background, cross, plus
             )
             # Make background and injected validation data into
