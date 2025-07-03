@@ -29,20 +29,23 @@ class GdbServer(Enum):
 
     @property
     def service_url(self) -> str:
+        if self == GdbServer.local:
+            return self.name
         return self.value + "api/"
 
     def gevent_url(self, graceid: str) -> str:
         """Get the URL for a specific event on this server."""
+        if self == GdbServer.local:
+            return graceid
         return self.value + f"events/{graceid}/view"
 
     def create_gracedb(self, write_dir: Path, **kwargs) -> "GraceDb":
         """Create a GraceDb client instance for this server."""
         if self == GdbServer.local:
-            return LocalGraceDb(server=self.name, write_dir=write_dir)
+            return LocalGraceDb(server=self, write_dir=write_dir)
 
         return GraceDb(
-            service_url=self.service_url,
-            server=self.name,
+            server=self,
             write_dir=write_dir,
             **kwargs,
         )
@@ -69,7 +72,12 @@ class GraceDb(_GraceDb):
         logger: Optional[logging.Logger] = None,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs, use_auth="scitoken")
+        super().__init__(
+            *args,
+            **kwargs,
+            service_url=server.service_url,
+            use_auth="scitoken",
+        )
         self.server = server
         self.write_dir = write_dir
         if logger is None:
@@ -115,6 +123,12 @@ class GraceDb(_GraceDb):
             self.logger.warning(
                 "Could not find frame file to evaluate write time. "
                 "Using rounded down event gpstime instead."
+            )
+            t_write = int(event.gpstime)
+        except ValueError:
+            self.logger.warning(
+                "Either too many prefixes or durations in data directory"
+                "If running in online mode, be careful"
             )
             t_write = int(event.gpstime)
 

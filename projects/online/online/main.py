@@ -4,7 +4,7 @@ import logging
 import signal
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple, TYPE_CHECKING, Literal
+from typing import Iterable, List, Optional, Tuple, Literal
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
@@ -34,9 +34,7 @@ from online.subprocesses import (
     signal_handler,
 )
 from online.subprocesses.authenticate import authenticate
-
-if TYPE_CHECKING:
-    from online.utils.gdb import GdbServer
+from online.utils.gdb import GdbServer
 
 SECONDS_PER_DAY = 86400
 # igwn_auth_utils finds tokens only if they have at least 10 minutes left
@@ -239,7 +237,7 @@ def search(
             if X is not None:
                 logging.debug(
                     "Frame {} is not analysis ready. Using dummy values "
-                    "for inference any ignoring any triggers".format(t0)
+                    "for inference and ignoring any triggers".format(t0)
                 )
                 pass
             # or if it's because frames were dropped within the stream
@@ -384,6 +382,7 @@ def main(
     device: str = "cpu",
     verbose: bool = False,
     mode: Literal["online", "offline"] = "online",
+    matmul_precision: Literal["highest", "high", "medium"] = "highest",
 ):
     """
     Main function for launching real-time Aframe and AMPLFI pipeline.
@@ -503,7 +502,11 @@ def main(
             are analyzed as if they were "streamed" online. Useful for
             mimicking an online analysis over mock data challenges with
             performance capabilities that are faster than realtime.
-    """
+        matmul_precision:
+            See https://docs.pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html
+            Setting precision to 'high' or 'medium' can significantly
+            reduce sampling times. Default is 'highest'.
+    """  # noqa: E501
 
     # create various queues for message
     # passing between subprocesses
@@ -525,12 +528,15 @@ def main(
     )
     subprocesses.append(logging_subprocess)
 
+    logging.info(f"Setting matmul precision to {matmul_precision}")
+    torch.set_float32_matmul_precision(matmul_precision)
+
     if mode == "offline":
         logging.warning(
             "Running in 'offline' mode: Turning email "
             "notifications off and setting GraceDB server to `local`"
         )
-        server = "local"
+        server = GdbServer.local
         emails = None
 
     if emails is not None:
@@ -578,7 +584,6 @@ def main(
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
     )
-
     fftlength = fftlength or kernel_length + fduration
     logging.info(f"Using fftlength {fftlength} for PSD estimation")
 

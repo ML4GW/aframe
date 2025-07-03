@@ -7,7 +7,7 @@ authors = [
     { name = "Alec Gunny", email = "alecg@mit.edu" },
     { name = "Ethan Marx", email = "emarx@mit.edu" },
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 license = "MIT"
 dependencies = [
     "utils",
@@ -21,7 +21,7 @@ dependencies = [
     "numpy<2.0.0",
     "scipy<1.15",
     "matplotlib==3.9.4",
-    "ligo-skymap>=2.2.2,<3",
+    "ligo-skymap>=2.4.0,<3",
     "ligo-gracedb>=2.14.1",
     "tables>=3.9",
 ]

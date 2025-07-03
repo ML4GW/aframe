@@ -173,6 +173,7 @@ class EventPage(MonitorPage):
                     prev_df["event"] == self.event_data["event"]
                 )[0, 0]
                 prev_df.loc[idx] = self.event_data
+                df = prev_df
             else:
                 # If the event is new, append it
                 df = pd.concat(
