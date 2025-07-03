@@ -253,7 +253,7 @@ class LALParameterSet(Ledger):
 class InjectionMetadata(Ledger):
     sample_rate: np.ndarray = metadata()
     duration: np.ndarray = metadata()
-    coalescence_time: float = metadata()
+    right_pad: float = metadata()
     num_injections: int = metadata(default=0)
 
     def __post_init__(self):
@@ -311,15 +311,15 @@ class _WaveformGenerator:
     waveform_approximant: str
     sample_rate: float
     waveform_duration: float
-    coalescence_time: float
+    right_pad: float
     minimum_frequency: float
     reference_frequency: float
 
     def shift_coalescence(self, waveforms: np.ndarray, t_final: float):
         """
         Shift a pair of polarizations such that the coalescence point is moved
-        to the time specified by self.coalescence_time. The shift is
-        accomplished by rolling the array
+        such that it is `self.right_pad` seconds from the right edge.
+        The shift is accomplished by rolling the array
 
         Args:
             waveforms:
@@ -333,11 +333,7 @@ class _WaveformGenerator:
         Returns:
             The stacked, shifted polarizations
         """
-        shift_time = (
-            t_final
-            - (self.waveform_duration - self.coalescence_time)
-            + 1 / self.sample_rate
-        )
+        shift_time = t_final - self.right_pad + 1 / self.sample_rate
         shift_idx = int(shift_time * self.sample_rate)
         return np.roll(waveforms, shift_idx, axis=-1)
 
@@ -422,20 +418,20 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         sample_rate: float,
         waveform_duration: float,
         waveform_approximant: str,
-        coalescence_time: float,
+        right_pad: float,
         ex: Optional[Executor] = None,
     ):
-        if waveform_duration < coalescence_time:
+        if waveform_duration < right_pad:
             raise ValueError(
-                "Coalescence time must be less than waveform duration; "
-                f"got values of {coalescence_time} and {waveform_duration}"
+                "Right padding must be less than waveform duration; "
+                f"got values of {right_pad} and {waveform_duration}"
             )
 
         waveform_generator = _WaveformGenerator(
             waveform_approximant=waveform_approximant,
             sample_rate=sample_rate,
             waveform_duration=waveform_duration,
-            coalescence_time=coalescence_time,
+            right_pad=right_pad,
             minimum_frequency=minimum_frequency,
             reference_frequency=reference_frequency,
         )
@@ -467,7 +463,7 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         polarizations["sample_rate"] = sample_rate
         polarizations["duration"] = waveform_duration
         polarizations["num_injections"] = len(params)
-        polarizations["coalescence_time"] = coalescence_time
+        polarizations["right_pad"] = right_pad
         return cls(**polarizations)
 
 
@@ -579,14 +575,14 @@ class InterferometerResponseSet(WaveformSet):
             if all(i is None for i in [start, end, shifts]):
                 return cls._load_with_idx(f, None)
 
-            coalescence_time = f.attrs["coalescence_time"]
+            left_pad = f.attrs["duration"] - f.attrs["right_pad"]
             times = f["parameters"]["injection_time"][:]
 
             mask = True
             if start is not None:
-                mask &= (times + coalescence_time) >= start
+                mask &= (times + left_pad) >= start
             if end is not None:
-                mask &= (times - coalescence_time) <= end
+                mask &= (times - left_pad) <= end
             if shifts is not None:
                 shifts = np.array(shifts)
                 ndim = shifts.ndim
@@ -631,10 +627,10 @@ class InterferometerResponseSet(WaveformSet):
         initial timestamp `start`
         """
         stop = start + x.shape[-1] / self.sample_rate
-        post_coalescence_time = self.duration - self.coalescence_time
+        left_pad = self.duration - self.right_pad
 
-        mask = self.injection_time >= (start - self.coalescence_time)
-        mask &= self.injection_time <= (stop + post_coalescence_time)
+        mask = self.injection_time >= (start - left_pad)
+        mask &= self.injection_time <= (stop + self.right_pad)
 
         if not mask.any():
             return x
@@ -645,7 +641,7 @@ class InterferometerResponseSet(WaveformSet):
         # potentially pad x to inject waveforms
         # that fall over the boundaries of chunks
         pad = []
-        earliest = (times - self.coalescence_time - start).min()
+        earliest = (times - left_pad - start).min()
         if earliest < 0:
             # For consistency, we want to round down here
             # E.g., if earliest = -0.1 and sample_rate = 2048,
@@ -658,7 +654,7 @@ class InterferometerResponseSet(WaveformSet):
         else:
             pad.append(0)
 
-        latest = (times + post_coalescence_time - stop).max()
+        latest = (times + self.right_pad - stop).max()
         if latest > 0:
             num_late = int(latest * self.sample_rate)
             pad.append(num_late)
@@ -672,9 +668,8 @@ class InterferometerResponseSet(WaveformSet):
         # create matrix of indices of waveform_size for each waveform
         waveforms = waveforms.transpose((1, 0, 2))
         _, num_waveforms, waveform_size = waveforms.shape
-        coalescence_time_idx = int(self.coalescence_time * self.sample_rate)
 
-        idx = np.arange(waveform_size) - coalescence_time_idx
+        idx = np.arange(waveform_size) - int(left_pad * self.sample_rate)
         idx = idx[None]
         idx = np.repeat(idx, num_waveforms, axis=0)
 
