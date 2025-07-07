@@ -285,7 +285,7 @@ class GraceDb(_GraceDb):
         # plt.close()
         self.write_log(
             graceid,
-            "Molleweide projection of amplfi.fits",
+            "Molleweide projection of amplfi.multiorder.fits,0",
             filename=amplfi_fname,
             tag_name="sky_loc",
         )
