@@ -17,6 +17,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 # TODO: currently combining path for nvidia variables 
 # necessary to launch triton in export container
@@ -26,12 +28,13 @@ env:
   REGISTRY: ghcr.io
   PATH: /opt/env/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/cuda-11.8/bin:/opt/tritonserver/bin:/usr/local/mpi/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/ucx/bin
 
-
 jobs:
   changes:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     outputs:
       projects: ${{ steps.filter.outputs.changes }}
+      has-changes: steps.filter.outputs.changes != '[]' && steps.filters.outputs.changes != ''
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -40,20 +43,21 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         filters: .github/project-filters.yaml
-      if: github.event.pull_request.draft == false
 
   build-test:
     runs-on: ubuntu-latest
-    needs: changes
+    needs: changes 
+    if: needs.changes.outputs.has-changes == 'true' || startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.changes.outputs.projects) }}
+        # For tag pushes, we want to build all projects, not just changed ones
+        project: ${{ startsWith(github.ref, 'refs/tags/') && fromJSON('["data", "online", "train", "infer", "export"]') || fromJSON(needs.changes.outputs.projects) }}
         exclude:
-          - project: 'workflow' # Fixed the exclusion key
+          - project: 'workflow' 
     steps:
     -
       name: Free Disk Space (Ubuntu)
@@ -92,7 +96,7 @@ jobs:
           -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
 
     # run tests inside the sandbox;
-    # if this is a push event, tar the sandbox
+    # if this is a push event or a tag, tar the sandbox
     # so that we can import it into docker
     # container and push it to the registry;
     # otherwise (e.g. for a PR) just run the tests
@@ -105,7 +109,7 @@ jobs:
           --privileged \
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
-          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && if [ "${{ github.event_name == 'push'}}" == "true" ]; then tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .; fi'
+          -c 'singularity exec --env PATH=${{ env.PATH }} /opt/aframe/sandbox pytest && if [ "${{ github.event_name == 'push' || startsWith(github.ref, 'refs/tags/') }}" == "true" ]; then tar -czf /opt/aframe/app.tar.gz -C /opt/aframe/sandbox .; fi'
 
     # now copy the fs contents into an empty
     # container and push it to the registry,
@@ -115,7 +119,7 @@ jobs:
       name: build and push docker image
       # only run on pushes so that we aren't
       # building containers for PRs
-      if: ${{ github.event_name == 'push' }}
+      if: ${{ github.event_name == 'push' || startsWith(github.ref, 'refs/tags/') }}
       env:
         tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
       run: |
