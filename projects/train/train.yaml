@@ -74,7 +74,7 @@ data:
         approximant: ml4gw.waveforms.IMRPhenomPv2
         f_min: 20
         f_ref: 40
-        kernel_length: 8
+        duration: 8
     # Extrinsic parameter distributions
     dec: 
       class_path: ml4gw.distributions.Cosine
@@ -131,7 +131,7 @@ trainer:
   # strategy: set to ddp if len(devices) > 1
   #precision: 16-mixed
   accelerator: auto
-  max_epochs: 400
+  max_epochs: 200
   check_val_every_n_epoch: 1
   log_every_n_steps: 20
   benchmark: true

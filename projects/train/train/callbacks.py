@@ -77,14 +77,13 @@ class SaveAugmentedBatch(Callback):
             X, y = trainer.datamodule.inject(X)
 
             # build val batch by hand
-            [background, _, _], [cross, plus] = next(
+            [background, _, _], [signals] = next(
                 iter(trainer.datamodule.val_dataloader())
             )
             background = background.to(device)
-            cross = cross.to(device)
-            plus = plus.to(device)
+            signals = signals.to(device)
             X_bg, X_inj = trainer.datamodule.build_val_batches(
-                background, cross, plus
+                background, signals
             )
 
             if save_dir.startswith("s3://"):
