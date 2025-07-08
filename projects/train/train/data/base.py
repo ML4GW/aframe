@@ -489,7 +489,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             # on the local device, the relevant tensors will be
             # empty, so just pass them through with a 0 shift to
             # indicate that this should be ignored
-            [background, _, timeslide_idx], [cross, plus] = batch
+            [background, _, timeslide_idx], [signals] = batch
 
             # If we're validating, unfold the background
             # data into a batch of overlapping kernels now that
@@ -497,7 +497,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             # much data from CPU to GPU. Once everything is
             # on-device, pre-inject signals into background.
             shift = self.timeslides[timeslide_idx].shift_size
-            X_bg, X_fg = self.build_val_batches(background, cross, plus)
+            X_bg, X_fg = self.build_val_batches(background, signals)
             batch = (shift, X_bg, X_fg)
         return batch
 
@@ -514,7 +514,9 @@ class BaseAframeDataset(pl.LightningDataModule):
     # ================================================ #
     @torch.no_grad()
     def build_val_batches(
-        self, background: Tensor, cross: Tensor, plus: Tensor
+        self,
+        background: Tensor,
+        signals: Tensor,
     ) -> tuple[Tensor, Tensor, Tensor]:
         """
         Unfold a timeseries of background data
@@ -524,8 +526,7 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         Args:
             background: A tensor of background data
-            cross: A tensor of cross polarization waveforms
-            plus: A tensor of plus polarization waveforms
+            signals: A tensor of signals to inject
 
         Returns:
             raw strain background kernels, injected kernels, and psds
@@ -538,10 +539,6 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         # split data into kernel and psd data and estimate psd
         X, psd = self.psd_estimator(background)
-
-        # Sample sky locations and project polarizations
-        dec, psi, phi = self.sample_extrinsic(cross)
-        signals = self.projector(dec, psi, phi, cross=cross, plus=plus)
 
         # sometimes at the end of a segment, there won't be
         # enough background kernels and so we'll have to inject

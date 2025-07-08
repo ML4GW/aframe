@@ -1,9 +1,11 @@
 from typing import Callable
 
 import torch
+from bilby.core.prior import ConditionalPriorDict, Constraint
 from ml4gw.waveforms.generator import TimeDomainCBCWaveformGenerator
 
 from ledger.injections import BilbyParameterSet
+from priors.utils import mass_constraints
 
 from .generator import WaveformGenerator
 
@@ -43,6 +45,14 @@ class CBCGenerator(WaveformGenerator):
                 `aframe.train.train.data.waveforms.generator.WaveformGenerator`
         """
         super().__init__(*args, **kwargs)
+
+        # For CBC generation, need to make sure that the mass ratio
+        # does not exceed what ml4gw can handle.
+        self.training_prior = ConditionalPriorDict(
+            self.training_prior, conversion_function=mass_constraints
+        )
+        self.training_prior["mass_ratio"] = Constraint(0.02, 0.999)
+
         self.approximant = approximant
         self.f_ref = f_ref
         self.waveform_generator = TimeDomainCBCWaveformGenerator(

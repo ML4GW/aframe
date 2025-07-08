@@ -4,8 +4,8 @@ from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
-    def build_val_batches(self, background, cross, plus):
-        X_bg, X_inj, psds = super().build_val_batches(background, cross, plus)
+    def build_val_batches(self, background, signals):
+        X_bg, X_inj, psds = super().build_val_batches(background, signals)
         X_bg = self.whitener(X_bg, psds)
         # whiten each view of injections
         X_fg = []
