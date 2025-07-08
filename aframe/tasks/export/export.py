@@ -69,7 +69,7 @@ class ExportLocal(AframeSingularityTask):
         # names and locations
         weights = self.input().path
         weights_dir = os.path.dirname(weights)
-        batch_file = weights_dir + "/batch.h5"
+        batch_file = weights_dir + "/batch.hdf5"
 
         export(
             weights,

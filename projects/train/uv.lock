@@ -38,9 +38,9 @@ requires-dist = [
     { name = "cloudpathlib", specifier = ">=0.18.1,<0.19" },
     { name = "jsonargparse", specifier = ">=4.27.1,<5" },
     { name = "kr8s", specifier = ">=0.10.0,<0.11" },
-    { name = "law", specifier = ">=0.1.19" },
+    { name = "law", specifier = ">=0.1.20" },
     { name = "luigi", specifier = "~=3.0" },
-    { name = "ml4gw-hermes", specifier = ">=0.2.0" },
+    { name = "ml4gw-hermes", specifier = ">=0.2.1" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "psutil", specifier = ">=5.9.8,<6" },
     { name = "pykube-ng", extras = ["oidc"], specifier = ">=23.6.0,<24" },
@@ -331,6 +331,49 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f0/3c/adaf39ce1fb4afdd21b611e3d530b183bb7759c9b673d60db0e347fd4439/beautifulsoup4-4.13.3.tar.gz", hash = "sha256:1bd32405dacc920b42b83ba01644747ed77456a65760e285fbc47633ceddaf8b", size = 619516 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/49/6abb616eb3cbab6a7cca303dc02fdf3836de2e0b834bf966a7f5271a34d8/beautifulsoup4-4.13.3-py3-none-any.whl", hash = "sha256:99045d7d3f08f91f0d656bc9b7efbae189426cd913d830294a15eefa0ea4df16", size = 186015 },
+]
+
+[[package]]
+name = "bilby"
+version = "2.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "bilby-cython" },
+    { name = "corner" },
+    { name = "dill" },
+    { name = "dynesty" },
+    { name = "emcee" },
+    { name = "h5py" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scipy" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6f/60/1c82067bd5d87fcc4dbe045c194866f21a00679ab529cb4b78c3c131d40e/bilby-2.5.2.tar.gz", hash = "sha256:b600494f8b9ca1a01124b6c8cd12711621450f5f9e54b3f24a1272bb878f2796", size = 11511325 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/b0/8314d3a6659bd160f25c94dae61fe0a38fe8bdfa1decb8844cb994e75771/bilby-2.5.2-py3-none-any.whl", hash = "sha256:ec849e05e9eceb67fdf0b5e01d62aa256c22abdb2c7cc84064516989a97ff25d", size = 2267539 },
+]
+
+[[package]]
+name = "bilby-cython"
+version = "0.5.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/93/6877dd78b375f3e83c8209aecc18f18d1cd88269a8a5c2d3c7dd9ad4fc53/bilby_cython-0.5.3.tar.gz", hash = "sha256:44400b2abc6fa592b13d69f33460cb156d6edb48a783f5539ee0a21e1d0a3508", size = 238517 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/e7/24a4d73fcee5e828b5819466ee8d5c7310119c3b08122a033ba6fe99d80e/bilby.cython-0.5.3-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:27a34164fbaf140f89e0e0e395c6ea3ae5e57209c07c7c717c4385fecb9dd398", size = 351950 },
+    { url = "https://files.pythonhosted.org/packages/00/66/aaf5ebb0467f0a3cd760aaefd5789a474785675717f7a9c18918d65556ec/bilby.cython-0.5.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0f72f2865d4a01cb241c400efe4764e85194fe43f362061778f291498f0538df", size = 940117 },
+    { url = "https://files.pythonhosted.org/packages/13/e9/8c63ca64b19a0536616ee1aa77c46492c8da81a3589963b85fd929962dfa/bilby.cython-0.5.3-cp310-cp310-win_amd64.whl", hash = "sha256:ad135a68e800b60c03cca967347289b3e7481d2c1376f8188510e5191fd812f0", size = 359692 },
+    { url = "https://files.pythonhosted.org/packages/de/c1/3799f4bd0e5a13375b621f21d12fd21e596d744b363e683f815afe593f1f/bilby.cython-0.5.3-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:813f2b53a55b0fbbc2a86ef9c025e3020eb086473663c110161e3b120728176d", size = 352052 },
+    { url = "https://files.pythonhosted.org/packages/e4/6a/78511b5e08ed89f492297746e3f488159d90e2b89680777a3a37565916eb/bilby.cython-0.5.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4642cb38f2cea8129261e25fe4237e2c06982753ef3ce2611072e541b7ecf6fb", size = 983911 },
+    { url = "https://files.pythonhosted.org/packages/38/f3/ef24cb7c8a7335f869829e5c0909515544924dcd5df6d4f58b377e1daeb2/bilby.cython-0.5.3-cp311-cp311-win_amd64.whl", hash = "sha256:d9d0c1c490619981234568dae7f11fab1544783a748492d39d0d690a70d12f6a", size = 359647 },
+    { url = "https://files.pythonhosted.org/packages/8b/c5/ad5ca082b2610defc488679690df8137300c6bb396b24f783e3d74873fa4/bilby.cython-0.5.3-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:264ccd8ca1adabc794931ed6deb5082ad0ed4b52694be8158cb421a80a752bca", size = 351851 },
+    { url = "https://files.pythonhosted.org/packages/13/26/f0b46d56d278665b484ec421dc571fb28bdd81635137d00e0edc2c8fddc9/bilby.cython-0.5.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:44e5e381c2861e26a4e1fd5c591ea0c3c9a0e2f0d8c78f28f8704abf2945cd8d", size = 1014120 },
+    { url = "https://files.pythonhosted.org/packages/11/de/02429d598ec5ed4c70113a2c3e8b76a5b113885f85eacdcdaf19cbb6d23d/bilby.cython-0.5.3-cp312-cp312-win_amd64.whl", hash = "sha256:2758256339d7c3703014b265d3a77e0299d5c6264f962bc311c989ac453cbd60", size = 357801 },
 ]
 
 [[package]]
@@ -641,6 +684,18 @@ wheels = [
 ]
 
 [[package]]
+name = "corner"
+version = "2.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/61/2d728798e9ae3bf899d962f77486cb29888d57f6fbf9561bc1435a6b1a74/corner-2.2.3.tar.gz", hash = "sha256:471b7b63395d8f1dee176bb779348ade38d56abd23404a48802a593607745e1c", size = 5932840 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/4a/5bd0a8b981c5a93153d9eb7c63143b407cc7f8dfc9f91eedc9b6f5289eca/corner-2.2.3-py3-none-any.whl", hash = "sha256:39674b223482456c3a78234dc7bdefd21188a2d47bb8cd468104a0501f6659ec", size = 15946 },
+]
+
+[[package]]
 name = "cryptography"
 version = "44.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -753,6 +808,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dill"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/80/630b4b88364e9a8c8c5797f4602d0f76ef820909ee32f0bacb9f90654042/dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0", size = 186976 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/3d/9373ad9c56321fdab5b41197068e1d8c25883b3fea29dd361f9b55116869/dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049", size = 119668 },
+]
+
+[[package]]
 name = "distlib"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -783,12 +847,33 @@ wheels = [
 ]
 
 [[package]]
+name = "dynesty"
+version = "2.1.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/20/6a8a27d803900ad8fdfe7d730a66d2304f3fda17616eb8debe10085fa81a/dynesty-2.1.5.tar.gz", hash = "sha256:fd742d483a1f78086bc8a36316594fa1e18eeb3a27f8293fca147b377b5cd311", size = 31034553 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/01/db367a6adfa49d280cda609ad5d94b9b257058b4499c59633e6d15c5e552/dynesty-2.1.5-py2.py3-none-any.whl", hash = "sha256:c1d20f300d6e0fb64675f01683d7511b181d2a5ac372295b1fe5f4410670530b", size = 108214 },
+]
+
+[[package]]
 name = "einops"
 version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e5/81/df4fbe24dff8ba3934af99044188e20a98ed441ad17a274539b74e82e126/einops-0.8.1.tar.gz", hash = "sha256:de5d960a7a761225532e0f1959e5315ebeafc0cd43394732f103ca44b9837e84", size = 54805 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/62/9773de14fe6c45c23649e98b83231fffd7b9892b6cf863251dc2afa73643/einops-0.8.1-py3-none-any.whl", hash = "sha256:919387eb55330f5757c6bea9165c5ff5cfe63a642682ea788a6d472576d81737", size = 64359 },
+]
+
+[[package]]
+name = "emcee"
+version = "3.1.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/53/1045ee878cb24281387079f8ee4f0ade1622c6aae1ed1fd91a53e4fa5b19/emcee-3.1.6.tar.gz", hash = "sha256:11af4daf6ab8f9ca69681e3c29054665db7bbd87fd4eb8e437d2c3a1248c637d", size = 2871117 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/ef/2196b9bf88ffa1bde45853c72df021fbd07a8fa91a0f59a22d14a050dc04/emcee-3.1.6-py2.py3-none-any.whl", hash = "sha256:f2d63752023bdccf744461450e512a5b417ae7d28f18e12acd76a33de87580cb", size = 47351 },
 ]
 
 [[package]]
@@ -1678,7 +1763,7 @@ wheels = [
 
 [[package]]
 name = "ml4gw-hermes"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -1688,9 +1773,9 @@ dependencies = [
     { name = "tblib" },
     { name = "tritonclient", extra = ["all"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/03/75ed3d4b7bc1b8fea50c139a325b70386b4a7852b329cd8cec0e124e0126/ml4gw_hermes-0.2.0.tar.gz", hash = "sha256:e254f2b3dff8676e75d35c0eb0e7f41d76feb3a74614ab154493ac2f344294c5", size = 43060 }
+sdist = { url = "https://files.pythonhosted.org/packages/34/75/4f4930e02da76fe78eca85af9240a1ee901a791a55b264bb0d8048c24719/ml4gw_hermes-0.2.1.tar.gz", hash = "sha256:9349daecee00515f7ff812099eb2ac46472eb1af8ca4cea1adf2c12d4243507c", size = 42163 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/b7/9d7b67be9b09af2b04a236156781e84f2ef48dafeb76cb28f8e6c3e6d3a1/ml4gw_hermes-0.2.0-py3-none-any.whl", hash = "sha256:30e32135e44d7babed8f4636268a11c47b811a6250b3bc9dc8c066d929d1a388", size = 57589 },
+    { url = "https://files.pythonhosted.org/packages/73/db/82ff800c799e2b788cedf45b23d6128629737f556567777a4dc91452920d/ml4gw_hermes-0.2.1-py3-none-any.whl", hash = "sha256:b7ff0a1f917240cdf9763e771d5ae88857dc04d39f38c6f68e41d40e88cec28e", size = 57806 },
 ]
 
 [[package]]
@@ -2136,6 +2221,28 @@ sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
 ]
+
+[[package]]
+name = "priors"
+version = "0.1.0"
+source = { editable = "../../libs/priors" }
+dependencies = [
+    { name = "astropy" },
+    { name = "bilby" },
+    { name = "numpy" },
+    { name = "utils" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "astropy", specifier = ">=5.0" },
+    { name = "bilby", specifier = ">=2.2.2,<3" },
+    { name = "numpy", specifier = ">=1.26.4,<2" },
+    { name = "utils", editable = "../../libs/utils" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = "~=7.3" }]
 
 [[package]]
 name = "prometheus-client"
@@ -3354,6 +3461,7 @@ dependencies = [
     { name = "lightning" },
     { name = "lightray" },
     { name = "ml4gw" },
+    { name = "priors" },
     { name = "ray", extra = ["default", "tune"] },
     { name = "s3fs" },
     { name = "torch" },
@@ -3382,6 +3490,7 @@ requires-dist = [
     { name = "lightning", specifier = "==2.2.1" },
     { name = "lightray", specifier = ">=0.2.3" },
     { name = "ml4gw", specifier = ">=0.7.2" },
+    { name = "priors", editable = "../../libs/priors" },
     { name = "ray", extras = ["default", "tune"], specifier = ">=2.8.0,<3" },
     { name = "s3fs", specifier = ">=2024,<2025" },
     { name = "torch", specifier = "==2.5.0" },
