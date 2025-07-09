@@ -190,6 +190,11 @@ def search(
             logging.error(tb)
             if emails is not None:
                 send_error_email(name, error, tb, emails)
+
+            # attribute to signal to main function
+            # that this error is from a subprocess
+            # so that we don't double email
+            error.subprocess = True
             raise error
 
         # if this frame was not analysis ready, assuming HLV ordering
@@ -893,7 +898,9 @@ def main(
             outdir=outdir,
         )
     except Exception as e:
-        if emails is not None:
+        # if error is from a subprocess,
+        # we already sent an email so don't send another
+        if emails is not None and not e.subprocess:
             tb = traceback.format_exc()
             send_error_email("main", str(e), tb, emails)
         raise e
