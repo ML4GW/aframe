@@ -8,6 +8,7 @@ from online.utils.pe import postprocess_samples
 from astropy import io
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
+from astropy.time import Time
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
@@ -55,7 +56,10 @@ def amplfi_subprocess(
                 nside,
                 min_samples_per_pix,
                 use_distance=use_distance,
-                metadata={"INSTRUME": ",".join(amplfi_ifos)},
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
             )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
@@ -123,7 +127,10 @@ def amplfi_subprocess(
                 nside,
                 min_samples_per_pix,
                 use_distance=use_distance,
-                metadata={"INSTRUME": ",".join(amplfi_ifos)},
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
             )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
