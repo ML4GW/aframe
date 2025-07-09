@@ -170,7 +170,7 @@ def warmup_amplfi(
     sample_rate: int,
     highpass: float,
     samples_per_event: int,
-    spectral_density: SpectralDensity,
+    spectral_density: "SpectralDensity",
     lowpass: Optional[float] = None,
     n_iters: int = 10,
 ):
