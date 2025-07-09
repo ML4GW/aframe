@@ -59,6 +59,9 @@ class EventPage(MonitorPage):
                 <h1>
                     <a href={url}>{url}</a>
                 </h1>
+                <p> <a href={self.root_url}>Summary root directory</a></p>
+                <p> <a href={self.event_root_url}>Event root directory</a></p>
+                <p> <a href={self.summary_page_url}>Summary page</a></p>
                 <div class="gallery">
             """
 
