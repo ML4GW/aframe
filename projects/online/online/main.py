@@ -5,6 +5,7 @@ import signal
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple, Literal
+import traceback
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
@@ -867,29 +868,35 @@ def main(
     )
 
     logging.info("Beginning search...")
-    search(
-        whitener=whitener,
-        snapshotter=snapshotter,
-        searcher=searcher,
-        error_queue=error_queue,
-        event_queue=event_queue,
-        amplfi_queue=amplfi_queue,
-        input_buffer=input_buffer,
-        output_buffer=output_buffer,
-        aframe=aframe,
-        ifos_to_model=ifos_to_model,
-        spectral_density=spectral_density,
-        amplfi_psd_length=amplfi_psd_length,
-        amplfi_whitener=amplfi_whitener,
-        samples_per_event=samples_per_event,
-        shared_samples=shared_samples,
-        data_it=data_it,
-        update_size=update_size,
-        time_offset=time_offset,
-        device=device,
-        emails=emails,
-        outdir=outdir,
-    )
+    try:
+        search(
+            whitener=whitener,
+            snapshotter=snapshotter,
+            searcher=searcher,
+            error_queue=error_queue,
+            event_queue=event_queue,
+            amplfi_queue=amplfi_queue,
+            input_buffer=input_buffer,
+            output_buffer=output_buffer,
+            aframe=aframe,
+            ifos_to_model=ifos_to_model,
+            spectral_density=spectral_density,
+            amplfi_psd_length=amplfi_psd_length,
+            amplfi_whitener=amplfi_whitener,
+            samples_per_event=samples_per_event,
+            shared_samples=shared_samples,
+            data_it=data_it,
+            update_size=update_size,
+            time_offset=time_offset,
+            device=device,
+            emails=emails,
+            outdir=outdir,
+        )
+    except Exception as e:
+        if emails is not None:
+            tb = traceback.format_exc()
+            send_error_email("main", str(e), tb)
+        raise e
 
     if mode == "offline":
         logging.info("Offline analysis complete")
