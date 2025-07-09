@@ -895,7 +895,7 @@ def main(
     except Exception as e:
         if emails is not None:
             tb = traceback.format_exc()
-            send_error_email("main", str(e), tb)
+            send_error_email("main", str(e), tb, emails)
         raise e
 
     if mode == "offline":
