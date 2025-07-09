@@ -163,7 +163,7 @@ def postprocess_samples(
 
 def warmup_amplfi(
     ifos_to_model: dict[
-        tuple[str, ...], tuple["FlowArchitecture", ChannelWiseScaler]
+        tuple[str, ...], tuple["FlowArchitecture", "ChannelWiseScaler"]
     ],
     kernel_length: int,
     psd_length: int,
