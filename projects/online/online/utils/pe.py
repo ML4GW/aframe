@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from astropy import cosmology, units as u
 import lal
@@ -159,3 +159,67 @@ def postprocess_samples(
         search_parameter_keys=inference_params,
     )
     return result
+
+
+def warmup_amplfi(
+    ifos_to_model: dict[
+        tuple[str, ...], tuple[FlowArchitecture, ChannelWiseScaler]
+    ],
+    kernel_length: int,
+    psd_length: int,
+    sample_rate: int,
+    highpass: float,
+    samples_per_event: int,
+    spectral_density: SpectralDensity,
+    lowpass: Optional[float] = None,
+    n_iters: int = 10,
+):
+    for ifos, (amplfi, _) in ifos_to_model.items():
+        strain_size = int(sample_rate * kernel_length)
+        strain = torch.randn(1, len(ifos), strain_size)
+
+        psd_size = int(sample_rate * psd_length)
+        psd_strain = torch.randn(1, len(ifos), psd_size)
+        psd = spectral_density(psd_strain.double())
+
+        # construct and bandpass asd
+        freqs = torch.fft.rfftfreq(strain.shape[-1], d=1 / sample_rate)
+        num_freqs = len(freqs)
+        psd = torch.nn.functional.interpolate(
+            psd, size=(num_freqs,), mode="linear"
+        )
+
+        mask = freqs > highpass
+        if lowpass is not None:
+            mask *= freqs < lowpass
+
+        freqs = freqs[mask]
+        psd = psd[:, :, mask]
+        asd = torch.sqrt(psd)
+
+        context = (strain, asd)
+        logging.info(f"Warming up {''.join([x[0] for x in ifos])} Amplfi")
+        times = []
+        with torch.no_grad():
+            for i in range(n_iters):
+                start_time = torch.cuda.Event(enable_timing=True)
+                end_time = torch.cuda.Event(enable_timing=True)
+
+                start_time.record()
+                _ = amplfi.sample(
+                    samples_per_event,
+                    context,
+                )
+                end_time.record()
+
+                # wait for the events to be recorded
+                torch.cuda.synchronize()
+
+                # convert to seconds
+                elapsed_time = start_time.elapsed_time(end_time) / 1000
+                times.append(elapsed_time)
+                logging.info(f"Iter {i + 1}: {elapsed_time:.2f} s")
+        avg_time = np.mean(times[2:])
+        logging.info(
+            f"Mean time after discarding first two iters: {avg_time:.2f} s"
+        )

@@ -8,7 +8,7 @@ from typing import Iterable, List, Optional, Tuple, Literal
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
-from amplfi.train.data.utils.utils import ParameterSampler
+from amplfi.train.prior import AmplfiPrior
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
@@ -20,7 +20,7 @@ from online.dataloading import (
     offline_data_iterator,
     ngdd_data_iterator,
 )
-from online.utils.pe import run_amplfi
+from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
@@ -339,7 +339,7 @@ def main(
     amplfi_hl_weights: Path,
     amplfi_hlv_architecture: FlowArchitecture,
     amplfi_hlv_weights: Path,
-    amplfi_parameter_sampler: ParameterSampler,
+    amplfi_parameter_sampler: AmplfiPrior,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -395,7 +395,7 @@ def main(
         amplfi_weights:
             Path to trained AMPLFI model weights
         amplfi_parameter_sampler:
-            ParameterSampler object that is used to filter
+            AmplfiPrior object that is used to filter
             parameters outside of the defined parameter space
         background_path:
             Path to background noise events dataset
@@ -849,6 +849,20 @@ def main(
         integration_window_length,
         kernel_length,
         aframe_right_pad,
+    )
+
+    # warmup amplfi to speed up
+    # sampling process when we
+    # actually get to an event
+    warmup_amplfi(
+        ifos_to_model,
+        kernel_length,
+        psd_length,
+        sample_rate,
+        highpass,
+        samples_per_event,
+        spectral_density,
+        lowpass,
     )
 
     logging.info("Beginning search...")

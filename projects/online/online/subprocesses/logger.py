@@ -29,6 +29,14 @@ class TimestampFormatter(logging.Formatter):
         return message
 
 
+def suppress_loggers():
+    # matplotlib and h5py have some debug-level
+    # logging we want to suppress
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
+    logging.getLogger("h5py").setLevel(logging.WARNING)
+
+
 def configure_logging(logdir: "Path", verbose: bool = False):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG if verbose else logging.INFO)
@@ -59,11 +67,7 @@ def configure_logging(logdir: "Path", verbose: bool = False):
 
     logger.info(f"Logging initialized in directory: {run_log_dir}")
 
-    # matplotlib and h5py have some debug-level
-    # logging we want to suppress
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-    logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
-    logging.getLogger("h5py").setLevel(logging.WARNING)
+    suppress_loggers()
 
 
 @subprocess_wrapper
@@ -107,4 +111,5 @@ def setup_logging(
     root.addHandler(h)
     root.setLevel(level)
 
+    suppress_loggers()
     return log_queue, listener

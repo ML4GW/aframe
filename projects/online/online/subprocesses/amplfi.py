@@ -52,7 +52,10 @@ def amplfi_subprocess(
 
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
-                nside, min_samples_per_pix, use_distance=use_distance
+                nside,
+                min_samples_per_pix,
+                use_distance=use_distance,
+                metadata={"INSTRUME": ",".join(amplfi_ifos)},
             )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
@@ -116,7 +119,12 @@ def amplfi_subprocess(
                 )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=use_distance)
+            skymap = result.to_skymap(
+                nside,
+                min_samples_per_pix,
+                use_distance=use_distance,
+                metadata={"INSTRUME": ",".join(amplfi_ifos)},
+            )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
