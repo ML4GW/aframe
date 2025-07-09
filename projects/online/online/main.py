@@ -856,10 +856,10 @@ def main(
     # actually get to an event
     warmup_amplfi(
         ifos_to_model,
-        kernel_length,
-        psd_length,
+        amplfi_kernel_length,
+        amplfi_psd_length,
         sample_rate,
-        highpass,
+        amplfi_highpass,
         samples_per_event,
         device,
         spectral_density,
