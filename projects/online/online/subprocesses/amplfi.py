@@ -1,7 +1,7 @@
 import logging
 import torch
 from typing import Optional, TYPE_CHECKING
-from amplfi.train.data.utils.utils import ParameterSampler
+from amplfi.train.prior import AmplfiPrior
 from torch.multiprocessing import Array, Queue
 from online.utils.searcher import Event
 from online.utils.pe import postprocess_samples
@@ -20,7 +20,7 @@ def amplfi_subprocess(
     amplfi_queue: Queue,
     gdb: "GraceDb",
     inference_params: list[str],
-    amplfi_parameter_sampler: ParameterSampler,
+    amplfi_parameter_sampler: AmplfiPrior,
     shared_samples: Array,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
