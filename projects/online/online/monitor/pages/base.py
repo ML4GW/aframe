@@ -19,6 +19,25 @@ class MonitorPage:
 
         self.dataframe_file = out_dir / "event_data.hdf5"
 
+    @property
+    def root_url(self):
+        """
+        The root url for the output of the monitoring process,
+        assuming that files are being written somewhere in
+        /home/aframe/public_html
+        """
+        base_dir = Path("/home/aframe/public_html")
+        sub_path = self.out_dir.relative_to(base_dir)
+        return f"https://ldas-jobs.ligo.caltech.edu/~aframe/{sub_path}"
+
+    @property
+    def summary_page_url(self):
+        return self.root_url + "/summary.html"
+
+    @property
+    def event_root_url(self):
+        return self.root_url + "/events"
+
     def html_header(self, label: str) -> str:
         """
         Generate the HTML header with a title.

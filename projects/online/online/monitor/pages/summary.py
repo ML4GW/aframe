@@ -67,6 +67,8 @@ class SummaryPage(MonitorPage):
                     <span class={pipeline_color}>{pipeline_status}</span>
                 </p>
                 <p> Data: <span class={data_color}>{data_status}</span></p>
+                <p> <a href={self.root_url}>Summary root directory</a></p>
+                <p> <a href={self.event_root_url}>Event root directory</a></p>
             <div class="gallery">
         """
         for name, caption in self.plot_name_dict.items():
