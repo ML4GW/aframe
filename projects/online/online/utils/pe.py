@@ -170,16 +170,17 @@ def warmup_amplfi(
     sample_rate: int,
     highpass: float,
     samples_per_event: int,
+    device: torch.device,
     spectral_density: "SpectralDensity",
     lowpass: Optional[float] = None,
     n_iters: int = 10,
 ):
     for ifos, (amplfi, _) in ifos_to_model.items():
         strain_size = int(sample_rate * kernel_length)
-        strain = torch.randn(1, len(ifos), strain_size)
+        strain = torch.randn(1, len(ifos), strain_size, device=device)
 
         psd_size = int(sample_rate * psd_length)
-        psd_strain = torch.randn(1, len(ifos), psd_size)
+        psd_strain = torch.randn(1, len(ifos), psd_size, device=device)
         psd = spectral_density(psd_strain.double())
 
         # construct and bandpass asd

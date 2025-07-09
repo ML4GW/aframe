@@ -861,6 +861,7 @@ def main(
         sample_rate,
         highpass,
         samples_per_event,
+        device,
         spectral_density,
         lowpass,
     )
