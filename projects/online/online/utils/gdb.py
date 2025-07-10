@@ -182,7 +182,13 @@ class GraceDb(_GraceDb):
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
-            parameters=["chirp_mass", "mass_ratio", "luminosity_distance"],
+            parameters=[
+                "chirp_mass",
+                "mass_ratio",
+                "luminosity_distance",
+                "mass_1",
+                "mass_2",
+            ],
             filename=corner_fname,
         )
 
