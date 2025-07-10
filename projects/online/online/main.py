@@ -5,10 +5,11 @@ import signal
 from pathlib import Path
 from queue import Empty
 from typing import Iterable, List, Optional, Tuple, Literal
+import traceback
 from online.utils.email_alerts import send_error_email, send_init_email
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
-from amplfi.train.data.utils.utils import ParameterSampler
+from amplfi.train.prior import AmplfiPrior
 from architectures import Architecture
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
@@ -20,7 +21,7 @@ from online.dataloading import (
     offline_data_iterator,
     ngdd_data_iterator,
 )
-from online.utils.pe import run_amplfi
+from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
 from utils.preprocessing import BatchWhitener
@@ -189,6 +190,11 @@ def search(
             logging.error(tb)
             if emails is not None:
                 send_error_email(name, error, tb, emails)
+
+            # attribute to signal to main function
+            # that this error is from a subprocess
+            # so that we don't double email
+            error._email_sent = True
             raise error
 
         # if this frame was not analysis ready, assuming HLV ordering
@@ -339,7 +345,7 @@ def main(
     amplfi_hl_weights: Path,
     amplfi_hlv_architecture: FlowArchitecture,
     amplfi_hlv_weights: Path,
-    amplfi_parameter_sampler: ParameterSampler,
+    amplfi_parameter_sampler: AmplfiPrior,
     background_path: Path,
     foreground_path: Path,
     rejected_path: Path,
@@ -395,7 +401,7 @@ def main(
         amplfi_weights:
             Path to trained AMPLFI model weights
         amplfi_parameter_sampler:
-            ParameterSampler object that is used to filter
+            AmplfiPrior object that is used to filter
             parameters outside of the defined parameter space
         background_path:
             Path to background noise events dataset
@@ -851,30 +857,53 @@ def main(
         aframe_right_pad,
     )
 
-    logging.info("Beginning search...")
-    search(
-        whitener=whitener,
-        snapshotter=snapshotter,
-        searcher=searcher,
-        error_queue=error_queue,
-        event_queue=event_queue,
-        amplfi_queue=amplfi_queue,
-        input_buffer=input_buffer,
-        output_buffer=output_buffer,
-        aframe=aframe,
-        ifos_to_model=ifos_to_model,
-        spectral_density=spectral_density,
-        amplfi_psd_length=amplfi_psd_length,
-        amplfi_whitener=amplfi_whitener,
-        samples_per_event=samples_per_event,
-        shared_samples=shared_samples,
-        data_it=data_it,
-        update_size=update_size,
-        time_offset=time_offset,
-        device=device,
-        emails=emails,
-        outdir=outdir,
+    # warmup amplfi to speed up
+    # sampling process when we
+    # actually get to an event
+    warmup_amplfi(
+        ifos_to_model,
+        amplfi_kernel_length,
+        amplfi_psd_length,
+        sample_rate,
+        amplfi_highpass,
+        samples_per_event,
+        device,
+        spectral_density,
+        lowpass,
     )
+
+    logging.info("Beginning search...")
+    try:
+        search(
+            whitener=whitener,
+            snapshotter=snapshotter,
+            searcher=searcher,
+            error_queue=error_queue,
+            event_queue=event_queue,
+            amplfi_queue=amplfi_queue,
+            input_buffer=input_buffer,
+            output_buffer=output_buffer,
+            aframe=aframe,
+            ifos_to_model=ifos_to_model,
+            spectral_density=spectral_density,
+            amplfi_psd_length=amplfi_psd_length,
+            amplfi_whitener=amplfi_whitener,
+            samples_per_event=samples_per_event,
+            shared_samples=shared_samples,
+            data_it=data_it,
+            update_size=update_size,
+            time_offset=time_offset,
+            device=device,
+            emails=emails,
+            outdir=outdir,
+        )
+    except Exception as e:
+        # if error is from a subprocess,
+        # we already sent an email so don't send another
+        if emails is not None and not hasattr(e, "_email_sent"):
+            tb = traceback.format_exc()
+            send_error_email("main", str(e), tb, emails)
+        raise e
 
     if mode == "offline":
         logging.info("Offline analysis complete")

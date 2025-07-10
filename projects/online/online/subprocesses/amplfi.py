@@ -1,13 +1,14 @@
 import logging
 import torch
 from typing import Optional, TYPE_CHECKING
-from amplfi.train.data.utils.utils import ParameterSampler
+from amplfi.train.prior import AmplfiPrior
 from torch.multiprocessing import Array, Queue
 from online.utils.searcher import Event
 from online.utils.pe import postprocess_samples
 from astropy import io
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
+from astropy.time import Time
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
@@ -20,7 +21,7 @@ def amplfi_subprocess(
     amplfi_queue: Queue,
     gdb: "GraceDb",
     inference_params: list[str],
-    amplfi_parameter_sampler: ParameterSampler,
+    amplfi_parameter_sampler: AmplfiPrior,
     shared_samples: Array,
     emails: Optional[list[str]] = None,
     email_far_threshold: float = 1e-6,
@@ -52,7 +53,13 @@ def amplfi_subprocess(
 
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
-                nside, min_samples_per_pix, use_distance=use_distance
+                nside,
+                min_samples_per_pix,
+                use_distance=use_distance,
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
             )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
@@ -116,7 +123,15 @@ def amplfi_subprocess(
                 )
 
             logger.info("Creating low resolution skymap")
-            skymap = result.to_skymap(nside, use_distance=use_distance)
+            skymap = result.to_skymap(
+                nside,
+                min_samples_per_pix,
+                use_distance=use_distance,
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
+            )
             fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
