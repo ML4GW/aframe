@@ -8,6 +8,7 @@ import pandas as pd
 from scipy.interpolate import interp1d
 import torch
 from amplfi.utils.result import AmplfiResult
+from ml4gw.waveforms.conversion import chirp_mass_and_mass_ratio_to_components
 
 torch.set_num_threads(1)
 
@@ -151,6 +152,11 @@ def postprocess_samples(
     posterior["ra"] = ra
     posterior["dec"] = dec
     posterior["distance"] = posterior["luminosity_distance"]
+    mass_1, mass_2 = chirp_mass_and_mass_ratio_to_components(
+        posterior["chirp_mass"], posterior["mass_ratio"]
+    )
+    posterior["mass_1"] = mass_1
+    posterior["mass_2"] = mass_2
     posterior = pd.DataFrame(posterior)
 
     result = AmplfiResult(
