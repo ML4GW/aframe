@@ -150,7 +150,7 @@ class GraceDb(_GraceDb):
         self,
         result: bilby.core.result.Result,
         skymap: "BinTableHDU",
-        graceid: int,
+        graceid: str,
         event_dir: Path,
     ):
         event_dir = self.write_dir / event_dir
@@ -183,7 +183,12 @@ class GraceDb(_GraceDb):
         _, has_ns, _, _ = em_bright.source_classification_pe(
             filename, num_eos_draws=10
         )
-        if has_ns == 0:
+        if has_ns > 0:
+            self.logger.info(
+                f"Event {graceid} had HasNS = {has_ns}, so {filename} "
+                " was not uploaded."
+            )
+        else:
             self.write_log(
                 graceid, "posterior", filename=filename, tag_name="pe"
             )
@@ -209,7 +214,7 @@ class GraceDb(_GraceDb):
     def submit_ligo_skymap_from_samples(
         self,
         result: bilby.core.result.Result,
-        graceid: int,
+        graceid: str,
         event_dir: Path,
         ifos: List[str],
     ):
@@ -257,7 +262,7 @@ class GraceDb(_GraceDb):
             label="SKYMAP_READY",
         )
 
-    def submit_skymap_plots(self, graceid: int, event_dir: Path):
+    def submit_skymap_plots(self, graceid: str, event_dir: Path):
         plt.switch_backend("agg")
 
         event_dir = self.write_dir / event_dir
@@ -318,7 +323,7 @@ class GraceDb(_GraceDb):
         #    tag_name="sky_loc",
         # )
 
-    def submit_pastro(self, pastro: float, graceid: int, event_dir: Path):
+    def submit_pastro(self, pastro: float, graceid: str, event_dir: Path):
         event_dir = self.write_dir / event_dir
         fname = event_dir / "aframe.p_astro.json"
         pastro = {
