@@ -148,7 +148,7 @@ def testing_waveforms(
         highpass=highpass,
         lowpass=lowpass,
         snr_threshold=snr_threshold,
-        psds=psds,
+        psd=psds,
         max_num_samples=max_num_samples,
     )
 
