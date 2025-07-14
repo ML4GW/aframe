@@ -180,7 +180,9 @@ class GraceDb(_GraceDb):
         with h5py.File(filename, "w") as f:
             f.create_dataset("posterior_samples", data=posterior_samples)
 
-        _, has_ns, _, _ = em_bright.source_classification_pe(filename)
+        _, has_ns, _, _ = em_bright.source_classification_pe(
+            filename, num_eos_draws=10
+        )
         if has_ns == 0:
             self.write_log(
                 graceid, "posterior", filename=filename, tag_name="pe"
