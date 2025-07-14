@@ -181,10 +181,10 @@ class GraceDb(_GraceDb):
             f.create_dataset("posterior_samples", data=posterior_samples)
 
         _, has_ns, _, _ = em_bright.source_classification_pe(filename)
-        if has_ns > 0:
-            return
-
-        self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
+        if has_ns == 0:
+            self.write_log(
+                graceid, "posterior", filename=filename, tag_name="pe"
+            )
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
