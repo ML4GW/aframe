@@ -7,6 +7,7 @@ import bilby
 import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
+from ligo.em_bright import em_bright
 from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from online.utils.searcher import Event
@@ -149,7 +150,7 @@ class GraceDb(_GraceDb):
         self,
         result: bilby.core.result.Result,
         skymap: "BinTableHDU",
-        graceid: int,
+        graceid: str,
         event_dir: Path,
     ):
         event_dir = self.write_dir / event_dir
@@ -178,7 +179,19 @@ class GraceDb(_GraceDb):
         posterior_samples = posterior_df.to_records(index=False)
         with h5py.File(filename, "w") as f:
             f.create_dataset("posterior_samples", data=posterior_samples)
-        self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
+
+        _, has_ns, _, _ = em_bright.source_classification_pe(
+            filename, num_eos_draws=10
+        )
+        if has_ns > 0:
+            self.logger.info(
+                f"Event {graceid} had HasNS = {has_ns}, so {filename} "
+                " was not uploaded."
+            )
+        else:
+            self.write_log(
+                graceid, "posterior", filename=filename, tag_name="pe"
+            )
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(
@@ -201,7 +214,7 @@ class GraceDb(_GraceDb):
     def submit_ligo_skymap_from_samples(
         self,
         result: bilby.core.result.Result,
-        graceid: int,
+        graceid: str,
         event_dir: Path,
         ifos: List[str],
     ):
@@ -249,7 +262,7 @@ class GraceDb(_GraceDb):
             label="SKYMAP_READY",
         )
 
-    def submit_skymap_plots(self, graceid: int, event_dir: Path):
+    def submit_skymap_plots(self, graceid: str, event_dir: Path):
         plt.switch_backend("agg")
 
         event_dir = self.write_dir / event_dir
@@ -310,7 +323,7 @@ class GraceDb(_GraceDb):
         #    tag_name="sky_loc",
         # )
 
-    def submit_pastro(self, pastro: float, graceid: int, event_dir: Path):
+    def submit_pastro(self, pastro: float, graceid: str, event_dir: Path):
         event_dir = self.write_dir / event_dir
         fname = event_dir / "aframe.p_astro.json"
         pastro = {
