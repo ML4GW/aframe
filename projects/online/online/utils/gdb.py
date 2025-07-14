@@ -7,6 +7,7 @@ import bilby
 import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
+from ligo.em_bright import em_bright
 from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from online.utils.searcher import Event
@@ -178,6 +179,11 @@ class GraceDb(_GraceDb):
         posterior_samples = posterior_df.to_records(index=False)
         with h5py.File(filename, "w") as f:
             f.create_dataset("posterior_samples", data=posterior_samples)
+
+        _, has_ns, _, _ = em_bright.source_classification_pe(filename)
+        if has_ns > 0:
+            return
+
         self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
 
         corner_fname = event_dir / "corner_plot.png"
