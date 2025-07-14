@@ -172,14 +172,14 @@ class DeployTestingWaveforms(
         from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)
-        start, end, shift, psd_segment = self.branch_data
+        start, end, shifts, psd_segment = self.branch_data
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
             testing_waveforms(
                 start=start,
                 end=end,
                 ifos=self.ifos,
-                shift=shift,
+                shifts=shifts,
                 spacing=self.spacing,
                 buffer=self.buffer,
                 prior=prior,
@@ -194,7 +194,7 @@ class DeployTestingWaveforms(
                 snr_threshold=self.snr_threshold,
                 psd_file=psd_file,
                 max_num_samples=self.max_num_samples,
-                tmp_dir=Path(self.tmp_dir),
+                output_dir=Path(self.tmp_dir),
                 jitter=self.jitter,
                 seed=self.seed,
             )
