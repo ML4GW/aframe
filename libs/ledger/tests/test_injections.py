@@ -115,8 +115,8 @@ class TestWaveformGenerator:
     def sample_rate(self):
         return 2048
 
-    @pytest.fixture(params=[0, 4, 7, 8])
-    def coalescence_time(self, request):
+    @pytest.fixture(params=[0, 0.5, 1, 4])
+    def right_pad(self, request):
         return request.param
 
     @pytest.fixture(params=[4, 10])
@@ -134,16 +134,16 @@ class TestWaveformGenerator:
         self,
         sample_rate,
         waveform_duration,
-        coalescence_time,
+        right_pad,
         dummy_signal,
     ):
-        if coalescence_time == waveform_duration:
-            coalescence_time -= 1 / sample_rate
+        if right_pad == 0:
+            right_pad += 1 / sample_rate
         gen = _WaveformGenerator(
             waveform_approximant="",
             sample_rate=sample_rate,
             waveform_duration=waveform_duration,
-            coalescence_time=coalescence_time,
+            right_pad=right_pad,
             minimum_frequency=20,
             reference_frequency=20,
         )
@@ -151,9 +151,8 @@ class TestWaveformGenerator:
         t_final = dummy_signal.shape[-1] // 2 / sample_rate
         waveforms = gen.align_waveforms(dummy_signal, t_final)
         assert waveforms.shape[-1] == int(sample_rate * waveform_duration)
-        assert (
-            np.argmax(waveforms)
-            == (coalescence_time % waveform_duration) * sample_rate
+        assert np.argmax(waveforms) == int(
+            (waveform_duration - right_pad) * sample_rate
         )
 
 
@@ -192,7 +191,7 @@ class TestLigoResponseSet:
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N,
-                coalescence_time=duration / 2,
+                right_pad=duration / 2,
                 **kwargs,
             )
         assert str(exc.value).startswith("Specified waveform duration")
@@ -205,7 +204,7 @@ class TestLigoResponseSet:
                 sample_rate=sample_rate,
                 duration=duration,
                 num_injections=N - 1,
-                coalescence_time=duration / 2,
+                right_pad=duration / 2,
                 **kwargs,
             )
         assert str(exc.value).startswith("LigoResponseSet")
@@ -214,7 +213,7 @@ class TestLigoResponseSet:
             sample_rate=sample_rate,
             duration=duration,
             num_injections=N,
-            coalescence_time=duration / 2,
+            right_pad=duration / 2,
             **kwargs,
         )
 
@@ -320,7 +319,7 @@ class TestLigoResponseSet:
         # now try with times
         ligo_response_set.injection_time = np.arange(N) % (N // 2)
         ligo_response_set.duration = 2
-        ligo_response_set.coalescence_time = ligo_response_set.duration / 2
+        ligo_response_set.right_pad = ligo_response_set.duration / 2
         for ifo in "hl":
             key = f"{ifo}1"
             old = getattr(ligo_response_set, key)

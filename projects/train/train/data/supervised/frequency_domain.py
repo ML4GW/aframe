@@ -23,8 +23,8 @@ class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             spectrogram_shape=self.spectrogram_shape,
         )
 
-    def augment(self, X):
-        X, y, psds = super().augment(X)
+    def inject(self, X):
+        X, y, psds = super().inject(X)
         X = self.whitener(X, psds)
         X = self.qtransform(X)
         return X, y
@@ -117,8 +117,8 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
 
         return X_bg, X_inj
 
-    def augment(self, X):
-        X, y, psds = super().augment(X)
+    def inject(self, X):
+        X, y, psds = super().inject(X)
 
         # fft whiten and bandpass in frequency domain
         X = self.whiten(X, psds)
