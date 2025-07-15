@@ -1,11 +1,7 @@
 from typing import Callable
 
 import torch
-from bilby.core.prior import ConditionalPriorDict, Constraint
 from ml4gw.waveforms.generator import TimeDomainCBCWaveformGenerator
-
-from ledger.injections import BilbyParameterSet
-from priors.utils import mass_constraints
 
 from .generator import WaveformGenerator
 
@@ -46,13 +42,6 @@ class CBCGenerator(WaveformGenerator):
         """
         super().__init__(*args, **kwargs)
 
-        # For CBC generation, need to make sure that the mass ratio
-        # does not exceed what ml4gw can handle.
-        self.training_prior = ConditionalPriorDict(
-            self.training_prior, conversion_function=mass_constraints
-        )
-        self.training_prior["mass_ratio"] = Constraint(0.02, 0.999)
-
         self.approximant = approximant
         self.f_ref = f_ref
         self.waveform_generator = TimeDomainCBCWaveformGenerator(
@@ -63,17 +52,6 @@ class CBCGenerator(WaveformGenerator):
             f_ref,
             self.right_pad,
         )
-
-    def convert(self, parameters):
-        # TODO: This assumes a detector-frame prior. Remove this
-        # when we switch to source-frame prior.
-        for key in ["mass_1", "mass_2", "chirp_mass", "total_mass"]:
-            if key in parameters:
-                parameters[key] *= 1 + parameters["redshift"]
-        parameter_set = BilbyParameterSet(**parameters)
-        lal_params = parameter_set.convert_to_lal_param_set(self.f_ref)
-        generation_params = lal_params.ml4gw_generation_params
-        return generation_params
 
     def forward(self, **parameters) -> torch.Tensor:
         hc, hp = self.waveform_generator(**parameters)
