@@ -1,5 +1,6 @@
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
+from ....prior import AframePrior
 from ..sampler import WaveformSampler
 import torch
 
@@ -12,18 +13,18 @@ class WaveformGenerator(WaveformSampler):
     def __init__(
         self,
         *args,
-        training_prior: Callable,
+        training_prior: AframePrior,
         **kwargs,
     ):
         """
         A torch module for generating waveforms on the fly.
         Args:
             training_prior:
-                A callable that returns a prior distribution
-                for the parameters of the waveform generator.
+                A callable that takes an integer N and returns a
+                dictionary of parameter Tensors, each of length `N`
         """
         super().__init__(*args, **kwargs)
-        self.training_prior, _ = training_prior()
+        self.training_prior = training_prior
 
     def get_train_waveforms(self, *_):
         """
@@ -34,17 +35,9 @@ class WaveformGenerator(WaveformSampler):
 
     def sample(self, X: torch.Tensor):
         N = len(X)
-        parameters = self.training_prior.sample(N)
-        generation_params = self.convert(parameters)
-        generation_params = {
-            k: torch.Tensor(v).to(X.device)
-            for k, v in generation_params.items()
-        }
-        hc, hp = self(**generation_params)
+        parameters = self.training_prior(N, device=X.device)
+        hc, hp = self(**parameters)
         return hc, hp
-
-    def convert(self, parameters: dict) -> dict:
-        raise NotImplementedError
 
     def forward(self):
         raise NotImplementedError

@@ -69,7 +69,7 @@ data:
     waveform_sampler: 
       class_path: train.data.waveforms.generator.cbc.CBCGenerator
       init_args:
-        training_prior: priors.priors.end_o3_ratesandpops
+        training_prior: ./training_prior.yaml
         val_waveform_file: ${oc.env:AFRAME_TRAIN_DATA_DIR}/train/val_waveforms.hdf5
         approximant: ml4gw.waveforms.IMRPhenomPv2
         f_min: 20
