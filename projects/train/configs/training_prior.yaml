@@ -1,7 +1,7 @@
 # default prior for use with `IMRPhenomPv2`
-class_path: aframe.train.prior.AmplfiPrior
+class_path: train.prior.AframePrior
 init_args:
-  conversion_function: aframe.train.conversion.precessing_to_lalsimulation_parameters
+  conversion_function: train.conversion.precessing_to_lalsimulation_parameters
   priors:
     chirp_mass: 
       class_path: torch.distributions.Uniform
