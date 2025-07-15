@@ -21,6 +21,7 @@ SANDBOX_CONFIGS = [
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "base.cfg",
     root / "projects" / "train" / "train.yaml",
     root / "projects" / "export" / "export.yaml",
+    root / "projects" / "train" / "configs" / "training_prior.yaml",
 ]
 
 REVIEW_CONFIGS = [
