@@ -20,7 +20,7 @@ class MultimodalSupervisedArchitecture(SupervisedArchitecture):
         width_per_group: int = 64,
         stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
         norm_layer: Optional[NormLayer] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
 
@@ -77,4 +77,3 @@ class MultimodalSupervisedArchitecture(SupervisedArchitecture):
 
         features = torch.cat([strain_out, low_out, high_out], dim=-1)
         return self.classifier(features)
-

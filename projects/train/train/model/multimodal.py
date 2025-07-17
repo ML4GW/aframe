@@ -4,6 +4,7 @@ from train.model.base import AframeBase
 
 Tensor = torch.Tensor
 
+
 class MultimodalAframe(AframeBase):
     def __init__(
         self,
@@ -43,14 +44,11 @@ class MultimodalAframe(AframeBase):
         hps = [p._optim for p in all_parameters if hasattr(p, "_optim")]
         hps = [
             dict(s)
-            for s in sorted(
-                dict.fromkeys(frozenset(hp.items()) for hp in hps)
-            )
+            for s in sorted(dict.fromkeys(frozenset(hp.items()) for hp in hps))
         ]
         for hp in hps:
             group_params = [
-                p for p in all_parameters
-                if getattr(p, "_optim", None) == hp
+                p for p in all_parameters if getattr(p, "_optim", None) == hp
             ]
             optimizer.add_param_group({"params": group_params, **hp})
 

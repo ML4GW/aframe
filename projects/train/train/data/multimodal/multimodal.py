@@ -2,7 +2,8 @@ from typing import Optional
 import torch
 from train.data.supervised.supervised import BaseAframeDataset
 from train.data.multimodal.time_domain import TimeDomainMultimodalAframeDataset
-from train.data.multimodal.frequency_domain import FrequencyDomainMultimodalAframeDataset
+from train.data.multimodal.frequency_domain import \
+FrequencyDomainMultimodalAframeDataset
 
 class MultimodalSupervisedAframeDataset(BaseAframeDataset):
     def __init__(
@@ -15,7 +16,8 @@ class MultimodalSupervisedAframeDataset(BaseAframeDataset):
         super().__init__(*args, **kwargs)
 
         self.time_dataset = TimeDomainMultimodalAframeDataset(*args, **kwargs)
-        self.freq_dataset = FrequencyDomainMultimodalAframeDataset(*args, **kwargs)
+        self.freq_dataset = \
+        FrequencyDomainMultimodalAframeDataset(*args, **kwargs)
 
     @property
     def sample_prob(self):
