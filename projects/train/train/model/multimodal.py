@@ -23,6 +23,20 @@ class MultimodalAframe(AframeBase):
         y_hat = self(X)
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
+    def validation_step(self, batch, batch_idx):
+        shift, X_bg, X_fg, _ = batch
+
+        y_hat_bg = self.score(X_bg)
+        y_hat_fg = self.score(X_fg)
+
+        y_bg = torch.zeros_like(y_hat_bg)
+        y_fg = torch.ones_like(y_hat_fg)
+
+        y_hat = torch.cat([y_hat_bg, y_hat_fg], dim=0)
+        y = torch.cat([y_bg, y_fg], dim=0)
+
+        return self.metric(y_hat, y, shift)
+
     def score(self, X):
         return self(X)
 

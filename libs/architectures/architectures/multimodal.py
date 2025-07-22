@@ -24,8 +24,8 @@ class MultimodalSupervisedArchitecture(SupervisedArchitecture):
     ):
         super().__init__()
 
-        # Time-domain ResNet
-        self.strain_resnet = ResNet1D(
+        # Time-domain ResNets
+        self.strain_low_resnet = ResNet1D(
             in_channels=num_ifos,
             layers=time_layers,
             classes=time_classes,
@@ -37,20 +37,21 @@ class MultimodalSupervisedArchitecture(SupervisedArchitecture):
             norm_layer=norm_layer,
         )
 
-        # Frequency-domain ResNets
-        freq_input_channels = int(num_ifos * 3)
-        self.psd_low_resnet = ResNet1D(
-            in_channels=freq_input_channels,
-            layers=freq_layers,
-            classes=freq_classes,
-            kernel_size=freq_kernel_size,
+        self.strain_high_resnet = ResNet1D(
+            in_channels=num_ifos,
+            layers=time_layers,
+            classes=time_classes,
+            kernel_size=time_kernel_size,
             zero_init_residual=zero_init_residual,
             groups=groups,
             width_per_group=width_per_group,
             stride_type=stride_type,
             norm_layer=norm_layer,
         )
-        self.psd_high_resnet = ResNet1D(
+
+        # Frequency-domain ResNet
+        freq_input_channels = int(num_ifos * 3)
+        self.fft_resnet = ResNet1D(
             in_channels=freq_input_channels,
             layers=freq_layers,
             classes=freq_classes,
@@ -62,18 +63,21 @@ class MultimodalSupervisedArchitecture(SupervisedArchitecture):
             norm_layer=norm_layer,
         )
 
-        # Final classifier
-        embed_dim = time_classes + 2 * freq_classes
+        embed_dim = 2 * time_classes + freq_classes
         self.classifier = nn.Linear(embed_dim, 1)
 
     def forward(self, X):
-        strain = X["strain"]
-        psd_low = X["psd_low"]
-        psd_high = X["psd_high"]
+        x_low = X.get("strain_low", X.get("psd_low"))
+        x_high = X.get("strain_high", X.get("psd_high"))
+        x_fft = X["fft"]
 
-        strain_out = self.strain_resnet(strain)
-        low_out = self.psd_low_resnet(psd_low)
-        high_out = self.psd_high_resnet(psd_high)
+        if x_low is None or x_high is None:
+            raise KeyError("Expected 'strain_low' or 'psd_low' and 'strain_high' or 'psd_high' in input dict.")
 
-        features = torch.cat([strain_out, low_out, high_out], dim=-1)
+        low_out = self.strain_low_resnet(x_low)
+        high_out = self.strain_high_resnet(x_high)
+        fft_out = self.fft_resnet(x_fft)
+
+        features = torch.cat([low_out, high_out, fft_out], dim=-1)
         return self.classifier(features)
+
