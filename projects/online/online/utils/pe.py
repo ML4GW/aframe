@@ -136,7 +136,7 @@ def postprocess_samples(
 
     # build bilby posterior object for
     # parameters we want to keep
-    posterior_params = ["chirp_mass", "mass_ratio", "luminosity_distance"]
+    posterior_params = ["chirp_mass", "mass_ratio", "luminosity_distance", "inclination"]
 
     posterior = {}
     for param in posterior_params:
