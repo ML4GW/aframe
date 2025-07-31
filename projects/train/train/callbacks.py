@@ -45,8 +45,9 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         device = pl_module.device
         [X], waveforms = next(iter(trainer.train_dataloader))
         X = X.to(device)
-        X, y = trainer.datamodule.augment(X, waveforms)
-        trace = torch.jit.trace(module.model.to("cpu"), X.to("cpu"))
+        X_low, X_high, X_fft, y = trainer.datamodule.augment(X, waveforms)
+        
+        trace = torch.jit.trace(module.model.to("cpu"), X_low.to("cpu"), X_high.to("cpu"), X_fft.to("cpu"))
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
@@ -75,7 +76,7 @@ class SaveAugmentedBatch(Callback):
             waveforms = trainer.datamodule.slice_waveforms(waveforms)
             X = X.to(device)
 
-            X, y = trainer.datamodule.augment(X, waveforms)
+            X_low, X_high, X_fft, y = trainer.datamodule.augment(X, waveforms)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -83,7 +84,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
                 background, signals
             )
 
@@ -92,7 +93,9 @@ class SaveAugmentedBatch(Callback):
                 with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
                     with io.BytesIO() as f:
                         with h5py.File(f, "w") as h5file:
-                            h5file["X"] = X.cpu().numpy()
+                            h5file["X_low"] = X_low.cpu().numpy()
+                            h5file["X_high"] = X_high.cpu().numpy()
+                            h5file["X_fft"] = X_fft.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
                         s3_file.write(f.getvalue())
 
@@ -104,7 +107,9 @@ class SaveAugmentedBatch(Callback):
                         s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
-                    f["X"] = X.cpu().numpy()
+                    f["X_low"] = X_low.cpu().numpy()
+                    f["X_high"] = X_high.cpu().numpy()
+                    f["X_fft"] = X_fft.cpu().numpy()
                     f["y"] = y.cpu().numpy()
 
                 with h5py.File(
@@ -136,3 +141,4 @@ class GradientTracker(Callback):
         norms = grad_norm(pl_module, norm_type=self.norm_type)
         total_norm = norms[f"grad_{float(self.norm_type)}_norm_total"]
         self.log(f"grad_norm_{self.norm_type}", total_norm)
+

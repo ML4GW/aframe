@@ -14,20 +14,32 @@ class MultimodalAframe(AframeBase):
     ) -> None:
         super().__init__(arch, *args, **kwargs)
 
-    def forward(self, X):
-        # Expect X to be a dict with keys strain, psd_low, psd_high
-        return self.model(X)
+    def forward(self, x_low: Tensor, x_high: Tensor, x_fft: Tensor) -> Tensor:
+        return self.model(x_low, x_high, x_fft)
 
-    def train_step(self, batch: tuple[dict[str, Tensor], Tensor]) -> Tensor:
-        X, y = batch
-        y_hat = self(X)
+    def train_step(self, batch: tuple[Tensor, Tensor, Tensor, Tensor]) -> Tensor:
+        x_low, x_high, x_fft, y = batch
+        y_hat = self(x_low, x_high, x_fft)
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def validation_step(self, batch, batch_idx):
-        shift, X_bg, X_fg, _ = batch
+        (
+            shift,
+            x_bg_low, x_bg_high, x_bg_fft,
+            x_fg_low, x_fg_high, x_fg_fft,
+            _
+        ) = batch
 
-        y_hat_bg = self.score(X_bg)
-        y_hat_fg = self.score(X_fg)
+        if isinstance(shift, torch.Tensor):
+            if shift.numel() > 1:
+                shift = shift[0].item()
+            else:
+                shift = shift.item()
+        else:
+            shift = float(shift)
+
+        y_hat_bg = self.score(x_bg_low, x_bg_high, x_bg_fft)
+        y_hat_fg = self.score(x_fg_low, x_fg_high, x_fg_fft)
 
         y_bg = torch.zeros_like(y_hat_bg)
         y_fg = torch.ones_like(y_hat_fg)
@@ -35,40 +47,9 @@ class MultimodalAframe(AframeBase):
         y_hat = torch.cat([y_hat_bg, y_hat_fg], dim=0)
         y = torch.cat([y_bg, y_fg], dim=0)
 
-        return self.metric(y_hat, y, shift)
+        self.metric.update(shift, y_hat_bg, y_hat_fg)
+        self.log("valid_auroc", self.metric.compute(), prog_bar=True, on_epoch=True)
 
-    def score(self, X):
-        return self(X)
+    def score(self, x_low: Tensor, x_high: Tensor, x_fft: Tensor):
+        return self(x_low, x_high, x_fft)
 
-    def configure_optimizers(self):
-        if not torch.distributed.is_initialized():
-            world_size = 1
-        else:
-            world_size = torch.distributed.get_world_size()
-
-        all_parameters = list(self.model.parameters())
-        params = [p for p in all_parameters if not hasattr(p, "_optim")]
-
-        lr = self.hparams.learning_rate * world_size
-        self._logger.info(f"Scaled lr by {world_size} to {lr}")
-        optimizer = torch.optim.AdamW(
-            params, lr=lr, weight_decay=self.hparams.weight_decay
-        )
-
-        hps = [p._optim for p in all_parameters if hasattr(p, "_optim")]
-        hps = [
-            dict(s)
-            for s in sorted(dict.fromkeys(frozenset(hp.items()) for hp in hps))
-        ]
-        for hp in hps:
-            group_params = [
-                p for p in all_parameters if getattr(p, "_optim", None) == hp
-            ]
-            optimizer.add_param_group({"params": group_params, **hp})
-
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, self.trainer.estimated_stepping_batches
-        )
-        scheduler_config = {"scheduler": scheduler, "interval": "step"}
-
-        return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
