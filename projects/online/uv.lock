@@ -123,7 +123,7 @@ wheels = [
 
 [[package]]
 name = "amplfi"
-version = "0.5.2"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bilby" },
@@ -147,9 +147,9 @@ dependencies = [
     { name = "wandb" },
     { name = "zuko" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/76/f3/71b5297c89d7cdee2df0dfb7a0449328ced32177e5cec4f7c8ee318a0ebc/amplfi-0.5.2.tar.gz", hash = "sha256:f9cc0d9239f68341a31d073fdb62f950bf838c3b688575b90f17d5e5aa94f29c", size = 264771 }
+sdist = { url = "https://files.pythonhosted.org/packages/68/f8/3142749df033d9ae5a7c86eee806085a4ca392ee12d743360e6746e2d370/amplfi-0.5.3.tar.gz", hash = "sha256:452b3fbacbf25a7105f40a8ac506be59c89710de73f8ff9c4db93efacfef56a4", size = 264200 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/67/ce86aa8b68af3ef4686820cf8a77beaaa8ea878906385a938314084c28a0/amplfi-0.5.2-py3-none-any.whl", hash = "sha256:151b2d8baa240b2237d7a4623488ab14803c4ef4fa38baf6aa1947d341931c65", size = 68508 },
+    { url = "https://files.pythonhosted.org/packages/d5/1d/937f11ee641b9340b755bea32609b22cb55abe5b2e35b8384ae2d565460a/amplfi-0.5.3-py3-none-any.whl", hash = "sha256:0ddfdfbe43ce224ff45ab71a70ea6a86b27311a8e5d0f6c9438c2e931161d9e5", size = 68865 },
 ]
 
 [[package]]
@@ -2808,7 +2808,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "amplfi", specifier = ">=0.5.2" },
+    { name = "amplfi", specifier = ">=0.5.3" },
     { name = "architectures", editable = "../../libs/architectures" },
     { name = "arrakis", specifier = ">=0.2.0,<0.3" },
     { name = "ledger", editable = "../../libs/ledger" },
