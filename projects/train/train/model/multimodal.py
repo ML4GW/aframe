@@ -1,9 +1,9 @@
 import torch
 from architectures.supervised import SupervisedArchitecture
 from train.model.base import AframeBase
+import torch.nn.functional as F
 
 Tensor = torch.Tensor
-
 
 class MultimodalAframe(AframeBase):
     def __init__(
@@ -14,42 +14,60 @@ class MultimodalAframe(AframeBase):
     ) -> None:
         super().__init__(arch, *args, **kwargs)
 
-    def forward(self, x_low: Tensor, x_high: Tensor, x_fft: Tensor) -> Tensor:
+    def forward(self, X):
+        x_low, x_high, x_fft = X
         return self.model(x_low, x_high, x_fft)
 
-    def train_step(self, batch: tuple[Tensor, Tensor, Tensor, Tensor]) -> Tensor:
-        x_low, x_high, x_fft, y = batch
-        y_hat = self(x_low, x_high, x_fft)
+
+    def train_step(self, batch: tuple) -> Tensor:
+        # Unpack depending on number of elements
+        if len(batch) == 4:
+            X_low, X_high, X_fft, y = batch
+        else:
+            raise ValueError(f"Unexpected batch format in train_step: {len(batch)} elements")
+
+        y_hat = self((X_low, X_high, X_fft))
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        mem_allocated = torch.cuda.memory_allocated() / 1024**2
+        mem_reserved = torch.cuda.memory_reserved() / 1024**2
+        print(f"[Train Batch End] Allocated: {mem_allocated:.2f} MiB, Reserved: {mem_reserved:.2f} MiB")
+
+    def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
+        mem_allocated = torch.cuda.memory_allocated() / 1024**2
+        mem_reserved = torch.cuda.memory_reserved() / 1024**2
+        print(f"[Validation Batch End] Allocated: {mem_allocated:.2f} MiB, Reserved: {mem_reserved:.2f} MiB")
+
+    def score(self, X):
+        X_low, X_high, X_fft = X
+        return self.model(X_low, X_high, X_fft)
+
     def validation_step(self, batch, batch_idx):
-        (
-            shift,
-            x_bg_low, x_bg_high, x_bg_fft,
-            x_fg_low, x_fg_high, x_fg_fft,
-            _
-        ) = batch
+        try:
+            shift, X_bg, X_inj = batch
+        except ValueError:
+            shift, X_bg_low, X_bg_high, X_bg_fft, X_fg_low, X_fg_high, X_fg_fft, *_ = batch
+            X_bg = (X_bg_low, X_bg_high, X_bg_fft)
+            X_inj = (X_fg_low, X_fg_high, X_fg_fft)
 
-        if isinstance(shift, torch.Tensor):
-            if shift.numel() > 1:
-                shift = shift[0].item()
-            else:
-                shift = shift.item()
-        else:
-            shift = float(shift)
+        # Score background
+        y_bg = self.score(X_bg)
 
-        y_hat_bg = self.score(x_bg_low, x_bg_high, x_bg_fft)
-        y_hat_fg = self.score(x_fg_low, x_fg_high, x_fg_fft)
+        # Score injected signals (num_views, batch, ...)
+        num_views, batch, *_ = X_inj[0].shape  # assume all modalities same shape
+        X_inj = tuple(x.view(num_views * batch, *x.shape[2:]) for x in X_inj)
+        y_fg = self.score(X_inj)
+        y_fg = y_fg.view(num_views, batch).mean(0)
 
-        y_bg = torch.zeros_like(y_hat_bg)
-        y_fg = torch.ones_like(y_hat_fg)
+        self.metric.update(shift, y_bg, y_fg)
 
-        y_hat = torch.cat([y_hat_bg, y_hat_fg], dim=0)
-        y = torch.cat([y_bg, y_fg], dim=0)
-
-        self.metric.update(shift, y_hat_bg, y_hat_fg)
-        self.log("valid_auroc", self.metric.compute(), prog_bar=True, on_epoch=True)
-
-    def score(self, x_low: Tensor, x_high: Tensor, x_fft: Tensor):
-        return self(x_low, x_high, x_fft)
+        self.log(
+            "valid_auroc",
+            self.metric,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+        )
 

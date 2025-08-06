@@ -70,9 +70,6 @@ class MultimodalSupervisedAframeDataset(SupervisedAframeDataset):
             asds = psds**0.5
             asds *= 1e23
             asds = asds.float()
-            #print(f"[DEBUG] X_bg_ftt.shape[-1]: {X_bg_fft.shape[-1]}")
-            #print(f"[DEBUG] X_fg_ftt.shape[-1]: {X_fg_fft.shape[-1]}")
-            #print(f"[DEBUG] asds.shape[-1]: {asds.shape[-1]}")
             num_freqs = X_fg_fft.shape[-1]
             if asds.shape[-1] != num_freqs:
                 asds = F.interpolate(
@@ -80,14 +77,8 @@ class MultimodalSupervisedAframeDataset(SupervisedAframeDataset):
                 )
             inv_asds = 1 / asds
             
-            print(f"[DEBUG] X_bg_fft.real.shape: {X_bg_fft.real.shape}")
-            print(f"[DEBUG] X_bg_fft.imag.shape: {X_bg_fft.imag.shape}")
-            print(f"[DEBUG] inv_asds.shape: {inv_asds.shape}")
             X_bg_fft = torch.cat([X_bg_fft.real, X_bg_fft.imag, inv_asds], dim=1).float()
             inv_asds = inv_asds.unsqueeze(0).repeat(5, 1, 1, 1)
-            print(f"[DEBUG] X_fg_fft.real.shape: {X_fg_fft.real.shape}")
-            print(f"[DEBUG] X_fg_fft.imag.shape: {X_fg_fft.imag.shape}")
-            print(f"[DEBUG] inv_asds.shape: {inv_asds.shape}")
             X_fg_fft = torch.cat([X_fg_fft.real, X_fg_fft.imag, inv_asds], dim=2).float()
 
             # Return data grouped into background and injected signal components
