@@ -224,11 +224,6 @@ class GraceDb(_GraceDb):
         filename = event_dir / "posterior_samples.dat"
         result.save_posterior_samples(filename=filename)
 
-        # TODO: we probably will need cores beyond whats on the head node
-        # to really speed this up, and also the following env variables
-        # need to be set to take advantage of thread parallelism:
-        # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
-        # we might need to submit this via condor
         args = [
             "ligo-skymap-from-samples",
             str(filename),
