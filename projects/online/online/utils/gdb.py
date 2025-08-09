@@ -10,6 +10,7 @@ from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.em_bright import em_bright
 from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
+from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
 import matplotlib.pyplot as plt
 
@@ -155,7 +156,7 @@ class GraceDb(_GraceDb):
     ):
         event_dir = self.write_dir / event_dir
         skymap_fname = event_dir / "amplfi.multiorder.fits"
-        skymap.writeto(skymap_fname)
+        write_sky_map(skymap_fname, skymap)
 
         self.logger.debug("Submitting skymap to GraceDB")
         self.write_log(
