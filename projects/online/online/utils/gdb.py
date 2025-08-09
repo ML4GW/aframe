@@ -8,10 +8,12 @@ import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.em_bright import em_bright
-from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from online.utils.searcher import Event
 import matplotlib.pyplot as plt
+from ligo.skymap.tool.ligo_skymap_from_samples import (
+    main as ligo_skymap_from_samples,
+)
 
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
@@ -243,16 +245,7 @@ class GraceDb(_GraceDb):
 
         args.extend(ifos)
 
-        # TODO: ligo-skymap-from-samples doesnt clean up
-        # process pool on purpose so that overhead from
-        # initializing pool can be eliminated. Once
-        # we get our own resources we should take
-        # advantage of this
-
-        # run subprocess, passing any output to python logger
-        result = run_subprocess_with_logging(
-            args, logger=self.logger, log_stderr_on_success=True
-        )
+        ligo_skymap_from_samples(args)
 
         self.write_log(
             graceid,
