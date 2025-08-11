@@ -225,7 +225,6 @@ class GraceDb(_GraceDb):
         result.save_posterior_samples(filename=filename)
 
         args = [
-            "ligo-skymap-from-samples",
             str(filename),
             "-j",
             str(64),
