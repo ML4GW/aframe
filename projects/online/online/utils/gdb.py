@@ -8,11 +8,13 @@ import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.em_bright import em_bright
-from ..subprocesses.utils import run_subprocess_with_logging
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
 import matplotlib.pyplot as plt
+from ligo.skymap.tool.ligo_skymap_from_samples import (
+    main as ligo_skymap_from_samples,
+)
 
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
@@ -223,13 +225,7 @@ class GraceDb(_GraceDb):
         filename = event_dir / "posterior_samples.dat"
         result.save_posterior_samples(filename=filename)
 
-        # TODO: we probably will need cores beyond whats on the head node
-        # to really speed this up, and also the following env variables
-        # need to be set to take advantage of thread parallelism:
-        # {"MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}.
-        # we might need to submit this via condor
         args = [
-            "ligo-skymap-from-samples",
             str(filename),
             "-j",
             str(64),
@@ -244,16 +240,7 @@ class GraceDb(_GraceDb):
 
         args.extend(ifos)
 
-        # TODO: ligo-skymap-from-samples doesnt clean up
-        # process pool on purpose so that overhead from
-        # initializing pool can be eliminated. Once
-        # we get our own resources we should take
-        # advantage of this
-
-        # run subprocess, passing any output to python logger
-        result = run_subprocess_with_logging(
-            args, logger=self.logger, log_stderr_on_success=True
-        )
+        ligo_skymap_from_samples(args)
 
         self.write_log(
             graceid,
