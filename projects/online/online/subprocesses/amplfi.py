@@ -63,6 +63,7 @@ def amplfi_subprocess(
 
             graceid = amplfi_queue.get()
 
+            gdb.update_event(event, graceid, result)
             if emails is not None and event.far < email_far_threshold:
                 logger.info(f"Sending detection email for {graceid}")
                 send_detection_email(
@@ -110,6 +111,7 @@ def amplfi_subprocess(
                 amplfi_parameter_sampler,
             )
 
+            gdb.update_event(event, graceid, result)
             if emails is not None and event.far < email_far_threshold:
                 logger.info("Sending detection email")
                 send_detection_email(

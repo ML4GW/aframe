@@ -18,7 +18,7 @@ from ligo.skymap.tool.ligo_skymap_from_samples import (
 
 if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
-
+    from amplfi.utils.result import AmplfiResult
 from enum import Enum
 
 
@@ -148,6 +148,30 @@ class GraceDb(_GraceDb):
             f.write(latency)
 
         return graceid
+
+    def update_event(self, event: Event, graceid: str, result: "AmplfiResult"):
+        """
+        Update an event with posterior source properties from amplfi
+        """
+        self.logger.info(f"Updating event {graceid} with source properties")
+        event_dir = self.write_dir / event.event_dir
+        event_file = event_dir / event.filename
+        with open(event_file) as f:
+            event_json = json.load(f)
+
+        event_json["mchirp"] = result.posterior["chirp_mass"].median()
+        event_json["mass1"] = result.posterior["mass_1"].median()
+        event_json["mass2"] = result.posterior["mass_2"].median()
+        event_json["mtotal"] = (
+            result.posterior["mass1"] + result.posterior["mass2"]
+        ).median()
+        event_json["spin1z"] = 0
+        event_json["spin2z"] = 0
+
+        with open(event_file, "w") as f:
+            json.dump(event_json, f)
+
+        self.replace_event(graceid, event_file)
 
     def submit_low_latency_pe(
         self,
