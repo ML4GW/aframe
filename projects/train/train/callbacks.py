@@ -90,7 +90,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, val_asds = trainer.datamodule.build_val_batches(
                 background, signals
             )
             # Make background and injected validation data into
@@ -108,6 +108,7 @@ class SaveAugmentedBatch(Callback):
                             for i, x in enumerate(X):
                                 h5file[f"input_{i}"] = x.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
+                            h5file["asds"] = train_asds.cpu().numpy()
                         s3_file.write(f.getvalue())
 
                 with s3.open(f"{save_dir}/val_batch.hdf5", "wb") as s3_file:
@@ -122,6 +123,7 @@ class SaveAugmentedBatch(Callback):
                     for i, x in enumerate(X):
                         f[f"input_{i}"] = x.cpu().numpy()
                     f["y"] = y.cpu().numpy()
+                    f["asds"] = train_asds.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"

@@ -37,7 +37,7 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
             [X], waveforms = batch
-            (X, X_fft), y = self.augment(X, waveforms)
+            (X, X_fft), y = self.inject(X, waveforms)
             batch = (X, X_fft, y)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
@@ -86,7 +86,7 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
 
         return X_fft
 
-    def augment(self, X, waveforms):
+    def inject(self, X, waveforms):
         X, y, psds = super().augment(X, waveforms)
         X = self.whitener(X, psds)
         X_fft = self.compute_frequency_domain_data(X, psds)

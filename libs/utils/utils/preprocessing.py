@@ -111,12 +111,14 @@ class BatchWhitener(torch.nn.Module):
         highpass: Optional[float] = None,
         lowpass: Optional[float] = None,
         return_whitened: bool = False,
+        return_asd: bool = False,
     ) -> None:
         super().__init__()
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
         self.augmentor = augmentor
         self.return_whitened = return_whitened
+        self.return_asd = return_asd
 
         # do foreground length calculation in units of samples,
         # then convert back to length to guard for intification
@@ -148,8 +150,14 @@ class BatchWhitener(torch.nn.Module):
                 "but found shape {}".format(x.shape)
             )
 
-        x, psd = self.psd_estimator(x)
-        whitened = self.whitener(x.double(), psd)
+        x, psd = self.psd_estimator(x.double())
+        whitened = self.whitener(x, psd)
+
+        x = x.float()
+
+        asd = psd**0.5
+        asd *= 1e23
+        asd = asd.float()
 
         # unfold x and then put it into the expected shape.
         # Note that if x has both signal and background
@@ -160,9 +168,14 @@ class BatchWhitener(torch.nn.Module):
         if self.augmentor is not None:
             x = self.augmentor(x)
 
-        if self.return_whitened:
+        if self.return_whitened and self.return_asd:
+            return x, whitened, asd
+        elif self.return_whitened:
             return x, whitened
-        return x
+        elif self.return_asd:
+            return x, asd
+        else:
+            return x
 
 
 class MultiModalPreprocessor(torch.nn.Module):
