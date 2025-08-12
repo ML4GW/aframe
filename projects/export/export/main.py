@@ -140,8 +140,11 @@ def export(
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
         size = batch_file["X"].shape[2:]
+        asd_size = batch_file["asds"].shape[-1]
 
     input_shape = (batch_size, num_ifos) + tuple(size)
+    asd_shape = (batch_size, num_ifos, asd_size)
+    input_shape_dict = {"whitened": input_shape, "asds": asd_shape}
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -159,7 +162,7 @@ def export(
 
     aframe.export_version(
         graph,
-        input_shapes={"whitened": input_shape},
+        input_shapes=input_shape_dict,
         output_names=["discriminator"],
         **kwargs,
     )
@@ -176,7 +179,7 @@ def export(
         ensemble = repo.add(ensemble_name, platform=qv.Platform.ENSEMBLE)
         # if fftlength isn't specified, calculate the default value
         fftlength = fftlength or kernel_length + fduration
-        whitened = add_streaming_input_preprocessor(
+        whitened, asds = add_streaming_input_preprocessor(
             ensemble,
             aframe.inputs["whitened"],
             psd_length=psd_length,
@@ -192,6 +195,7 @@ def export(
             streams_per_gpu=streams_per_gpu,
         )
         ensemble.pipe(whitened, aframe.inputs["whitened"])
+        ensemble.pipe(asds, aframe.inputs["asds"])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry
