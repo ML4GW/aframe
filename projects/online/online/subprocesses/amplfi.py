@@ -53,6 +53,7 @@ def amplfi_subprocess(
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
                 use_distance=use_distance,
+                adaptive=True,
                 min_samples_per_pix_dist=min_samples_per_pix,
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
@@ -122,6 +123,7 @@ def amplfi_subprocess(
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
                 use_distance=use_distance,
+                adaptive=True,
                 min_samples_per_pix_dist=min_samples_per_pix,
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
