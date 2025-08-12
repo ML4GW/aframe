@@ -8,4 +8,3 @@ from .supervised import (
 from .multimodal import (
         MultimodalSupervisedArchitecture
 )
-from .concat import ConcatResNet
