@@ -36,7 +36,10 @@ dependencies = [
 train = "train.cli:main"
 
 [dependency-groups]
-dev = ["pytest~=7.3"]
+dev = [
+    "pytest~=7.3",
+    "jupyter>=1.0.0,<2",
+]
 
 [tool.uv]
 
