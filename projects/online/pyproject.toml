@@ -15,7 +15,7 @@ dependencies = [
     "p_astro",
     "architectures",
     "arrakis>=0.2.0,<0.3",
-    "amplfi>=0.5.4",
+    "amplfi>=0.5.5",
     "ml4gw>=0.7.4",
     "omegaconf>=2.3.0,<3",
     "numpy<2.0.0",

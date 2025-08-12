@@ -5,7 +5,6 @@ from amplfi.train.prior import AmplfiPrior
 from torch.multiprocessing import Array, Queue
 from online.utils.searcher import Event
 from online.utils.pe import postprocess_samples
-from astropy import io
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
 from astropy.time import Time
@@ -53,15 +52,13 @@ def amplfi_subprocess(
 
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
-                nside,
-                min_samples_per_pix,
                 use_distance=use_distance,
+                min_samples_per_pix_dist=min_samples_per_pix,
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
                     "DATE": Time.now().utc.isot,
                 },
             )
-            fits_skymap = io.fits.table_to_hdu(skymap)
 
             graceid = amplfi_queue.get()
 
@@ -80,7 +77,7 @@ def amplfi_subprocess(
             )
             gdb.submit_low_latency_pe(
                 result,
-                fits_skymap,
+                skymap,
                 graceid,
                 event.event_dir,
             )
@@ -124,20 +121,18 @@ def amplfi_subprocess(
 
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
-                nside,
-                min_samples_per_pix,
                 use_distance=use_distance,
+                min_samples_per_pix_dist=min_samples_per_pix,
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
                     "DATE": Time.now().utc.isot,
                 },
             )
-            fits_skymap = io.fits.table_to_hdu(skymap)
 
             logger.info("Submitting posterior and low resolution skymap")
             gdb.submit_low_latency_pe(
                 result,
-                fits_skymap,
+                skymap,
                 graceid,
                 event.event_dir,
             )
