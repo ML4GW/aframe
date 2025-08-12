@@ -7,6 +7,7 @@ from online.utils.searcher import Event
 from online.utils.pe import postprocess_samples
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
+from astropy.time import Time
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
@@ -53,6 +54,10 @@ def amplfi_subprocess(
             skymap = result.to_skymap(
                 use_distance=use_distance,
                 min_samples_per_pix_dist=min_samples_per_pix,
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
             )
 
             graceid = amplfi_queue.get()
@@ -118,6 +123,10 @@ def amplfi_subprocess(
             skymap = result.to_skymap(
                 use_distance=use_distance,
                 min_samples_per_pix_dist=min_samples_per_pix,
+                metadata={
+                    "INSTRUME": ",".join(amplfi_ifos),
+                    "DATE": Time.now().utc.isot,
+                },
             )
 
             logger.info("Submitting posterior and low resolution skymap")
