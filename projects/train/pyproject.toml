@@ -22,7 +22,7 @@ dependencies = [
     "fsspec[s3]>=2024,<2025",
     "urllib3>=1.25.4,<1.27",
     "utils",
-    "ml4gw>=0.7.2",
+    "ml4gw>=0.7.5",
     "aframe",
     "ledger",
     "priors",
@@ -37,7 +37,10 @@ dependencies = [
 train = "train.cli:main"
 
 [dependency-groups]
-dev = ["pytest~=7.3"]
+dev = [
+    "pytest~=7.3",
+    "jupyter>=1.0.0",    
+]
 
 [tool.uv]
 
