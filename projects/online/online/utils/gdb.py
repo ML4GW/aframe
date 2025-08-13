@@ -159,19 +159,19 @@ class GraceDb(_GraceDb):
         with open(event_file) as f:
             event_json = json.load(f)
 
-        event_json["mchirp"] = result.posterior["chirp_mass"].median()
-        event_json["mass1"] = result.posterior["mass_1"].median()
-        event_json["mass2"] = result.posterior["mass_2"].median()
-        event_json["mtotal"] = (
-            result.posterior["mass1"] + result.posterior["mass2"]
-        ).median()
+        event_json["mchirp"] = float(result.posterior["chirp_mass"].median())
+        event_json["mass1"] = float(result.posterior["mass_1"].median())
+        event_json["mass2"] = float(result.posterior["mass_2"].median())
+        event_json["mtotal"] = float(
+            (result.posterior["mass_1"] + result.posterior["mass_2"]).median()
+        )
         event_json["spin1z"] = 0
         event_json["spin2z"] = 0
 
         with open(event_file, "w") as f:
             json.dump(event_json, f)
 
-        self.replace_event(graceid, event_file)
+        self.replace_event(graceid, str(event_file))
 
     def submit_low_latency_pe(
         self,

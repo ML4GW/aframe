@@ -63,17 +63,6 @@ def amplfi_subprocess(
 
             graceid = amplfi_queue.get()
 
-            gdb.update_event(event, graceid, result)
-            if emails is not None and event.far < email_far_threshold:
-                logger.info(f"Sending detection email for {graceid}")
-                send_detection_email(
-                    emails,
-                    result,
-                    event,
-                    graceid,
-                    gdb.server.gevent_url(graceid),
-                )
-
             logger.info(
                 f"Submitting posterior and low resolution skymap for {graceid}"
             )
@@ -83,6 +72,18 @@ def amplfi_subprocess(
                 graceid,
                 event.event_dir,
             )
+
+            gdb.update_event(event, graceid, result)
+
+            if emails is not None and event.far < email_far_threshold:
+                logger.info(f"Sending detection email for {graceid}")
+                send_detection_email(
+                    emails,
+                    result,
+                    event,
+                    graceid,
+                    gdb.server.gevent_url(graceid),
+                )
 
             logger.info(f"Launching ligo-skymap-from-samples for {graceid}")
             gdb.submit_ligo_skymap_from_samples(
@@ -111,17 +112,6 @@ def amplfi_subprocess(
                 amplfi_parameter_sampler,
             )
 
-            gdb.update_event(event, graceid, result)
-            if emails is not None and event.far < email_far_threshold:
-                logger.info("Sending detection email")
-                send_detection_email(
-                    emails,
-                    result,
-                    event,
-                    graceid,
-                    gdb.server.gevent_url(graceid),
-                )
-
             logger.info("Creating low resolution skymap")
             skymap = result.to_skymap(
                 use_distance=use_distance,
@@ -140,6 +130,17 @@ def amplfi_subprocess(
                 graceid,
                 event.event_dir,
             )
+
+            gdb.update_event(event, graceid, result)
+            if emails is not None and event.far < email_far_threshold:
+                logger.info("Sending detection email")
+                send_detection_email(
+                    emails,
+                    result,
+                    event,
+                    graceid,
+                    gdb.server.gevent_url(graceid),
+                )
 
             logger.info(f"Launching ligo-skymap-from-samples for {graceid}")
             gdb.submit_ligo_skymap_from_samples(
