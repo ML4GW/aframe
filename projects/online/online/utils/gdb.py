@@ -167,7 +167,8 @@ class GraceDb(_GraceDb):
         )
         event_json["spin1z"] = 0
         event_json["spin2z"] = 0
-
+        # TODO: esimate from posterior
+        event_json["template_duration"] = 1.5
         with open(event_file, "w") as f:
             json.dump(event_json, f)
 
