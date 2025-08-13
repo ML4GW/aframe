@@ -46,7 +46,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         [X], waveforms = next(iter(trainer.train_dataloader))
         X = X.to(device)
         X_low, X_high, X_fft, y = trainer.datamodule.augment(X, waveforms)
-        
+                
         trace = torch.jit.trace(module.model.to("cpu"), X_low.to("cpu"), X_high.to("cpu"), X_fft.to("cpu"))
 
         save_dir = trainer.logger.save_dir
@@ -84,7 +84,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, psds = trainer.datamodule.build_val_batches(
                 background, signals
             )
 
@@ -104,6 +104,7 @@ class SaveAugmentedBatch(Callback):
                         with h5py.File(f, "w") as h5file:
                             h5file["X_bg"] = X_bg.cpu().numpy()
                             h5file["X_inj"] = X_inj.cpu().numpy()
+                            h5file["psds"] = psds.cpu().numpy()
                         s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
@@ -117,6 +118,7 @@ class SaveAugmentedBatch(Callback):
                 ) as f:
                     f["X_bg"] = X_bg.cpu().numpy()
                     f["X_inj"] = X_inj.cpu().numpy()
+                    f["psds"] = psds.cpu().numpy()
 
             # while we're here let's log the wandb url
             # associated with the run
