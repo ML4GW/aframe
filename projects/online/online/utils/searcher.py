@@ -86,6 +86,8 @@ class Event:
         event = asdict(self)
         _, _ = event.pop("datadir"), event.pop("ifo_suffix", None)
         event["ifos"] = ",".join(event["ifos"])
+        event["end_time"] = int(self.gpstime)
+        event["end_time_ns"] = int(self.gpstime % 1 * 1e9)
         filecontents = str(event)
         filecontents = json.loads(filecontents.replace("'", '"'))
         with open(filename, "w") as f:
