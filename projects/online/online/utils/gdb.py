@@ -179,9 +179,9 @@ class GraceDb(_GraceDb):
         result: bilby.core.result.Result,
         skymap: "BinTableHDU",
         graceid: str,
-        event_dir: Path,
+        event: Event,
     ):
-        event_dir = self.write_dir / event_dir
+        event_dir = self.write_dir / event.event_dir
         skymap_fname = event_dir / "amplfi.multiorder.fits"
         write_sky_map(skymap_fname, skymap)
 
@@ -220,6 +220,9 @@ class GraceDb(_GraceDb):
             self.write_log(
                 graceid, "posterior", filename=filename, tag_name="pe"
             )
+
+        # update event with source parameters
+        self.update_event(event, graceid, result)
 
         corner_fname = event_dir / "corner_plot.png"
         result.plot_corner(

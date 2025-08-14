@@ -70,10 +70,8 @@ def amplfi_subprocess(
                 result,
                 skymap,
                 graceid,
-                event.event_dir,
+                event,
             )
-
-            gdb.update_event(event, graceid, result)
 
             if emails is not None and event.far < email_far_threshold:
                 logger.info(f"Sending detection email for {graceid}")
@@ -128,10 +126,9 @@ def amplfi_subprocess(
                 result,
                 skymap,
                 graceid,
-                event.event_dir,
+                event,
             )
 
-            gdb.update_event(event, graceid, result)
             if emails is not None and event.far < email_far_threshold:
                 logger.info("Sending detection email")
                 send_detection_email(
