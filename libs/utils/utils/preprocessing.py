@@ -111,14 +111,12 @@ class BatchWhitener(torch.nn.Module):
         highpass: Optional[float] = None,
         lowpass: Optional[float] = None,
         return_whitened: bool = False,
-        return_asd: bool = False,
     ) -> None:
         super().__init__()
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
         self.augmentor = augmentor
         self.return_whitened = return_whitened
-        self.return_asd = return_asd
 
         # do foreground length calculation in units of samples,
         # then convert back to length to guard for intification
@@ -135,6 +133,9 @@ class BatchWhitener(torch.nn.Module):
             fast=highpass is not None,
         )
         self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
+
+        freqs = torch.fft.rfftfreq(size, d=1 / sample_rate)
+        self.freq_mask = (freqs > highpass) & (freqs < lowpass)
 
     def forward(self, x: Tensor) -> Tensor:
         # Get the number of channels so we know how to
@@ -155,9 +156,16 @@ class BatchWhitener(torch.nn.Module):
 
         x = x.float()
 
-        asd = psd**0.5
-        asd *= 1e23
-        asd = asd.float()
+        if self.return_asd:
+            asd = psd**0.5
+            asd = asd.float()
+            asd = torch.nn.functional.interpolate(
+                asd.unsqueeze(0),
+                size=(len(self.freq_mask),),
+                mode="linear",
+            )
+            asd = asd[:, :, self.freq_mask]
+            asd = asd.expand(x.shape[0], -1, -1)
 
         # unfold x and then put it into the expected shape.
         # Note that if x has both signal and background

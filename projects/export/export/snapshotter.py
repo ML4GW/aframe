@@ -5,7 +5,11 @@ import torch
 from hermes.quiver import Platform
 from hermes.quiver.streaming import utils as streaming_utils
 
+<<<<<<< HEAD
 from utils.preprocessing import BackgroundSnapshotter
+=======
+from utils.preprocessing import BackgroundSnapshotter, MultiModalPreprocessor
+>>>>>>> b074291 (Re-organize data flow to get multimodal export and inference working)
 
 if TYPE_CHECKING:
     from hermes.quiver.model import EnsembleModel, ExposedTensor
@@ -39,6 +43,17 @@ def add_streaming_input_preprocessor(
 ) -> "ExposedTensor":
     """Create a snapshotter model and add it to the repository"""
 
+<<<<<<< HEAD
+=======
+    batch_size, num_ifos, *kernel_size = input.shape
+    if q is not None:
+        if len(kernel_size) != 2:
+            raise ValueError(
+                "If q is not None, the input kernel should be 2D, "
+                f"got {len(kernel_size)} dimension(s)"
+            )
+
+>>>>>>> b074291 (Re-organize data flow to get multimodal export and inference working)
     snapshotter = BackgroundSnapshotter(
         psd_length=psd_length,
         kernel_length=kernel_length,
