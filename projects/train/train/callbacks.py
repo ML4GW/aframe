@@ -45,9 +45,10 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         device = pl_module.device
         [X] = next(iter(trainer.train_dataloader))
         X = X.to(device)
-        strain, asds, _ = trainer.datamodule.inject(X)
-        X = (strain.to("cpu"), asds.to("cpu"))
-        trace = torch.jit.trace(module.model.to("cpu"), X)
+        X, X_fft, _ = trainer.datamodule.inject(X)
+        X = X.to("cpu")
+        X_fft = X_fft.to("cpu")
+        trace = torch.jit.trace(module.model.to("cpu"), (X, X_fft))
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
@@ -75,7 +76,7 @@ class SaveAugmentedBatch(Callback):
             [X] = next(iter(trainer.train_dataloader))
             X = X.to(device)
 
-            strain, train_asds, y = trainer.datamodule.inject(X)
+            X, X_fft, y = trainer.datamodule.inject(X)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -83,8 +84,8 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj, val_asds = trainer.datamodule.build_val_batches(
-                background, signals
+            X_bg, X_inj, val_X_bg_fft, val_X_fg_fft = (
+                trainer.datamodule.build_val_batches(background, signals)
             )
 
             if save_dir.startswith("s3://"):
@@ -92,9 +93,9 @@ class SaveAugmentedBatch(Callback):
                 with s3.open(f"{save_dir}/batch.hdf5", "wb") as s3_file:
                     with io.BytesIO() as f:
                         with h5py.File(f, "w") as h5file:
-                            h5file["X"] = strain.cpu().numpy()
+                            h5file["X"] = X.cpu().numpy()
+                            h5file["X_fft"] = X_fft.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
-                            h5file["asds"] = train_asds.cpu().numpy()
                         s3_file.write(f.getvalue())
 
                 with s3.open(f"{save_dir}/val_batch.hdf5", "wb") as s3_file:
@@ -102,20 +103,22 @@ class SaveAugmentedBatch(Callback):
                         with h5py.File(f, "w") as h5file:
                             h5file["X_bg"] = X_bg.cpu().numpy()
                             h5file["X_inj"] = X_inj.cpu().numpy()
-                            h5file["val_asds"] = val_asds.cpu().numpy()
+                            h5file["X_bg_fft"] = val_X_bg_fft.cpu().numpy()
+                            h5file["X_fg_fft"] = val_X_fg_fft.cpu().numpy()
                         s3_file.write(f.getvalue())
             else:
                 with h5py.File(os.path.join(save_dir, "batch.hdf5"), "w") as f:
                     f["X"] = X.cpu().numpy()
                     f["y"] = y.cpu().numpy()
-                    f["asds"] = train_asds.cpu().numpy()
+                    f["X_fft"] = X_fft.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"
                 ) as f:
                     f["X_bg"] = X_bg.cpu().numpy()
                     f["X_inj"] = X_inj.cpu().numpy()
-                    f["val_asds"] = val_asds.cpu().numpy()
+                    f["X_bg_fft"] = val_X_bg_fft.cpu().numpy()
+                    f["X_fg_fft"] = val_X_fg_fft.cpu().numpy()
 
             # while we're here let's log the wandb url
             # associated with the run

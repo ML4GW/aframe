@@ -221,17 +221,8 @@ class SupervisedMultiModalResNet(SupervisedArchitecture):
 
         self.classifier = torch.nn.Linear(time_classes + freq_classes, 1)
 
-    def forward(self, X):
-        strain, asds = X
-
-        asds *= 1e23
-        asds = asds.float()
-        inv_asds = 1 / asds
-
-        time_domain_output = self.time_domain_resnet(strain)
-        X_fft = torch.fft.rfft(strain)
-        X_fft = X_fft[..., -asds.shape[-1] :]
-        X_fft = torch.cat((X_fft.real, X_fft.imag, inv_asds), dim=1)
+    def forward(self, X, X_fft):
+        time_domain_output = self.time_domain_resnet(X)
         freq_domain_output = self.freq_psd_resnet(X_fft)
         concat = torch.cat([time_domain_output, freq_domain_output], dim=-1)
         return self.classifier(concat)
