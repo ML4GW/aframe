@@ -6,11 +6,14 @@ from pathlib import Path
 import pandas as pd
 from scipy.stats import poisson
 import warnings
+import logging
 
 from datetime import datetime, timedelta, timezone
 
 IFOS = ["H1", "L1", "V1"]
 SECONDS_PER_YEAR = 365 * 86400
+
+logger = logging.getLogger("monitor-plotting")
 
 
 def aframe_response_plot(
@@ -92,6 +95,7 @@ def q_plots(
                 frange=(online_args["amplfi_highpass"], np.inf),
             ).plot(epoch=gpstime)
         except ValueError:
+            logger.info(f"Failed to create Q-plot for {ifo}")
             continue
         ax = qplot.gca()
         ax.set_yscale("log")
