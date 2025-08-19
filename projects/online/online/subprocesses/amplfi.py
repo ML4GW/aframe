@@ -8,6 +8,7 @@ from online.utils.pe import postprocess_samples
 from .utils import subprocess_wrapper
 from online.utils.email_alerts import send_detection_email
 from astropy.time import Time
+from ligo.skymap.io.fits import gps_to_iso8601
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
@@ -58,6 +59,7 @@ def amplfi_subprocess(
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
                     "DATE": Time.now().utc.isot,
+                    "DATE-OBS": gps_to_iso8601(event.gpstime),
                 },
             )
 
@@ -118,6 +120,7 @@ def amplfi_subprocess(
                 metadata={
                     "INSTRUME": ",".join(amplfi_ifos),
                     "DATE": Time.now().utc.isot,
+                    "DATE-OBS": gps_to_iso8601(event.gpstime),
                 },
             )
 
