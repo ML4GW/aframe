@@ -84,12 +84,15 @@ def q_plots(
     t0 = gpstime - online_args["event_position"]
     for i, ifo in enumerate(IFOS[: len(whitened)]):
         ts = TimeSeries(whitened[i], sample_rate=sample_rate, t0=t0)
-        qplot = ts.q_transform(
-            whiten=False,
-            gps=gpstime,
-            logf=True,
-            frange=(online_args["amplfi_highpass"], np.inf),
-        ).plot(epoch=gpstime)
+        try:
+            qplot = ts.q_transform(
+                whiten=False,
+                gps=gpstime,
+                logf=True,
+                frange=(online_args["amplfi_highpass"], np.inf),
+            ).plot(epoch=gpstime)
+        except ValueError:
+            continue
         ax = qplot.gca()
         ax.set_yscale("log")
         qplot.savefig(plotsdir / f"{ifo}_qtransform.png", dpi=150)
