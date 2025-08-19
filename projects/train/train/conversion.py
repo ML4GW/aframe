@@ -66,3 +66,25 @@ def aligned_to_lalsimulation_parameters(
     parameters["s1z"] = parameters["chi1"]
     parameters["s2z"] = parameters["chi2"]
     return parameters
+
+
+def component_aligned_to_lalsimulation_parameters(
+    parameters: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """
+    Convert aligned spin parameters to lalsimulation parameters
+    and compnent masses to chirp mass and mass ratio
+    """
+    m1, m2 = parameters["mass_1"], parameters["mass_2"]
+    parameters["chirp_mass"] = (m1 * m2) ** (3 / 5) / (m1 + m2) ** (1 / 5)
+    parameters["mass_ratio"] = m2 / m1
+
+    parameters["s1x"] = torch.zeros_like(m1)
+    parameters["s1y"] = torch.zeros_like(m1)
+
+    parameters["s2x"] = torch.zeros_like(m1)
+    parameters["s2y"] = torch.zeros_like(m1)
+
+    parameters["s1z"] = parameters["chi1"]
+    parameters["s2z"] = parameters["chi2"]
+    return parameters

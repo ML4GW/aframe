@@ -70,6 +70,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
 class SaveAugmentedBatch(Callback):
     def on_train_start(self, trainer, pl_module):
         if trainer.global_rank == 0:
+            breakpoint()
             # find device module is on
             device = pl_module.device
             save_dir = trainer.logger.save_dir

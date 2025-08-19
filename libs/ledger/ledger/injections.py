@@ -506,8 +506,14 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
         if self._waveforms is None:
             fields = sorted(self.waveform_fields)
             waveforms = [getattr(self, i) for i in fields]
-            waveforms = np.stack(waveforms, axis=1)
-            self._waveforms = waveforms
+            shape = (
+                waveforms[0].shape[0],
+                len(fields),
+                waveforms[0].shape[-1],
+            )
+            self._waveforms = np.zeros(shape, dtype=np.float32)
+            for i, field in enumerate(fields):
+                self._waveforms[:, i, :] = getattr(self, field)
         return self._waveforms
 
     def num_waveform_fields(self):
