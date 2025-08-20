@@ -68,7 +68,6 @@ data:
          # alpha: -3
          # decay_steps: 989
     # validation args
-    valid_frac: 0.25
     valid_stride: 0.5
     num_valid_views: 5
     valid_livetime: 57600 
