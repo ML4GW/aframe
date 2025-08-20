@@ -162,6 +162,9 @@ def postprocess_samples(
     )
     posterior["mass_1"] = mass_1
     posterior["mass_2"] = mass_2
+    # add time column so ligo-skymap-from-samples
+    # can add the gpstime metadata attribute
+    posterior["time"] = np.ones_like(mass_1) * event_time
     posterior = pd.DataFrame(posterior)
 
     result = AmplfiResult(
