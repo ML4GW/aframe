@@ -47,9 +47,13 @@ class TimeSlideAUROC(Metric):
         self.add_state("foreground", default=[])
 
     def update(
-        self, shift: int, background: torch.Tensor, foreground: torch.Tensor
+        self, shift: int | float | torch.Tensor, background: torch.Tensor, foreground: torch.Tensor
     ) -> None:
-        self.shifts.append(torch.Tensor([shift]).to(background.device))
+        if isinstance(shift, torch.Tensor):
+            if shift.numel() != 1:
+                raise ValueError(f"Shift tensor must have one element, got {shift.numel()}")
+            shift = shift.item()
+        self.shifts.append(torch.tensor([shift], device=background.device))
         self.background.append(background)
         self.foreground.append(foreground)
 
@@ -58,14 +62,16 @@ class TimeSlideAUROC(Metric):
         for i, bg, fg in zip(self.shifts, self.background, self.foreground):
             foreground.append(fg)
             background[i.item()].append(bg)
-        foreground = torch.cat(foreground)
+
+        # flatten foreground predictions to 1D
+        foreground = torch.cat([f.view(-1) for f in foreground])
 
         pooled_background = []
         for bg in background.values():
             bg = torch.cat(bg).view(1, 1, -1)
             bg = self.pool(bg).view(-1)
             pooled_background.append(bg)
-        background = torch.cat(pooled_background)
+        background = torch.cat(pooled_background).view(-1)
 
         # concatenate these with view-averaged foreground
         # predictions to constitute our predicted outputs
@@ -199,7 +205,6 @@ class TimeSlide(torch.utils.data.IterableDataset):
             minlen = min([len(x) for x in X])
             X = [x[:minlen] for x in X]
             yield torch.stack(X)
-
 
 def get_timeslides(
     timeseries: torch.Tensor,
