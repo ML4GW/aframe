@@ -22,7 +22,7 @@ dependencies = [
     "fsspec[s3]>=2024,<2025",
     "urllib3>=1.25.4,<1.27",
     "utils",
-    "ml4gw>=0.7.5",
+    "ml4gw>=0.7.7",
     "aframe",
     "ledger",
     "priors",
