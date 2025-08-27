@@ -67,6 +67,8 @@ class AframePrior:
                 for key in keys
             }
 
+        return {k: v[:N] for k, v in parameters.items()}
+
         return parameters
 
     def log_prob(self, samples: dict[str, torch.Tensor]) -> torch.Tensor:
