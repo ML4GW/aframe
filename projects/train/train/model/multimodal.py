@@ -14,12 +14,11 @@ class MultimodalAframe(AframeBase):
     ) -> None:
         super().__init__(arch, *args, **kwargs)
 
-    def forward(self, X):
-        x_low, x_high, x_fft = X
+    def forward(self, x_low: Tensor, x_high: Tensor, x_fft: Tensor) -> Tensor:
         return self.model(x_low, x_high, x_fft)
 
-
     def train_step(self, batch: tuple) -> Tensor:
+        print(" training Step ~")
         # Unpack depending on number of elements
         if len(batch) == 4:
             X_low, X_high, X_fft, y = batch
@@ -28,17 +27,6 @@ class MultimodalAframe(AframeBase):
 
         y_hat = self((X_low, X_high, X_fft))
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
-
-
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        mem_allocated = torch.cuda.memory_allocated() / 1024**2
-        mem_reserved = torch.cuda.memory_reserved() / 1024**2
-        print(f"[Train Batch End] Allocated: {mem_allocated:.2f} MiB, Reserved: {mem_reserved:.2f} MiB")
-
-    def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
-        mem_allocated = torch.cuda.memory_allocated() / 1024**2
-        mem_reserved = torch.cuda.memory_reserved() / 1024**2
-        print(f"[Validation Batch End] Allocated: {mem_allocated:.2f} MiB, Reserved: {mem_reserved:.2f} MiB")
 
     def score(self, X):
         X_low, X_high, X_fft = X

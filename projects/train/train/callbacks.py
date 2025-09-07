@@ -37,19 +37,27 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def on_train_end(self, trainer, pl_module):
+        if trainer.global_rank != 0:
+            return
         torch.cuda.empty_cache()
         module = pl_module.__class__.load_from_checkpoint(
             self.best_model_path, arch=pl_module.model, metric=pl_module.metric
         )
-
+        print("Checkpoiint loaded")
         device = pl_module.device
         [X], waveforms = next(iter(trainer.train_dataloader))
+        print("Batch loaded")
         X = X.to(device)
         X_low, X_high, X_fft, y = trainer.datamodule.augment(X, waveforms)
+        print("Augmented")
                 
         trace = torch.jit.trace(module.model.to("cpu"), X_low.to("cpu"), X_high.to("cpu"), X_fft.to("cpu"))
+        print("traced model")
+        save_path = "/home/stevenjames.henderson/aframe/runs/multimodalv2/training/model.pt"
 
-        save_dir = trainer.logger.save_dir
+        #save_dir = trainer.logger.save_dir
+        save_dir = os.path.dirname(save_path)
+        print(f"saving to {save_dir}")
         if save_dir.startswith("s3://"):
             s3 = s3fs.S3FileSystem()
             with s3.open(f"{save_dir}/model.pt", "wb") as f:
@@ -62,6 +70,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             shutil.copy(
                 self.best_model_path, os.path.join(save_dir, "best.ckpt")
             )
+        print("export complete")
 
 
 class SaveAugmentedBatch(Callback):
@@ -144,3 +153,17 @@ class GradientTracker(Callback):
         total_norm = norms[f"grad_{float(self.norm_type)}_norm_total"]
         self.log(f"grad_norm_{self.norm_type}", total_norm)
 
+class ExportOnResume(Callback):
+    def on_fit_end(self, trainer, pl_module):
+        # Only run once per cluster rank
+        if not trainer.global_rank == 0:
+            return
+
+        ckpt_path = trainer.ckpt_path if hasattr(trainer, "ckpt_path") else None
+        if ckpt_path:
+            print(" Resuming from checkpoint— exporting TorchScript now.")
+            ts = pl_module.to_torchscript()
+            # save_path = os.path.join(trainer.log_dir, "model.pt")
+            save_path = "/home/stevenjames.henderson/aframe/runs/multimodalv2/training/model.pt"
+            torch.jit.save(ts, save_path)
+            print(f" TorchScript model saved to {save_path}")
