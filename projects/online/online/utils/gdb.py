@@ -7,7 +7,6 @@ import bilby
 import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-from ligo.em_bright import em_bright
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
@@ -207,19 +206,9 @@ class GraceDb(_GraceDb):
         posterior_samples = posterior_df.to_records(index=False)
         with h5py.File(filename, "w") as f:
             f.create_dataset("posterior_samples", data=posterior_samples)
-
-        _, has_ns, _, _ = em_bright.source_classification_pe(
-            filename, num_eos_draws=10
-        )
-        if has_ns > 0:
-            self.logger.info(
-                f"Event {graceid} had HasNS = {has_ns}, so {filename} "
-                " was not uploaded."
-            )
-        else:
-            self.write_log(
-                graceid, "posterior", filename=filename, tag_name="pe"
-            )
+        self.logger.debug("Submitting posterior samples to GraceDB")
+        self.write_log(graceid, "posterior", filename=filename, tag_name="pe")
+        self.logger.debug("Posterior samples submitted")
 
         # update event with source parameters
         self.update_event(event, graceid, result)

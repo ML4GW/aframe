@@ -105,6 +105,7 @@ def pastro_subprocess(
         while not posterior_file.exists():
             time.sleep(1e-3)
 
+        logger.info("Reading posterior file")
         with h5py.File(posterior_file, "r") as f:
             samples = f["posterior_samples"][:]
             m1_source = samples["mass_1_source"]
@@ -122,6 +123,6 @@ def pastro_subprocess(
             "Terrestrial": 1 - pastro,
         }
 
-        logger.info(f"Submitting p_astro: {pastro} for {graceid}")
+        logger.info(f"Submitting p_astro: {probs} for {graceid}")
         gdb.submit_pastro(probs, graceid, event.event_dir)
         logger.info(f"Submitted p_astro for {graceid}")

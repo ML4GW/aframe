@@ -1647,15 +1647,6 @@ wheels = [
 ]
 
 [[package]]
-name = "joblib"
-version = "1.5.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dc/fe/0f5a938c54105553436dbff7a61dc4fed4b1b2c98852f8833beaf4d5968f/joblib-1.5.1.tar.gz", hash = "sha256:f4f86e351f39fe3d0d32a9f2c3d8af1ee4cec285aafcb27003dda5205576b444", size = 330475 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/4f/1195bbac8e0c2acc5f740661631d8d750dc38d4a32b23ee5df3cde6f4e0d/joblib-1.5.1-py3-none-any.whl", hash = "sha256:4719a31f054c7d766948dcd83e9613686b27114f190f717cec7eaa2084f8a74a", size = 307746 },
-]
-
-[[package]]
 name = "json5"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2078,23 +2069,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a2/06/e213ba1ffd71da2ea0f0c8b354c90d809273b3f586180441375f18c33fdf/lightray-0.2.4.tar.gz", hash = "sha256:aa90faed38f236552cd688ba624e70c1db1ce3d64f0430ada4307e42c7fd8eb1", size = 144794 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/9f/c885e222ec4e50fe9f6e3067ee6cc9f8631e3b642c69db83934423043921/lightray-0.2.4-py3-none-any.whl", hash = "sha256:c0868ee362f967a86cc57b4af9578b362e51ef09c998603d7ff62218130198fe", size = 7206 },
-]
-
-[[package]]
-name = "ligo-em-bright"
-version = "1.2.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "astropy" },
-    { name = "h5py" },
-    { name = "lalsuite" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scikit-learn" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/52/ed/9d82d8a9b7861ea9d985083224c8f41b766df822b566207779d54fab25b6/ligo_em_bright-1.2.2.tar.gz", hash = "sha256:1746b5a4f5d2a492f08faa2e215b291163a32300f429e243c725641a6c7e099c", size = 26521 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/c3/3e6ee53a12a75cb63081835651b9a3fe695d5d7fd669bc9737337dcf98b6/ligo_em_bright-1.2.2-py3-none-any.whl", hash = "sha256:1c3ef50b9d537019d9b6bdd2f60322f8ded26d598034d6d453b2b2246434dd64", size = 30272 },
 ]
 
 [[package]]
@@ -2787,7 +2761,6 @@ dependencies = [
     { name = "architectures" },
     { name = "arrakis" },
     { name = "ledger" },
-    { name = "ligo-em-bright" },
     { name = "ligo-gracedb" },
     { name = "ligo-skymap" },
     { name = "matplotlib" },
@@ -2812,7 +2785,6 @@ requires-dist = [
     { name = "architectures", editable = "../../libs/architectures" },
     { name = "arrakis", specifier = ">=0.2.0,<0.3" },
     { name = "ledger", editable = "../../libs/ledger" },
-    { name = "ligo-em-bright", specifier = ">=1.2.2" },
     { name = "ligo-gracedb", specifier = ">=2.14.1" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
     { name = "matplotlib", specifier = "==3.9.4" },
@@ -3950,30 +3922,6 @@ wheels = [
 ]
 
 [[package]]
-name = "scikit-learn"
-version = "1.5.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "joblib" },
-    { name = "numpy" },
-    { name = "scipy" },
-    { name = "threadpoolctl" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/92/72/2961b9874a9ddf2b0f95f329d4e67f67c3301c1d88ba5e239ff25661bb85/scikit_learn-1.5.1.tar.gz", hash = "sha256:0ea5d40c0e3951df445721927448755d3fe1d80833b0b7308ebff5d2a45e6414", size = 6958368 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/86/ab9f95e338c5ef5b4e79463ee91e55aae553213835e59bf038bc0cc21bf8/scikit_learn-1.5.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:154297ee43c0b83af12464adeab378dee2d0a700ccd03979e2b821e7dd7cc1c2", size = 12087598 },
-    { url = "https://files.pythonhosted.org/packages/7d/d7/fb80c63062b60b1fa5dcb2d4dd3a4e83bd8c68cdc83cf6ff8c016228f184/scikit_learn-1.5.1-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:b5e865e9bd59396220de49cb4a57b17016256637c61b4c5cc81aaf16bc123bbe", size = 10979067 },
-    { url = "https://files.pythonhosted.org/packages/c1/f8/fd3fa610cac686952d8c78b8b44cf5263c6c03885bd8e5d5819c684b44e8/scikit_learn-1.5.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:909144d50f367a513cee6090873ae582dba019cb3fca063b38054fa42704c3a4", size = 12485469 },
-    { url = "https://files.pythonhosted.org/packages/32/63/ed228892adad313aab0d0f9261241e7bf1efe36730a2788ad424bcad00ca/scikit_learn-1.5.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:689b6f74b2c880276e365fe84fe4f1befd6a774f016339c65655eaff12e10cbf", size = 13335048 },
-    { url = "https://files.pythonhosted.org/packages/5d/55/0403bf2031250ac982c8053397889fbc5a3a2b3798b913dae4f51c3af6a4/scikit_learn-1.5.1-cp311-cp311-win_amd64.whl", hash = "sha256:9a07f90846313a7639af6a019d849ff72baadfa4c74c778821ae0fad07b7275b", size = 10988436 },
-    { url = "https://files.pythonhosted.org/packages/b1/8d/cf392a56e24627093a467642c8b9263052372131359b570df29aaf4811ab/scikit_learn-1.5.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:5944ce1faada31c55fb2ba20a5346b88e36811aab504ccafb9f0339e9f780395", size = 12102404 },
-    { url = "https://files.pythonhosted.org/packages/d5/2c/734fc9269bdb6768905ac41b82d75264b26925b1e462f4ebf45fe4f17646/scikit_learn-1.5.1-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:0828673c5b520e879f2af6a9e99eee0eefea69a2188be1ca68a6121b809055c1", size = 11037398 },
-    { url = "https://files.pythonhosted.org/packages/d3/a9/15774b178bcd1cde1c470adbdb554e1504dce7c302e02ff736c90d65e014/scikit_learn-1.5.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:508907e5f81390e16d754e8815f7497e52139162fd69c4fdbd2dfa5d6cc88915", size = 12089887 },
-    { url = "https://files.pythonhosted.org/packages/8a/5d/047cde25131eef3a38d03317fa7d25d6f60ce6e8ccfd24ac88b3e309fc00/scikit_learn-1.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:97625f217c5c0c5d0505fa2af28ae424bd37949bb2f16ace3ff5f2f81fb4498b", size = 13079093 },
-    { url = "https://files.pythonhosted.org/packages/cb/be/dec2a8d31d133034a8ec51ae68ac564ec9bde1c78a64551f1438c3690b9e/scikit_learn-1.5.1-cp312-cp312-win_amd64.whl", hash = "sha256:da3f404e9e284d2b0a157e1b56b6566a34eb2798205cba35a211df3296ab7a74", size = 10945350 },
-]
-
-[[package]]
 name = "scipy"
 version = "1.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4239,15 +4187,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8a/11/965c6fd8e5cc254f1fe142d547387da17a8ebfd75a3455f637c663fb38a0/terminado-0.18.1.tar.gz", hash = "sha256:de09f2c4b85de4765f7714688fff57d3e75bad1f909b589fde880460c753fd2e", size = 32701 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/9e/2064975477fdc887e47ad42157e214526dcad8f317a948dee17e1659a62f/terminado-0.18.1-py3-none-any.whl", hash = "sha256:a4468e1b37bb318f8a86514f65814e1afc977cf29b3992a4500d9dd305dcceb0", size = 14154 },
-]
-
-[[package]]
-name = "threadpoolctl"
-version = "3.6.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b7/4d/08c89e34946fce2aec4fbb45c9016efd5f4d7f24af8e5d93296e935631d8/threadpoolctl-3.6.0.tar.gz", hash = "sha256:8ab8b4aa3491d812b623328249fab5302a68d2d71745c8a4c719a2fcaba9f44e", size = 21274 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/d5/f9a850d79b0851d1d4ef6456097579a9005b31fea68726a4ae5f2d82ddd9/threadpoolctl-3.6.0-py3-none-any.whl", hash = "sha256:43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb", size = 18638 },
 ]
 
 [[package]]
