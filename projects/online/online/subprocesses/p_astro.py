@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -6,6 +7,7 @@ from torch.multiprocessing import Queue
 
 from .utils import subprocess_wrapper
 
+import h5py
 import pickle
 
 from ledger.events import EventSet, RecoveredInjectionSet
@@ -99,6 +101,27 @@ def pastro_subprocess(
         pastro = pastro_model(event.detection_statistic)
         graceid = pastro_queue.get()
 
+        posterior_file = event.event_dir / "amplfi.posterior_samples.hdf5"
+        while not posterior_file.exists():
+            time.sleep(1e-3)
+
+        with h5py.File(posterior_file, "r") as f:
+            samples = f["posterior_samples"][:]
+            m1_source = samples["mass_1_source"]
+            m2_source = samples["mass_2_source"]
+
+        num_samples = len(m1_source)
+        bns_frac = sum(m1_source < 3) / num_samples
+        bbh_frac = sum(m2_source > 3) / num_samples
+        nsbh_frac = 1 - bns_frac - bbh_frac
+
+        probs = {
+            "BBH": pastro * bbh_frac,
+            "NSBH": pastro * nsbh_frac,
+            "BNS": pastro * bns_frac,
+            "Terrestrial": 1 - pastro,
+        }
+
         logger.info(f"Submitting p_astro: {pastro} for {graceid}")
-        gdb.submit_pastro(float(pastro), graceid, event.event_dir)
+        gdb.submit_pastro(probs, graceid, event.event_dir)
         logger.info(f"Submitted p_astro for {graceid}")

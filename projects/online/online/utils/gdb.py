@@ -339,18 +339,13 @@ class GraceDb(_GraceDb):
         #    tag_name="sky_loc",
         # )
 
-    def submit_pastro(self, pastro: float, graceid: str, event_dir: Path):
+    def submit_pastro(
+        self, probs: dict[str, float], graceid: str, event_dir: Path
+    ):
         event_dir = self.write_dir / event_dir
         fname = event_dir / "aframe.p_astro.json"
-        pastro = {
-            "BBH": pastro,
-            "Terrestrial": 1 - pastro,
-            "NSBH": 0,
-            "BNS": 0,
-        }
-
         with open(fname, "w") as f:
-            json.dump(pastro, f)
+            json.dump(probs, f)
 
         self.write_log(
             graceid,
