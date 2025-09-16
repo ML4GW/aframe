@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("pastro-process")
 
+TIMEOUT = 10
+TIMESTEP = 1e-3
+MAX_RETRIES = int(TIMEOUT / TIMESTEP)
+
 
 def fit_or_load_pastro(
     model_path: Path,
@@ -102,26 +106,43 @@ def pastro_subprocess(
         graceid = pastro_queue.get()
 
         posterior_file = event.event_dir / "amplfi.posterior_samples.hdf5"
+        retries = 0
         while not posterior_file.exists():
-            time.sleep(1e-3)
+            time.sleep(TIMESTEP)
+            retries += 1
+            if retries >= MAX_RETRIES:
+                file_not_created = True
+                break
 
-        logger.info("Reading posterior file")
-        with h5py.File(posterior_file, "r") as f:
-            samples = f["posterior_samples"][:]
-            m1_source = samples["mass_1_source"]
-            m2_source = samples["mass_2_source"]
+        if file_not_created:
+            logging.info(
+                f"Posterior file not found after {TIMESTEP} seconds, "
+                "assigning all probability to BBH"
+            )
+            probs = {
+                "BBH": pastro,
+                "NSBH": 0,
+                "BNS": 0,
+                "Terrestrial": 1 - pastro,
+            }
+        else:
+            logger.info("Reading posterior file")
+            with h5py.File(posterior_file, "r") as f:
+                samples = f["posterior_samples"][:]
+                m1_source = samples["mass_1_source"]
+                m2_source = samples["mass_2_source"]
 
-        num_samples = len(m1_source)
-        bns_frac = sum(m1_source < 3) / num_samples
-        bbh_frac = sum(m2_source > 3) / num_samples
-        nsbh_frac = 1 - bns_frac - bbh_frac
+            num_samples = len(m1_source)
+            bns_frac = sum(m1_source < 3) / num_samples
+            bbh_frac = sum(m2_source > 3) / num_samples
+            nsbh_frac = 1 - bns_frac - bbh_frac
 
-        probs = {
-            "BBH": pastro * bbh_frac,
-            "NSBH": pastro * nsbh_frac,
-            "BNS": pastro * bns_frac,
-            "Terrestrial": 1 - pastro,
-        }
+            probs = {
+                "BBH": pastro * bbh_frac,
+                "NSBH": pastro * nsbh_frac,
+                "BNS": pastro * bns_frac,
+                "Terrestrial": 1 - pastro,
+            }
 
         logger.info(f"Submitting p_astro: {probs} for {graceid}")
         gdb.submit_pastro(probs, graceid, event.event_dir)
