@@ -105,7 +105,8 @@ def pastro_subprocess(
         pastro = pastro_model(event.detection_statistic)
         graceid = pastro_queue.get()
 
-        posterior_file = event.event_dir / "amplfi.posterior_samples.hdf5"
+        event_dir = outdir / "events" / event.event_dir
+        posterior_file = event_dir / "amplfi.posterior_samples.hdf5"
         retries = 0
         while not posterior_file.exists():
             time.sleep(TIMESTEP)
