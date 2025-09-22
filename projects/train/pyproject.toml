@@ -22,9 +22,10 @@ dependencies = [
     "fsspec[s3]>=2024,<2025",
     "urllib3>=1.25.4,<1.27",
     "utils",
-    "ml4gw>=0.7.2",
+    "ml4gw>=0.7.7",
     "aframe",
     "ledger",
+    "priors",
     "architectures",
     "bayesian-optimization>=1.4.3,<2",
     "filelock>=3.13.1,<4",
@@ -36,7 +37,10 @@ dependencies = [
 train = "train.cli:main"
 
 [dependency-groups]
-dev = ["pytest~=7.3"]
+dev = [
+    "pytest~=7.3",
+    "jupyter>=1.0.0",    
+]
 
 [tool.uv]
 
@@ -49,6 +53,7 @@ explicit = true
 utils = { path = "../../libs/utils", editable = true }
 aframe = { path = "../..", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
+priors = { path = "../../libs/priors", editable = true }
 architectures = { path = "../../libs/architectures", editable = true }
 
 [build-system]
