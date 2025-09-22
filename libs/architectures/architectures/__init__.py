@@ -5,3 +5,6 @@ from .supervised import (
     SupervisedSpectrogramDomainResNet,
     SupervisedTimeDomainResNet,
 )
+from .multimodal import (
+        MultimodalSupervisedArchitecture
+)
