@@ -557,7 +557,10 @@ class BaseAframeDataset(pl.LightningDataModule):
         # signals so that they're spaced evenly
         # throughout all those batches.
         num_waveforms = len(self.val_waveforms)
-        signal_batch_size = (num_waveforms - 1) // len(background_dataset) + 1
+
+        signal_batch_size = (num_waveforms - 1) // self.valid_loader_length + 1
+
+        # self._logger.info(f"signal batch size: {signal_batch_size}")
         signal_dataset = torch.utils.data.TensorDataset(self.val_waveforms)
         signal_loader = torch.utils.data.DataLoader(
             signal_dataset,
@@ -565,9 +568,12 @@ class BaseAframeDataset(pl.LightningDataModule):
             shuffle=False,
             pin_memory=False,
         )
-        return ZippedDataset(
-            background_dataset, signal_loader, minimum=self.valid_loader_length
+        dataset = ZippedDataset(
+            background_dataset,
+            signal_loader,
+            minimum=min(self.valid_loader_length, len(signal_loader)),
         )
+        return dataset
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         # divide batches per epoch up among all devices
