@@ -355,3 +355,6 @@ class LocalGraceDb(GraceDb):
 
     def write_log(self, *args, **kwargs):
         pass
+
+    def replace_event(self, *args, **kwargs):
+        pass
