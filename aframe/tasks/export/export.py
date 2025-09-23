@@ -1,3 +1,4 @@
+import importlib
 import os
 
 import law
@@ -24,7 +25,8 @@ class ExportParams(law.Task):
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
     lowpass = luigi.OptionalFloatParameter(default="")
-    q = luigi.OptionalFloatParameter(default="")
+    preprocessor = luigi.Parameter(default="utils.preprocessing.BatchWhitener")
+    preprocessor_kwargs = luigi.Parameter(default={})
     fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
     repository_directory = PathParameter(
@@ -42,6 +44,11 @@ class ExportLocal(AframeSingularityTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.repository_directory.mkdir(exist_ok=True, parents=True)
+
+    def _import_class(self, path: str):
+        module_name, class_name = path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
 
     def output(self):
         return ModelRepositoryTarget(self.repository_directory, self.platform)
@@ -62,6 +69,9 @@ class ExportLocal(AframeSingularityTask):
 
         from export.main import export
 
+        breakpoint()
+        cls = self._import_class(self.preprocessor)
+        preprocessor = cls(**self.preprocessor_kwargs)
         # convert string to Platform enum
         platform = Platform[self.platform]
 
@@ -69,7 +79,7 @@ class ExportLocal(AframeSingularityTask):
         # names and locations
         weights = self.input().path
         weights_dir = os.path.dirname(weights)
-        batch_file = weights_dir + "/batch.h5"
+        batch_file = weights_dir + "/batch.hdf5"
 
         export(
             weights,
@@ -82,10 +92,7 @@ class ExportLocal(AframeSingularityTask):
             self.batch_size,
             self.fduration,
             self.psd_length,
-            self.fftlength,
-            self.q,
-            self.highpass,
-            self.lowpass,
+            preprocessor,
             self.streams_per_gpu,
             self.aframe_instances,
             self.preproc_instances,
