@@ -20,6 +20,7 @@ SANDBOX_CONFIGS = [
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "bbh.cfg",
     root / "aframe" / "pipelines" / "sandbox" / "configs" / "base.cfg",
     root / "projects" / "train" / "train.yaml",
+    root / "projects" / "export" / "export.yaml",
 ]
 
 REVIEW_CONFIGS = [
@@ -77,6 +78,14 @@ def copy_configs(
             if pipeline == "tune":
                 cfg[train_task]["tune_config"] = str(path / "tune.yaml")
 
+            with open(dest, "w") as f:
+                cfg.write(f)
+        elif config.name in ["base.cfg", "review.cfg"]:
+            cfg = configparser.ConfigParser()
+            # Need this to preserve case of keys
+            cfg.optionxform = str
+            cfg.read(config)
+            cfg["luigi_ExportLocal"]["config"] = str(path / "export.yaml")
             with open(dest, "w") as f:
                 cfg.write(f)
         else:

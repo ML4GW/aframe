@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
+export = "export.cli:main"
 export-model = "export.main:export"
 export-and-launch-triton = "export.remote:main"
 

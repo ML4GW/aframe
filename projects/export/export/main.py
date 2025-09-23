@@ -180,6 +180,7 @@ def export(
             kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             fduration=fduration,
+            preprocessor=preprocessor,
             preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,
         )

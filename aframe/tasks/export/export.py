@@ -1,33 +1,28 @@
-import importlib
 import os
+import sys
 
 import law
 import luigi
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
-from aframe.config import paths
+from aframe.config import Defaults, paths
 from aframe.parameters import PathParameter
 from aframe.tasks.export.target import ModelRepositoryTarget
+from aframe.tasks.train.utils import stream_command
 
 
 class ExportParams(law.Task):
+    config = luigi.Parameter(default=Defaults.EXPORT)
     fduration = luigi.FloatParameter()
     kernel_length = luigi.FloatParameter()
     inference_sampling_rate = luigi.FloatParameter()
     sample_rate = luigi.FloatParameter()
     batch_file = luigi.Parameter(default="")
     streams_per_gpu = luigi.IntParameter()
-    aframe_instances = luigi.IntParameter()
-    preproc_instances = luigi.IntParameter()
-    clean = luigi.BoolParameter()
     batch_size = luigi.IntParameter()
     psd_length = luigi.FloatParameter()
     highpass = luigi.FloatParameter()
-    lowpass = luigi.OptionalFloatParameter(default="")
-    preprocessor = luigi.Parameter(default="utils.preprocessing.BatchWhitener")
-    preprocessor_kwargs = luigi.Parameter(default={})
-    fftlength = luigi.OptionalFloatParameter(default="")
     ifos = luigi.ListParameter()
     repository_directory = PathParameter(
         default=paths().results_dir / "model_repo"
@@ -45,11 +40,6 @@ class ExportLocal(AframeSingularityTask):
         super().__init__(*args, **kwargs)
         self.repository_directory.mkdir(exist_ok=True, parents=True)
 
-    def _import_class(self, path: str):
-        module_name, class_name = path.rsplit(".", 1)
-        module = importlib.import_module(module_name)
-        return getattr(module, class_name)
-
     def output(self):
         return ModelRepositoryTarget(self.repository_directory, self.platform)
 
@@ -64,38 +54,50 @@ class ExportLocal(AframeSingularityTask):
     def num_ifos(self):
         return len(self.ifos)
 
+    def get_args(self):
+        args = ["--config", self.config]
+        args.append("--repository_directory=" + str(self.repository_directory))
+        args.append("--num_ifos=" + str(self.num_ifos))
+        args.append("--sample_rate=" + str(self.sample_rate))
+        args.append("--kernel_length=" + str(self.kernel_length))
+        args.append("--fduration=" + str(self.fduration))
+        args.append(
+            "--inference_sampling_rate=" + str(self.inference_sampling_rate)
+        )
+        args.append("--batch_size=" + str(self.batch_size))
+        args.append("--psd_length=" + str(self.psd_length))
+        args.append("--streams_per_gpu=" + str(self.streams_per_gpu))
+        args.append("--platform=" + str(self.platform))
+        return args
+
     def run(self):
-        from hermes.quiver import Platform
-
-        from export.main import export
-
-        breakpoint()
-        cls = self._import_class(self.preprocessor)
-        preprocessor = cls(**self.preprocessor_kwargs)
-        # convert string to Platform enum
-        platform = Platform[self.platform]
-
         # Assuming a convention for batch file/model file
         # names and locations
         weights = self.input().path
         weights_dir = os.path.dirname(weights)
         batch_file = weights_dir + "/batch.hdf5"
 
-        export(
-            weights,
-            self.repository_directory,
-            batch_file,
-            self.num_ifos,
-            self.kernel_length,
-            self.inference_sampling_rate,
-            self.sample_rate,
-            self.batch_size,
-            self.fduration,
-            self.psd_length,
-            preprocessor,
-            self.streams_per_gpu,
-            self.aframe_instances,
-            self.preproc_instances,
-            platform,
-            clean=self.clean,
-        )
+        args = self.get_args()
+        args.append("--weights=" + weights)
+        args.append("--batch_file=" + batch_file)
+        cmd = [sys.executable, "-m", "export"] + args
+        stream_command(cmd)
+
+        # export(
+        #     weights,
+        #     self.repository_directory,
+        #     batch_file,
+        #     self.num_ifos,
+        #     self.kernel_length,
+        #     self.inference_sampling_rate,
+        #     self.sample_rate,
+        #     self.batch_size,
+        #     self.fduration,
+        #     self.psd_length,
+        #     preprocessor,
+        #     self.streams_per_gpu,
+        #     self.aframe_instances,
+        #     self.preproc_instances,
+        #     platform,
+        #     clean=self.clean,
+        # )

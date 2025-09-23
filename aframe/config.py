@@ -97,7 +97,8 @@ class s3(luigi.Config):
 
 
 class Defaults:
-    TRAIN = os.path.join(project_base, "train", "config.yaml")
+    TRAIN = os.path.join(project_base, "train", "train.yaml")
+    EXPORT = os.path.join(project_base, "export", "export.yaml")
 
 
 # mapping from external to internal nautilus urls
