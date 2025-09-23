@@ -23,7 +23,7 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
         asds *= 1e23
         asds = asds.float()
 
-        return X_bg, X_fg, X_bg_fft, X_fg_fft
+        return (X_bg, X_bg_fft), (X_fg, X_fg_fft)
 
     def on_after_batch_transfer(self, batch, _):
         """
@@ -51,7 +51,7 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
             # much data from CPU to GPU. Once everything is
             # on-device, pre-inject signals into background.
             shift = self.timeslides[timeslide_idx].shift_size
-            X_bg, X_fg, X_bg_fft, X_fg_fft = self.build_val_batches(
+            (X_bg, X_bg_fft), (X_fg, X_fg_fft) = self.build_val_batches(
                 background, signals
             )
             batch = (shift, X_bg, X_fg, X_bg_fft, X_fg_fft)

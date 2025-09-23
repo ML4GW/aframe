@@ -46,7 +46,11 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         [X], waveforms = next(iter(trainer.train_dataloader))
         X = X.to(device)
         X, y = trainer.datamodule.augment(X, waveforms)
-        trace = torch.jit.trace(module.model.to("cpu"), X.to("cpu"))
+        if isinstance(X, tuple):
+            X = tuple(i.cpu() for i in X)
+        else:
+            X = X.cpu()
+        trace = torch.jit.trace(module.model.to("cpu"), X)
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
@@ -76,6 +80,10 @@ class SaveAugmentedBatch(Callback):
             X = X.to(device)
 
             X, y = trainer.datamodule.augment(X, waveforms)
+            # If X is not a tuple, make it one for consistency
+            # of format for saving to file below
+            if not isinstance(X, tuple):
+                X = (X,)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -86,32 +94,42 @@ class SaveAugmentedBatch(Callback):
             X_bg, X_inj = trainer.datamodule.build_val_batches(
                 background, signals
             )
+            # Make background and injected validation data into
+            # tuples for consistency if necessary
+            if not isinstance(X_bg, tuple):
+                X_bg = (X_bg,)
+            if not isinstance(X_inj, tuple):
+                X_inj = (X_inj,)
 
             if save_dir.startswith("s3://"):
                 s3 = s3fs.S3FileSystem()
-                with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
+                with s3.open(f"{save_dir}/batch.hdf5", "wb") as s3_file:
                     with io.BytesIO() as f:
                         with h5py.File(f, "w") as h5file:
-                            h5file["X"] = X.cpu().numpy()
+                            for i, x in enumerate(X):
+                                h5file[f"input_{i}"] = x.cpu().numpy()
                             h5file["y"] = y.cpu().numpy()
                         s3_file.write(f.getvalue())
 
-                with s3.open(f"{save_dir}/val_batch.h5", "wb") as s3_file:
+                with s3.open(f"{save_dir}/val_batch.hdf5", "wb") as s3_file:
                     with io.BytesIO() as f:
                         with h5py.File(f, "w") as h5file:
-                            h5file["X_bg"] = X_bg.cpu().numpy()
-                            h5file["X_inj"] = X_inj.cpu().numpy()
+                            for i, (bg, inj) in enumerate(zip(X_bg, X_inj)):
+                                h5file[f"X_bg_{i}"] = bg.cpu().numpy()
+                                h5file[f"X_inj_{i}"] = inj.cpu().numpy()
                         s3_file.write(f.getvalue())
             else:
-                with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
-                    f["X"] = X.cpu().numpy()
+                with h5py.File(os.path.join(save_dir, "batch.hdf5"), "w") as f:
+                    for i, x in enumerate(X):
+                        f[f"input_{i}"] = x.cpu().numpy()
                     f["y"] = y.cpu().numpy()
 
                 with h5py.File(
-                    os.path.join(save_dir, "val_batch.h5"), "w"
+                    os.path.join(save_dir, "val_batch.hdf5"), "w"
                 ) as f:
-                    f["X_bg"] = X_bg.cpu().numpy()
-                    f["X_inj"] = X_inj.cpu().numpy()
+                    for i, (bg, inj) in enumerate(zip(X_bg, X_inj)):
+                        f[f"X_bg_{i}"] = bg.cpu().numpy()
+                        f[f"X_inj_{i}"] = inj.cpu().numpy()
 
             # while we're here let's log the wandb url
             # associated with the run
