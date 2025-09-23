@@ -113,13 +113,13 @@ def pastro_subprocess(
             try:
                 with h5py.File(posterior_file, "r") as f:
                     samples = f["posterior_samples"][:]
-                    m1_source = samples["mass_1_source"]
-                    m2_source = samples["mass_2_source"]
+                    m1 = samples["mass_1"]
+                    m2 = samples["mass_2"]
 
                 logger.info("Read posteriors from file")
-                num_samples = len(m1_source)
-                bns_frac = sum(m1_source < 3) / num_samples
-                bbh_frac = sum(m2_source > 3) / num_samples
+                num_samples = len(m1)
+                bns_frac = sum(m1 < 3) / num_samples
+                bbh_frac = sum(m2 > 3) / num_samples
                 nsbh_frac = 1 - bns_frac - bbh_frac
 
                 probs = {
