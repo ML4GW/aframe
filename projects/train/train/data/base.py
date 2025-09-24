@@ -557,7 +557,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         # signals so that they're spaced evenly
         # throughout all those batches.
         num_waveforms = len(self.val_waveforms)
-
         signal_batch_size = (num_waveforms - 1) // self.valid_loader_length + 1
 
         # self._logger.info(f"signal batch size: {signal_batch_size}")

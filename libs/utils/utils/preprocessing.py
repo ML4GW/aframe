@@ -163,3 +163,94 @@ class BatchWhitener(torch.nn.Module):
         if self.return_whitened:
             return x, whitened
         return x
+
+
+class MultiModalPreprocessor(torch.nn.Module):
+    """
+    Preprocess a batch of waveforms for multimodal training.
+    This includes whitening the time domain data and
+    calculating the frequency domain data
+    """
+
+    def __init__(
+        self,
+        kernel_length: float,
+        sample_rate: float,
+        inference_sampling_rate: float,
+        batch_size: int,
+        fduration: float,
+        fftlength: float,
+        highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
+    ) -> None:
+        super().__init__()
+        self.stride_size = int(sample_rate / inference_sampling_rate)
+        self.kernel_size = int(kernel_length * sample_rate)
+
+        # do foreground length calculation in units of samples,
+        # then convert back to length to guard for intification
+        strides = (batch_size - 1) * self.stride_size
+        fsize = int(fduration * sample_rate)
+        size = strides + self.kernel_size + fsize
+        length = size / sample_rate
+        self.psd_estimator = PsdEstimator(
+            length,
+            sample_rate,
+            fftlength=fftlength,
+            overlap=None,
+            average="median",
+            fast=highpass is not None,
+        )
+        self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
+
+        freqs = torch.fft.rfftfreq(self.kernel_size, d=1 / sample_rate)
+        self.freq_mask = torch.ones_like(freqs, dtype=torch.bool)
+        if highpass is not None:
+            self.freq_mask &= freqs > highpass
+        if lowpass is not None:
+            self.freq_mask &= freqs < lowpass
+
+    def forward(self, x: Tensor) -> Tensor:
+        # Get the number of channels so we know how to
+        # reshape `x` appropriately after unfolding to
+        # ensure we have (batch, channels, time) shape
+        if x.ndim == 3:
+            num_channels = x.size(1)
+        elif x.ndim == 2:
+            num_channels = x.size(0)
+        else:
+            raise ValueError(
+                "Expected input to be either 2 or 3 dimensional, "
+                "but found shape {}".format(x.shape)
+            )
+
+        x, psd = self.psd_estimator(x.double())
+        whitened = self.whitener(x, psd)
+
+        x = x.float()
+
+        asd = psd**0.5
+        asd = asd.float()
+        asd = torch.nn.functional.interpolate(
+            asd.unsqueeze(0),
+            size=(len(self.freq_mask),),
+            mode="linear",
+        )
+        asd = asd[:, :, self.freq_mask]
+        asd *= 1e23
+
+        # unfold x and then put it into the expected shape.
+        # Note that if x has both signal and background
+        # batch elements, they will be interleaved along
+        # the batch dimension after unfolding
+        x = unfold_windows(whitened, self.kernel_size, self.stride_size)
+        x = x.reshape(-1, num_channels, self.kernel_size)
+
+        asd = asd.expand(x.shape[0], -1, -1)
+        inv_asd = 1 / asd
+
+        x_fft = torch.fft.rfft(x, dim=-1)
+        x_fft = x_fft[:, :, self.freq_mask]
+        x_fft = torch.cat([x_fft.real, x_fft.imag, inv_asd], dim=1)
+
+        return x, x_fft

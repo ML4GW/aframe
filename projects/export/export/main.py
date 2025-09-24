@@ -33,10 +33,7 @@ def export(
     batch_size: int,
     fduration: float,
     psd_length: float,
-    fftlength: Optional[float] = None,
-    q: Optional[float] = None,
-    highpass: Optional[float] = None,
-    lowpass: Optional[float] = None,
+    preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
     aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
@@ -85,13 +82,9 @@ def export(
         psd_length:
             Length of background time in seconds to use for PSD
             calculation
-        fftlength:
-            Length of time in seconds to use to calculate the FFT
-            during whitening
-        highpass:
-            Frequency to use for a highpass filter
-        lowpass:
-            Frequency to use for a lowpass filter
+        preprocessor:
+            PyTorch module that defines how data from the snapshotter
+            is manipulated before being given the model
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
@@ -139,9 +132,12 @@ def export(
 
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
-        size = batch_file["X"].shape[2:]
+        input_shape_dict = {
+            key: (batch_size,) + tuple(batch_file[key].shape[1:])
+            for key in batch_file.keys()
+            if key != "y"
+        }
 
-    input_shape = (batch_size, num_ifos) + tuple(size)
     # the network will have some different keyword
     # arguments required for export depending on
     # the target inference platform
@@ -159,7 +155,7 @@ def export(
 
     aframe.export_version(
         graph,
-        input_shapes={"whitened": input_shape},
+        input_shapes=input_shape_dict,
         output_names=["discriminator"],
         **kwargs,
     )
@@ -174,24 +170,22 @@ def export(
     except KeyError:
         # if we don't, create one
         ensemble = repo.add(ensemble_name, platform=qv.Platform.ENSEMBLE)
-        # if fftlength isn't specified, calculate the default value
-        fftlength = fftlength or kernel_length + fduration
-        whitened = add_streaming_input_preprocessor(
+        preproc_model = add_streaming_input_preprocessor(
             ensemble,
-            aframe.inputs["whitened"],
+            input_shape_dict,
+            batch_size,
+            num_ifos,
             psd_length=psd_length,
             sample_rate=sample_rate,
             kernel_length=kernel_length,
             inference_sampling_rate=inference_sampling_rate,
             fduration=fduration,
-            fftlength=fftlength,
-            q=q,
-            highpass=highpass,
-            lowpass=lowpass,
+            preprocessor=preprocessor,
             preproc_instances=preproc_instances,
             streams_per_gpu=streams_per_gpu,
         )
-        ensemble.pipe(whitened, aframe.inputs["whitened"])
+        for key in input_shape_dict.keys():
+            ensemble.pipe(preproc_model.outputs[key], aframe.inputs[key])
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry

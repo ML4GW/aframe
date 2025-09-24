@@ -11,7 +11,7 @@ from aframe.tasks.data.fetch import FetchTrain
 
 
 class TrainBaseParameters(law.Task):
-    config = luigi.Parameter(
+    train_config = luigi.Parameter(
         default=Defaults.TRAIN,
         description="Path to the lightning CLI config file used for training. "
         "Defaults to the config file in the root of the train project.",
@@ -115,7 +115,7 @@ class TrainBase(law.Task):
     def get_args(self):
         args = [
             "--config",
-            self.config,
+            self.train_config,
             "--seed_everything",
             str(self.seed),
             f"--data.ifos=[{','.join(self.ifos)}]",
