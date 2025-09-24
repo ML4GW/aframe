@@ -72,7 +72,7 @@ def copy_configs(
             train_task = (
                 "luigi_Train" if pipeline == "sandbox" else "luigi_TuneTask"
             )
-            cfg[train_task]["config"] = str(path / "train.yaml")
+            cfg[train_task]["train_config"] = str(path / "train.yaml")
 
             # if tuning, set the tune config file
             if pipeline == "tune":
@@ -85,7 +85,9 @@ def copy_configs(
             # Need this to preserve case of keys
             cfg.optionxform = str
             cfg.read(config)
-            cfg["luigi_ExportLocal"]["config"] = str(path / "export.yaml")
+            cfg["luigi_ExportLocal"]["export_config"] = str(
+                path / "export.yaml"
+            )
             with open(dest, "w") as f:
                 cfg.write(f)
         else:

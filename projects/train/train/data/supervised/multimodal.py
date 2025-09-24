@@ -37,7 +37,8 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
             [X], waveforms = batch
-            batch = self.augment(X, waveforms)
+            (X, X_fft), y = self.augment(X, waveforms)
+            batch = (X, X_fft, y)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
             # on the local device, the relevant tensors will be
@@ -90,4 +91,4 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
         X = self.whitener(X, psds)
         X_fft = self.compute_frequency_domain_data(X, psds)
 
-        return X, X_fft, y
+        return (X, X_fft), y

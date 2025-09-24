@@ -13,7 +13,7 @@ from aframe.tasks.train.utils import stream_command
 
 
 class ExportParams(law.Task):
-    config = luigi.Parameter(default=Defaults.EXPORT)
+    export_config = luigi.Parameter(default=Defaults.EXPORT)
     fduration = luigi.FloatParameter()
     kernel_length = luigi.FloatParameter()
     inference_sampling_rate = luigi.FloatParameter()
@@ -55,7 +55,7 @@ class ExportLocal(AframeSingularityTask):
         return len(self.ifos)
 
     def get_args(self):
-        args = ["--config", self.config]
+        args = ["--config", self.export_config]
         args.append("--repository_directory=" + str(self.repository_directory))
         args.append("--num_ifos=" + str(self.num_ifos))
         args.append("--sample_rate=" + str(self.sample_rate))
@@ -82,22 +82,3 @@ class ExportLocal(AframeSingularityTask):
         args.append("--batch_file=" + batch_file)
         cmd = [sys.executable, "-m", "export"] + args
         stream_command(cmd)
-
-        # export(
-        #     weights,
-        #     self.repository_directory,
-        #     batch_file,
-        #     self.num_ifos,
-        #     self.kernel_length,
-        #     self.inference_sampling_rate,
-        #     self.sample_rate,
-        #     self.batch_size,
-        #     self.fduration,
-        #     self.psd_length,
-        #     preprocessor,
-        #     self.streams_per_gpu,
-        #     self.aframe_instances,
-        #     self.preproc_instances,
-        #     platform,
-        #     clean=self.clean,
-        # )
