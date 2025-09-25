@@ -34,7 +34,7 @@ jobs:
     if: github.event.pull_request.draft == false
     outputs:
       projects: ${{ steps.filter.outputs.changes }}
-      has-changes: ${{ steps.filter.outputs.changes != '[]' }} && ${{ steps.filters.outputs.changes != '' }}
+      has-changes: steps.filter.outputs.changes != '[]' && steps.filter.outputs.changes != ''
       check1: ${{ steps.filter.outputs.changes != '[]' }}
       check2: ${{ steps.filter.outputs.changes != '' }}
     steps:
