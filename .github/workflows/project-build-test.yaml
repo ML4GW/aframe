@@ -37,10 +37,10 @@ jobs:
       has-changes: steps.filter.outputs.changes != '[]' && steps.filters.outputs.changes != ''
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Filter project changes
       id: filter 
-      uses: dorny/paths-filter@v2
+      uses: dorny/paths-filter@v3
       with:
         filters: .github/project-filters.yaml
 
