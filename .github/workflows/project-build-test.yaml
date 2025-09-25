@@ -44,6 +44,15 @@ jobs:
       with:
         filters: .github/project-filters.yaml
 
+  test-changes:
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+      - env:
+          PROJECTS: ${{ needs.changes.outputs.projects }} 
+          HAS_CHANGES: ${{ needs.changes.outputs.has-changes }}
+        run: echo "$PROJECTS $HAS_CHANGES"
+
   build-test:
     runs-on: ubuntu-latest
     needs: changes 
