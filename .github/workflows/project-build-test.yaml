@@ -56,7 +56,7 @@ jobs:
           CHECK1: ${{ needs.changes.outputs.check1 }}
           CHECK2: ${{ needs.changes.outputs.check2 }}
           COMBINED: ${{ needs.changes.outputs.check1 && needs.changes.outputs.check2 }}
-        run: echo "$PROJECTS $HAS_CHANGES $CHECK1 $CHECK2"
+        run: echo "$PROJECTS $HAS_CHANGES $CHECK1 $CHECK2 $COMBINED"
 
   build-test:
     runs-on: ubuntu-latest
