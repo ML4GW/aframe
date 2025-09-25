@@ -13,6 +13,7 @@ from ml4gw.nn.resnet import ResNet1D
 from tritonclient.grpc.model_config_pb2 import ModelConfig
 
 from export.main import export
+from utils.preprocessing import BatchWhitener
 
 
 # set up a directory for the entirety of the session
@@ -235,6 +236,25 @@ def batch_size(request):
     return request.param
 
 
+@pytest.fixture
+def preprocessor(
+    kernel_length,
+    sample_rate,
+    inference_sampling_rate,
+    batch_size,
+    fduration,
+):
+    return BatchWhitener(
+        kernel_length=kernel_length,
+        sample_rate=sample_rate,
+        inference_sampling_rate=inference_sampling_rate,
+        batch_size=batch_size,
+        fduration=fduration,
+        fftlength=2,
+        highpass=32,
+    )
+
+
 def test_export_for_shapes(
     repo_dir,
     batch_file,
@@ -244,6 +264,7 @@ def test_export_for_shapes(
     psd_length,
     batch_size,
     inference_sampling_rate,
+    preprocessor,
     trace_network_weights,
     validate_repo,
     output_dir,
@@ -282,6 +303,7 @@ def test_export_for_shapes(
             sample_rate=sample_rate,
             batch_size=batch_size,
             fduration=fduration,
+            preprocessor=preprocessor,
             streams_per_gpu=1,
             aframe_instances=1,
             platform=platform,
@@ -308,6 +330,7 @@ def test_export_for_weights(
     psd_length,
     inference_sampling_rate,
     fduration,
+    preprocessor,
     trace_network_weights,
     validate_repo,
     batch_size,
@@ -337,8 +360,9 @@ def test_export_for_weights(
         sample_rate=sample_rate,
         kernel_length=kernel_length,
         psd_length=psd_length,
-        batch_size=1,
+        batch_size=batch_size,
         fduration=fduration,
+        preprocessor=preprocessor,
         streams_per_gpu=1,
         aframe_instances=1,
         platform=platform,
@@ -352,7 +376,7 @@ def test_export_for_weights(
         expected_aframe_size=int(sample_rate * kernel_length),
         expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
-        expected_batch_size=1,
+        expected_batch_size=batch_size,
     )
 
 
@@ -394,6 +418,7 @@ def test_export_for_scaling(
     psd_length,
     inference_sampling_rate,
     fduration,
+    preprocessor,
     validate_repo,
     trace_network_weights,
     batch_size,
@@ -431,8 +456,9 @@ def test_export_for_scaling(
             sample_rate=sample_rate,
             kernel_length=kernel_length,
             psd_length=psd_length,
-            batch_size=1,
-            fduration=1,
+            batch_size=batch_size,
+            fduration=fduration,
+            preprocessor=preprocessor,
             streams_per_gpu=streams_per_gpu,
             aframe_instances=aframe_instances,
             clean=clean,
@@ -449,7 +475,7 @@ def test_export_for_scaling(
         expected_aframe_size=int(sample_rate * kernel_length),
         expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
-        expected_batch_size=1,
+        expected_batch_size=batch_size,
     )
 
     # now check what happens if the repo already exists
@@ -463,7 +489,7 @@ def test_export_for_scaling(
         expected_aframe_size=int(sample_rate * kernel_length),
         expected_state_size=expected_state_size,
         expected_crop=int(sample_rate),
-        expected_batch_size=1,
+        expected_batch_size=batch_size,
     )
 
     # now make sure if we change the scale
@@ -479,7 +505,7 @@ def test_export_for_scaling(
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_aframe_size=int(sample_rate * kernel_length),
         expected_state_size=expected_state_size,
-        expected_batch_size=1,
+        expected_batch_size=batch_size,
         expected_crop=int(sample_rate),
     )
 
@@ -516,6 +542,6 @@ def test_export_for_scaling(
         expected_stream_size=int(sample_rate / inference_sampling_rate),
         expected_aframe_size=int(sample_rate * kernel_length),
         expected_state_size=expected_state_size,
-        expected_batch_size=1,
+        expected_batch_size=batch_size,
         expected_crop=int(sample_rate),
     )
