@@ -35,6 +35,8 @@ jobs:
     outputs:
       projects: ${{ steps.filter.outputs.changes }}
       has-changes: ${{ steps.filter.outputs.changes != '[]' && steps.filters.outputs.changes != '' }}
+      check1: ${{ steps.filter.outputs.changes != '[]' }}
+      check2: ${{ steps.filter.outputs.changes != '' }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -51,7 +53,9 @@ jobs:
       - env:
           PROJECTS: ${{ needs.changes.outputs.projects }} 
           HAS_CHANGES: ${{ needs.changes.outputs.has-changes }}
-        run: echo "$PROJECTS $HAS_CHANGES"
+          CHECK1: ${{ needs.changes.outputs.check1 }}
+          CHECK2: ${{ needs.changes.outputs.check2 }}
+        run: echo "$PROJECTS $HAS_CHANGES $CHECK1 $CHECK2"
 
   build-test:
     runs-on: ubuntu-latest
