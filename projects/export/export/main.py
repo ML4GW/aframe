@@ -130,6 +130,8 @@ def export(
     if aframe_instances is not None:
         scale_model(aframe, aframe_instances)
 
+    # Infer the shape of each input from the batch file.
+    # Assumes the output is stored as "y"
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
         input_shape_dict = {
