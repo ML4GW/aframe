@@ -162,6 +162,8 @@ def postprocess_samples(
     )
     posterior["mass_1"] = mass_1
     posterior["mass_2"] = mass_2
+    posterior["mass_1_source"] = mass_1 / (1 + z_vals)
+    posterior["mass_2_source"] = mass_2 / (1 + z_vals)
     # add time column so ligo-skymap-from-samples
     # can add the gpstime metadata attribute
     posterior["time"] = np.ones_like(mass_1) * event_time
