@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -6,6 +7,7 @@ from torch.multiprocessing import Queue
 
 from .utils import subprocess_wrapper
 
+import h5py
 import pickle
 
 from ledger.events import EventSet, RecoveredInjectionSet
@@ -18,6 +20,10 @@ if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
 
 logger = logging.getLogger("pastro-process")
+
+TIMEOUT = 10
+TIMESTEP = 1e-3
+MAX_RETRIES = int(TIMEOUT / TIMESTEP)
 
 
 def fit_or_load_pastro(
@@ -96,9 +102,51 @@ def pastro_subprocess(
     while True:
         event = pastro_queue.get()
         logger.info("Calculating p_astro")
-        pastro = pastro_model(event.detection_statistic)
+        pastro = float(pastro_model(event.detection_statistic))
         graceid = pastro_queue.get()
 
-        logger.info(f"Submitting p_astro: {pastro} for {graceid}")
-        gdb.submit_pastro(float(pastro), graceid, event.event_dir)
+        event_dir = outdir / "events" / event.event_dir
+        posterior_file = event_dir / "amplfi.posterior_samples.hdf5"
+
+        retries = 0
+        while True:
+            try:
+                with h5py.File(posterior_file, "r") as f:
+                    samples = f["posterior_samples"][:]
+                    m1_source = samples["mass_1_source"]
+                    m2_source = samples["mass_2_source"]
+
+                logger.info("Read posteriors from file")
+                num_samples = len(m1_source)
+                bns_frac = sum(m1_source < 3) / num_samples
+                bbh_frac = sum(m2_source > 3) / num_samples
+                nsbh_frac = 1 - bns_frac - bbh_frac
+
+                probs = {
+                    "BBH": pastro * bbh_frac,
+                    "NSBH": pastro * nsbh_frac,
+                    "BNS": pastro * bns_frac,
+                    "Terrestrial": 1 - pastro,
+                }
+
+                break
+            except Exception:
+                time.sleep(TIMESTEP)
+                retries += 1
+
+            if retries >= MAX_RETRIES:
+                logging.info(
+                    f"Posterior file not found after {TIMEOUT} seconds, "
+                    "assigning all probability to BBH"
+                )
+                probs = {
+                    "BBH": pastro,
+                    "NSBH": 0,
+                    "BNS": 0,
+                    "Terrestrial": 1 - pastro,
+                }
+                break
+
+        logger.info(f"Submitting p_astro: {probs} for {graceid}")
+        gdb.submit_pastro(probs, graceid, event.event_dir)
         logger.info(f"Submitted p_astro for {graceid}")
