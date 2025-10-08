@@ -54,6 +54,10 @@ class TestingWaveformsParams(WaveformParams):
         description="Seed for controlling randomness"
         " of waveform prior sampling"
     )
+    jitter = luigi.FloatParameter(
+        description="Scale of random jitter to add to injection times",
+        default=0.1,
+    )
     output_dir = PathParameter(
         description="Directory where merged waveforms and "
         "rejected parameters will be saved",
@@ -184,7 +188,8 @@ class DeployTestingWaveforms(
                 self.snr_threshold,
                 psd_file,
                 Path(self.tmp_dir),
-                self.seed,
+                jitter=self.jitter,
+                seed=self.seed,
             )
 
 
