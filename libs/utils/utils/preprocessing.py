@@ -134,9 +134,6 @@ class BatchWhitener(torch.nn.Module):
         )
         self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
 
-        freqs = torch.fft.rfftfreq(size, d=1 / sample_rate)
-        self.freq_mask = (freqs > highpass) & (freqs < lowpass)
-
     def forward(self, x: Tensor) -> Tensor:
         # Get the number of channels so we know how to
         # reshape `x` appropriately after unfolding to
@@ -154,19 +151,6 @@ class BatchWhitener(torch.nn.Module):
         x, psd = self.psd_estimator(x.double())
         whitened = self.whitener(x, psd)
 
-        x = x.float()
-
-        if self.return_asd:
-            asd = psd**0.5
-            asd = asd.float()
-            asd = torch.nn.functional.interpolate(
-                asd.unsqueeze(0),
-                size=(len(self.freq_mask),),
-                mode="linear",
-            )
-            asd = asd[:, :, self.freq_mask]
-            asd = asd.expand(x.shape[0], -1, -1)
-
         # unfold x and then put it into the expected shape.
         # Note that if x has both signal and background
         # batch elements, they will be interleaved along
@@ -176,14 +160,9 @@ class BatchWhitener(torch.nn.Module):
         if self.augmentor is not None:
             x = self.augmentor(x)
 
-        if self.return_whitened and self.return_asd:
-            return x, whitened, asd
-        elif self.return_whitened:
+        if self.return_whitened:
             return x, whitened
-        elif self.return_asd:
-            return x, asd
-        else:
-            return x
+        return x
 
 
 class MultiModalPreprocessor(torch.nn.Module):

@@ -60,7 +60,7 @@ class TrainBaseParameters(law.Task):
         "It is expected to contain a `val_waveforms.hdf5` file of "
         "signals for validation, a `/background` sub-directory containing "
         "background, and a `train_waveforms.hdf5` file containing "
-        "training signals if `generate_train_waveforms` is set to False.",
+        "training signals if `precompute_train_waveforms` is set to True.",
         default=paths().train_datadir,
     )
     precompute_train_waveforms = luigi.BoolParameter(

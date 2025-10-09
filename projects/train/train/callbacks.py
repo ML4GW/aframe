@@ -45,7 +45,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         device = pl_module.device
         [X] = next(iter(trainer.train_dataloader))
         X = X.to(device)
-        X, y = trainer.datamodule.augment(X, waveforms)
+        X, y = trainer.datamodule.inject(X)
         if isinstance(X, tuple):
             X = tuple(i.cpu() for i in X)
         else:
@@ -78,7 +78,7 @@ class SaveAugmentedBatch(Callback):
             [X] = next(iter(trainer.train_dataloader))
             X = X.to(device)
 
-            X, y = trainer.datamodule.augment(X, waveforms)
+            X, y = trainer.datamodule.inject(X)
             # If X is not a tuple, make it one for consistency
             # of format for saving to file below
             if not isinstance(X, tuple):
@@ -90,8 +90,8 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj, val_X_bg_fft, val_X_fg_fft = (
-                trainer.datamodule.build_val_batches(background, signals)
+            X_bg, X_inj = trainer.datamodule.build_val_batches(
+                background, signals
             )
             # Make background and injected validation data into
             # tuples for consistency if necessary
@@ -122,7 +122,6 @@ class SaveAugmentedBatch(Callback):
                     for i, x in enumerate(X):
                         f[f"input_{i}"] = x.cpu().numpy()
                     f["y"] = y.cpu().numpy()
-                    f["X_fft"] = X_fft.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"

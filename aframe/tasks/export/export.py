@@ -29,7 +29,7 @@ class ExportParams(law.Task):
     )
     train_task = luigi.TaskParameter()
     platform = luigi.Parameter(
-        default="TORCHSCRIPT",
+        default="TENSORRT",
         description="Platform to use for exporting model for inference",
     )
 
