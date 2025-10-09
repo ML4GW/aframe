@@ -5,3 +5,4 @@ from .supervised import (
     SupervisedAframeS4,
     SupervisedMultiModalAframe,
 )
+from .MultimodalMultiband import MultimodalMultibandModule

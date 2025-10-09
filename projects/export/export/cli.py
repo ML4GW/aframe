@@ -26,7 +26,13 @@ def main(args=None):
     configure_logging(logfile, verbose)
     args = args.as_dict()
     # args["platform"] = Platform[args["platform"]]
-    export(**args)
+    if args['model_type'] == 'mm_export':
+        from export.mm_modules import separate_model
+        separate_model(**args)
+        from export.mm_main import export
+        export(**args)
+    else:
+        export(**args)
 
 
 if __name__ == "__main__":

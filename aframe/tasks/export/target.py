@@ -24,7 +24,7 @@ class ModelRepositoryTarget(luigi.Target):
 
         # currently only check `aframe` model for versions
         # since this is the most important
-        version_dir = os.path.join(self.path, "aframe")
+        version_dir = os.path.join(self.path, "fc")
         if not os.path.isdir(version_dir):
             return versions
 
@@ -51,10 +51,12 @@ class ModelRepositoryTarget(luigi.Target):
 
         # define the structure of the model repo
         structure = {
-            "aframe": [
-                "config.pbtxt",
-                (version, [conventions[self.platform]]),
-            ],
+            "resnet_0": ["config.pbtxt", (version, [conventions[self.platform]]),],
+            "resnet_1": ["config.pbtxt", (version, [conventions[self.platform]]),],
+            "resnet_2": ["config.pbtxt", (version, [conventions[self.platform]]),],
+            "resnet_3": ["config.pbtxt", (version, [conventions[self.platform]]),],
+            "fc": ["config.pbtxt", (version, [conventions[self.platform]]),],
+            "concatenation_layer": ["config.pbtxt", (version, ["model.plan"])],
             "aframe-stream": ["config.pbtxt", (version, ["model.empty"])],
             "preprocessor": ["config.pbtxt", (version, ["model.pt"])],
             "snapshotter": ["config.pbtxt", (version, ["model.onnx"])],

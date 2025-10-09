@@ -24,6 +24,7 @@ dependencies = [
     { name = "pykube-ng", extra = ["oidc"] },
     { name = "spython" },
     { name = "utils" },
+    { name = "architectures" },
 ]
 
 [package.metadata]
@@ -40,6 +41,7 @@ requires-dist = [
     { name = "pykube-ng", extras = ["oidc"], specifier = ">=23.6.0,<24" },
     { name = "spython", specifier = ">=0.2,<0.3" },
     { name = "utils", editable = "../../libs/utils" },
+    { name = "architectures", editable = "../../libs/architectures" },
 ]
 
 [package.metadata.requires-dev]
@@ -493,6 +495,7 @@ dependencies = [
     { name = "tensorrt" },
     { name = "urllib3" },
     { name = "utils" },
+    { name = "architectures" },
 ]
 
 [package.dev-dependencies]
@@ -512,6 +515,7 @@ requires-dist = [
     { name = "tensorrt", specifier = "==8.5.2.2" },
     { name = "urllib3", specifier = ">=1.25.4,<1.27" },
     { name = "utils", editable = "../../libs/utils" },
+    { name = "architectures", editable = "../../libs/architectures" },
 ]
 
 [package.metadata.requires-dev]
@@ -2090,6 +2094,15 @@ wheels = [
 ]
 
 [[package]]
+name = "einops"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/81/df4fbe24dff8ba3934af99044188e20a98ed441ad17a274539b74e82e126/einops-0.8.1.tar.gz", hash = "sha256:de5d960a7a761225532e0f1959e5315ebeafc0cd43394732f103ca44b9837e84", size = 54805 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/62/9773de14fe6c45c23649e98b83231fffd7b9892b6cf863251dc2afa73643/einops-0.8.1-py3-none-any.whl", hash = "sha256:919387eb55330f5757c6bea9165c5ff5cfe63a642682ea788a6d472576d81737", size = 64359 },
+]
+
+[[package]]
 name = "utils"
 version = "0.1.0"
 source = { editable = "../../libs/utils" }
@@ -2098,6 +2111,17 @@ dependencies = [
     { name = "ml4gw" },
     { name = "numpy" },
     { name = "s3fs" },
+]
+
+[[package]]
+name = "architectures"
+version = "0.1.0"
+source = { editable = "../../libs/architectures" }
+dependencies = [
+    { name = "einops" },
+    { name = "h5py" },
+    { name = "ml4gw" },
+    { name = "numpy" },
 ]
 
 [package.metadata]

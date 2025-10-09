@@ -4,6 +4,7 @@ From: ghcr.io/astral-sh/uv:0.6.10-python3.10-bookworm-slim
 %files
 . /opt/aframe/projects/export/
 ../../libs/utils /opt/aframe/libs/utils
+../../libs/architectures /opt/aframe/libs/architectures
 ../../aframe /opt/aframe/aframe
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
