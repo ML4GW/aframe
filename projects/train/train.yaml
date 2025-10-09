@@ -38,6 +38,9 @@ data:
     batch_size: 384
     batches_per_epoch: 3700
     num_files_per_batch: 10
+    # Used for loading waveforms from disk
+    # chunks_per_epoch: 10
+    # chunk_size: 10000
 
     # preprocessing args
     # kernel_length:
@@ -68,6 +71,8 @@ data:
          # max_snr: 100
          # alpha: -3
          # decay_steps: 989
+    # If loading waveforms from disk, waveform_sampler should be
+    # an instance of train.data.waveforms.WaveformLoader
     waveform_sampler: 
       class_path: train.data.waveforms.generator.cbc.CBCGenerator
       init_args:

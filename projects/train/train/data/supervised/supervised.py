@@ -43,7 +43,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         return self.hparams.waveform_prob + self.swap_prob + self.mute_prob
 
     @torch.no_grad()
-    def inject(self, X):
+    def inject(self, X, waveforms=None):
         X, psds = self.psd_estimator(X)
         X = self.inverter(X)
         X = self.reverser(X)
@@ -54,7 +54,13 @@ class SupervisedAframeDataset(BaseAframeDataset):
         mask = rvs < self.sample_prob
 
         dec, psi, phi = self.sample_extrinsic(X[mask])
-        hc, hp = self.waveform_sampler.sample(X[mask])
+        # If waveforms were passed, we're loading them from
+        # disk and we can slice out the ones we want.
+        # If not, we're generating them on the fly.
+        if waveforms is not None:
+            hc, hp = waveforms[mask, 0], waveforms[mask, 1]
+        else:
+            hc, hp = self.waveform_sampler.sample(X[mask])
 
         snrs = self.snr_sampler.sample((mask.sum().item(),)).to(X.device)
         responses = self.projector(

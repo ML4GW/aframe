@@ -25,39 +25,6 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
 
         return (X_bg, X_bg_fft), (X_fg, X_fg_fft)
 
-    def on_after_batch_transfer(self, batch, _):
-        """
-        This is a method inherited from the DataModule
-        base class that gets called after data returned
-        by a dataloader gets put on the local device,
-        but before it gets passed to the LightningModule.
-        Use this to do on-device augmentation/preprocessing.
-        """
-        if self.trainer.training:
-            # if we're training, perform random augmentations
-            # on input data and use it to impact labels
-            [X] = batch
-            (X, X_fft), y = self.inject(X)
-            batch = (X, X_fft, y)
-        elif self.trainer.validating or self.trainer.sanity_checking:
-            # If we're in validation mode but we're not validating
-            # on the local device, the relevant tensors will be
-            # empty, so just pass them through with a 0 shift to
-            # indicate that this should be ignored
-            [background, _, timeslide_idx], [signals] = batch
-
-            # If we're validating, unfold the background
-            # data into a batch of overlapping kernels now that
-            # we're on the GPU so that we're not transferring as
-            # much data from CPU to GPU. Once everything is
-            # on-device, pre-inject signals into background.
-            shift = self.timeslides[timeslide_idx].shift_size
-            (X_bg, X_bg_fft), (X_fg, X_fg_fft) = self.build_val_batches(
-                background, signals
-            )
-            batch = (shift, X_bg, X_fg, X_bg_fft, X_fg_fft)
-        return batch
-
     def compute_frequency_domain_data(self, X, psds):
         asds = psds**0.5
 

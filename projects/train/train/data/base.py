@@ -17,7 +17,12 @@ from ml4gw.utils.slicing import unfold_windows
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
 from train.metrics import get_timeslides
-from train.data.waveforms.sampler import WaveformSampler
+from train.data.waveforms import (
+    ChunkedWaveformDataset,
+    Hdf5WaveformLoader,
+    WaveformLoader,
+    WaveformSampler,
+)
 from utils.preprocessing import PsdEstimator
 
 Tensor = torch.Tensor
@@ -130,6 +135,13 @@ class BaseAframeDataset(pl.LightningDataModule):
         valid_livetime:
             Total livetime in seconds of the validation data
             to be generated via timeslides.
+        chunks_per_epoch:
+            Number of chunks of waveforms to load from disk
+            each epoch. Not used if generating waveforms
+            during training.
+        chunk_size:
+            Number of waveforms to load in each chunk.
+            Not used if generating waveforms during training.
         verbose:
             Whether to log debug information during training.
     """
@@ -167,6 +179,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
         max_num_workers: int = 6,
+        # dataloading args
+        chunks_per_epoch: int = 1,
+        chunk_size: int = 10000,
         verbose: bool = False,
     ) -> None:
         super().__init__()
@@ -190,6 +205,10 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         self.dec, self.psi, self.phi = dec, psi, phi
         self.waveform_sampler = waveform_sampler
+        # If we're using a `WaveformLoader`, we're loading
+        # training waveforms from disk, so have a flag tp
+        # indicate that
+        self.waveforms_from_disk = isinstance(waveform_sampler, WaveformLoader)
         self.snr_sampler = snr_sampler
 
         # generate our local node data directory
@@ -482,8 +501,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         if self.trainer.training:
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
-            [batch] = batch
-            batch = self.inject(batch)
+            if self.waveforms_from_disk:
+                [batch], waveforms = batch
+                batch = self.inject(batch, waveforms)
+            else:
+                [batch] = batch
+                batch = self.inject(batch)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
             # on the local device, the relevant tensors will be
@@ -636,4 +659,51 @@ class BaseAframeDataset(pl.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=pin_memory,
         )
-        return dataloader
+
+        # If we're not loading waveforms from disk, just return
+        # the background dataloader
+        if not self.waveforms_from_disk:
+            return dataloader
+
+        # build iterator for waveform loading
+        # that will load chunks of waveforms
+        # to be sampled from
+        waveform_loader = Hdf5WaveformLoader(
+            self.train_waveform_fnames,
+            batch_size=self.hparams.chunk_size,
+            batches_per_epoch=self.hparams.chunks_per_epoch or 1,
+            channels=["cross", "plus"],
+            path="waveforms",
+        )
+        # calculate how many batches we'll sample from each chunk
+        # based on requested chunks per epoch and batches per epoch
+        world_size, _ = self.get_world_size_and_rank()
+        batches_per_epoch = self.hparams.batches_per_epoch // world_size
+        batches_per_chunk = (
+            int(batches_per_epoch // self.hparams.chunks_per_epoch) + 1
+        )
+        self._logger.info(
+            f"Training on pool of {waveform_loader.total} waveforms. "
+            f"Sampling {batches_per_chunk} batches per chunk "
+            f"from {self.hparams.chunks_per_epoch} chunks "
+            f"of size {self.hparams.chunk_size} each epoch"
+        )
+
+        # multiprocess waveform chunk loader
+        # so we don't have to wait for waveforms
+        waveform_loader = torch.utils.data.DataLoader(
+            waveform_loader,
+            num_workers=2,
+            pin_memory=pin_memory,
+            persistent_workers=True,
+        )
+
+        # build a dataset that will sample from
+        # iterator of chunks of waveforms
+        waveform_dataset = ChunkedWaveformDataset(
+            waveform_loader,
+            batch_size=self.hparams.batch_size,
+            batches_per_chunk=batches_per_chunk,
+        )
+
+        return ZippedDataset(dataloader, waveform_dataset)
