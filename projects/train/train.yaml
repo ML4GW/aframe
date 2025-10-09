@@ -34,10 +34,12 @@ data:
     # data_dir:
     # ifos:
 
-    # preprocessing args
+    # dataloading args
     batch_size: 384
     batches_per_epoch: 3700
     num_files_per_batch: 10
+
+    # preprocessing args
     # kernel_length:
     psd_length: 8
     # fduration:

@@ -66,8 +66,8 @@ class DeployTrainingWaveforms(
 @inherits(DeployTrainingWaveforms)
 class TrainingWaveforms(AframeDataTask):
     """
-    Launch condorized generation of validation waveforms via
-    rejection sampling, and merge results into a single file
+    Launch condorized generation of training waveforms,
+    and merge results into a single file
     """
 
     def __init__(self, *args, **kwargs):
