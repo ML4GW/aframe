@@ -67,7 +67,7 @@ class TrainBaseParameters(law.Task):
         default=False,
         description="Whether to pre-compute the waveforms used "
         "during training. If True, the training waveforms will be "
-        "read from the `train_waveforms.hdf5` file in the data "
+        "read from the `training_waveforms.hdf5` file in the data "
         "directory. If False, the waveforms will be simulated "
         "on-the-fly during training.",
     )
