@@ -44,6 +44,12 @@ class SupervisedAframeDataset(BaseAframeDataset):
 
     @torch.no_grad()
     def inject(self, X, waveforms=None):
+        if self.waveforms_from_disk and waveforms is None:
+            raise ValueError(
+                "Waveforms should be passed to the `inject` method "
+                "if waveforms are being loaded from disk, got None"
+            )
+
         X, psds = self.psd_estimator(X)
         X = self.inverter(X)
         X = self.reverser(X)
@@ -54,11 +60,18 @@ class SupervisedAframeDataset(BaseAframeDataset):
         mask = rvs < self.sample_prob
 
         dec, psi, phi = self.sample_extrinsic(X[mask])
-        # If waveforms were passed, we're loading them from
-        # disk and we can slice out the ones we want.
+        # If we're loading waveforms from disk, we can
+        # slice out the ones we want.
         # If not, we're generating them on the fly.
-        if waveforms is not None:
-            hc, hp = waveforms[mask, 0], waveforms[mask, 1]
+        if self.waveforms_from_disk:
+            # TODO: Can we just use `mask` to slice out the
+            # waveforms we want here? Copying this from the
+            # old `WaveformSampler` in case it handles edge
+            # cases I'm not thinking of
+            N = mask.sum().item()
+            idx = torch.randperm(waveforms.shape[0])[:N]
+            waveforms = waveforms[idx].to(X.device).float()
+            hc, hp = waveforms[:, 0], waveforms[:, 1]
         else:
             hc, hp = self.waveform_sampler.sample(X[mask])
 
@@ -66,7 +79,10 @@ class SupervisedAframeDataset(BaseAframeDataset):
         responses = self.projector(
             dec, psi, phi, snrs, psds[mask], cross=hc, plus=hp
         )
-        responses = self.slice_waveforms(responses)
+        # If we're loading waveforms from disk, we'll have sliced
+        # the waveforms already in `on_before_batch_transfer`
+        if not self.waveforms_from_disk:
+            responses = self.slice_waveforms(responses)
         kernels = sample_kernels(
             responses, kernel_size=X.size(-1), coincident=True
         )

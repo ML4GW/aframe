@@ -486,6 +486,20 @@ class BaseAframeDataset(pl.LightningDataModule):
         """Return the device of the associated lightning module"""
         return self.trainer.lightning_module.device
 
+    def on_before_batch_transfer(self, batch, _):
+        """
+        Slice loaded waveforms before sending to device
+        if not generating waveforms during training
+        """
+        # TODO: maybe pass indices as argument to
+        # waveform loader to reduce quantity of data
+        # we need to load
+        if self.trainer.training and self.waveforms_from_disk:
+            X, waveforms = batch
+            waveforms = self.slice_waveforms(waveforms)
+            batch = X, waveforms
+        return batch
+
     def on_after_batch_transfer(self, batch, _):
         """
         This is a method inherited from the DataModule
