@@ -26,13 +26,20 @@ class WaveformLoader(WaveformSampler):
     def __init__(
         self,
         *args,
-        training_waveform_file: Path,
+        training_waveform_path: Path,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.training_waveform_file = training_waveform_file
+        if training_waveform_path.is_dir():
+            self.training_waveform_files = list(
+                training_waveform_path.iterdir()
+            )
+        else:
+            self.training_waveform_files = [training_waveform_path]
 
-        waveform_set = WaveformPolarizationSet.read(training_waveform_file)
+        waveform_set = WaveformPolarizationSet.read(
+            self.training_waveform_files[0]
+        )
         if waveform_set.right_pad != self.right_pad:
             raise ValueError(
                 "Training waveform file does not have the same "

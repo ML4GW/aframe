@@ -678,7 +678,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # that will load chunks of waveforms
         # to be sampled from
         waveform_loader = Hdf5WaveformLoader(
-            [self.waveform_sampler.training_waveform_file],
+            self.waveform_sampler.training_waveform_files,
             batch_size=self.hparams.chunk_size,
             batches_per_epoch=self.hparams.chunks_per_epoch or 1,
             channels=["cross", "plus"],
