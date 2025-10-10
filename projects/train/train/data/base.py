@@ -619,10 +619,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # we're going to go through, then batch the
         # signals so that they're spaced evenly
         # throughout all those batches.
-        cross, plus = self.val_waveforms
-        num_waveforms = len(cross)
+        num_waveforms = len(self.val_waveforms)
         signal_batch_size = (num_waveforms - 1) // self.valid_loader_length + 1
-        signal_dataset = torch.utils.data.TensorDataset(cross, plus)
+        signal_dataset = torch.utils.data.TensorDataset(self.val_waveforms)
         signal_loader = torch.utils.data.DataLoader(
             signal_dataset,
             batch_size=signal_batch_size,
@@ -669,7 +668,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         # that will load chunks of waveforms
         # to be sampled from
         waveform_loader = Hdf5WaveformLoader(
-            self.train_waveform_fnames,
+            [self.waveform_sampler.training_waveform_file],
             batch_size=self.hparams.chunk_size,
             batches_per_epoch=self.hparams.chunks_per_epoch or 1,
             channels=["cross", "plus"],

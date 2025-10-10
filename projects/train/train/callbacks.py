@@ -43,9 +43,16 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         )
 
         device = pl_module.device
-        [X] = next(iter(trainer.train_dataloader))
-        X = X.to(device)
-        X, y = trainer.datamodule.inject(X)
+        # Handle the case of loading training waveforms from disk
+        if trainer.datamodule.waveforms_from_disk:
+            [X], waveforms = next(iter(trainer.train_dataloader))
+            X = X.to(device)
+            waveforms = waveforms.to(device)
+            X, y = trainer.datamodule.inject(X, waveforms)
+        else:
+            [X] = next(iter(trainer.train_dataloader))
+            X = X.to(device)
+            X, y = trainer.datamodule.inject(X)
         if isinstance(X, tuple):
             X = tuple(i.cpu() for i in X)
         else:
@@ -75,10 +82,16 @@ class SaveAugmentedBatch(Callback):
             save_dir = trainer.logger.save_dir
 
             # build training batch by hand
-            [X] = next(iter(trainer.train_dataloader))
-            X = X.to(device)
-
-            X, y = trainer.datamodule.inject(X)
+            # Handle the case of loading training waveforms from disk
+            if trainer.datamodule.waveforms_from_disk:
+                [X], waveforms = next(iter(trainer.train_dataloader))
+                X = X.to(device)
+                waveforms = waveforms.to(device)
+                X, y = trainer.datamodule.inject(X, waveforms)
+            else:
+                [X] = next(iter(trainer.train_dataloader))
+                X = X.to(device)
+                X, y = trainer.datamodule.inject(X)
             # If X is not a tuple, make it one for consistency
             # of format for saving to file below
             if not isinstance(X, tuple):

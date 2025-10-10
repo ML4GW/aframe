@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 import torch
 
+from ledger.injections import WaveformPolarizationSet
 from .sampler import WaveformSampler
 
 
@@ -31,7 +32,7 @@ class WaveformLoader(WaveformSampler):
         super().__init__(*args, **kwargs)
         self.training_waveform_file = training_waveform_file
 
-        waveform_set = self.waveform_set_cls.read(training_waveform_file)
+        waveform_set = WaveformPolarizationSet.read(training_waveform_file)
         if waveform_set.right_pad != self.right_pad:
             raise ValueError(
                 "Training waveform file does not have the same "

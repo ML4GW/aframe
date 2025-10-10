@@ -53,8 +53,8 @@ class MultiModalSupervisedAframeDataset(SupervisedAframeDataset):
 
         return X_fft
 
-    def inject(self, X):
-        X, y, psds = super().inject(X)
+    def inject(self, X, waveforms=None):
+        X, y, psds = super().inject(X, waveforms)
         X = self.whitener(X, psds)
         X_fft = self.compute_frequency_domain_data(X, psds)
 

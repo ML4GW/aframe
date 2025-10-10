@@ -38,7 +38,7 @@ class SupervisedMultiModalAframe(SupervisedAframe):
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def validation_step(self, batch, _) -> None:
-        shift, (X_bg, X_inj), (X_bg_fft, X_inj_fft) = batch
+        shift, (X_bg, X_bg_fft), (X_inj, X_inj_fft) = batch
 
         y_bg = self.score(X_bg, X_bg_fft)
 

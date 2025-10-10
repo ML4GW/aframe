@@ -16,7 +16,7 @@ class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_fg = torch.stack(X_fg)
         return X_bg, X_fg
 
-    def inject(self, X):
-        X, y, psds = super().inject(X)
+    def inject(self, X, waveforms=None):
+        X, y, psds = super().inject(X, waveforms)
         X = self.whitener(X, psds)
         return X, y
