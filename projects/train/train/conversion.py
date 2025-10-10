@@ -5,18 +5,42 @@ from ml4gw.waveforms.conversion import (
 )
 
 
+def add_mass_params(
+    parameters: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """
+    Add mass_1 and mass_2 to parameter dictionary if
+    chirp_mass and mass_ratio are present, or vice-versa.
+
+    Raises a ValueError if neither pair are present.
+    """
+    if "chirp_mass" in parameters and "mass_ratio" in parameters:
+        mass_1, mass_2 = chirp_mass_and_mass_ratio_to_components(
+            parameters["chirp_mass"], parameters["mass_ratio"]
+        )
+
+        parameters["mass_1"] = mass_1
+        parameters["mass_2"] = mass_2
+    elif "mass_1" in parameters and "mass_2" in parameters:
+        m1, m2 = parameters["mass_1"], parameters["mass_2"]
+        parameters["chirp_mass"] = (m1 * m2) ** (3 / 5) / (m1 + m2) ** (1 / 5)
+        parameters["mass_ratio"] = m2 / m1
+    else:
+        raise ValueError(
+            "Parameter dictionary did not contain either "
+            "(chirp mass, mass ratio) or (mass 1, mass 2)"
+        )
+    return parameters
+
+
 def precessing_to_lalsimulation_parameters(
     parameters: dict[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
     """
     Convert precessing spin parameters to lalsimulation parameters
     """
-    mass_1, mass_2 = chirp_mass_and_mass_ratio_to_components(
-        parameters["chirp_mass"], parameters["mass_ratio"]
-    )
-
-    parameters["mass_1"] = mass_1
-    parameters["mass_2"] = mass_2
+    parameters = add_mass_params(parameters)
+    mass_1 = parameters["mass_1"]
 
     # TODO: hard coding f_ref = 40 here b/c not sure best way to link this
     # to the f_ref specified in the config file
@@ -50,40 +74,14 @@ def aligned_to_lalsimulation_parameters(
     """
     Convert aligned spin parameters to lalsimulation parameters
     """
-    mass_1, mass_2 = chirp_mass_and_mass_ratio_to_components(
-        parameters["chirp_mass"], parameters["mass_ratio"]
-    )
-
-    parameters["mass_1"] = mass_1
-    parameters["mass_2"] = mass_2
+    parameters = add_mass_params(parameters)
+    mass_1 = parameters["mass_1"]
 
     parameters["s1x"] = torch.zeros_like(mass_1)
     parameters["s1y"] = torch.zeros_like(mass_1)
 
     parameters["s2x"] = torch.zeros_like(mass_1)
     parameters["s2y"] = torch.zeros_like(mass_1)
-
-    parameters["s1z"] = parameters["chi1"]
-    parameters["s2z"] = parameters["chi2"]
-    return parameters
-
-
-def component_aligned_to_lalsimulation_parameters(
-    parameters: dict[str, torch.Tensor],
-) -> dict[str, torch.Tensor]:
-    """
-    Convert aligned spin parameters to lalsimulation parameters
-    and compnent masses to chirp mass and mass ratio
-    """
-    m1, m2 = parameters["mass_1"], parameters["mass_2"]
-    parameters["chirp_mass"] = (m1 * m2) ** (3 / 5) / (m1 + m2) ** (1 / 5)
-    parameters["mass_ratio"] = m2 / m1
-
-    parameters["s1x"] = torch.zeros_like(m1)
-    parameters["s1y"] = torch.zeros_like(m1)
-
-    parameters["s2x"] = torch.zeros_like(m1)
-    parameters["s2y"] = torch.zeros_like(m1)
 
     parameters["s1z"] = parameters["chi1"]
     parameters["s2z"] = parameters["chi2"]

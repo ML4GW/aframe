@@ -29,10 +29,6 @@ Tensor = torch.Tensor
 Distribution = torch.distributions.Distribution
 TransformedDist = torch.distributions.TransformedDistribution
 
-# TODO:
-# Move waveform slicing to the waveform sampler?
-# Make separate training prior
-
 
 # TODO: using this right now because
 # lightning.pytorch.utilities.CombinedLoader

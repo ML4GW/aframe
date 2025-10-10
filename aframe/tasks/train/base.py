@@ -59,7 +59,7 @@ class TrainBaseParameters(law.Task):
         description="Directory where training data is stored."
         "It is expected to contain a `val_waveforms.hdf5` file of "
         "signals for validation, a `/background` sub-directory containing "
-        "background, and a `train_waveforms.hdf5` file containing "
+        "background, and a `training_waveforms.hdf5` file containing "
         "training signals if `precompute_train_waveforms` is set to True.",
         default=paths().train_datadir,
     )

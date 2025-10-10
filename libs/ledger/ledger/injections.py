@@ -159,25 +159,6 @@ class LALParameterSet(Ledger):
         ).value
 
     @property
-    def ml4gw_generation_params(self):
-        params = {
-            "mass_1": self.mass1,
-            "mass_2": self.mass2,
-            "chirp_mass": chirp_mass(self.mass1, self.mass2),
-            "mass_ratio": self.mass2 / self.mass1,
-            "s1x": self.spin1x,
-            "s1y": self.spin1y,
-            "s1z": self.spin1z,
-            "s2x": self.spin2x,
-            "s2y": self.spin2y,
-            "s2z": self.spin2z,
-            "inclination": self.inclination,
-            "distance": self.luminosity_distance,
-            "phic": self.phase,
-        }
-        return params
-
-    @property
     def generation_params(self):
         params = {
             "mass1": self.mass1,
