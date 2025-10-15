@@ -55,7 +55,9 @@ class ChannelMuter(torch.nn.Module):
         if num > 0:
             channel = torch.randint(X.shape[1], size=(num,))
             indices = torch.randint(X.shape[0], size=(num,))
-            X[indices, channel] = torch.zeros(X.shape[-1], device=X.device)
+            X[indices, channel] = torch.zeros(
+                X.shape[-1], device=X.device, dtype=X.dtype
+            )
 
         return X, indices
 

@@ -29,9 +29,10 @@ class WaveformParams(law.Task):
         default="IMRPhenomXPHM",
         description="Approximant to use for waveform generation",
     )
-    coalescence_time = luigi.FloatParameter(
+    right_pad = luigi.FloatParameter(
         description="Location of the defining point of the signal "
-        "within the generated waveform"
+        "within the generated waveform relative to the right edge "
+        "of the waveform (in seconds)",
     )
 
 

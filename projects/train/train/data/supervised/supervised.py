@@ -43,19 +43,46 @@ class SupervisedAframeDataset(BaseAframeDataset):
         return self.hparams.waveform_prob + self.swap_prob + self.mute_prob
 
     @torch.no_grad()
-    def augment(self, X, waveforms):
+    def inject(self, X, waveforms=None):
+        if self.waveforms_from_disk and waveforms is None:
+            raise ValueError(
+                "Waveforms should be passed to the `inject` method "
+                "if waveforms are being loaded from disk, got None"
+            )
+
         X, psds = self.psd_estimator(X)
         X = self.inverter(X)
         X = self.reverser(X)
         # sample enough waveforms to do true injections,
         # swapping, and muting
 
-        *params, polarizations, mask = self.waveform_sampler(
-            X, self.sample_prob, waveforms
+        rvs = torch.rand(size=X.shape[:1], device=X.device)
+        mask = rvs < self.sample_prob
+
+        dec, psi, phi = self.sample_extrinsic(X[mask])
+        # If we're loading waveforms from disk, we can
+        # slice out the ones we want.
+        # If not, we're generating them on the fly.
+        if self.waveforms_from_disk:
+            # TODO: Can we just use `mask` to slice out the
+            # waveforms we want here? Copying this from the
+            # old `WaveformSampler` in case it handles edge
+            # cases I'm not thinking of
+            N = mask.sum().item()
+            idx = torch.randperm(waveforms.shape[0])[:N]
+            waveforms = waveforms[idx].to(X.device).float()
+            hc, hp = waveforms[:, 0], waveforms[:, 1]
+        else:
+            hc, hp = self.waveform_sampler.sample(X[mask])
+
+        snrs = self.snr_sampler.sample((mask.sum().item(),)).to(X.device)
+        responses = self.projector(
+            dec, psi, phi, snrs, psds[mask], cross=hc, plus=hp
         )
-        N = len(params[0])
-        snrs = self.snr_sampler.sample((N,)).to(X.device)
-        responses = self.projector(*params, snrs, psds[mask], **polarizations)
+        # If we're loading waveforms from disk, we'll have sliced
+        # the waveforms already in `on_before_batch_transfer`
+        if not self.waveforms_from_disk:
+            responses = self.slice_waveforms(responses)
         kernels = sample_kernels(
             responses, kernel_size=X.size(-1), coincident=True
         )

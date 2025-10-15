@@ -25,7 +25,7 @@ def rejection_sample(
     sample_rate: float,
     waveform_duration: float,
     waveform_approximant: str,
-    coalescence_time: float,
+    right_pad: float,
     highpass: float,
     lowpass: float,
     snr_threshold: float,
@@ -70,7 +70,7 @@ def rejection_sample(
             sample_rate,
             waveform_duration,
             waveform_approximant,
-            coalescence_time,
+            right_pad,
         )
         polarizations = {
             "cross": torch.Tensor(polarization_set.cross),
@@ -145,7 +145,7 @@ def rejection_sample(
         idx += num_accepted
         num_signals -= num_accepted
 
-    parameters["coalescence_time"] = coalescence_time
+    parameters["right_pad"] = right_pad
     parameters["sample_rate"] = sample_rate
     parameters["duration"] = waveform_duration
     parameters["num_injections"] = num_injections

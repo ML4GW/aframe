@@ -1,4 +1,4 @@
-from .frequency_domain import (
+from .time_frequency_domain import (
     FrequencyDomainSupervisedAframeDataset,
     SpectrogramDomainSupervisedAframeDataset,
 )

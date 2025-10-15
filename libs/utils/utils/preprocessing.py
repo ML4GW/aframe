@@ -148,8 +148,8 @@ class BatchWhitener(torch.nn.Module):
                 "but found shape {}".format(x.shape)
             )
 
-        x, psd = self.psd_estimator(x)
-        whitened = self.whitener(x.double(), psd)
+        x, psd = self.psd_estimator(x.double())
+        whitened = self.whitener(x, psd)
 
         # unfold x and then put it into the expected shape.
         # Note that if x has both signal and background

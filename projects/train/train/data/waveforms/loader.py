@@ -1,14 +1,53 @@
+from pathlib import Path
+
 import logging
 import math
 import warnings
-from pathlib import Path
 from typing import Iterable, Optional
 
 import h5py
 import numpy as np
 import torch
-from ml4gw.distributions import Cosine
-from torch.distributions.uniform import Uniform
+
+from ledger.injections import WaveformPolarizationSet
+from .sampler import WaveformSampler
+
+
+class WaveformLoader(WaveformSampler):
+    """
+    Module that should be used if training waveforms
+    are loaded from disk. The main function is to make
+    waveform handling consistent whether the waveforms
+    are generated during training or loaded from disk
+    The actual loading of the training waveforms is done
+    by `waveform_dataloader` in `train.data.base.train_dataloader()`.
+    """
+
+    def __init__(
+        self,
+        *args,
+        training_waveform_path: Path,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        if training_waveform_path.is_dir():
+            self.training_waveform_files = list(
+                training_waveform_path.iterdir()
+            )
+        else:
+            self.training_waveform_files = [training_waveform_path]
+
+        waveform_set = WaveformPolarizationSet.read(
+            self.training_waveform_files[0]
+        )
+        if waveform_set.right_pad != self.right_pad:
+            raise ValueError(
+                "Training waveform file does not have the same "
+                "right pad as validation waveform file"
+            )
+
+    def get_train_waveforms(self, world_size, rank, device):
+        pass
 
 
 # TODO: move to ml4gw
@@ -216,31 +255,3 @@ class ChunkedWaveformDataset(torch.utils.data.IterableDataset):
             except StopIteration:
                 break
             num_waveforms, _, _ = chunk.shape
-
-
-class WaveformSampler(torch.nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.dec = Cosine()
-        self.psi = Uniform(0, torch.pi)
-        self.phi = Uniform(-torch.pi, torch.pi)
-
-    def forward(self, X, prob, waveforms):
-        # determine batch size from X and prob
-        rvs = torch.rand(size=X.shape[:1], device=X.device)
-        mask = rvs < prob
-        N = mask.sum().item()
-
-        # sample sky parameters for each injections
-        dec = self.dec.sample((N,)).to(X.device)
-        psi = self.psi.sample((N,)).to(X.device)
-        phi = self.phi.sample((N,)).to(X.device)
-
-        # now sample the actual waveforms we want to inject
-        idx = torch.randperm(waveforms.shape[0])[:N]
-        waveforms = waveforms[idx].to(X.device).float()
-
-        cross, plus = waveforms[:, 0], waveforms[:, 1]
-        polarizations = {"cross": cross, "plus": plus}
-
-        return dec, psi, phi, polarizations, mask
