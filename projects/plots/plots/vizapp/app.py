@@ -24,7 +24,8 @@ class App:
     def __init__(
         self,
         weights: str,
-        data_dir: Path,
+        background_dir: Path,
+        waveforms_dir: Path,
         results_dir: Path,
         ifos: List[str],
         mass_combos: List[tuple],
@@ -49,7 +50,8 @@ class App:
 
         # set attributes that will be accessible
         # to downstream pages
-        self.data_dir = data_dir
+        self.background_dir = background_dir
+        self.waveforms_dir = waveforms_dir
         self.results_dir = results_dir
         self.ifos = ifos
         self.mass_combos = mass_combos
@@ -75,7 +77,9 @@ class App:
 
         # instantiate object for managing
         # data loading and application of vetos
-        self.data_manager = DataManager(results_dir, data_dir, ifos, vetos)
+        self.data_manager = DataManager(
+            results_dir, waveforms_dir, ifos, vetos
+        )
 
         # initialize all our pages and their constituent plots
         self.pages: list["Page"] = []

@@ -22,7 +22,7 @@ class Analysis(Page):
     def get_analyzer(self):
         return EventAnalyzer(
             self.app.model,
-            self.app.data_dir / "background",
+            self.app.background_dir,
             self.app.data_manager.response_set,
             self.app.psd_length,
             self.app.kernel_length,
