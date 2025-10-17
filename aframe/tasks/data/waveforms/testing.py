@@ -58,10 +58,15 @@ class TestingWaveformsParams(WaveformParams):
         description="Scale of random jitter to add to injection times",
         default=0.1,
     )
+    background_dir = PathParameter(
+        description="Directory containing background strain data into "
+        "which waveforms will be injected during inference",
+        default=paths().test_background_dir,
+    )
     output_dir = PathParameter(
         description="Directory where merged waveforms and "
         "rejected parameters will be saved",
-        default=paths().test_datadir,
+        default=paths().test_waveforms_dir,
     )
 
 
@@ -83,8 +88,8 @@ class DeployTestingWaveforms(
         reqs = {}
         reqs["test_segments"] = FetchTest.req(
             self,
-            segments_file=self.output_dir / "segments.txt",
-            data_dir=self.output_dir / "background",
+            segments_file=self.background_dir / "segments.txt",
+            data_dir=self.background_dir / "background",
         )
         return reqs
 

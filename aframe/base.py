@@ -25,8 +25,10 @@ S3_ENV_VARS = [
 # that should be mounted so that users
 # can point to one anothers directories
 AFRAME_DATA_DIRS = [
-    "AFRAME_TRAIN_DATA_DIR",
-    "AFRAME_TEST_DATA_DIR",
+    "AFRAME_TRAIN_BACKGROUND_DIR",
+    "AFRAME_TRAIN_WAVEFORMS_DIR",
+    "AFRAME_TEST_BACKGROUND_DIR",
+    "AFRAME_TEST_WAVEFORMS_DIR",
     "AFRAME_TRAIN_RUN_DIR",
 ]
 
@@ -172,8 +174,8 @@ class AframeSandboxTask(law.SandboxTask, AframeParameters):
         # that will eventually be merged (and uploaded to s3)
         # but want to keep around in case the workflow fails
         # so that luigi/law caching can keep track of them.
-        # Can't use `AFRAME_TRAIN_DATA_DIR` because that might
-        # refer to an s3/remote directory
+        # Can't use either of the `AFRAME_TRAIN` dirs because
+        # that might refer to an s3/remote directory
         env["AFRAME_TMPDIR"] = os.getenv("AFRAME_TMPDIR", local)
 
         # if gpus are specified, expose them inside container

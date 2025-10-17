@@ -38,7 +38,7 @@ class DataManager:
     def __init__(
         self,
         results_dir: Path,
-        data_dir: Path,
+        waveforms_dir: Path,
         ifos: list[str],
         vetos: Optional[VETO_CATEGORIES] = None,
     ):
@@ -46,8 +46,8 @@ class DataManager:
         self.ifos = ifos
         self.vetos = vetos
         # load results and data from the run we're visualizing
-        rejected = data_dir / "rejected-parameters.hdf5"
-        self.response_set = data_dir / "waveforms.hdf5"
+        rejected = waveforms_dir / "rejected-parameters.hdf5"
+        self.response_set = waveforms_dir / "waveforms.hdf5"
 
         self.logger.info(
             "Reading in background, foreground and rejected parameters"
