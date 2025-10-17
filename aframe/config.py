@@ -114,18 +114,18 @@ nautilus_urls = {
 
 
 class paths(luigi.Config):
-    train_background = PathParameter(
+    train_background_dir = PathParameter(
         default=os.getenv("AFRAME_TRAIN_BACKGROUND_DIR", "")
     )
-    train_waveforms = PathParameter(
+    train_waveforms_dir = PathParameter(
         default=os.getenv("AFRAME_TRAIN_WAVEFORMS_DIR", "")
     )
     train_rundir = PathParameter(default=os.getenv("AFRAME_TRAIN_RUN_DIR", ""))
     results_dir = PathParameter(default=os.getenv("AFRAME_RESULTS_DIR", ""))
-    test_background = PathParameter(
+    test_background_dir = PathParameter(
         default=os.getenv("AFRAME_TEST_BACKGROUND_DIR", "")
     )
-    test_waveforms = PathParameter(
+    test_waveforms_dir = PathParameter(
         default=os.getenv("AFRAME_TEST_WAVEFORMS_DIR", "")
     )
     condor_dir = PathParameter(default=os.getenv("AFRAME_CONDOR_DIR", ""))

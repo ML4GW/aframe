@@ -27,7 +27,7 @@ class DeployTrainingWaveforms(
 
     output_dir = PathParameter(
         description="Directory where merged training waveforms will be saved",
-        default=paths().train_waveforms,
+        default=paths().train_waveforms_dir,
     )
 
     tmp_dir = PathParameter(

@@ -302,7 +302,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         return int(self.hparams.right_pad * self.hparams.sample_rate)
 
     def train_val_split(self) -> tuple[Sequence[str], Sequence[str]]:
-        fnames = glob.glob(f"{self.background_dir}/*.hdf5")
+        fnames = glob.glob(f"{self.background_dir}/background/*.hdf5")
         fnames = sorted([Path(fname) for fname in fnames])
         durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
         valid_fnames = []

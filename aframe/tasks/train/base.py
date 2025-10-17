@@ -55,13 +55,19 @@ class TrainBaseParameters(law.Task):
         "will save checkpoints, logs, etc. ",
         default=paths().train_rundir,
     )
-    data_dir = PathParameter(
-        description="Directory where training data is stored."
+    background_dir = PathParameter(
+        description="Directory where training background is stored."
+        "It is expected to contain a set of hdf5 files with names "
+        "`background-<gps_start_time>_<duration>.hdf5` containing "
+        "strain data.",
+        default=paths().train_background_dir,
+    )
+    waveforms_dir = PathParameter(
+        description="Directory where training waveforms are stored."
         "It is expected to contain a `val_waveforms.hdf5` file of "
-        "signals for validation, a `/background` sub-directory containing "
-        "background, and a `training_waveforms.hdf5` file containing "
+        "validation signals and a `training_waveforms.hdf5` file containing "
         "training signals if `precompute_train_waveforms` is set to True.",
-        default=paths().train_datadir,
+        default=paths().train_waveforms_dir,
     )
     precompute_train_waveforms = luigi.BoolParameter(
         default=False,
@@ -128,8 +134,10 @@ class TrainBase(law.Task):
             "--seed_everything",
             str(self.seed),
             f"--data.ifos=[{','.join(self.ifos)}]",
-            "--data.data_dir",
-            str(self.data_dir),
+            "--data.background_dir",
+            str(self.background_dir),
+            "--data.waveforms_dir",
+            str(self.waveforms_dir),
         ]
         args = self.configure_data_args(args)
         if self.use_wandb and not wandb().api_key:
