@@ -61,7 +61,7 @@ class TestingWaveformsParams(WaveformParams):
     output_dir = PathParameter(
         description="Directory where merged waveforms and "
         "rejected parameters will be saved",
-        default=paths().test_datadir,
+        default=paths().test_waveforms,
     )
 
 
