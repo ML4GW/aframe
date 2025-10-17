@@ -105,8 +105,15 @@ class TrainingWaveforms(AframeDataTask):
             WaveformPolarizationSet,
             "WaveformPolarizationSet",
         )
+        # Read in one of the waveform files so we can get information
+        # for chunking the dataset
+        waveforms = cls.read(self.waveform_files[0]).get_waveforms()
+        num_waveforms = len(waveforms)
+        num_files = len(self.waveform_files)
+
+        chunks = (min(64, num_waveforms * num_files), waveforms.shape[-1])
         with self.output().open("w") as f:
-            cls.aggregate(self.waveform_files, f, clean=True)
+            cls.aggregate(self.waveform_files, f, clean=True, chunks=chunks)
 
         # clean up temporary directory
         shutil.rmtree(self.tmp_dir)
