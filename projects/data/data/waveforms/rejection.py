@@ -113,7 +113,9 @@ def rejection_sample(
         num_accepted = mask.sum()
         total_accepted += num_accepted
         # If we've generated more signals than we need,
-        # figure out where to cut off the arrays
+        # figure out where to cut off the arrays by
+        # identifying the index at which we reach
+        # the target number of accepted signals.
         if num_signals < total_accepted:
             target_accepted = num_signals - (total_accepted - num_accepted)
             idx = np.where(np.cumsum(mask) == target_accepted)[0][0] + 1
@@ -156,8 +158,9 @@ def rejection_sample(
         # Estimate how many more samples need to be generated
         # to reach our desired number of accepted samples.
         samples_remaining = num_signals - total_accepted
-        # Prevent division by zero if no samples were accepted
-        acceptance_rate = max(1, num_accepted) / num_samples
+        acceptance_rate = num_accepted / num_samples
+        # We `continue` above if `num_accepted == 0`, so
+        # no need to worry above division by zero here.
         num_samples = int(np.ceil(samples_remaining / acceptance_rate))
         # To make sure we don't exceed memory limits,
         # don't generate more than `max_num_samples`
