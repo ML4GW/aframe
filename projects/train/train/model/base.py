@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import Union
 
 import lightning.pytorch as pl
@@ -46,14 +47,34 @@ class AframeBase(pl.LightningModule):
         self.model = arch
         self.metric = metric
         self.verbose = verbose
-        self._logger = self.get_logger()
+        self._logger = self.init_logging(verbose)
         self.save_hyperparameters(ignore=["arch", "metric"])
 
-    def get_logger(self):
-        logger_name = "AframeModel"
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
-        return logger
+    def init_logging(self, verbose):
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        logging.basicConfig(
+            format=log_format,
+            level=logging.DEBUG if verbose else logging.INFO,
+            stream=sys.stdout,
+        )
+
+        world_size, rank = self.get_world_size_and_rank()
+        logger_name = self.__class__.__name__
+        if world_size > 1:
+            logger_name += f":{rank}"
+        return logging.getLogger(logger_name)
+
+    def get_world_size_and_rank(self) -> tuple[int, int]:
+        """
+        Name says it all, but generalizes to the case
+        where we aren't running distributed training.
+        """
+        if not torch.distributed.is_initialized():
+            return 1, 0
+        else:
+            world_size = torch.distributed.get_world_size()
+            rank = torch.distributed.get_rank()
+            return world_size, rank
 
     def forward(self, X: Tensor) -> Tensor:
         """
