@@ -215,7 +215,7 @@ class AframeBase(pl.LightningModule):
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             pct_start=self.hparams.pct_lr_ramp,
-            max_lr=self.hparams.learning_rate,
+            max_lr=lr,
             total_steps=self.trainer.estimated_stepping_batches,
         )
         scheduler_config = {"scheduler": scheduler, "interval": "step"}
