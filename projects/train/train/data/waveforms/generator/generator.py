@@ -26,13 +26,6 @@ class WaveformGenerator(WaveformSampler):
         super().__init__(*args, **kwargs)
         self.training_prior = training_prior
 
-    def get_train_waveforms(self, *_):
-        """
-        Method is not implemented for this class, as
-        waveforms are generated on the fly.
-        """
-        pass
-
     def sample(self, X: torch.Tensor):
         N = len(X)
         parameters = self.training_prior(N, device=X.device)

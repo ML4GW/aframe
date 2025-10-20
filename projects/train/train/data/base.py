@@ -29,6 +29,8 @@ Tensor = torch.Tensor
 Distribution = torch.distributions.Distribution
 TransformedDist = torch.distributions.TransformedDistribution
 
+SECONDS_PER_DAY = 86400
+
 
 # TODO: using this right now because
 # lightning.pytorch.utilities.CombinedLoader
@@ -220,10 +222,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.waveforms_dir = fs_utils.get_data_dir(self.hparams.waveforms_dir)
         self.verbose = verbose
 
-    # ================================================ #
-    # Distribution utilities
-    # ================================================ #
-
     def init_logging(self, verbose: bool):
         log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         logging.basicConfig(
@@ -232,6 +230,34 @@ class BaseAframeDataset(pl.LightningDataModule):
             stream=sys.stdout,
         )
 
+    def prepare_data(self):
+        """
+        Download s3 data if it doesn't exist.
+        """
+        logger = logging.getLogger(self.__class__.__name__)
+        bucket, _ = fs_utils.split_data_dir(self.hparams.background_dir)
+        if bucket is None:
+            return
+        logger.info(
+            "Downloading background data from S3 bucket {} to {}".format(
+                bucket, self.background_dir
+            )
+        )
+        fs_utils.download_training_data(bucket, self.background_dir)
+
+        bucket, _ = fs_utils.split_data_dir(self.hparams.waveforms_dir)
+        if bucket is None:
+            return
+        logger.info(
+            "Downloading waveform data from S3 bucket {} to {}".format(
+                bucket, self.waveforms_dir
+            )
+        )
+        fs_utils.download_training_data(bucket, self.waveforms_dir)
+
+    # ================================================ #
+    # Distribution utilities
+    # ================================================ #
     def get_world_size_and_rank(self) -> tuple[int, int]:
         """
         Name says it all, but generalizes to the case
@@ -245,11 +271,15 @@ class BaseAframeDataset(pl.LightningDataModule):
             return world_size, rank
 
     def get_logger(self, world_size, rank):
-        logger_name = "AframeDataset"
+        logger_name = self.__class__.__name__
         if world_size > 1:
-            logger_name += f"{rank}"
-        logger = logging.getLogger(logger_name)
-        return logger
+            logger_name += f":{rank}"
+        return logging.getLogger(logger_name)
+
+    @property
+    def device(self):
+        """Return the device of the associated lightning module"""
+        return self.trainer.lightning_module.device
 
     # ================================================ #
     # Re-paramterizing some attributes
@@ -289,19 +319,29 @@ class BaseAframeDataset(pl.LightningDataModule):
     def left_pad_size(self) -> int:
         """
         Minimum numer of samples that the defining point of the
-        signal will be from the left edge of the _whitened_ kernel.
+        signal will be from the left edge of the _unwhitened_ kernel.
         """
-        return int(self.hparams.left_pad * self.hparams.sample_rate)
+        return (
+            int(self.hparams.left_pad * self.hparams.sample_rate)
+            + self.filter_size // 2
+        )
 
     @property
     def right_pad_size(self) -> int:
         """
         Minimum number of samples that the defining point of the
-        signal will be from the left edge of the _whitened_ kernel
+        signal will be from the left edge of the _unwhitened_ kernel
         """
-        return int(self.hparams.right_pad * self.hparams.sample_rate)
+        return (
+            int(self.hparams.right_pad * self.hparams.sample_rate)
+            + self.filter_size // 2
+        )
 
     def train_val_split(self) -> tuple[Sequence[str], Sequence[str]]:
+        """
+        Split background files into training and validation sets
+        based on the requested duration of the validation set
+        """
         fnames = glob.glob(f"{self.background_dir}/background/*.hdf5")
         fnames = sorted([Path(fname) for fname in fnames])
         durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
@@ -313,6 +353,17 @@ class BaseAframeDataset(pl.LightningDataModule):
             valid_fnames.append(str(fname))
 
         train_fnames = list(set(fnames) - set(valid_fnames))
+        train_duration = sum(durations) - valid_duration
+
+        self._logger.info(
+            f"Using {len(train_fnames)} files with a total duration "
+            f"of {train_duration / SECONDS_PER_DAY:.3f} days for training"
+        )
+        self._logger.info(
+            f"Using {len(valid_fnames)} files with a total duration "
+            f"of {valid_duration / SECONDS_PER_DAY:.3f} days for validation"
+        )
+
         return train_fnames, valid_fnames
 
     @property
@@ -327,45 +378,25 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.max_num_workers, int(os.cpu_count() / local_world_size)
         )
 
-    # ================================================ #
-    # Utilities for initial data loading and preparation
-    # ================================================ #
-
-    def prepare_data(self):
-        """
-        Download s3 data if it doesn't exist.
-        """
-        logger = logging.getLogger("AframeDataset")
-        bucket, _ = fs_utils.split_data_dir(self.hparams.background_dir)
-        if bucket is None:
-            return
-        logger.info(
-            "Downloading background data from S3 bucket {} to {}".format(
-                bucket, self.background_dir
-            )
-        )
-        fs_utils.download_training_data(bucket, self.background_dir)
-
-        bucket, _ = fs_utils.split_data_dir(self.hparams.waveforms_dir)
-        if bucket is None:
-            return
-        logger.info(
-            "Downloading waveform data from S3 bucket {} to {}".format(
-                bucket, self.waveforms_dir
-            )
-        )
-        fs_utils.download_training_data(bucket, self.waveforms_dir)
-
+    # ================================================== #
+    # Utilities for initial data loading and preparation #
+    # ================================================== #
     def slice_waveforms(self, waveforms: torch.Tensor) -> torch.Tensor:
         """
-        Slice waveforms to the correct length depending on
-        requested left and right padding
+        Slice/pad waveforms to the correct length depending on
+        requested left and right padding. Waveforms are re-sized
+        such that any `kernel_length` window will contain the
+        merger time between the left and right pads.
         """
+        # Compute the location of the signal based on the `right_pad`
+        # attribute of the waveform sampler
         signal_idx = waveforms.shape[-1] - int(
             self.waveform_sampler.right_pad * self.hparams.sample_rate
         )
-        kernel_size = int(
-            self.hparams.kernel_length * self.hparams.sample_rate
+        # Compute the size in samples of the unwhitened kernel
+        kernel_size = (
+            int(self.hparams.kernel_length * self.hparams.sample_rate)
+            + self.filter_size
         )
 
         if kernel_size < self.left_pad_size + self.right_pad_size:
@@ -374,19 +405,20 @@ class BaseAframeDataset(pl.LightningDataModule):
                 f"padding ({self.left_pad_size} + {self.right_pad_size})"
             )
 
-        signal_start = signal_idx - (kernel_size - self.right_pad_size)
-        signal_start -= self.filter_size // 2
+        start_idx = signal_idx - (kernel_size - self.right_pad_size)
+        stop_idx = signal_idx + (kernel_size - self.left_pad_size)
 
-        signal_stop = signal_idx + (kernel_size - self.left_pad_size)
-        signal_stop += self.filter_size // 2
-
-        # If signal_start is less than 0, add padding on the left
-        left_pad = -1 * min(signal_start, 0)
-        # If signal_stop is larger than the dataset, add padding on the right
-        right_pad = max(signal_stop - waveforms.shape[-1], 0)
+        # If start_idx is less than 0, add padding on the left
+        left_pad = -1 * min(start_idx, 0)
+        # If stop_idx is larger than the dataset, add padding on the right
+        right_pad = max(stop_idx - waveforms.shape[-1], 0)
+        # If we're padding on the left, we need to readjust the indices
+        if left_pad > 0:
+            start_idx += left_pad
+            stop_idx += left_pad
 
         waveforms = torch.nn.functional.pad(waveforms, [left_pad, right_pad])
-        waveforms = waveforms[..., signal_start:signal_stop]
+        waveforms = waveforms[..., start_idx:stop_idx]
 
         return waveforms
 
@@ -484,9 +516,10 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.val_waveforms = self.waveform_sampler.get_val_waveforms(
             world_size, rank
         )
-        self.waveform_sampler.get_train_waveforms(
-            world_size, rank, self.device
-        )
+        if self.waveforms_from_disk:
+            self.waveform_sampler.get_train_waveforms(
+                world_size, rank, self.device
+            )
         self._logger.info("Initial dataloading complete")
 
         # now define some of the augmentation transforms
@@ -494,15 +527,6 @@ class BaseAframeDataset(pl.LightningDataModule):
         self._logger.info("Constructing sample rate dependent transforms")
         self.build_transforms()
         self.transforms_to_device()
-
-    # ================================================ #
-    # Utilities for doing augmentation/preprocessing
-    # after tensors have been transferred to GPU
-    # ================================================ #
-    @property
-    def device(self):
-        """Return the device of the associated lightning module"""
-        return self.trainer.lightning_module.device
 
     def on_before_batch_transfer(self, batch, _):
         """
@@ -518,6 +542,10 @@ class BaseAframeDataset(pl.LightningDataModule):
             batch = X, waveforms
         return batch
 
+    # ============================================== #
+    # Utilities for doing augmentation/preprocessing #
+    # after tensors have been transferred to GPU     #
+    # ============================================== #
     def on_after_batch_transfer(self, batch, _):
         """
         This is a method inherited from the DataModule
@@ -608,21 +636,20 @@ class BaseAframeDataset(pl.LightningDataModule):
         signal_idx = signals.shape[-1] - int(
             self.waveform_sampler.right_pad * self.hparams.sample_rate
         )
-        max_start = int(
-            signal_idx - self.left_pad_size - self.filter_size // 2
-        )
+        max_start = int(signal_idx - self.left_pad_size)
         max_stop = max_start + kernel_size
         pad = max_stop - signals.size(-1)
         if pad > 0:
             signals = torch.nn.functional.pad(signals, [0, pad])
 
-        step = (
-            kernel_size
-            - self.left_pad_size
-            - self.right_pad_size
-            - self.filter_size
-        )
-        step /= self.hparams.num_valid_views - 1
+        # Prevent division by zero if we want only
+        # a single validation view
+        if self.hparams.num_valid_views == 1:
+            step = 0
+        else:
+            step = kernel_size - self.left_pad_size - self.right_pad_size
+            step /= self.hparams.num_valid_views - 1
+
         X_inj = []
         for i in range(self.hparams.num_valid_views):
             start = max_start - int(i * step)
