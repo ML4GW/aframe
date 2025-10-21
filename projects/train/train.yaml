@@ -76,12 +76,13 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        training_waveform_path: ${oc.env:AFRAME_TRAIN_DATA_DIR}/training_waveforms.hdf5
+        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
+        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms.hdf5
     # waveform_sampler: 
     #   class_path: train.data.waveforms.generator.cbc.CBCGenerator
     #   init_args:
     #     training_prior: ./training_prior.yaml
-    #     val_waveform_file: ${oc.env:AFRAME_TRAIN_DATA_DIR}/val_waveforms.hdf5
+    #     val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
     #     approximant: ml4gw.waveforms.IMRPhenomPv2
     #     f_min: 20
     #     f_ref: 40

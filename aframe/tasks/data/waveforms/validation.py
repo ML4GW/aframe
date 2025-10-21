@@ -39,9 +39,14 @@ class DeployValidationWaveforms(
         description="Frequency of lowpass filter in Hz",
         default="",
     )
+    background_dir = PathParameter(
+        description="Directory containing background strain data into "
+        "which waveforms will be injected during validation",
+        default=paths().train_background_dir,
+    )
     output_dir = PathParameter(
         description="Directory where merged training waveforms will be saved",
-        default=paths().train_datadir,
+        default=paths().train_waveforms_dir,
     )
 
     tmp_dir = PathParameter(
@@ -66,8 +71,8 @@ class DeployValidationWaveforms(
         reqs = super().workflow_requires()
         reqs["psd_segment"] = FetchTrain.req(
             self,
-            data_dir=self.output_dir / "background",
-            segments_file=self.output_dir / "segments.txt",
+            data_dir=self.background_dir / "background",
+            segments_file=self.background_dir / "segments.txt",
         )
         return reqs
 

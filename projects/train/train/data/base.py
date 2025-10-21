@@ -64,8 +64,12 @@ class BaseAframeDataset(pl.LightningDataModule):
     are processed before being passed to a model
 
     Args:
-        data_dir:
-            Path to the directory containing the training data.
+        background_dir:
+            Path to the directory containing the training background.
+            If this is a s3 bucket, it will be downloaded
+            to a local directory.
+        waveforms_dir:
+            Path to the directory containing the training waveforms.
             If this is a s3 bucket, it will be downloaded
             to a local directory.
         ifos:
@@ -145,7 +149,8 @@ class BaseAframeDataset(pl.LightningDataModule):
     def __init__(
         self,
         # data loading args
-        data_dir: str,
+        background_dir: str,
+        waveforms_dir: str,
         ifos: Sequence[str],
         sample_rate: float,
         dec: Distribution,
@@ -209,7 +214,10 @@ class BaseAframeDataset(pl.LightningDataModule):
 
         # generate our local node data directory
         # if our specified data source is remote
-        self.data_dir = fs_utils.get_data_dir(self.hparams.data_dir)
+        self.background_dir = fs_utils.get_data_dir(
+            self.hparams.background_dir
+        )
+        self.waveforms_dir = fs_utils.get_data_dir(self.hparams.waveforms_dir)
         self.verbose = verbose
 
     # ================================================ #
@@ -294,7 +302,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         return int(self.hparams.right_pad * self.hparams.sample_rate)
 
     def train_val_split(self) -> tuple[Sequence[str], Sequence[str]]:
-        fnames = glob.glob(f"{self.data_dir}/background/*.hdf5")
+        fnames = glob.glob(f"{self.background_dir}/background/*.hdf5")
         fnames = sorted([Path(fname) for fname in fnames])
         durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
         valid_fnames = []
@@ -328,15 +336,25 @@ class BaseAframeDataset(pl.LightningDataModule):
         Download s3 data if it doesn't exist.
         """
         logger = logging.getLogger("AframeDataset")
-        bucket, _ = fs_utils.split_data_dir(self.hparams.data_dir)
+        bucket, _ = fs_utils.split_data_dir(self.hparams.background_dir)
         if bucket is None:
             return
         logger.info(
-            "Downloading data from S3 bucket {} to {}".format(
-                bucket, self.data_dir
+            "Downloading background data from S3 bucket {} to {}".format(
+                bucket, self.background_dir
             )
         )
-        fs_utils.download_training_data(bucket, self.data_dir)
+        fs_utils.download_training_data(bucket, self.background_dir)
+
+        bucket, _ = fs_utils.split_data_dir(self.hparams.waveforms_dir)
+        if bucket is None:
+            return
+        logger.info(
+            "Downloading waveform data from S3 bucket {} to {}".format(
+                bucket, self.waveforms_dir
+            )
+        )
+        fs_utils.download_training_data(bucket, self.waveforms_dir)
 
     def slice_waveforms(self, waveforms: torch.Tensor) -> torch.Tensor:
         """
