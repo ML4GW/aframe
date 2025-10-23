@@ -68,6 +68,12 @@ class TestingWaveformsParams(WaveformParams):
         "rejected parameters will be saved",
         default=paths().test_waveforms_dir,
     )
+    max_num_samples = luigi.IntParameter(
+        description="Maximum number of waveforms to simulate "
+        "during each pass of rejection sampling. Determined "
+        "by memory limitations.",
+        default=3000,
+    )
 
 
 @inherits(TestingWaveformsParams)
@@ -171,28 +177,29 @@ class DeployTestingWaveforms(
         from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)
-        start, end, shift, psd_segment = self.branch_data
+        start, end, shifts, psd_segment = self.branch_data
         with psd_segment.open("r") as psd_file:
             psd_file = h5py.File(io.BytesIO(psd_file.read()))
             testing_waveforms(
-                start,
-                end,
-                self.ifos,
-                shift,
-                self.spacing,
-                self.buffer,
-                prior,
-                self.minimum_frequency,
-                self.reference_frequency,
-                self.sample_rate,
-                self.waveform_duration,
-                self.waveform_approximant,
-                self.right_pad,
-                self.highpass,
-                self.lowpass,
-                self.snr_threshold,
-                psd_file,
-                Path(self.tmp_dir),
+                start=start,
+                end=end,
+                ifos=self.ifos,
+                shifts=shifts,
+                spacing=self.spacing,
+                buffer=self.buffer,
+                prior=prior,
+                minimum_frequency=self.minimum_frequency,
+                reference_frequency=self.reference_frequency,
+                sample_rate=self.sample_rate,
+                waveform_duration=self.waveform_duration,
+                waveform_approximant=self.waveform_approximant,
+                right_pad=self.right_pad,
+                highpass=self.highpass,
+                lowpass=self.lowpass,
+                snr_threshold=self.snr_threshold,
+                psd_file=psd_file,
+                max_num_samples=self.max_num_samples,
+                output_dir=Path(self.tmp_dir),
                 jitter=self.jitter,
                 seed=self.seed,
             )
