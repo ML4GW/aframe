@@ -145,6 +145,9 @@ def create_online_runfile(path: Path):
     export BEARER_TOKEN_FILE=
     export SCITOKEN_FILE=
 
+    export AFRAME_KEYTAB=/home/aframe.online/robot/aframe-online_robot_aframe.ldas.cit.keytab
+    export AFRAME_CREDKEY=aframe-online/robot/aframe.ldas.cit
+
     # trained model weights
     export AMPLFI_HL_WEIGHTS=
     export AMPLFI_HLV_WEIGHTS=
@@ -184,7 +187,7 @@ def create_online_runfile(path: Path):
         crash count = $crash_count" >> monitoring.log
         sleep 1
     done
-    """
+    """  # noqa E501
     runfile = path / "run.sh"
     write_content(content, runfile)
 

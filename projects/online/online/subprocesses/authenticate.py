@@ -5,16 +5,23 @@ from .utils import subprocess_wrapper, run_subprocess_with_logging
 
 logger = logging.getLogger("authenticate-subprocess")
 
+AFRAME_KEYTAB = os.getenv(
+    "AFRAME_KEYTAB",
+    "/home/aframe.online/robot/aframe-online_robot_aframe.ldas.cit.keytab",
+)
+
+AFRAME_CREDKEY = os.getenv(
+    "AFRAME_CREDKEY", "aframe-online/robot/aframe.ldas.cit"
+)
+
 
 def authenticate(minsecs: float = 1000, debug: bool = False):
     args = [
         "kinit",
-        "aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu@LIGO.ORG",
+        AFRAME_CREDKEY + "@LIGO.ORG",
         "-k",
         "-t",
-        os.path.expanduser(
-            "~/robot/aframe-1-scitoken_robot_ldas-pcdev12.ligo.caltech.edu.keytab"  # noqa
-        ),
+        AFRAME_KEYTAB,
     ]
     run_subprocess_with_logging(
         args, logger=logger, log_stderr_on_success=False
@@ -28,9 +35,9 @@ def authenticate(minsecs: float = 1000, debug: bool = False):
         "-i",
         "igwn",
         "-r",
-        "aframe-1-scitoken",
+        AFRAME_CREDKEY.split("/")[0],
         "--scopes=gracedb.read",
-        "--credkey=aframe-1-scitoken/robot/ldas-pcdev12.ligo.caltech.edu",
+        f"--credkey={AFRAME_CREDKEY}",
         f"--minsecs={minsecs}",
         "--nooidc",
     ]
