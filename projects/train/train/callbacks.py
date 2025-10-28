@@ -57,38 +57,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             X = tuple(i.cpu() for i in X)
         else:
             X = X.cpu()
-        trace = torch.jit.trace(module.model.to("cpu"), X)
-
-        save_dir = trainer.logger.save_dir
-        if save_dir.startswith("s3://"):
-            s3 = s3fs.S3FileSystem()
-            with s3.open(f"{save_dir}/model.pt", "wb") as f:
-                torch.jit.save(trace, f)
-
-            s3.copy(self.best_model_path, f"{save_dir}/best.ckpt")
-        else:
-            with open(os.path.join(save_dir, "model.pt"), "wb") as f:
-                torch.jit.save(trace, f)
-            shutil.copy(
-                self.best_model_path, os.path.join(save_dir, "best.ckpt")
-            )
-
-class MultimodalMultibandModelCheckpoint(pl.callbacks.ModelCheckpoint):
-    def on_train_end(self, trainer, pl_module):
-        torch.cuda.empty_cache()
-        torch.serialization.add_safe_globals([ml4gw.distributions.PowerLaw])
-        torch.serialization.add_safe_globals([torch.distributions.transforms.AffineTransform])
-        torch.serialization.add_safe_globals([torch.distributions.transforms.PowerTransform])
-        torch.serialization.add_safe_globals([torch.distributions.uniform.Uniform])
-        module = pl_module.__class__.load_from_checkpoint(
-            self.best_model_path, arch=pl_module.model, metric=pl_module.metric
-        )
-
-        device = pl_module.device
-        [X], waveforms = next(iter(trainer.train_dataloader))
-        X = X.to(device)
-        X, y = trainer.datamodule.augment(X, waveforms)
-        trace = torch.jit.trace(module.model.to("cpu"), (tuple(Xi.to("cpu") for Xi in X), ))
+        trace = torch.jit.trace(module.model.to("cpu"), (X,))
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
@@ -187,74 +156,6 @@ class SaveAugmentedBatch(Callback):
                         os.path.join(save_dir, "wandb_url.txt"), "w"
                     ) as f:
                         f.write(url)
-
-class MultimodalMultibandSaveAugmentedBatch(Callback):
-    def on_train_start(self, trainer, pl_module):
-        if trainer.global_rank == 0:
-            # find device module is on
-            device = pl_module.device
-            save_dir = trainer.logger.save_dir
-
-            # build training batch by hand
-            [X], waveforms = next(iter(trainer.train_dataloader))
-            waveforms = trainer.datamodule.slice_waveforms(waveforms)
-            X = X.to(device)
-
-            X, y = trainer.datamodule.augment(X, waveforms)
-
-            # build val batch by hand
-            [background, _, _], [signals] = next(
-                iter(trainer.datamodule.val_dataloader())
-            )
-            background = background.to(device)
-            signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
-                background, signals
-            )
-
-            if save_dir.startswith("s3://"):
-                s3 = s3fs.S3FileSystem()
-                with s3.open(f"{save_dir}/batch.h5", "wb") as s3_file:
-                    with io.BytesIO() as f:
-                        with h5py.File(f, "w") as h5file:
-                            h5file["X"] = X.cpu().numpy()
-                            h5file["y"] = y.cpu().numpy()
-                        s3_file.write(f.getvalue())
-
-                with s3.open(f"{save_dir}/val_batch.h5", "wb") as s3_file:
-                    with io.BytesIO() as f:
-                        with h5py.File(f, "w") as h5file:
-                            h5file["X_bg"] = X_bg.cpu().numpy()
-                            h5file["X_inj"] = X_inj.cpu().numpy()
-                        s3_file.write(f.getvalue())
-            else:
-                with h5py.File(os.path.join(save_dir, "batch.h5"), "w") as f:
-                    for i, Xi in enumerate(X):
-                        f[f"X_{i}"] = Xi.cpu().numpy()
-                    f["y"] = y.cpu().numpy()
-
-                with h5py.File(
-                    os.path.join(save_dir, "val_batch.h5"), "w"
-                ) as f:
-                    for i, Xi in enumerate(X_bg):
-                        f[f"X_bg_{i}"] = Xi.cpu().numpy()
-                    for i, Xi in enumerate(X_inj):
-                        f[f"X_inj_{i}"] = Xi.cpu().numpy()
-
-            # while we're here let's log the wandb url
-            # associated with the run
-            maybe_wandb_logger = trainer.loggers[-1]
-            if isinstance(maybe_wandb_logger, pl.loggers.WandbLogger):
-                url = maybe_wandb_logger.experiment.url
-                if save_dir.startswith("s3://"):
-                    with s3.open(f"{save_dir}/wandb_url.txt", "wb") as s3_file:
-                        s3_file.write(url.encode())
-                else:
-                    with open(
-                        os.path.join(save_dir, "wandb_url.txt"), "w"
-                    ) as f:
-                        f.write(url)
-
 
 class GradientTracker(Callback):
     def __init__(self, norm_type: int = 2):
