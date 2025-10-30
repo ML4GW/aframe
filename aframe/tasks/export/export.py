@@ -80,14 +80,14 @@ class ExportLocal(AframeSingularityTask):
         args.append("--platform=" + str(self.platform))
         args.append("--model_type=" + str(self.model_type))
         if self.model_type == 'mm_export':
-            args.append("--resample_rates=" + str(self.batch_size))
-            args.append("--kernel_lengths=" + str(self.psd_length))
-            args.append("--high_passes=" + str(self.streams_per_gpu))
-            args.append("--low_passes=" + str(self.platform))
-            args.append("--inference_sampling_rates=" + str(self.batch_size))
-            args.append("--starting_offsets=" + str(self.psd_length))
-            args.append("--classes=" + str(self.streams_per_gpu))
-            args.append("--layers=" + str(self.platform))
+            args.append("--resample_rates=" + str(self.resample_rates))
+            args.append("--kernel_lengths=" + str(self.kernel_lengths))
+            args.append("--high_passes=" + str(self.high_passes))
+            args.append("--low_passes=" + str(self.low_passes))
+            args.append("--inference_sampling_rates=" + str(self.inference_sampling_rates))
+            args.append("--starting_offsets=" + str(self.starting_offsets))
+            args.append("--classes=" + str(self.classes))
+            args.append("--layers=" + str(self.layers))
         return args
 
     def run(self):

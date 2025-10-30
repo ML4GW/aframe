@@ -31,13 +31,13 @@ class MultimodalMultibandDataset(SupervisedAframeDataset):
                  *args, 
                  **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.resample_rates = resample_rates
+        self.resample_rates = resample_rates #assumes that kernels read highest to lowest with last inde reserved for fft params
         self.kernel_lengths = kernel_lengths
         self.high_passes = high_passes
         self.low_passes = low_passes
         self.inference_sampling_rates = inference_sampling_rates
         self.min_kernel_size = int(self.hparams.kernel_lengths[0]*self.hparams.sample_rate)
-        self.initial_offsets = np.array(initial_offsets)
+        self.initial_offsets = np.array(initial_offsets) #in units of 1/max(inference_sampling_rates) relative to the previous layer. Assumes 0 and -1 index are 0 offset
         
     def slice_waveforms(self, waveforms: torch.Tensor) -> torch.Tensor:
         signal_idx = waveforms.shape[-1] - int(

@@ -55,7 +55,7 @@ def separate_model(weights: str,
     torch.jit.save(net_trace, outpath)
     return
 
-class concatenation_layer(torch.nn.Module):
+class concatenation_layer(torch.nn.Module): #the concatenation is made with explicit args so that triton can keep track of variables
     def __init__(self,
                  inference_sampling_rates: Sequence[float],
                 ) -> None:

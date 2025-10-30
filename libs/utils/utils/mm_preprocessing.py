@@ -125,16 +125,17 @@ class mm_BatchWhitener(torch.nn.Module):
         self.num_ifos = num_ifos
         # do foreground length calculation in units of samples,
         # then convert back to length to guard for intification
-        starting_offsets = [0, *starting_offsets]
         self.starting_offsets = []
+        self.starting_offsets.append(int(kernel_length*sample_rate-self.kernel_sizes[0]))
         running_offset = 0
-        for so in starting_offsets:
+        for i, so in enumerate(starting_offsets):
             running_offset += so
-            self.starting_offsets.append(int(kernel_length*sample_rate-running_offset*min(self.stride_sizes)-self.kernel_sizes[i]))
+            self.starting_offsets.append(int(kernel_length*sample_rate-running_offset*min(self.stride_sizes)-self.kernel_sizes[i+1]))
 
         self.starting_offsets.append(int(kernel_length*sample_rate-self.kernel_sizes[-1]))
         
         self.ending_offsets = []
+        self.ending_offsets.append(None)
         running_offset = 0
         for so in starting_offsets:
             running_offset += so
@@ -167,9 +168,6 @@ class mm_BatchWhitener(torch.nn.Module):
         self.fft_lowpass = low_passes[-1]
 
     def forward(self, x: Tensor) -> Tensor:
-        # Get the number of channels so we know how to
-        # reshape `x` appropriately after unfolding to
-        # ensure we have (batch, channels, time) shape
         out_x = tuple()
         x, psd = self.psd_estimator(x)
         for i in range(self.num_timeseries):
