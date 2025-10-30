@@ -107,29 +107,13 @@ def export(
 
     # load in the model graph
     logging.info("Initializing model graph")
-#UNCOMMENT BELOW FOR ACTUAL RUN
-    #with open_file(weights, "rb") as f:
-    #    graph = nn = torch.jit.load(f, map_location="cpu")
-# REMOVE BELOW FOR ACTUAL RUN
-    if weights.endswith(".ckpt"):
-        from train.model.multimodal import MultimodalAframe  # or whatever class wraps your arch
 
-        repo = qv.ModelRepository(repository_directory, clean=clean)
-        try:
-            aframe = repo.models["aframe"]
-        except KeyError:
-            aframe = repo.add("aframe", platform=platform)
+    with open_file(weights, "rb") as f:
+        graph = nn = torch.jit.load(f, map_location="cpu")
 
-        if aframe_instances is not None:
-            scale_model(aframe, aframe_instances)
+    graph.eval()
+    logging.info(f"Initialize:\n{nn}")
 
-        ckpt_model = MultimodalAframe.load_from_checkpoint(weights)
-        graph = ckpt_model.arch
-
-#UNCOMMENT ON ACTUAL RUN
-    #graph.eval()
-    logging.info(f"Initialize:\n{graph}")
-    #logging.info(f"Initialize:\n{nn}")
     # instantiate a model repository at the
     # indicated location. Split up the preprocessor
     # and the neural network (which we'll call aframe)
