@@ -13,7 +13,7 @@ import numpy as np
 from ml4gw.transforms import SpectralDensity
 import random
 Tensor = torch.Tensor
-
+import ml4gw
 from typing import Callable, Optional, Union
 from collections.abc import Sequence
 
@@ -38,7 +38,12 @@ class MultimodalMultibandDataset(SupervisedAframeDataset):
         self.inference_sampling_rates = inference_sampling_rates
         self.min_kernel_size = int(self.hparams.kernel_lengths[0]*self.hparams.sample_rate)
         self.initial_offsets = np.array(initial_offsets) #in units of 1/max(inference_sampling_rates) relative to the previous layer. Assumes 0 and -1 index are 0 offset
-        
+        torch.serialization.add_safe_globals([ml4gw.distributions.PowerLaw])
+        torch.serialization.add_safe_globals([torch.distributions.transforms.AffineTransform])
+        torch.serialization.add_safe_globals([torch.distributions.transforms.PowerTransform])
+        torch.serialization.add_safe_globals([torch.distributions.uniform.Uniform])
+        torch.serialization.add_safe_globals([ml4gw.distributions.Cosine])
+
     def slice_waveforms(self, waveforms: torch.Tensor) -> torch.Tensor:
         signal_idx = waveforms.shape[-1] - int(
             self.waveform_sampler.right_pad * self.hparams.sample_rate

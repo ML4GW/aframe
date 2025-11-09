@@ -11,11 +11,11 @@ from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities import grad_norm
-from lightning.pytorch.cli import SaveConfigCallback
+
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
 
-class WandbSaveConfig(SaveConfigCallback):
+class WandbSaveConfig(pl.cli.SaveConfigCallback):
     """
     Override of `lightning.pytorch.cli.SaveConfigCallback` for use with WandB
     to ensure all the hyperparameters are logged to the WandB dashboard.
@@ -73,6 +73,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
                 self.best_model_path, os.path.join(save_dir, "best.ckpt")
             )
 
+
 class SaveAugmentedBatch(Callback):
     def on_train_start(self, trainer, pl_module):
         if trainer.global_rank == 0:
@@ -102,8 +103,8 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj, val_X_bg_fft, val_X_fg_fft = (
-                trainer.datamodule.build_val_batches(background, signals)
+            X_bg, X_inj = trainer.datamodule.build_val_batches(
+                background, signals
             )
             # Make background and injected validation data into
             # tuples for consistency if necessary
@@ -134,7 +135,6 @@ class SaveAugmentedBatch(Callback):
                     for i, x in enumerate(X):
                         f[f"input_{i}"] = x.cpu().numpy()
                     f["y"] = y.cpu().numpy()
-                    f["X_fft"] = X_fft.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"
@@ -156,6 +156,7 @@ class SaveAugmentedBatch(Callback):
                         os.path.join(save_dir, "wandb_url.txt"), "w"
                     ) as f:
                         f.write(url)
+
 
 class GradientTracker(Callback):
     def __init__(self, norm_type: int = 2):
