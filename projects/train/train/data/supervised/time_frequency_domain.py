@@ -18,7 +18,7 @@ class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
         super().build_transforms(*args, **kwargs)
         self.qtransform = SingleQTransform(
             duration=self.hparams.kernel_length,
-            sample_rate=self.sample_rate,
+            sample_rate=self.hparams.sample_rate,
             q=self.q,
             spectrogram_shape=self.spectrogram_shape,
         )
@@ -63,7 +63,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
 
     @property
     def window_size(self):
-        return int(self.window_length * self.sample_rate)
+        return int(self.window_length * self.hparams.sample_rate)
 
     @property
     def window_scale(self):
@@ -89,18 +89,18 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         psd = truncate_inverse_power_spectrum(
             psd,
             self.hparams.fduration,
-            self.sample_rate,
+            self.hparams.sample_rate,
             self.hparams.highpass,
             self.hparams.lowpass,
         )
         X = X - X.mean(-1, keepdim=True)
         X = X * self.window
         freqs = torch.fft.rfftfreq(
-            X.shape[-1], 1 / self.sample_rate, device=self.device
+            X.shape[-1], 1 / self.hparams.sample_rate, device=self.device
         )
         mask = freqs > self.hparams.highpass
         mask *= freqs < self.hparams.lowpass
-        X = torch.fft.rfft(X, dim=-1) / self.sample_rate
+        X = torch.fft.rfft(X, dim=-1) / self.hparams.sample_rate
         X /= torch.sqrt(psd)
         X = X[..., mask]
         return X
