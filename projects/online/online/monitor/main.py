@@ -5,9 +5,6 @@ from pathlib import Path
 from .utils.parse_logs import estimate_tb, pipeline_online
 from .pages import EventPage, SummaryPage
 
-from gwpy.time import tconvert
-from datetime import datetime, timezone
-
 
 def main(
     run_dir: Path,
@@ -25,7 +22,9 @@ def main(
         online_args: Configuration parameters for the online search.
         start_time:
             The earliest GPS time to consider for processing events.
-            If None, the current GPS time is used.
+            If None and an event dataframe file exists, the oldest
+            event time will be used. If the file does not exist,
+            the current GPS time is used.
         update_cadence:
             The interval in seconds to check for new events.
         logger: Logger object for standardizing logging output
@@ -36,26 +35,23 @@ def main(
 
     detected_event_dir = run_dir / "output" / "events"
 
-    if start_time is None:
-        start_time = float(tconvert(datetime.now(timezone.utc)))
-
+    summary_page = SummaryPage(start_time, run_dir, out_dir, logger)
     # Estimate analysis live time since the given start time
-    tb = estimate_tb(run_dir, start_time)
+    tb = estimate_tb(run_dir, summary_page.start_time)
     logger.info(f"Estimated analysis live time: {tb:.2f} seconds")
 
     previous_update_time = time.time()
 
-    summary_page = SummaryPage(start_time, run_dir, out_dir, logger)
     while True:
         detected_events = [
             event
             for event in detected_event_dir.iterdir()
-            if float(event.name.split("_")[1]) >= start_time
+            if float(event.name.split("_")[1])
         ]
 
         # The event page will be created/updated only if the event directory
         # is missing expected plots. Otherwise it will be skipped.
-        for event in detected_events:
+        for event in sorted(detected_events):
             event_page = EventPage(
                 event, online_args, run_dir, out_dir, logger
             )
