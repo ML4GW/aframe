@@ -7,7 +7,7 @@ from infer.data import Sequence
 from infer.main import infer
 from infer.postprocess import Postprocessor
 from utils.logging import configure_logging
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def build_parser():
     parser = jsonargparse.ArgumentParser()

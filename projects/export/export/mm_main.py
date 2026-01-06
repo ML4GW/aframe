@@ -5,7 +5,6 @@ from typing import Optional
 import h5py
 import hermes.quiver as qv
 import torch
-
 from collections.abc import Sequence
 
 from export.mm_snapshotter import mm_add_streaming_input_preprocessor
@@ -37,13 +36,13 @@ def mm_export(
     batch_size: int,
     fduration: float,
     psd_length: float,
-    resample_rates: Sequence[float], 
-    kernel_lengths: Sequence[float], 
-    high_passes: Sequence[float], 
-    low_passes: Sequence[float],
-    inference_sampling_rates: Sequence[float],
-    starting_offsets: Sequence[int],
-    classes: Sequence[int],
+    resample_rates: tuple, 
+    kernel_lengths: tuple, 
+    high_passes: tuple, 
+    low_passes: tuple,
+    inference_sampling_rates: tuple,
+    starting_offsets: tuple,
+    classes: tuple,
     fftlength: Optional[float] = None,
     q: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -122,7 +121,15 @@ def mm_export(
         **kwargs:
             Key word arguments specific to the export platform
     """
-
+    resample_rates = list(resample_rates)
+    kernel_lengths = list(kernel_lengths)
+    high_passes = list(high_passes)
+    low_passes = list(low_passes)
+    inference_sampling_rates = list(inference_sampling_rates)
+    starting_offsets = list(starting_offsets)
+    classes = list(classes)
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    
     # load in the model graph
     logging.info("Initializing model graph")
     

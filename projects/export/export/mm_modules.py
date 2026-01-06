@@ -5,7 +5,6 @@ from typing import Optional
 import h5py
 import hermes.quiver as qv
 import torch
-
 from utils.s3 import open_file
 
 from architectures.stackedresnets import MultimodalMultiband
@@ -20,10 +19,13 @@ def separate_model(weights: str,
                    kernel_length: float,
                    sample_rate: float,
                    batch_size: int,
-                   classes: list,
-                   layers: Sequence[list],
-                   inference_sampling_rates: Sequence[float],
+                   classes: tuple,
+                   layers: tuple,
+                   inference_sampling_rates: tuple,
                    **kwargs,):
+    classes = list(classes)
+    inference_sampling_rates = list(inference_sampling_rates)
+    layers = [list(v) for v in layers]
     mm_test=MultimodalMultiband(classes = classes, num_ifos = num_ifos, sample_rate = sample_rate,  kernel_length = kernel_length, 
                                 layers = layers, kernel_size = 3, zero_init_residual = False, groups = 1, width_per_group = 64, 
                                 stride_type = None, norm_layer = GroupNorm1DGetter(groups = 16))
@@ -57,9 +59,10 @@ def separate_model(weights: str,
 
 class concatenation_layer(torch.nn.Module): #the concatenation is made with explicit args so that triton can keep track of variables
     def __init__(self,
-                 inference_sampling_rates: Sequence[float],
+                 inference_sampling_rates: tuple,
                 ) -> None:
         super().__init__()
+        inference_sampling_rates = list(inference_sampling_rates)
         self.repeats = [max(inference_sampling_rates)//x for x in inference_sampling_rates]
         self.num_layers = len(self.repeats)
         self.forward = make_forward(self.num_layers).__get__(self)
