@@ -36,6 +36,7 @@ def configure_logging(
         format=log_format,
         level=logging.DEBUG if verbose else logging.INFO,
         stream=sys.stdout,
+        force=True,
     )
 
     # If a filename is provided, add file handler to write logs to file
