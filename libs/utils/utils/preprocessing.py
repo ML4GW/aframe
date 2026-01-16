@@ -49,7 +49,9 @@ class BackgroundSnapshotter(torch.nn.Module):
         # Convert to number of samples at the given sample rate
         self.state_size = int(state_length * sample_rate)
 
-    def forward(self, update: Tensor, snapshot: Tensor) -> tuple[Tensor, ...]:
+    def forward(
+        self, update: Tensor, snapshot: Tensor
+    ) -> tuple[Tensor, Tensor]:
         """
         Concatenate new update with snapshot and extract sliding window.
 
