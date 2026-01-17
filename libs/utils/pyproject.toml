@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=1.26.4,<2",
     "s3fs>=2024,<2025",
     "ml4gw>=0.7.2",
+    "astropy>=6.0.1",
 ]
 
 [dependency-groups]
