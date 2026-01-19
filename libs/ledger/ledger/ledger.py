@@ -1,30 +1,58 @@
 import os
 import warnings
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional, Union
 
 import h5py
 import numpy as np
 from tqdm.auto import tqdm
 
-PATH = Union[str, bytes, os.PathLike]
+PATH = str | bytes | os.PathLike
 
 
 # define metadata for various types of injection set attributes
 # so that they can be easily extended by just annotating your
 # new argument with the appropriate type of field
 def parameter(default=None):
+    """Create a parameter field with metadata for Ledger dataclasses.
+
+    Args:
+        default: Optional factory function returning default value.
+            Defaults to empty numpy array.
+
+    Returns:
+        A dataclass field with parameter metadata.
+    """
     default = default or (lambda: np.array([]))
     return field(metadata={"kind": "parameter"}, default_factory=default)
 
 
 def waveform(default=None):
+    """Create a waveform field with metadata for Ledger dataclasses.
+
+    Args:
+        default: Optional factory function returning default value.
+            Defaults to empty numpy array.
+
+    Returns:
+        A dataclass field with waveform metadata.
+    """
     default = default or (lambda: np.array([]))
     return field(metadata={"kind": "waveform"}, default_factory=default)
 
 
 def metadata(default=None, default_factory=None):
+    """Create a metadata field with metadata for Ledger dataclasses.
+
+    Args:
+        default: Default value for the field. Can only specify one of
+                 default or default_factory.
+        default_factory: Callable to generate default value.
+
+    Returns:
+        A dataclass field with metadata kind annotation.
+    """
     # can only specify one of default or default_factory
     kwargs = {}
     if default_factory is not None:
@@ -35,6 +63,16 @@ def metadata(default=None, default_factory=None):
 
 
 def _iter_open(files: Iterable[Path], mode: str, clean: bool = True):
+    """Iterate over HDF5 files, opening and optionally removing them.
+
+    Args:
+        files: Iterable of file paths to open.
+        mode: File open mode ('r', 'w', 'a', etc.).
+        clean: If True, delete files after yielding. Defaults to True.
+
+    Yields:
+        Opened h5py.File objects.
+    """
     for fname in files:
         with h5py.File(fname, mode) as f:
             yield f
@@ -44,6 +82,12 @@ def _iter_open(files: Iterable[Path], mode: str, clean: bool = True):
 
 @dataclass
 class Ledger:
+    """Base class for managing collections of parameters and waveforms.
+
+    Provides functionality for data storage, retrieval, sorting,
+    and file I/O operations for structured collections of data.
+    """
+
     def __post_init__(self):
         # get our length up front and make sure that
         # everything that isn't metadata has the same length
@@ -115,9 +159,18 @@ class Ledger:
         idx = np.argsort(getattr(self, attr))
         return self[idx]
 
-    def write(self, fname: PATH, chunks=None) -> None:
-        """
-        TODO: implement this with an append mode
+    def write(
+        self, fname: PATH, chunks: tuple[int, ...] | None = None
+    ) -> None:
+        """Write ledger data to HDF5 file.
+
+        Args:
+            fname: Path to output HDF5 file.
+            chunks: Optional tuple specifying chunk shape for
+                waveform datasets.
+
+        Raises:
+            TypeError: If a field is missing metadata annotation.
         """
         with h5py.File(fname, "w") as f:
             f.attrs["length"] = len(self)
@@ -147,7 +200,7 @@ class Ledger:
                     )
 
     @classmethod
-    def _load_with_idx(cls, f: h5py.File, idx: Optional[np.ndarray] = None):
+    def _load_with_idx(cls, f: h5py.File, idx: np.ndarray | None = None):
         def _try_get(group: str, field: str):
             try:
                 group = f[group]
@@ -199,24 +252,35 @@ class Ledger:
 
     @classmethod
     def read(cls, fname: PATH):
+        """Read ledger data from HDF5 file.
+
+        Args:
+            fname: Path to HDF5 file to read.
+
+        Returns:
+            Instance of the ledger class populated with data from file.
+        """
         with h5py.File(fname, "r") as f:
             return cls._load_with_idx(f, None)
 
     @classmethod
     def sample_from_file(cls, fname: PATH, N: int, replace: bool = False):
-        """Helper method for out-of-memory dataloading
+        """Sample data from HDF5 file for out-of-memory operations.
 
-        TODO: future extension - add a `weights` callable
-        that takes the open h5py.File object as an input
-        and computes sampling weights based on parameter values
+        Loads a random sample of records from a ledger file without
+        loading the entire file into memory.
 
         Args:
-            fname: The file to sample from
-            N: The number of samples to draw
-            replace:
-                Whether to draw with replacement or not.
-                If `False`, `N` must be less than the total
-                number of samples contained in the file.
+            fname: Path to HDF5 file to sample from.
+            N: Number of samples to draw.
+            replace: If True, draw with replacement. If False, N must be
+                less than total samples in file. Defaults to False.
+
+        Returns:
+            Instance of the ledger class with sampled data.
+
+        Raises:
+            ValueError: If replace=False and N exceeds file length.
         """
 
         with h5py.File(fname, "r") as f:
@@ -276,38 +340,27 @@ class Ledger:
         fname: Path,
         dtype: np.dtype = np.float64,
         clean: bool = True,
-        chunks: Optional[tuple] = None,
-        length: Optional[int] = None,
+        chunks: tuple[int, ...] | None = None,
+        length: int | None = None,
     ) -> None:
-        """
-        Aggregate the data from the files of many smaller
-        ledgers into a single larger ledger file
+        """Aggregate multiple ledger files into a single file.
+
+        Combines data from multiple smaller ledger files into a single
+        larger file, with optional cleanup of source files.
 
         Args:
-            files:
-                List of Paths to all of the smaller files to
-                aggregate. All files must be structured as
-                expected by the `cls` object
-            fname:
-                Name of the file into which the smaller files
-                will be aggregated
-            dtype:
-                The datatype to use for storing parameters
-                or waveforms data
-            clean:
-                If true, remove the source files when the
-                aggregation process completes
-            chunks:
-                Shape to chunk waveforms into for efficient
-                reading
-            length:
-                The total length of the final `Ledger` object.
-                If unspecified, this will be determined from
-                the `length` attribute of the source files.
-                If the final length is known in advance,
-                specifying it here saves a read operation of
-                each source file.
-
+            files: Iterable of file paths to aggregate. All files must be
+                   structured as expected by the `cls` object.
+            fname: Output file path for the aggregated ledger.
+            dtype: Datatype for storing parameters and waveforms data.
+                   Defaults to np.float64.
+            clean: If True, remove source files after aggregation.
+                   Defaults to True.
+            chunks: Optional tuple specifying chunk shape for efficient
+                    waveform reading.
+            length: Total length of final Ledger object. If unspecified,
+                    determined from source file metadata. Providing this
+                    in advance saves a read operation per source file.
         """
         if length is None:
             # iterate through all the files once up front
