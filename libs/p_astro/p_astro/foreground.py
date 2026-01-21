@@ -1,3 +1,4 @@
+import numpy as np
 from astropy.cosmology import Cosmology
 from scipy.stats import gaussian_kde
 
@@ -42,10 +43,14 @@ class ForegroundModel:
 
     @property
     def total_injections(self):
+        """
+        Total number of generated injections, including those below the SNR cut
+        """
         return len(self.foreground) + len(self.rejected)
 
     @property
     def scale_factor(self):
+        """Scale factor to convert from rate density to count rate"""
         return (
             self.astro_event_rate
             * self.injected_volume
@@ -96,7 +101,18 @@ class KdeForeground(ForegroundModel):
     def fit(self):
         self.kde = gaussian_kde(self.foreground.detection_statistic)
 
-    def __call__(self, stats):
+    def __call__(self, stats: float | np.ndarray) -> float | np.ndarray:
+        """
+        Evaluate the foreground model density at the given detection statistics
+
+        Args:
+            stats: Detection statistic(s) at which to evaluate the
+                foreground model
+
+        Returns:
+            Foreground model density evaluated at the input
+            detection statistic(s)
+        """
         density = self.kde(stats)
         if isinstance(stats, (float, int)):
             density = density.item()
