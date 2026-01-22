@@ -207,8 +207,8 @@ class MultiModalPreprocessor(torch.nn.Module):
         self.freq_mask = torch.ones_like(freqs, dtype=torch.bool)
         if highpass is not None:
             self.freq_mask &= freqs > highpass
-        if lowpass is not None:
-            self.freq_mask &= freqs < lowpass
+#        if lowpass is not None:
+#            self.freq_mask &= freqs < lowpass
 
     def forward(self, x: Tensor) -> Tensor:
         # Get the number of channels so we know how to
