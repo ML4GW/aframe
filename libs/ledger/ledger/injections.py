@@ -1,10 +1,10 @@
 from concurrent.futures import Executor, as_completed
 from dataclasses import dataclass, make_dataclass
-from typing import Dict, List, Optional
 
 import h5py
 import numpy as np
 from astropy.cosmology import z_at_value
+from astropy.cosmology import Cosmology
 from astropy.units import Mpc
 from lalsimulation import (
     SimInspiralTransformPrecessingNewInitialConditions,
@@ -15,25 +15,57 @@ from pycbc.waveform import get_td_waveform
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 from utils.cosmology import DEFAULT_COSMOLOGY
 
+# Solar mass in kg
 MSUN = 1.988409902147041637325262574352366540e30
 
 
-def chirp_mass(m1, m2):
-    """Calculate chirp mass from component masses"""
+def chirp_mass(
+    m1: float | np.ndarray, m2: float | np.ndarray
+) -> float | np.ndarray:
+    """Calculate chirp mass from component masses.
+
+    Args:
+        m1: Primary mass (scalar or array).
+        m2: Secondary mass (scalar or array).
+
+    Returns:
+        Chirp mass with same shape as inputs.
+    """
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
 
 
-def transpose(d: Dict[str, List]):
-    """Turn a dict of lists into a list of dicts"""
+def transpose(d: dict[str, list]):
+    """Convert dictionary of lists to list of dictionaries.
+
+    Transposes data structure so each row becomes a dictionary entry
+    keyed by the original dictionary keys.
+
+    Args:
+        d: Dictionary with string keys and list values of equal length.
+
+    Returns:
+        List of dictionaries, one per row of input data.
+    """
     return [dict(zip(d, col)) for col in zip(*d.values())]
 
 
 @dataclass
 class IntrinsicParameterSet(Ledger):
-    """
-    Easy to initialize with:
-    params = prior.sample(N)
-    params = IntrinsicParameterSet(**params)
+    """A set of intrinsic parameters for a binary system.
+
+    Stores the intrinsic parameters of a binary system that determine
+    its waveform. Can be easily initialized from bilby prior samples.
+
+    Attributes:
+        mass_1: Primary component mass in solar masses.
+        mass_2: Secondary component mass in solar masses.
+        a_1: Primary spin magnitude.
+        a_2: Secondary spin magnitude.
+        tilt_1: Primary tilt angle (rad).
+        tilt_2: Secondary tilt angle (rad).
+        phi_12: Azimuthal angle between spins (rad).
+        phi_jl: Azimuthal angle between total angular momentum and orbital
+                angular momentum (rad).
     """
 
     mass_1: np.ndarray = parameter()
@@ -47,19 +79,48 @@ class IntrinsicParameterSet(Ledger):
 
     @property
     def chirp_mass(self):
+        """Compute chirp mass from component masses.
+
+        Returns:
+            Chirp mass array.
+        """
         return chirp_mass(self.mass_1, self.mass_2)
 
     @property
     def total_mass(self):
+        """Compute total mass from component masses.
+
+        Returns:
+            Total mass array.
+        """
         return self.mass_1 + self.mass_2
 
     @property
     def mass_ratio(self):
+        """Compute mass ratio (mass_2 / mass_1).
+
+        Returns:
+            Mass ratio array.
+        """
         return self.mass_2 / self.mass_1
 
 
 @dataclass
 class ExtrinsicParameterSet(Ledger):
+    """A set of extrinsic parameters for a binary system.
+
+    Stores the extrinsic parameters that determine the detector response
+    but not the waveform shape.
+
+    Attributes:
+        ra: Right ascension sky coordinate (rad).
+        dec: Declination sky coordinate (rad).
+        redshift: Source redshift.
+        psi: Polarization angle (rad).
+        theta_jn: Inclination angle (rad).
+        phase: Phase at reference frequency (rad).
+    """
+
     ra: np.ndarray = parameter()
     dec: np.ndarray = parameter()
     redshift: np.ndarray = parameter()
@@ -69,20 +130,55 @@ class ExtrinsicParameterSet(Ledger):
 
     @property
     def mass_1_source(self):
+        """Convert mass_1 from detector frame to source frame.
+
+        Returns:
+            Source frame mass_1.
+        """
         return self.mass_1 / (1 + self.redshift)
 
     @property
     def mass_2_source(self):
+        """Convert mass_2 from detector frame to source frame.
+
+        Returns:
+            Source frame mass_2.
+        """
         return self.mass_2 / (1 + self.redshift)
 
     @property
-    def luminosity_distance(self, cosmology=DEFAULT_COSMOLOGY):
+    def luminosity_distance(self, cosmology: Cosmology = DEFAULT_COSMOLOGY):
+        """Calculate luminosity distance from redshift using cosmology.
+
+        Args:
+            cosmology: Astropy cosmology to use. Defaults to DEFAULT_COSMOLOGY.
+
+        Returns:
+            Luminosity distance in Mpc.
+        """
         return cosmology.luminosity_distance(self.redshift).value
 
 
 @dataclass
 class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
+    """Combined intrinsic and extrinsic parameters with Bilby convention.
+
+    Stores both intrinsic (masses, spins) and extrinsic (sky location,
+    phase) parameters in the format used by Bilby.
+    """
+
     def convert_to_lal_param_set(self, reference_frequency: float):
+        """Convert Bilby parameters to LAL convention.
+
+        Converts spin parameters from angle/magnitude convention used by Bilby
+        to Cartesian components used by LAL.
+
+        Args:
+            reference_frequency: Reference frequency for spin transformation.
+
+        Returns:
+            LALParameterSet with converted parameters.
+        """
         mass_1_si = self.mass_1 * MSUN
         mass_2_si = self.mass_2 * MSUN
         inclination = np.zeros(len(self))
@@ -136,6 +232,24 @@ class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
 
 @dataclass
 class LALParameterSet(Ledger):
+    """Binary parameters with LAL convention.
+
+    Stores parameters in the format expected by PyCBC's get_td_waveform
+    function, with Cartesian spin components.
+
+    Attributes:
+        mass1: Primary component mass in solar masses.
+        mass2: Secondary component mass in solar masses.
+        spin1x, spin1y, spin1z: Primary spin Cartesian components.
+        spin2x, spin2y, spin2z: Secondary spin Cartesian components.
+        inclination: Orbital inclination angle (rad).
+        luminosity_distance: Luminosity distance in Mpc.
+        phase: Phase at reference frequency (rad).
+        ra: Right ascension (rad).
+        dec: Declination (rad).
+        psi: Polarization angle (rad).
+    """
+
     # No underscores in masses because of format PyCBC expects
     mass1: np.ndarray = parameter()
     mass2: np.ndarray = parameter()
@@ -153,13 +267,26 @@ class LALParameterSet(Ledger):
     psi: np.ndarray = parameter()
 
     @property
-    def redshift(self, cosmology=DEFAULT_COSMOLOGY):
+    def redshift(self, cosmology: Cosmology = DEFAULT_COSMOLOGY):
+        """Calculate redshift from luminosity distance using cosmology.
+
+        Args:
+            cosmology: Astropy cosmology to use. Defaults to DEFAULT_COSMOLOGY.
+
+        Returns:
+            Redshift array.
+        """
         return z_at_value(
             cosmology.luminosity_distance, self.luminosity_distance * Mpc
         ).value
 
     @property
     def generation_params(self):
+        """Format parameters for waveform generation with PyCBC.
+
+        Returns:
+            Dictionary with parameters in PyCBC format for get_td_waveform.
+        """
         params = {
             "mass1": self.mass1,
             "mass2": self.mass2,
@@ -176,6 +303,17 @@ class LALParameterSet(Ledger):
         return params
 
     def convert_to_bilby_param_set(self, reference_frequency: float):
+        """Convert LAL parameters to Bilby format.
+
+        Converts spin parameters from Cartesian components in LAL format
+        to angle/magnitude convention used by Bilby.
+
+        Args:
+            reference_frequency: Reference frequency for spin transformation.
+
+        Returns:
+            BilbyParameterSet with converted parameters.
+        """
         theta_jn = np.zeros(len(self))
         phi_jl = np.zeros(len(self))
         tilt_1 = np.zeros(len(self))
@@ -232,12 +370,34 @@ class LALParameterSet(Ledger):
 
 @dataclass
 class InjectionMetadata(Ledger):
+    """Metadata for sets of generated waveforms.
+
+    Stores metadata about a set of injected waveforms including sampling
+    parameters and injection configuration.
+
+    Attributes:
+        sample_rate: Waveform sampling rate in Hz.
+        duration: Waveform duration in seconds.
+        right_pad: Time from coalescence to right edge in seconds.
+        num_injections: Total number of injections generated.
+    """
+
     sample_rate: np.ndarray = metadata()
     duration: np.ndarray = metadata()
     right_pad: float = metadata()
     num_injections: int = metadata(default=0)
 
     def __post_init__(self):
+        """Validate metadata consistency for waveforms.
+
+        Verifies that:
+        - All waveforms have the specified duration
+        - num_injections >= number of waveforms
+        - Sample rate is specified if waveforms are present
+
+        Raises:
+            ValueError: If validation checks fail.
+        """
         # verify that all waveforms have the appropriate duration
         super().__post_init__()
         if self.num_injections < self._length:
@@ -270,6 +430,11 @@ class InjectionMetadata(Ledger):
 
     @property
     def waveform_fields(self):
+        """Get list of field names that contain waveform data.
+
+        Returns:
+            List of waveform field names.
+        """
         fields = self.__dataclass_fields__.items()
         fields = filter(lambda x: x[1].metadata["kind"] == "waveform", fields)
         return [i[0] for i in fields]
@@ -287,7 +452,19 @@ class InjectionMetadata(Ledger):
 
 @dataclass(frozen=True)
 class _WaveformGenerator:
-    """Thin wrapper so that we can potentially parallelize this"""
+    """Thin wrapper for parallelizable waveform generation.
+
+    Provides callable interface for generating time-domain waveforms
+    with specified parameters, designed to work with multiprocessing.
+
+    Attributes:
+        waveform_approximant: Waveform approximant name.
+        sample_rate: Sampling rate in Hz.
+        waveform_duration: Total waveform duration in seconds.
+        right_pad: Padding from coalescence to right edge in seconds.
+        minimum_frequency: Minimum frequency for waveform in Hz.
+        reference_frequency: Reference frequency in Hz.
+    """
 
     waveform_approximant: str
     sample_rate: float
@@ -297,49 +474,37 @@ class _WaveformGenerator:
     reference_frequency: float
 
     def shift_coalescence(self, waveforms: np.ndarray, t_final: float):
-        """
-        Shift a pair of polarizations such that the coalescence point is moved
-        such that it is `self.right_pad` seconds from the right edge.
-        The shift is accomplished by rolling the array
+        """Shift waveform so coalescence is right_pad seconds from edge.
+
+        Rolls the waveform array so the coalescence point (originally at
+        t=0 from PyCBC) is positioned right_pad seconds from the right edge.
 
         Args:
-            waveforms:
-                The stacked polarizations of a waveform. These are generated
-                by PyCBC's `get_td_waveform`, which places the coalescence
-                point at t = 0
-            t_final:
-                The ending time of the signal array. This time is relative
-                to the coalescence point
+            waveforms: Stacked polarizations (2, num_samples) from PyCBC.
+            t_final: Ending time of signal array relative to coalescence.
 
         Returns:
-            The stacked, shifted polarizations
+            Shifted waveform array with same shape as input.
         """
         shift_time = t_final - self.right_pad + 1 / self.sample_rate
         shift_idx = int(shift_time * self.sample_rate)
         return np.roll(waveforms, shift_idx, axis=-1)
 
     def align_waveforms(self, waveforms: np.ndarray, t_final: float):
-        """
-        Adjust a pair of polarizations such that the arrays have the desired
-        length and the coalescence point is at the desired time. Waveforms
-        generated by PyCBC have different lengths based on the waveform
-        parameters, and so may be longer or shorter than
-        `self.waveform_duration`. If the generated signal is shorter, it
-        will be zero-padded on the left and then shifted. If it is longer,
-        it will be shifted and then cropped.
+        """Pad or crop waveform to desired length with correct merger time.
+
+        Adjusts waveforms to the desired duration with coalescence point
+        at the correct position. Waveforms from PyCBC have variable lengths
+        depending on parameters, so this function pads or crops as needed.
+        Shorter waveforms are zero-padded on the left then shifted, while
+        longer waveforms are shifted then cropped from the right.
 
         Args:
-            waveforms:
-                The stacked polarizations of a waveform. These are generated
-                by PyCBC's `get_td_waveform`, which places the coalescence
-                point at t = 0
-            t_final:
-                The ending time of the signal array. This time is relative
-                to the coalescence point
+            waveforms: Stacked polarizations (2, num_samples) from PyCBC.
+            t_final: Ending time of signal array relative to coalescence.
 
         Returns:
-            The stacked, shifted polarizations padded or cropped to the
-            appropriate length
+            Waveform array with shape (2, waveform_duration*sample_rate).
         """
         waveform_length = int(self.sample_rate * self.waveform_duration)
         if waveforms.shape[-1] < waveform_length:
@@ -351,7 +516,20 @@ class _WaveformGenerator:
             waveforms = waveforms[:, -waveform_length:]
         return waveforms
 
-    def __call__(self, params: Dict[str, float]):
+    def __call__(self, params: dict[str, float]):
+        """Generate waveform for given parameters.
+
+        Generates a time-domain waveform using PyCBC's get_td_waveform
+        with the specified generator parameters and input parameters.
+        The mimimum frequency is automatically adjusted if it exceeds
+        the frequency limit for the given masses.
+
+        Args:
+            params: Dictionary of waveform parameters from generation_params.
+
+        Returns:
+            Dictionary with 'plus' and 'cross' polarization arrays.
+        """
         # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/transforms/detection/waveform.py?ref_type=heads#L112 # noqa
         freq_limit = 1899.0 / (params["mass1"] + params["mass2"])
         if self.minimum_frequency > freq_limit:
@@ -380,14 +558,26 @@ class _WaveformGenerator:
 
 @dataclass
 class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
+    """A set of generated waveform polarizations.
+
+    Stores the plus and cross polarizations of generated waveforms
+    along with their parameters and metadata.
+
+    Attributes:
+        cross: Cross polarization waveform array.
+        plus: Plus polarization waveform array.
+    """
+
     cross: np.ndarray = waveform()
     plus: np.ndarray = waveform()
 
     @property
     def waveform_duration(self):
+        """Calculate waveform duration from array length and sample rate."""
         return self.cross.shape[-1] / self.sample_rate
 
     def get_waveforms(self) -> np.ndarray:
+        """Get stacked waveforms of shape (num_injections, 2, num_samples)."""
         return np.stack([self.cross, self.plus], axis=-2)
 
     @classmethod
@@ -400,8 +590,29 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
         waveform_duration: float,
         waveform_approximant: str,
         right_pad: float,
-        ex: Optional[Executor] = None,
+        ex: Executor | None = None,
     ):
+        """Generate waveforms from parameters using PyCBC.
+
+        Creates a WaveformPolarizationSet by generating time-domain waveforms
+        for each set of parameters using PyCBC's get_td_waveform.
+
+        Args:
+            params: BilbyParameterSet with injection parameters.
+            minimum_frequency: Minimum frequency in Hz for waveform generation.
+            reference_frequency: Reference frequency in Hz.
+            sample_rate: Sampling rate in Hz.
+            waveform_duration: Total waveform duration in seconds.
+            waveform_approximant: Waveform approximant name.
+            right_pad: Padding from coalescence to right edge in seconds.
+            ex: Optional Executor for parallel waveform generation.
+
+        Returns:
+            WaveformPolarizationSet with generated waveforms.
+
+        Raises:
+            ValueError: If right_pad >= waveform_duration.
+        """
         if waveform_duration < right_pad:
             raise ValueError(
                 "Right padding must be less than waveform duration; "
@@ -450,6 +661,17 @@ class WaveformPolarizationSet(InjectionMetadata, BilbyParameterSet):
 
 @dataclass
 class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
+    """Intrinsic and extrinsic parameters for injection campaign.
+
+    Combines extrinsic and intrinsic parameters along with SNR information
+    for injections into detector data.
+
+    Attributes:
+        snr: Overall signal-to-noise ratio.
+        ifo_snrs: SNR in each individual interferometer.
+        ifos: List of interferometer names.
+    """
+
     snr: np.ndarray = parameter()
     ifo_snrs: np.ndarray = parameter()
     ifos: list[str] = metadata(default_factory=list)
@@ -474,8 +696,10 @@ class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
 
 @dataclass
 class WaveformSet(InjectionMetadata, InjectionParameterSet):
-    """
-    A set of waveforms projected onto a set of interferometers
+    """A set of waveform polarizations along with their metadata.
+
+    Stores both polarizations of gravitational wave strain for injections
+    along with their parameters, SNRs, and metadata.
     """
 
     def __post_init__(self):
@@ -484,6 +708,11 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
 
     @property
     def waveforms(self) -> np.ndarray:
+        """Get stacked waveform array (cached after first access).
+
+        Returns:
+            Array of shape (num_injections, num_polarizations, num_samples).
+        """
         if self._waveforms is None:
             fields = sorted(self.waveform_fields)
             waveforms = [getattr(self, i) for i in fields]
@@ -498,19 +727,26 @@ class WaveformSet(InjectionMetadata, InjectionParameterSet):
         return self._waveforms
 
     def num_waveform_fields(self):
+        """Get number of waveform fields in this set.
+
+        Returns:
+            Number of waveform polarizations.
+        """
         return len(self.waveform_fields)
 
 
 # TODO: rename this to InjectionCampaign
-
-
-# note, dataclass inheritance goes from last to first,
-# so the ordering of kwargs here would be:
-# mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate, h1, l1
 @dataclass
 class InterferometerResponseSet(WaveformSet):
-    """
-    Represents a set of projected waveforms to be used in an injection campaign
+    """Waveforms projected onto specific interferometers.
+
+    Represents a set of projected waveforms to be used in an injection
+    campaign, along with the times and shifts for each injection.
+
+    Note:
+        Dataclass inheritance order (last to first) determines field ordering:
+        mass1, mass2, ..., ra, dec, psi, injection_time, shift, sample_rate,
+        h1, l1
     """
 
     injection_time: np.ndarray = parameter()
@@ -526,14 +762,36 @@ class InterferometerResponseSet(WaveformSet):
         )
 
     def get_shift(self, shift):
+        """
+        Get injections with specified shift.
+
+        Args:
+            shift:
+                Shift value or array to filter injections by
+
+        Returns:
+            InjectionParameterSet with injections with the specified shift.
+        """
         mask = self.shift == shift
         if self.shift.ndim == 2:
             mask = mask.all(axis=-1)
         return self[mask]
 
-    def get_times(
-        self, start: Optional[float] = None, end: Optional[float] = None
-    ):
+    def get_times(self, start: float | None = None, end: float | None = None):
+        """
+        Get injections within specified time range.
+
+        Args:
+            start:
+                Optional start time to filter injections from
+            end:
+                Optional end time to filter injections to
+
+        Returns:
+            InjectionParameterSet with injections that fall
+            within the specified time range.
+        """
+
         if start is None and end is None:
             raise ValueError("Must specify one of start or end")
 
@@ -548,15 +806,26 @@ class InterferometerResponseSet(WaveformSet):
     def read(
         cls,
         fname: PATH,
-        start: Optional[float] = None,
-        end: Optional[float] = None,
-        shifts: Optional[float] = None,
+        start: float | None = None,
+        end: float | None = None,
+        shifts: float | None = None,
     ):
         """
-        Similar wildcard behavior in loading. Additional
-        kwargs to be able to load data for just a particular
-        segment since the slice method below will make copies
-        and you could start to run out of memory fast.
+        Load InjectionCampaign from file with optional slicing.
+
+        Args:
+            fname:
+                Path to file to load from
+            start:
+                Optional start time to load injections from
+            end:
+                Optional end time to load injections to
+            shifts:
+                Optional list of shifts to load injections for
+
+        Returns:
+            Loaded InjectionCampaign instance with injections that fall
+            within the specified time range and/or shifts.
         """
         with h5py.File(fname, "r") as f:
             if all(i is None for i in [start, end, shifts]):
@@ -610,8 +879,16 @@ class InterferometerResponseSet(WaveformSet):
 
     def inject(self, x: np.ndarray, start: float):
         """
-        Inject waveforms into background array with
-        initial timestamp `start`
+        Inject waveforms into background timeseries
+
+        Args:
+            x:
+                Array of shape (num_ifos, num_samples) to inject waveforms into
+            start:
+                GPS start time of x
+
+        Returns:
+            Background timeseries with waveforms injected
         """
         stop = start + x.shape[-1] / self.sample_rate
         left_pad = self.duration - self.right_pad
@@ -691,6 +968,8 @@ def waveform_class_factory(ifos: list[str], base_cls, cls_name: str):
         cls_name:
             Name of resulting dataclass
 
+    Returns:
+        Newly created dataclass with waveform fields for each ifo
     """
     ifos = [ifo.lower() for ifo in ifos]
     fields = [(ifo, waveform()) for ifo in ifos]

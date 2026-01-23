@@ -14,76 +14,20 @@ def reference_frequency():
 @pytest.fixture
 def bilby_param_set():
     params = {
-        "mass_1": np.array(
-            [
-                35,
-            ]
-        ),
-        "mass_2": np.array(
-            [
-                20,
-            ]
-        ),
-        "a_1": np.array(
-            [
-                0.5,
-            ]
-        ),
-        "a_2": np.array(
-            [
-                0,
-            ]
-        ),
-        "tilt_1": np.array(
-            [
-                np.pi / 2,
-            ]
-        ),
-        "tilt_2": np.array(
-            [
-                np.pi / 2,
-            ]
-        ),
-        "phi_12": np.array(
-            [
-                np.pi,
-            ]
-        ),
-        "phi_jl": np.array(
-            [
-                np.pi,
-            ]
-        ),
-        "ra": np.array(
-            [
-                np.pi / 4,
-            ]
-        ),
-        "dec": np.array(
-            [
-                np.pi / 4,
-            ]
-        ),
-        "redshift": np.array(
-            [
-                1,
-            ]
-        ),
-        "psi": np.array(
-            [
-                np.pi / 8,
-            ]
-        ),
-        "theta_jn": np.array(
-            [
-                np.pi / 8,
-            ]
-        ),
-        "phase": np.array(
-            [
-                np.pi / 8,
-            ]
-        ),
+        "mass_1": np.array([35]),
+        "mass_2": np.array([20]),
+        "a_1": np.array([0.5]),
+        "a_2": np.array([0]),
+        "tilt_1": np.array([np.pi / 2]),
+        "tilt_2": np.array([np.pi / 2]),
+        "phi_12": np.array([np.pi]),
+        "phi_jl": np.array([np.pi]),
+        "ra": np.array([np.pi / 4]),
+        "dec": np.array([np.pi / 4]),
+        "redshift": np.array([1]),
+        "psi": np.array([np.pi / 8]),
+        "theta_jn": np.array([np.pi / 8]),
+        "phase": np.array([np.pi / 8]),
     }
     return BilbyParameterSet(**params)
 
