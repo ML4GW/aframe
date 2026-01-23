@@ -85,7 +85,7 @@ class Postprocessor:
             val = y[i]
             window = y[i + 1 : i + 1 + window_size]
 
-            if (val <= window).any():
+            if (val < window).any():
                 # if there is a larger value,
                 # move our index to it
                 i += np.argmax(window) + 1
