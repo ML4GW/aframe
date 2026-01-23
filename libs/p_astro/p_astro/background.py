@@ -45,9 +45,9 @@ class KdeAndPolynomialBackground(BackgroundModel):
     Args:
         split:
             The detection statistic at which to switch from using
-            a KDE to fit the background to using an exponential
-            fit to the background. If None, the split point is
-            estimated as the point at which the PDF of the KDE
+            a KDE to fit the background to using a polynomial
+            fit to the log background pdf. If None, the split point
+            is estimated as the point at which the PDF of the KDE
             drops below 1/sqrt(N), where N is the number of
             background events
     """
@@ -58,9 +58,15 @@ class KdeAndPolynomialBackground(BackgroundModel):
 
     @property
     def scale_factor(self):
+        """Scale factor to convert from rate density to count rate"""
         return len(self.background) * SECONDS_IN_YEAR / self.background.Tb
 
     def fit(self):
+        """
+        Fit the background model to the data using a KDE where there are
+        sufficient samples, and a polynomial fit to the tail of the
+        distribution where samples are sparse.
+        """
         # fit gaussian kde to the background
         kde = gaussian_kde(self.background.detection_statistic)
 
@@ -101,7 +107,18 @@ class KdeAndPolynomialBackground(BackgroundModel):
         )
         self.threshold_statistic = samples[stop]
 
-    def __call__(self, stats):
+    def __call__(self, stats: float | np.ndarray) -> float | np.ndarray:
+        """
+        Evaluate the background model density at the given detection statistics
+
+        Args:
+            stats: Detection statistic(s) at which to evaluate the
+                background model
+
+        Returns:
+            Background model density evaluated at the input
+            detection statistic(s)
+        """
         return (
             np.piecewise(
                 stats,
