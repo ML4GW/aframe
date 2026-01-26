@@ -35,6 +35,7 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
+    num_outputs: Optional[int] = None,
     aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
@@ -88,6 +89,9 @@ def export(
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
+        num_outputs: 
+            The number of neural network outputs. Default is None
+            which guarantees 1.
         aframe_instances:
             The number of concurrent execution instances of the
             aframe architecture to host per GPU during inference
@@ -155,10 +159,21 @@ def export(
     elif platform == qv.Platform.TENSORRT:
         kwargs["use_fp16"] = False
 
+    # determining the number of neural networks for
+    # naming the outputs
+    if num_outputs is None:
+        num_outputs = 1
+    if num_outputs < 1:
+        raise ValueError("num_outputs must be >= 1")
+    output_names = (
+        ["discriminator"] if num_outputs == 1 
+        else [f"discriminator_{i}" for i in range(num_outputs)]
+    )
+
     aframe.export_version(
         graph,
         input_shapes=input_shape_dict,
-        output_names=["discriminator"],
+        output_names=output_names,
         **kwargs,
     )
 
@@ -191,7 +206,9 @@ def export(
 
         # export the ensemble model, which basically amounts
         # to writing its config and creating an empty version entry
-        ensemble.add_output(aframe.outputs["discriminator"])
+        # this takes care of number of neural network outputs and its name
+        for name in output_names:
+            ensemble.add_output(aframe.outputs[name])
         ensemble.export_version(None)
     else:
         # if there does already exist an ensemble by

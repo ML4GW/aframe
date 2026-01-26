@@ -126,3 +126,67 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         # split into real and imaginary parts
         X = torch.cat([X.real, X.imag], dim=1)
         return X, y
+
+
+class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
+    def __init__(
+        self, q: float, spectrogram_shape: list[int, int], *args, **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.q = q
+        self.spectrogram_shape = spectrogram_shape
+
+    def build_transforms(self, *args, **kwargs):
+        super().build_transforms(*args, **kwargs)
+
+        if self.schedule.shape[0] != 2:
+            raise RuntimeError(
+                "TimeSpectrogramDomainSupervisedAframeDataset requires "
+                f"exactly 2 schedule views, but got {self.schedule.shape[0]}."
+            )
+
+        self.qtransform = SingleQTransform(
+            duration=self.schedule[0, 1].item(),
+            sample_rate=self.schedule[0, 2].item(),
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
+        
+    def build_val_batches(self, background, signals):
+        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+
+        # whiten each view of backgrounds and injections
+        X_bg = self.whitener(X_bg, psds)
+        X_fg = []
+        for inj in X_inj:
+            inj = self.whitener(inj, psds)
+            X_fg.append(inj)
+        X_fg = torch.stack(X_fg)
+
+        # decimate and q transform backgrounds and injections
+        if self.decimator is not None:
+            X_bg = self.decimator(X_bg)
+            X_fg = self.decimator(X_fg)
+
+        # converting first segment of timeseries to q transform
+        X_bg_spec = torch.nan_to_num(self.qtransform(X_bg[0]))
+        X_fg_spec = []
+        for i in range(X_fg[0].shape[0]):
+            qt = torch.nan_to_num(self.qtransform(X_fg[0][i]))
+            X_fg_spec.append(qt)
+        X_fg_spec = torch.stack(X_fg_spec)
+
+        # first input is timeseries and second input is spectrogram
+        return (X_bg[1], X_bg_spec), (X_fg[1], X_fg_spec)
+
+    def inject(self, X, waveforms=None):
+        X, y, psds = super().inject(X, waveforms)
+        X = self.whitener(X, psds)
+        if self.decimator is not None:
+            X = self.decimator(X)
+        
+        # converting first segment of timeseries to q transform
+        X_spec = torch.nan_to_num(self.qtransform(X[0]))
+
+        # first input is timeseries and second input is spectrogram
+        return (X[1], X_spec), y

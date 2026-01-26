@@ -11,7 +11,7 @@ import lightning.pytorch as pl
 import torch
 from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
-from ml4gw.transforms import Whiten
+from ml4gw.transforms import Whiten, Decimator
 from ml4gw.utils.slicing import unfold_windows
 
 from train import augmentations as aug
@@ -125,6 +125,14 @@ class BaseAframeDataset(pl.LightningDataModule):
         snr_sampler:
             A callable that samples SNRs for the injected signals.
             If `None`, SNRs will be left unchanged.
+        schedule:
+            The schedule specifies which segments of the input to keep and 
+            at what sampling rate. Each row of the schedule has the form:
+            [start_time, end_time, target_sample_rate].
+        split:
+            If `True`, then return a list of decimated segments based on the
+            schedule input. If `False`, then return a concatenated single 
+            continuous output tensor.
         valid_stride:
             Stride in seconds for the validation timeslides.
             If `None`, will use `kernel_length + fduration`.
@@ -176,6 +184,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         snr_sampler: Optional[
             Union[TransformedDist, Callable[[int], Tensor]]
         ] = None,
+        schedule: Optional[list[list[int]]] = None,
+        split: Optional[bool] = None,
         # validation args
         valid_stride: Optional[float] = None,
         num_valid_views: int = 4,
@@ -205,6 +215,15 @@ class BaseAframeDataset(pl.LightningDataModule):
         self.projector = None
         self.psd_estimator = None
         self._on_device = False
+
+        # check for schedule and set up decimator if needed
+        if self.hparams.schedule is not None:
+            schedule = self.hparams.schedule
+            self.schedule = torch.tensor(schedule, dtype=torch.int)
+            if split:
+                self.decimator = Decimator(sample_rate=self.hparams.sample_rate, schedule=self.schedule, split=True)
+            else:
+                self.decimator = Decimator(sample_rate=self.hparams.sample_rate, schedule=self.schedule)
 
         self.dec, self.psi, self.phi = dec, psi, phi
         self.waveform_sampler = waveform_sampler

@@ -1,0 +1,37 @@
+# commented args (i.e. comments with colon at end 
+# to illustrate a value needs to be filled out)
+# represent values filled out
+# by the export task at run time. To build a functional
+# standalone config, add these in yourself.
+
+logfile: /home/bhavya.gupta/experiments/aframe/export/export.log
+weights: /home/bhavya.gupta/experiments/aframe/models/time-spec-tuned-trained/model.pt
+batch_file: /home/bhavya.gupta/experiments/aframe/models/time-spec-tuned-trained/batch.hdf5
+repository_directory: /home/bhavya.gupta/experiments/aframe/export/model_repo
+num_ifos: 2
+kernel_length: 20.0
+inference_sampling_rate: 16
+sample_rate: 2048
+batch_size: 128
+fduration: 2
+psd_length: 64
+preprocessor:
+  class_path: utils.preprocessing.BatchWhitenerTimeSpectrogramDecimate
+  init_args:
+    kernel_length: 20.0
+    sample_rate: 2048
+    inference_sampling_rate: 16
+    batch_size: 128
+    fduration: 2
+    fftlength: 2
+    schedule: [[0, 16, 512], [16, 20, 2048]]
+    split: True
+    q: 45.6
+    spectrogram_shape: [64, 128]
+    highpass: 32.0
+streams_per_gpu: 12
+num_outputs: 2
+aframe_instances: 1
+platform: TENSORRT
+clean: true
+verbose: true

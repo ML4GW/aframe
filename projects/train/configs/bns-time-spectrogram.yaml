@@ -1,0 +1,163 @@
+# commented args represent values filled out
+# by train task at run time. To build a functional
+# standalone config, add these in.
+ 
+# To start training from a checkpoint, uncomment the below argument
+# and specify a path to the desired checkpoint
+# ckpt_path: ""
+model:
+  class_path: train.model.SupervisedTimeSpectrogramAframe
+  init_args:
+    # architecture
+    arch:
+      class_path: architectures.supervised.SupervisedTimeSpectrogramResNet
+      init_args:
+        time_layers: [3, 4, 6, 3]
+        time_kernel_size: 25
+        time_classes: 1
+        time_norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 16
+        spec_layers: [3, 3, 2, 2]
+        spec_kernel_size: 3
+        spec_classes: 1
+        spec_norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm2DGetter
+          init_args:
+            groups: 16
+    metric_X:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+    metric_X_spec:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+    metric:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+    # optimization params
+    weight_decay: 3e-5
+    learning_rate: 4e-4
+    pct_lr_ramp: 0.115
+    # early stop
+data:
+  class_path: train.data.supervised.TimeSpectrogramDomainSupervisedAframeDataset
+  init_args:
+    # loading args
+    background_dir: '/work/nvme/bcse/DATADIR/o3b-data-hlv/online/train'
+    waveforms_dir: '/work/hdd/bcse/bgupta1/aframe/data/train/train-waveforms-10k-25s'
+    ifos: [H1,L1]
+    sample_rate: 2048
+    batches_per_epoch: 200
+    num_files_per_batch: 10
+    chunk_size: 2000
+    chunks_per_epoch: 20
+    # preprocessing args
+    batch_size: 1000
+    kernel_length: 20
+    psd_length: 20
+    fduration: 2
+    # augmentation args
+    waveform_prob: 0.277
+    swap_prob: 0.014
+    mute_prob: 0.055
+    left_pad: 18.95
+    right_pad: 0.05
+    # highpass: 
+    # lowpass: 
+    fftlength: 2
+    schedule: [[0, 16, 512], [16, 20, 2048]]
+    split: True
+    q: 45.6
+    spectrogram_shape: [64, 128]
+    snr_sampler:
+      class_path: ml4gw.distributions.PowerLaw
+      init_args: 
+        minimum: 8
+        maximum: 100
+        index: -3
+    # curriculum learning for snr sampler
+    # snr_sampler:
+    #   class_path: train.augmentations.SnrSampler
+    #   init_args:
+    #      max_min_snr: 30
+    #      min_min_snr: 8
+    #      max_snr: 100
+    #      alpha: -3
+    #      decay_steps: 600
+    waveform_sampler:
+      class_path: train.data.waveforms.WaveformLoader
+      init_args:
+        training_waveform_path: /work/hdd/bcse/bgupta1/aframe/data/train/train-waveforms-10k-25s/waveforms.hdf5
+        val_waveform_file: /work/hdd/bcse/bgupta1/aframe/data/train/val-waveforms-10k-25s/val_waveforms_10k.hdf5
+    dec: 
+      class_path: ml4gw.distributions.Cosine
+    psi: 
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 3.14159
+        validate_args: false
+    phi: 
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 6.28318
+        validate_args: false
+    # validation args
+    valid_stride: 0.5
+    num_valid_views: 5
+    valid_livetime: 57600 # how much total length of background (in seconds) to use for validation
+
+trainer:
+  # by default, use a local CSV logger.
+  # note that you can use multiple loggers!
+  # Options in train task for appending 
+  # a wandb logger for remote logging.
+  logger:
+    - class_path: lightning.pytorch.loggers.TensorBoardLogger
+      init_args:
+        save_dir: /work/hdd/bcse/bgupta1/aframe/results/time-spec-test
+        name: "test"
+        version: "tmp"
+
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: "valid_auroc_avg"
+        mode: "max"
+        patience: 500
+    # custom model checkpoint for saving and
+    # tracing best model at end of traiing
+    # that will be used for downstream export
+    - class_path: train.callbacks.ModelCheckpoint
+      init_args:
+        monitor: "valid_auroc_avg"
+        mode: "max"
+        save_top_k: 1
+        save_last: true
+        auto_insert_metric_name: false
+    - class_path: train.callbacks.SaveAugmentedBatch
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: "step"
+  # uncomment below if you want to profile
+  # profiler:
+    # class_path: lightning.pytorch.profilers.PyTorchProfiler
+    # dict_kwargs:
+      # profile_memory: true
+  # devices:
+  # strategy: set to ddp if len(devices) > 1
+  #precision: 16-mixed
+  accelerator: auto
+  max_epochs: 1500
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 20
+  enable_progress_bar: true
+  benchmark: true

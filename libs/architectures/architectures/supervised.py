@@ -226,3 +226,56 @@ class SupervisedMultiModalResNet(SupervisedArchitecture):
         freq_domain_output = self.freq_psd_resnet(X_fft)
         concat = torch.cat([time_domain_output, freq_domain_output], dim=-1)
         return self.classifier(concat)
+
+class SupervisedTimeSpectrogramResNet(SupervisedArchitecture):
+    """
+    Spectrogram and Time Domain ResNet that processes a combination of 
+    timeseries and spectrogram image data.
+    """
+    
+    def __init__(
+        self,
+        num_ifos: int,
+        time_classes: int,
+        spec_classes: int,
+        time_layers: list[int],
+        spec_layers: list[int],
+        time_kernel_size: int = 3,
+        spec_kernel_size: int = 3,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
+        time_norm_layer: Optional[NormLayer] = None,
+        spec_norm_layer: Optional[NormLayer] = None,
+        **kwargs,
+    ):
+        super().__init__()
+        self.time_domain_resnet = ResNet1D(
+            in_channels=num_ifos,
+            layers=time_layers,
+            classes=time_classes,
+            kernel_size=time_kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=time_norm_layer,
+        )
+
+        self.spectrogram_resnet = ResNet2D(
+            in_channels=num_ifos,
+            layers=spec_layers,
+            classes=spec_classes,
+            kernel_size=spec_kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=spec_norm_layer,
+        )
+
+    def forward(self, X, X_spec):
+        time_domain_output = self.time_domain_resnet(X)
+        spec_domain_output = self.spectrogram_resnet(X_spec)
+        return time_domain_output, spec_domain_output
