@@ -126,12 +126,12 @@ class BaseAframeDataset(pl.LightningDataModule):
             A callable that samples SNRs for the injected signals.
             If `None`, SNRs will be left unchanged.
         schedule:
-            The schedule specifies which segments of the input to keep and 
+            The schedule specifies which segments of the input to keep and
             at what sampling rate. Each row of the schedule has the form:
             [start_time, end_time, target_sample_rate].
         split:
             If `True`, then return a list of decimated segments based on the
-            schedule input. If `False`, then return a concatenated single 
+            schedule input. If `False`, then return a concatenated single
             continuous output tensor.
         valid_stride:
             Stride in seconds for the validation timeslides.
@@ -221,9 +221,16 @@ class BaseAframeDataset(pl.LightningDataModule):
             schedule = self.hparams.schedule
             self.schedule = torch.tensor(schedule, dtype=torch.int)
             if split:
-                self.decimator = Decimator(sample_rate=self.hparams.sample_rate, schedule=self.schedule, split=True)
+                self.decimator = Decimator(
+                    sample_rate=self.hparams.sample_rate,
+                    schedule=self.schedule,
+                    split=True,
+                )
             else:
-                self.decimator = Decimator(sample_rate=self.hparams.sample_rate, schedule=self.schedule)
+                self.decimator = Decimator(
+                    sample_rate=self.hparams.sample_rate,
+                    schedule=self.schedule,
+                )
 
         self.dec, self.psi, self.phi = dec, psi, phi
         self.waveform_sampler = waveform_sampler

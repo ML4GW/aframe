@@ -227,12 +227,13 @@ class SupervisedMultiModalResNet(SupervisedArchitecture):
         concat = torch.cat([time_domain_output, freq_domain_output], dim=-1)
         return self.classifier(concat)
 
+
 class SupervisedTimeSpectrogramResNet(SupervisedArchitecture):
     """
-    Spectrogram and Time Domain ResNet that processes a combination of 
+    Spectrogram and Time Domain ResNet that processes a combination of
     timeseries and spectrogram image data.
     """
-    
+
     def __init__(
         self,
         num_ifos: int,

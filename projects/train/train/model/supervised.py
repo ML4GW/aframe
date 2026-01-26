@@ -75,12 +75,12 @@ class SupervisedMultiModalAframe(SupervisedAframe):
 
 class SupervisedTimeSpectrogramAframe(SupervisedAframe):
     def __init__(
-        self, 
-        arch: SupervisedArchitecture, 
-        metric_X:TimeSlideAUROC, 
+        self,
+        arch: SupervisedArchitecture,
+        metric_X: TimeSlideAUROC,
         metric_X_spec: TimeSlideAUROC,
-        *args, 
-        **kwargs
+        *args,
+        **kwargs,
     ) -> None:
         super().__init__(arch, *args, **kwargs)
 
@@ -94,18 +94,21 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         return self(X, X_spec)
 
     def train_step(
-        self, 
-        batch: tuple[tuple[Tensor, Tensor], Tensor]
+        self, batch: tuple[tuple[Tensor, Tensor], Tensor]
     ) -> Union[Tensor, dict[str, Tensor]]:
         (X, X_spec), y = batch
         y_hat_X, y_hat_X_spec = self(X, X_spec)
-        loss_X = torch.nn.functional.binary_cross_entropy_with_logits(y_hat_X, y)
-        loss_X_spec = torch.nn.functional.binary_cross_entropy_with_logits(y_hat_X_spec, y)
+        loss_X = torch.nn.functional.binary_cross_entropy_with_logits(
+            y_hat_X, y
+        )
+        loss_X_spec = torch.nn.functional.binary_cross_entropy_with_logits(
+            y_hat_X_spec, y
+        )
         return {
-        "loss_X": loss_X, 
-        "loss_X_spec": loss_X_spec,
-    }
-    
+            "loss_X": loss_X,
+            "loss_X_spec": loss_X_spec,
+        }
+
     def compute_loss_fn(self, **loss):
         return 0.7 * loss["loss_X_spec"] + 0.3 * loss["loss_X"]
 
@@ -113,12 +116,12 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         shift, (X_bg, X_bg_spec), (X_fg, X_fg_spec) = batch
 
         y_bg_X, y_bg_spec = self.score(X_bg, X_bg_spec)
-        y_bg = (y_bg_X + y_bg_spec)/2
+        y_bg = (y_bg_X + y_bg_spec) / 2
 
         # compute predictions over multiple views of
         # each injection and use their average as our
         # prediction
-        
+
         num_views, batch, *shape = X_fg.shape
         X_fg = X_fg.view(num_views * batch, *shape)
         num_views, batch, *shape = X_fg_spec.shape

@@ -89,7 +89,7 @@ def export(
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
-        num_outputs: 
+        num_outputs:
             The number of neural network outputs. Default is None
             which guarantees 1.
         aframe_instances:
@@ -166,7 +166,8 @@ def export(
     if num_outputs < 1:
         raise ValueError("num_outputs must be >= 1")
     output_names = (
-        ["discriminator"] if num_outputs == 1 
+        ["discriminator"]
+        if num_outputs == 1
         else [f"discriminator_{i}" for i in range(num_outputs)]
     )
 

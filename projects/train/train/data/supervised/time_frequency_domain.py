@@ -151,7 +151,7 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             q=self.q,
             spectrogram_shape=self.spectrogram_shape,
         )
-        
+
     def build_val_batches(self, background, signals):
         X_bg, X_inj, psds = super().build_val_batches(background, signals)
 
@@ -184,7 +184,7 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X = self.whitener(X, psds)
         if self.decimator is not None:
             X = self.decimator(X)
-        
+
         # converting first segment of timeseries to q transform
         X_spec = torch.nan_to_num(self.qtransform(X[0]))
 

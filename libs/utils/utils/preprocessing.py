@@ -3,7 +3,12 @@ from collections.abc import Callable
 import torch
 from torch import Tensor
 
-from ml4gw.transforms import SpectralDensity, Whiten, Decimator, SingleQTransform
+from ml4gw.transforms import (
+    SpectralDensity,
+    Whiten,
+    Decimator,
+    SingleQTransform,
+)
 from ml4gw.utils.slicing import unfold_windows
 
 
@@ -461,9 +466,7 @@ class BatchWhitenerTimeSpectrogramDecimate(torch.nn.Module):
         self.return_whitened = return_whitened
         self.schedule = torch.tensor(schedule, dtype=torch.int)
         self.decimator = Decimator(
-            sample_rate=sample_rate, 
-            schedule=self.schedule, 
-            split=split
+            sample_rate=sample_rate, schedule=self.schedule, split=split
         )
         self.qtransform = SingleQTransform(
             duration=self.schedule[0, 1].item(),
@@ -519,6 +522,6 @@ class BatchWhitenerTimeSpectrogramDecimate(torch.nn.Module):
 
         if self.return_whitened:
             return x, whitened
-        
+
         # first input is timeseries and second input is spectrogram
         return x[1], spec
