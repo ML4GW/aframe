@@ -1,6 +1,6 @@
 import torch
 from ml4gw.spectral import truncate_inverse_power_spectrum
-from ml4gw.transforms.qtransform import SingleQTransform
+from ml4gw.transforms import Decimator, SingleQTransform
 
 from train.data.base import Tensor
 from train.data.supervised.supervised import SupervisedAframeDataset
@@ -129,21 +129,58 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
 
 
 class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
+    """
+    A derived class of BaseAframeDataset and SupervisedAframeDataset which
+    decimates the strain and transforms it into separate timeseries and
+    spectrogram for loading data to train Aframe models.
+
+    Additional Args:
+        schedule:
+            The schedule specifies which segments of the input to keep and
+            at what sampling rate. Each row of the schedule has the form:
+            [start_time, end_time, target_sample_rate].
+        split:
+            If `True`, then return a list of decimated segments based on the
+            schedule input. If `False`, then return a concatenated single
+            continuous output tensor.
+        q:
+            The Q value to use for the Q transform.
+        spectrogram_shape:
+            The shape of the interpolated spectrogram, specified as
+            ``(num_f_bins, num_t_bins)``. Because the
+            frequency spacing of the Q-tiles is in log-space, the
+            frequency interpolation is log-spaced as well.
+    """
+
     def __init__(
-        self, q: float, spectrogram_shape: list[int, int], *args, **kwargs
+        self,
+        schedule: list[list[int]],
+        split: bool,
+        q: float,
+        spectrogram_shape: list[int, int],
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.schedule = torch.tensor(schedule, dtype=torch.int)
+
+        if self.schedule.shape[0] != 2:
+            raise ValueError(
+                "TimeSpectrogramDomainSupervisedAframeDataset requires "
+                f"exactly 2 schedule views, but got {self.schedule.shape[0]}."
+            )
+
+        self.split = split
+        self.decimator = Decimator(
+            sample_rate=self.hparams.sample_rate,
+            schedule=self.schedule,
+            split=self.split,
+        )
         self.q = q
         self.spectrogram_shape = spectrogram_shape
 
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
-
-        if self.schedule.shape[0] != 2:
-            raise RuntimeError(
-                "TimeSpectrogramDomainSupervisedAframeDataset requires "
-                f"exactly 2 schedule views, but got {self.schedule.shape[0]}."
-            )
 
         self.qtransform = SingleQTransform(
             duration=self.schedule[0, 1].item(),
@@ -171,8 +208,8 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
         # converting first segment of timeseries to q transform
         X_bg_spec = torch.nan_to_num(self.qtransform(X_bg[0]))
         X_fg_spec = []
-        for i in range(X_fg[0].shape[0]):
-            qt = torch.nan_to_num(self.qtransform(X_fg[0][i]))
+        for X in range(X_fg[0].shape[0]):
+            qt = torch.nan_to_num(self.qtransform(X_fg[0][X]))
             X_fg_spec.append(qt)
         X_fg_spec = torch.stack(X_fg_spec)
 

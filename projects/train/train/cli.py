@@ -39,6 +39,8 @@ class AframeCLI(LightningCLI):
             "model.init_args.metric.init_args.stride",
         )
 
+        # TODO: This is a workaround for optional extra metrics. Revisit
+        # if metric handling becomes more complex or widespread.
         try:
             parser.link_arguments(
                 "data.init_args.valid_stride",

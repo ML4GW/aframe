@@ -1,6 +1,5 @@
 import torch
 from architectures.supervised import SupervisedArchitecture
-from typing import Union
 
 from train.model.base import AframeBase
 from train.metrics import TimeSlideAUROC
@@ -77,6 +76,10 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
     def __init__(
         self,
         arch: SupervisedArchitecture,
+        train_X_coeff: float,
+        train_X_spec_coeff: float,
+        val_X_coeff: float,
+        val_X_spec_coeff: float,
         metric_X: TimeSlideAUROC,
         metric_X_spec: TimeSlideAUROC,
         *args,
@@ -87,6 +90,11 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         self.metric_X = metric_X
         self.metric_X_spec = metric_X_spec
 
+        self.train_X_coeff = train_X_coeff
+        self.train_X_spec_coeff = train_X_spec_coeff
+        self.val_X_coeff = val_X_coeff
+        self.val_X_spec_coeff = val_X_spec_coeff
+
     def forward(self, X, X_spec):
         return self.model(X, X_spec)
 
@@ -95,7 +103,7 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
 
     def train_step(
         self, batch: tuple[tuple[Tensor, Tensor], Tensor]
-    ) -> Union[Tensor, dict[str, Tensor]]:
+    ) -> Tensor | dict[str, Tensor]:
         (X, X_spec), y = batch
         y_hat_X, y_hat_X_spec = self(X, X_spec)
         loss_X = torch.nn.functional.binary_cross_entropy_with_logits(
@@ -110,13 +118,18 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         }
 
     def compute_loss_fn(self, **loss):
-        return 0.7 * loss["loss_X_spec"] + 0.3 * loss["loss_X"]
+        return (
+            self.train_X_coeff * loss["loss_X"]
+            + self.train_X_spec_coeff * loss["loss_X_spec"]
+        )
 
     def validation_step(self, batch, _) -> None:
         shift, (X_bg, X_bg_spec), (X_fg, X_fg_spec) = batch
 
         y_bg_X, y_bg_spec = self.score(X_bg, X_bg_spec)
-        y_bg = (y_bg_X + y_bg_spec) / 2
+        y_bg = (self.val_X_coeff * y_bg_X) + (
+            self.val_X_spec_coeff * y_bg_spec
+        )
 
         # compute predictions over multiple views of
         # each injection and use their average as our
@@ -130,7 +143,9 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         y_fg_X, y_fg_spec = self.score(X_fg, X_fg_spec)
         y_fg_X = y_fg_X.view(num_views, batch).mean(0)
         y_fg_spec = y_fg_spec.view(num_views, batch).mean(0)
-        y_fg = (y_fg_X + y_fg_spec) / 2
+        y_fg = (self.val_X_coeff * y_fg_X) + (
+            self.val_X_spec_coeff * y_fg_spec
+        )
 
         # include the shift associated with this data
         # in our outputs to reconstruct background
@@ -145,7 +160,7 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         # validation epoch
         # tracking metric for each data type
         self.log(
-            "valid_auroc_avg",
+            "valid_auroc",
             self.metric,
             on_step=True,
             on_epoch=True,

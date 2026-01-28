@@ -26,6 +26,10 @@ model:
           class_path: ml4gw.nn.norm.GroupNorm2DGetter
           init_args:
             groups: 16
+    train_X_coeff: 0.3
+    train_X_spec_coeff: 0.7
+    val_X_coeff: 0.5
+    val_X_spec_coeff: 0.5
     metric_X:
       class_path: train.metrics.TimeSlideAUROC
       init_args:
@@ -50,8 +54,8 @@ data:
   class_path: train.data.supervised.TimeSpectrogramDomainSupervisedAframeDataset
   init_args:
     # loading args
-    background_dir: '/work/nvme/bcse/DATADIR/o3b-data-hlv/online/train'
-    waveforms_dir: '/work/hdd/bcse/bgupta1/aframe/data/train/train-waveforms-10k-25s'
+    # background_dir:
+    # waveforms_dir:
     ifos: [H1,L1]
     sample_rate: 2048
     batches_per_epoch: 200
@@ -94,8 +98,8 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        training_waveform_path: /work/hdd/bcse/bgupta1/aframe/data/train/train-waveforms-10k-25s/waveforms.hdf5
-        val_waveform_file: /work/hdd/bcse/bgupta1/aframe/data/train/val-waveforms-10k-25s/val_waveforms_10k.hdf5
+        # training_waveform_path:
+        # val_waveform_file:
     dec: 
       class_path: ml4gw.distributions.Cosine
     psi: 
@@ -123,14 +127,14 @@ trainer:
   logger:
     - class_path: lightning.pytorch.loggers.TensorBoardLogger
       init_args:
-        save_dir: /work/hdd/bcse/bgupta1/aframe/results/time-spec-test
+        # save_dir:
         name: "test"
         version: "tmp"
 
   callbacks:
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
-        monitor: "valid_auroc_avg"
+        monitor: "valid_auroc"
         mode: "max"
         patience: 500
     # custom model checkpoint for saving and

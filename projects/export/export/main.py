@@ -35,7 +35,7 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
-    num_outputs: Optional[int] = None,
+    num_outputs: Optional[int] = 1,
     aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
@@ -90,8 +90,7 @@ def export(
             The number of snapshot states to host per GPU during
             inference
         num_outputs:
-            The number of neural network outputs. Default is None
-            which guarantees 1.
+            The number of neural network outputs. Default is set to 1
         aframe_instances:
             The number of concurrent execution instances of the
             aframe architecture to host per GPU during inference
@@ -161,8 +160,6 @@ def export(
 
     # determining the number of neural networks for
     # naming the outputs
-    if num_outputs is None:
-        num_outputs = 1
     if num_outputs < 1:
         raise ValueError("num_outputs must be >= 1")
     output_names = (

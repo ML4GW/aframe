@@ -3,8 +3,10 @@ from utils.preprocessing import (
     PsdEstimator,
     BatchWhitener,
     MultiModalPreprocessor,
+    TimeSpectrogramPreprocessor,
 )
 import torch
+import pytest
 
 
 class TestBackgroundSnapshotter:
@@ -320,3 +322,128 @@ class TestMultiModalPreprocessor:
             preprocessor.kernel_size,
         )
         assert x_freq.shape == (self.batch_size, 3 * channels, num_freqs)
+
+
+class TestTimeSpectrogramPreprocessor:
+    """Test suite for TimeSpectrogramPreprocessor module."""
+
+    kernel_length = 20
+    sample_rate = 2048
+    inference_sampling_rate = 16
+    batch_size = 32
+    fduration = 2
+    fftlength = 2
+    schedule = [[0, 16, 512], [16, 20, 2048]]  # spectrogram and timeseries
+    spectrogram_shape = (64, 128)
+    q = 45.6
+
+    def test_initialization(self):
+        preprocessor = TimeSpectrogramPreprocessor(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+            schedule=self.schedule,
+            split=True,
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
+
+        assert preprocessor.kernel_size == int(
+            self.kernel_length * self.sample_rate
+        )
+        assert preprocessor.stride_size == int(
+            self.sample_rate / self.inference_sampling_rate
+        )
+        assert preprocessor.psd_estimator is not None
+        assert preprocessor.whitener is not None
+        assert preprocessor.decimator is not None
+        assert preprocessor.qtransform is not None
+
+    def test_invalid_schedule_raises(self):
+        with pytest.raises(ValueError):
+            TimeSpectrogramPreprocessor(
+                kernel_length=self.kernel_length,
+                sample_rate=self.sample_rate,
+                inference_sampling_rate=self.inference_sampling_rate,
+                batch_size=self.batch_size,
+                fduration=self.fduration,
+                fftlength=self.fftlength,
+                schedule=[[0, 16, 512]],  # only one view
+                split=True,
+                q=self.q,
+                spectrogram_shape=self.spectrogram_shape,
+            )
+
+    def test_forward_shape(self):
+        preprocessor = TimeSpectrogramPreprocessor(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+            schedule=self.schedule,
+            split=True,
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
+
+        channels = 2
+
+        total_samples = int(
+            (
+                (self.batch_size - 1) * preprocessor.stride_size
+                + preprocessor.kernel_size
+            )
+            * 2
+        )
+
+        x = torch.randn(channels, total_samples)
+
+        X, X_spec = preprocessor(x)
+
+        # expected timeseries length from schedule[1]
+        ts_duration = self.schedule[1][1] - self.schedule[1][0]
+        ts_rate = self.schedule[1][2]
+        expected_ts_length = ts_duration * ts_rate
+
+        # timeseries output
+        assert X.shape == (
+            self.batch_size,
+            channels,
+            expected_ts_length,
+        )
+
+        # spectrogram output
+        assert X_spec.shape == (
+            self.batch_size,
+            channels,
+            self.spectrogram_shape[0],
+            self.spectrogram_shape[1],
+        )
+
+    def test_schedule_duration_matches_kernel_length(self):
+        preprocessor = TimeSpectrogramPreprocessor(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+            schedule=self.schedule,
+            split=True,
+            q=self.q,
+            spectrogram_shape=self.spectrogram_shape,
+        )
+
+        # compute total scheduled duration
+        schedule_duration = (
+            (preprocessor.schedule[:, 1] - preprocessor.schedule[:, 0])
+            .sum()
+            .item()
+        )
+
+        assert schedule_duration == self.kernel_length
