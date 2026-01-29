@@ -4,10 +4,10 @@
 # by the export task at run time. To build a functional
 # standalone config, add these in yourself.
 
-# logfile:
-# weights:
-# batch_file:
-# repository_directory:
+logfile:
+weights:
+batch_file:
+repository_directory:
 num_ifos: 2
 kernel_length: 20.0
 inference_sampling_rate: 16

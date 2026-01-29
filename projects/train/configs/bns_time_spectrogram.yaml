@@ -54,8 +54,8 @@ data:
   class_path: train.data.supervised.TimeSpectrogramDomainSupervisedAframeDataset
   init_args:
     # loading args
-    # background_dir:
-    # waveforms_dir:
+    background_dir:
+    waveforms_dir:
     ifos: [H1,L1]
     sample_rate: 2048
     batches_per_epoch: 200
@@ -98,8 +98,8 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        # training_waveform_path:
-        # val_waveform_file:
+        training_waveform_path:
+        val_waveform_file:
     dec: 
       class_path: ml4gw.distributions.Cosine
     psi: 

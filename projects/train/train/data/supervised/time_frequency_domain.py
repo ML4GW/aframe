@@ -134,7 +134,7 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
     decimates the strain and transforms it into separate timeseries and
     spectrogram for loading data to train Aframe models.
 
-    Additional Args:
+    Args:
         schedule:
             The schedule specifies which segments of the input to keep and
             at what sampling rate. Each row of the schedule has the form:
@@ -171,16 +171,17 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             )
 
         self.split = split
-        self.decimator = Decimator(
-            sample_rate=self.hparams.sample_rate,
-            schedule=self.schedule,
-            split=self.split,
-        )
         self.q = q
         self.spectrogram_shape = spectrogram_shape
 
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
+
+        self.decimator = Decimator(
+            sample_rate=self.hparams.sample_rate,
+            schedule=self.schedule,
+            split=self.split,
+        )
 
         self.qtransform = SingleQTransform(
             duration=self.schedule[0, 1].item(),

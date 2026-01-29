@@ -6,7 +6,7 @@ authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
 requires-python = ">=3.9,<3.13"
 license = "MIT"
 dependencies = [
-    "ml4gw>=0.7.10",
+    "ml4gw>=0.7.7",
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
     "ml4gw-hermes[torch]>=0.2.1",
