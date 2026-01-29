@@ -26,6 +26,7 @@ preprocessor:
     fftlength: 2
     highpass: 32
 streams_per_gpu: 6
+# num_outputs:
 aframe_instances: 1
 platform: TENSORRT
 clean: false

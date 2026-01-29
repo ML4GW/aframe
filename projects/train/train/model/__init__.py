@@ -4,4 +4,5 @@ from .supervised import (
     SupervisedAframe,
     SupervisedAframeS4,
     SupervisedMultiModalAframe,
+    SupervisedTimeSpectrogramAframe,
 )

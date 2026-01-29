@@ -3,7 +3,12 @@ from collections.abc import Callable
 import torch
 from torch import Tensor
 
-from ml4gw.transforms import SpectralDensity, Whiten
+from ml4gw.transforms import (
+    SpectralDensity,
+    Whiten,
+    Decimator,
+    SingleQTransform,
+)
 from ml4gw.utils.slicing import unfold_windows
 
 
@@ -429,3 +434,158 @@ class MultiModalPreprocessor(torch.nn.Module):
         x_fft = torch.cat([x_fft.real, x_fft.imag, inv_asd], dim=1)
 
         return x, x_fft
+
+
+class TimeSpectrogramPreprocessor(torch.nn.Module):
+    """
+    Calculate the PSDs and whiten an entire batch of kernels at once
+    for decimated timeseries and spectrogram of the strain data.
+
+    Applies decimation to strain and separates it into desired inputs
+    of timeseries and spectrogram. This object requires the strain to
+    be split into exactly two parts therefore schedule should be two
+    rows defining the start time, stop time, and sample rate.
+
+    Combines PSD estimation and whitening in a single pass.
+
+    Args:
+        kernel_length (float): Length of output kernels in seconds.
+        sample_rate (float): Input sampling rate in Hz.
+        inference_sampling_rate (float): Sampling rate of network output in Hz.
+            Determines the overlap between kernels.
+        batch_size (int): Number of kernels to extract from input.
+        fduration (float): Duration of the whitening filter in seconds
+        fftlength (float): FFT length for PSD calculation in seconds.
+        schedule (list[list[int]]): The schedule specifies which segments of
+            the input to keep and at what sampling rate. Each row of the
+            schedule has the form: [start_time, end_time, target_sample_rate].
+        split (bool): If `True`, then return a list of decimated segments based
+            on the schedule input. If `False`, then return a concatenated
+            single continuous output tensor.
+        q (float): The Q value to use for the Q transform.
+        spectrogram_shape (list[int, int]): The shape of the interpolated
+            spectrogram, specified as ``(num_f_bins, num_t_bins)``. Because the
+            frequency spacing of the Q-tiles is in log-space, the frequency
+            interpolation is log-spaced as well.
+        highpass (float, optional): Highpass frequency in Hz. Applied during
+            whitening. Defaults to None.
+        lowpass (float, optional): Lowpass frequency in Hz. Applied during
+            whitening. Defaults to None.
+
+    Example:
+        >>> preprocessor = BatchWhitenerTimeSpectrogramDecimate(
+        ...     kernel_length=20, sample_rate=2048,
+        ...     inference_sampling_rate=16, batch_size=128,
+        ...     fduration=2, fftlength=2,
+        ...     schedule=[[0, 16, 512], [16, 20, 2048]],
+        ...     split=True, q=45.6, spectrogram_shape=[64, 128],
+        ... )
+        >>> x = torch.randn(2, 40960) # (channels, time) (20s at 2048Hz)
+        >>> X, X_spec = preprocessor(x)
+        >>> # based on schedule (4s at 2048Hz)
+        >>> # X: (batch_size, channels, 8192)
+        >>> # X_spec: (batch_size, channels, 64, 128)
+    """
+
+    def __init__(
+        self,
+        kernel_length: float,
+        sample_rate: float,
+        inference_sampling_rate: float,
+        batch_size: int,
+        fduration: float,
+        fftlength: float,
+        schedule: list[list[int]],
+        split: bool,
+        q: float,
+        spectrogram_shape: list[int, int],
+        highpass: float | None = None,
+        lowpass: float | None = None,
+    ) -> None:
+        super().__init__()
+        self.stride_size = int(sample_rate / inference_sampling_rate)
+        self.kernel_size = int(kernel_length * sample_rate)
+        self.schedule = torch.tensor(schedule, dtype=torch.int)
+        if self.schedule.shape[0] != 2:
+            raise ValueError(
+                "BatchWhitenerTimeSpectrogramDecimate requires exactly "
+                f"2 schedule views, but got {self.schedule.shape[0]}."
+            )
+        self.decimator = Decimator(
+            sample_rate=sample_rate, schedule=self.schedule, split=split
+        )
+        self.qtransform = SingleQTransform(
+            duration=self.schedule[0, 1].item(),
+            sample_rate=self.schedule[0, 2].item(),
+            q=q,
+            spectrogram_shape=spectrogram_shape,
+        )
+
+        # do foreground length calculation in units of samples,
+        # then convert back to length to guard for intification
+        strides = (batch_size - 1) * self.stride_size
+        fsize = int(fduration * sample_rate)
+        size = strides + self.kernel_size + fsize
+        length = size / sample_rate
+        self.psd_estimator = PsdEstimator(
+            length,
+            sample_rate,
+            fftlength=fftlength,
+            overlap=None,
+            average="median",
+            fast=highpass is not None,
+        )
+        self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Preprocess data for timeseries spectrogram training.
+
+        Produces a decimated timeseries which is split into timeseries
+        and spectrogram as requested by the user.
+
+        Args:
+            x (Tensor): Input data of shape (batch, channels, time) or
+                (channels, time).
+
+        Returns:
+            Tuple[Tensor, Tensor]:
+                - X: Whitened decimated and split timeseries of shape
+                  (batch_size, channels, timeseries_length)
+                - X_spec: Whitened spectrogram data of shape
+                  (batch_size, channels, spectrogram_shape)
+
+        Raises:
+            ValueError: If input is not 2 or 3 dimensional.
+        """
+        # Determine number of channels for later reshaping
+        if x.ndim == 3:
+            num_channels = x.size(1)
+        elif x.ndim == 2:
+            num_channels = x.size(0)
+        else:
+            raise ValueError(
+                "Expected input to be either 2 or 3 dimensional, "
+                "but found shape {}".format(x.shape)
+            )
+
+        # Estimate PSD and prepare data
+        x, psd = self.psd_estimator(x.double())
+        # Apply whitening using estimated PSD
+        whitened = self.whitener(x, psd)
+
+        # unfold x and then put it into the expected shape.
+        # Note that if x has both signal and background
+        # batch elements, they will be interleaved along
+        # the batch dimension after unfolding
+        x = unfold_windows(whitened, self.kernel_size, self.stride_size)
+        # Reshape to (batch_size, channels, kernel_size)
+        x = x.reshape(-1, num_channels, self.kernel_size)
+
+        # decimate the timeseries
+        x = self.decimator(x)
+        # convert first segment into spectrogram
+        spec = self.qtransform(x[0])
+
+        # first input is timeseries and second input is spectrogram
+        return x[1], spec
