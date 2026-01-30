@@ -207,10 +207,10 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             X_fg = self.decimator(X_fg)
 
         # converting first segment of timeseries to q transform
-        X_bg_spec = torch.nan_to_num(self.qtransform(X_bg[0]))
+        X_bg_spec = self.qtransform(X_bg[0])
         X_fg_spec = []
         for X in range(X_fg[0].shape[0]):
-            qt = torch.nan_to_num(self.qtransform(X_fg[0][X]))
+            qt = self.qtransform(X_fg[0][X])
             X_fg_spec.append(qt)
         X_fg_spec = torch.stack(X_fg_spec)
 
@@ -224,7 +224,7 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             X = self.decimator(X)
 
         # converting first segment of timeseries to q transform
-        X_spec = torch.nan_to_num(self.qtransform(X[0]))
+        X_spec = self.qtransform(X[0])
 
         # first input is timeseries and second input is spectrogram
         return (X[1], X_spec), y
