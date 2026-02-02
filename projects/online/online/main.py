@@ -51,7 +51,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 def load_model(model: Architecture, weights: Path):
     checkpoint = torch.load(weights, map_location="cpu", weights_only=False)
     arch_weights = {
-        k[6:]: v
+        k.removeprefix("model."): v
         for k, v in checkpoint["state_dict"].items()
         if k.startswith("model.")
     }
@@ -63,7 +63,7 @@ def load_model(model: Architecture, weights: Path):
 def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
     model, checkpoint = load_model(model, weights)
     scaler_weights = {
-        k[len("scaler.") :]: v
+        k.removeprefix("scaler."): v
         for k, v in checkpoint["state_dict"].items()
         if k.startswith("scaler.")
     }
