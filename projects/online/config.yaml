@@ -51,17 +51,21 @@ channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN", "V1:Hrec_hoft_16384Hz"]
 state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
 sample_rate: 2048
-astro_event_rate: 31
-kernel_length: 1.5
+astro_event_rate: 89
+kernel_length: 20
 online_inference_rate: 512
-offline_inference_rate: 4
+offline_inference_rate: 16
+schedule: [[0, 16, 512], [16, 20, 2048]]
+split: True
+q: 45.6
+spectrogram: [64, 128]
 inference_params: ["chirp_mass", "mass_ratio", "luminosity_distance", "phic", "inclination", "dec", "psi", "phi"]
 psd_length: 64
 amplfi_psd_length: 10
 aframe_right_pad: 0.0
-fduration: 1
+fduration: 2
 amplfi_fduration: 2
-integration_window_length: 1.5
+integration_window_length: 1
 amplfi_kernel_length: 30
 event_position: 29.5
 fftlength: null
@@ -77,7 +81,7 @@ min_samples_per_pix: 5
 server: "local"
 auth_refresh: 300
 ifo_suffix: 
-input_buffer_length: 75
-output_buffer_length: 8
+input_buffer_length: 100
+output_buffer_length: 16
 device: "cuda"
 verbose: true
