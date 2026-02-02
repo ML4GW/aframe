@@ -24,7 +24,7 @@ from online.dataloading import (
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
-from utils.preprocessing import BatchWhitener
+from utils.preprocessing import TimeSpectrogramPreprocessor
 from online.subprocesses import (
     amplfi_subprocess,
     pastro_subprocess,
@@ -146,7 +146,7 @@ def process_event(
 
 @torch.no_grad()
 def search(
-    whitener: BatchWhitener,
+    whitener: TimeSpectrogramPreprocessor,
     snapshotter: OnlineSnapshotter,
     searcher: Searcher,
     event_queue: Queue,
@@ -293,7 +293,7 @@ def search(
         # (significant performance speed up)
         if hl_ready:
             logging.debug("Performing inference")
-            y = aframe(whitened)[:, 0]
+            y = aframe(whitened)[0][:, 0]
         else:
             y = torch.ones(whitened.shape[0])
 
@@ -357,6 +357,10 @@ def main(
     kernel_length: float,
     online_inference_rate: float,
     offline_inference_rate: float,
+    schedule: list[list[int]],
+    split: bool,
+    q: float,
+    spectrogram_shape: list[int, int],
     psd_length: float,
     amplfi_psd_length: float,
     aframe_right_pad: float,
@@ -430,6 +434,21 @@ def main(
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
+        schedule:
+            It specifies which segments of the input to keep and at
+            what sampling rate. Each row of the schedule has the
+            form: [start_time, end_time, target_sample_rate]
+        split:
+            If `True`, then return a list of decimated segments based on
+            the schedule input. If `False`, then return a concatenated
+            single continuous output tensor.
+        q:
+            The Q value to use for the Q transform.
+        spectrogram_shape:
+            The shape of the interpolated spectrogram, specified as
+            ``(num_f_bins, num_t_bins)``. Because the frequency spacing
+            of the Q-tiles is in log-space, the frequency interpolation
+            is log-spaced as well.
         psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten aframe data
@@ -799,13 +818,17 @@ def main(
         lowpass=lowpass,
     ).to(device)
 
-    whitener = BatchWhitener(
+    whitener = TimeSpectrogramPreprocessor(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=online_inference_rate,
         batch_size=update_size * online_inference_rate,
         fduration=fduration,
         fftlength=fftlength,
+        schedule=schedule,
+        split=split,
+        q=q,
+        spectrogram_shape=spectrogram_shape,
         highpass=highpass,
         lowpass=lowpass,
     ).to(device)
