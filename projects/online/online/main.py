@@ -293,7 +293,7 @@ def search(
         # (significant performance speed up)
         if hl_ready:
             logging.debug("Performing inference")
-            y = aframe(whitened)[:, 0]
+            y = aframe(whitened)[0][:, 0]
         else:
             y = torch.ones(whitened.shape[0])
 
