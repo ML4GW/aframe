@@ -29,11 +29,15 @@ amplfi_hlv_architecture:
     transforms: 15
     randperm: true
     embedding_net: 
-      class_path: amplfi.train.architectures.embeddings.MultiModalPsd
+      class_path: amplfi.train.architectures.embeddings.MultiModalPsdEmbeddingWithDecimator
       init_args:
         num_ifos: 3
         time_context_dim: 48
         freq_context_dim: 48
+        strain_sample_rate: ${sample_rate}
+        decimator_schedule: [[0, 10, 256], [10, 28, 512], [28, 30, 2048]]
+        time_kernel_size: 5
+        freq_kernel_size: 3
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
