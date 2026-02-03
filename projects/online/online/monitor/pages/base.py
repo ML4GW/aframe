@@ -24,9 +24,9 @@ class MonitorPage:
         """
         The root url for the output of the monitoring process,
         assuming that files are being written somewhere in
-        /home/aframe/public_html
+        /home/aframe.online/public_html
         """
-        base_dir = Path("/home/aframe/public_html")
+        base_dir = Path("/home/aframe.online/public_html")
         sub_path = self.out_dir.relative_to(base_dir)
         return f"https://ldas-jobs.ligo.caltech.edu/~aframe/{sub_path}"
 
