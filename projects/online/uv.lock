@@ -4430,7 +4430,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "h5py", specifier = "~=3.6" },
-    { name = "ml4gw", specifier = ">=0.7.2" },
+    { name = "ml4gw", specifier = "==0.7.8" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "s3fs", specifier = ">=2024,<2025" },
 ]

@@ -3,7 +3,7 @@ name = "export"
 version = "0.1.0"
 description = "Export aframe for IaaS inference"
 authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 license = "MIT"
 dependencies = [
     "ml4gw>=0.7.7",
