@@ -6,9 +6,9 @@ from torch import Tensor
 from ml4gw.transforms import (
     SpectralDensity,
     Whiten,
-    Decimator,
     SingleQTransform,
 )
+from ml4gw.transforms.decimator import Decimator
 from ml4gw.utils.slicing import unfold_windows
 
 
@@ -506,13 +506,14 @@ class TimeSpectrogramPreprocessor(torch.nn.Module):
         self.stride_size = int(sample_rate / inference_sampling_rate)
         self.kernel_size = int(kernel_length * sample_rate)
         self.schedule = torch.tensor(schedule, dtype=torch.int)
+        self.split = split
         if self.schedule.shape[0] != 2:
             raise ValueError(
                 "BatchWhitenerTimeSpectrogramDecimate requires exactly "
                 f"2 schedule views, but got {self.schedule.shape[0]}."
             )
         self.decimator = Decimator(
-            sample_rate=sample_rate, schedule=self.schedule, split=split
+            sample_rate=sample_rate, schedule=self.schedule
         )
         self.qtransform = SingleQTransform(
             duration=self.schedule[0, 1].item(),
@@ -583,7 +584,7 @@ class TimeSpectrogramPreprocessor(torch.nn.Module):
         x = x.reshape(-1, num_channels, self.kernel_size)
 
         # decimate the timeseries
-        x = self.decimator(x)
+        x = self.decimator(x, split=self.split)
         # convert first segment into spectrogram
         spec = self.qtransform(x[0])
 
