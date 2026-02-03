@@ -7,7 +7,7 @@ authors = [
     { name = "William Benoit", email = "benoi090@umn.edu" },
     { name = "Alec Gunny", email = "alec.gunny@ligo.org" },
 ]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "luigi~=3.0",
     "utils",

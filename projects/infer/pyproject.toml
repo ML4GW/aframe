@@ -7,7 +7,7 @@ authors = [
     { name = "Ethan Marx" },
     { name = "Will Benoit" },
 ]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "ratelimiter~=1.2",
     "jsonargparse~=4.24",
