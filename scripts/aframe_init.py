@@ -116,12 +116,12 @@ def create_online_runfile(path: Path):
     cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
     cmd += "--env BEARER_TOKEN_FILE=$BEARER_TOKEN_FILE "
     cmd += "--env SCITOKEN_FILE=$SCITOKEN_FILE "
-    cmd += "$AFRAME_CONTAINER_ROOT /opt/env/bin/online "
+    cmd += "$AFRAME_CONTAINER /opt/env/bin/online "
     cmd += "--config $config 2>> monitoring.log"
 
     monitor_cmd = "apptainer run "
     monitor_cmd += f" --bind {path} "
-    monitor_cmd += "$AFRAME_CONTAINER_ROOT /opt/env/bin/monitor "
+    monitor_cmd += "$AFRAME_CONTAINER /opt/env/bin/monitor "
     monitor_cmd += f"--run_dir {path} --out_dir $MONITOR_OUTDIR &"
 
     content = f"""
