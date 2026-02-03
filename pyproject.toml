@@ -57,6 +57,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 79
+extend-select = ["T201"]
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
@@ -65,7 +66,8 @@ mccabe = {"max-complexity" = 18}
 select = ["B", "C", "E", "F", "W", "B9"]
 # ignore W605 and E203 for consistency with black
 # ignore F722 for compatibility with jaxtyping
-ignore = ["W605", "E203", "F722"]
+# ignore B905 to allow zip without explicit strict parameter
+ignore = ["W605", "E203", "F722", "B905"]
 
 # ignore asterisk imports and unused
 # import errors in __init__ files
