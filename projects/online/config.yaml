@@ -47,7 +47,7 @@ amplfi_hlv_architecture:
 amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 amplfi_parameter_sampler: ./prior.yaml
-channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN", "V1:Hrec_hoft_16384Hz"]
+channels: ["H1:GDS-CALIB_STRAIN_INJ1_O3Replay", "L1:GDS-CALIB_STRAIN_INJ1_O3Replay", "V1:Hrec_hoft_16384Hz_INJ1_O3Replay"]
 state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
 sample_rate: 2048
@@ -68,19 +68,19 @@ amplfi_fduration: 2
 integration_window_length: 1
 amplfi_kernel_length: 30
 event_position: 29.5
-fftlength: null
+fftlength: 2
 highpass: 32
 amplfi_highpass: 25
 lowpass: null
 refractory_period: 8
-far_threshold: 1 # per day
+far_threshold: 12 # per day
 email_far_threshold: 0.00000001 # Hz
 emails: null
 nside: 64
 min_samples_per_pix: 5
 server: "local"
 auth_refresh: 300
-ifo_suffix: 
+ifo_suffix: "O3ReplayMDC"
 input_buffer_length: 100
 output_buffer_length: 16
 device: "cuda"
