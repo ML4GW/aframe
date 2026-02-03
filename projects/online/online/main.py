@@ -293,9 +293,9 @@ def search(
         # (significant performance speed up)
         if hl_ready:
             logging.debug("Performing inference")
-            y = aframe(whitened)[0][:, 0]
+            y = aframe(*whitened)[0][:, 0]
         else:
-            y = torch.ones(whitened.shape[0])
+            y = torch.ones(whitened[0].shape[0])
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output

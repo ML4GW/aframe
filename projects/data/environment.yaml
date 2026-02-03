@@ -3,9 +3,9 @@ channels:
   - conda-forge
 dependencies:
   # python/env dependencies
-  - python=3.9
+  - python=3.10
   - pip
-  - uv=0.6.10
+  - uv=0.9.26
   - jsonargparse
   # need these for utils lib
   # TODO: add constraints for better pinning

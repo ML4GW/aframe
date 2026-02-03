@@ -2152,7 +2152,7 @@ wheels = [
 
 [[package]]
 name = "ml4gw"
-version = "0.7.11"
+version = "0.7.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jaxtyping" },
@@ -2161,9 +2161,9 @@ dependencies = [
     { name = "torch" },
     { name = "torchaudio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/0a/722f553635ffc91b32623e69a4c93591c11ce2c24a10e4bda35ab0d8e6ae/ml4gw-0.7.11.tar.gz", hash = "sha256:8df9ebecd97ed6a6e8ba07fab40882f5966e646897f5187a9ccf7913faf6464e", size = 119593, upload-time = "2026-01-29T20:34:30.794Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/cf/76629bfe5b515c354cb6c45968a9780e86fa731a691856a29670a416f706/ml4gw-0.7.8.tar.gz", hash = "sha256:1aa3cd1e0137613817465269d32a3183d33f0e0d89f301394215dea0bc089586", size = 118257, upload-time = "2025-10-03T13:48:14.953Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/7d/f8c3e695d52cd9e70fd3f7bb51efd29848a3eb481dc1b94228f481dd05f8/ml4gw-0.7.11-py3-none-any.whl", hash = "sha256:0a6645f27444d266fb94afe988450bc2d00e24bd70328b0a5903194e1900acdb", size = 129588, upload-time = "2026-01-29T20:34:29.357Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/10/a7e1e074dc08eaf0ff39a085316f14d8754e7b9cef77a922eaabe9348068/ml4gw-0.7.8-py3-none-any.whl", hash = "sha256:9871464276f460cadbdaba8d7e74c9671b333b705661e1386e72e7413d128fb7", size = 128386, upload-time = "2025-10-03T13:48:13.718Z" },
 ]
 
 [[package]]
@@ -2647,7 +2647,7 @@ requires-dist = [
     { name = "ligo-gracedb", specifier = ">=2.14.1" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
     { name = "matplotlib", specifier = "==3.9.4" },
-    { name = "ml4gw", specifier = ">=0.7.11" },
+    { name = "ml4gw", specifier = "==0.7.8" },
     { name = "numpy", specifier = "<2.0.0" },
     { name = "omegaconf", specifier = ">=2.3.0,<3" },
     { name = "p-astro", editable = "../../libs/p_astro" },
@@ -4243,7 +4243,7 @@ dependencies = [
 requires-dist = [
     { name = "astropy", specifier = ">=6.0.1" },
     { name = "h5py", specifier = "~=3.6" },
-    { name = "ml4gw", specifier = ">=0.7.2" },
+    { name = "ml4gw", specifier = "==0.7.8" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "s3fs", specifier = ">=2024,<2025" },
 ]

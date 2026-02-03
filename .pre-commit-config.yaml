@@ -7,7 +7,7 @@ repos:
     - id: ruff-format
 - repo: https://github.com/astral-sh/uv-pre-commit
   # uv version
-  rev: 0.6.12
+  rev: 0.9.26
   hooks:
     - id: uv-lock
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -20,7 +20,3 @@ repos:
   rev: v0.1.15
   hooks:
     - id: helmlint
-- repo: https://github.com/dhruvmanila/remove-print-statements
-  rev: v0.5.2  
-  hooks:
-  - id: remove-print-statements
