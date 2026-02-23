@@ -191,6 +191,7 @@ def offline_data_iterator(
     sample_rate: float,
     ifo_suffix: str = None,
     state_channels: Optional[dict[str, str]] = None,
+    numtaps: Optional[int] = 60,
 ) -> Generator[tuple[torch.Tensor, float, list[bool]], None, None]:
     """
     Similar to `data_iterator` above, but does not
@@ -207,14 +208,18 @@ def offline_data_iterator(
             f"evenly divide the frame sample rate {GWF_SAMPLE_RATE}"
         )
     factor = int(factor)
-    b, a = build_resample_filter(factor)
+    b, a = build_resample_filter(factor, numtaps)
+    # Need to crop off at least filter size from both sides
+    # of the resampled data
+    crop_size = numtaps // factor + 1
+    crop_length = crop_size / sample_rate
 
     frame_buffer = np.zeros((len(ifos), 0))
-    # slice corresponds to middle second of
-    # a 3 second buffer; the middle second is
-    # yielded at each step to mitigate resampling
-    # edge effects
-    buffer_slc = slice(-int(2 * sample_rate), -int(sample_rate))
+    # slicing will take out 1 second of data from a buffer,
+    # removing `crop_size` samples on the right and, because
+    # frames come in 1-second chunks, `sample_rate - crop_size`
+    # samples on the left.
+    buffer_slc = slice(-int(crop_size + sample_rate), -int(crop_size))
 
     last_ready = [True] * len(ifos)
 
@@ -289,9 +294,9 @@ def offline_data_iterator(
                 frame = np.stack(frames)
                 frame_buffer = np.append(frame_buffer, frame, axis=1)
                 dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
-                # Need at least 3 seconds to be able to crop out edge effects
-                # from resampling and just yield the middle second
-                if dur >= 3:
+                # Need enough time to be able to crop out edge effects
+                # from resampling
+                if dur >= sample_rate + 2 * crop_length:
                     x = resample(frame_buffer, factor, b, a)
                     x = x[:, buffer_slc]
                     frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
@@ -299,7 +304,11 @@ def offline_data_iterator(
                     # the data quality bits of the previous second
                     # of data, i.e. the middle second of the
                     # buffer that is being yielded as well
-                    yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
+                    yield (
+                        torch.Tensor(x.copy()).double(),
+                        t0 - crop_length,
+                        last_ready,
+                    )
 
                 last_ready = ready
                 t0 += 1

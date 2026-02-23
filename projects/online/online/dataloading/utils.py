@@ -22,8 +22,7 @@ fname_re = re.compile(pattern)
 # reproduce exact parameters of
 # gwpys TimeSeries.resample() method,
 # when downsampling by integer factor
-def build_resample_filter(factor: int):
-    n = 60
+def build_resample_filter(factor: int, n: int = 60):
     filt = signal.firwin(n + 1, 1.0 / factor, window="hamming")
     _, filt = filter_design.parse_filter(filt)
     b, a = filt
