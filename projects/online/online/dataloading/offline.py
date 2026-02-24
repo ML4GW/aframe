@@ -209,10 +209,10 @@ def offline_data_iterator(
         )
     factor = int(factor)
     b, a = build_resample_filter(factor, numtaps)
-    # Need to crop off at least filter size from both sides
-    # of the resampled data. Stick with powers of 2 to
-    # avoid issues coverting between time and samples.
-    crop_size = 2 ** np.ceil(np.log2(numtaps / factor))
+    # Need to crop off at least half the filter size from
+    # both sides of the resampled data. Stick with powers of
+    # 2 to avoid issues coverting between time and samples.
+    crop_size = 2 ** np.ceil(np.log2((numtaps / 2) / factor))
     crop_length = crop_size / sample_rate
 
     frame_buffer = np.zeros((len(ifos), 0))
