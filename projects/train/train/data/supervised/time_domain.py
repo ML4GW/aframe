@@ -41,6 +41,8 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
             else:
                 [batch] = batch
                 batch = self.inject(batch)
+            X, (y, mu) = batch
+            batch = (X, y, mu)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
             # on the local device, the relevant tensors will be
@@ -125,7 +127,7 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         mu = mu[~swap_indices * ~mute_indices]
 
         X = self.whitener(X, psds)
-        return X, y, mu
+        return X, (y, mu)
 
     def build_val_batches(self, background, signals):
         X_bg, X_inj, psds = super().build_val_batches(background, signals)

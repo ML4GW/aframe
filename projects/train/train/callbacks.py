@@ -53,6 +53,7 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             [X] = next(iter(trainer.train_dataloader))
             X = X.to(device)
             X, y = trainer.datamodule.inject(X)
+            y = (y,)
         if isinstance(X, tuple):
             X = tuple(i.cpu() for i in X)
         else:
@@ -96,6 +97,8 @@ class SaveAugmentedBatch(Callback):
             # of format for saving to file below
             if not isinstance(X, tuple):
                 X = (X,)
+            if not isinstance(y, tuple):
+                y = (y,)
 
             # build val batch by hand
             [background, _, _], [signals] = next(
@@ -103,7 +106,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
                 background, signals
             )
             # Make background and injected validation data into
@@ -120,7 +123,8 @@ class SaveAugmentedBatch(Callback):
                         with h5py.File(f, "w") as h5file:
                             for i, x in enumerate(X):
                                 h5file[f"input_{i}"] = x.cpu().numpy()
-                            h5file["y"] = y.cpu().numpy()
+                            for i, out in enumerate(y):
+                                h5file[f"output_{i}"] = out.cpu().numpy()
                         s3_file.write(f.getvalue())
 
                 with s3.open(f"{save_dir}/val_batch.hdf5", "wb") as s3_file:
@@ -136,7 +140,8 @@ class SaveAugmentedBatch(Callback):
                 with h5py.File(os.path.join(save_dir, "batch.hdf5"), "w") as f:
                     for i, x in enumerate(X):
                         f[f"input_{i}"] = x.cpu().numpy()
-                    f["y"] = y.cpu().numpy()
+                    for i, out in enumerate(y):
+                        f[f"output_{i}"] = out.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"
