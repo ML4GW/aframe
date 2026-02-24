@@ -280,3 +280,61 @@ class SupervisedTimeSpectrogramResNet(SupervisedArchitecture):
         time_domain_output = self.time_domain_resnet(X)
         spec_domain_output = self.spectrogram_resnet(X_spec)
         return time_domain_output, spec_domain_output
+
+
+class SupervisedTimeDomainRegression(ResNet1D, SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
+        layers: list[int],
+        kernel_size: int = 3,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
+        norm_layer: Optional[NormLayer] = None,
+    ) -> None:
+        super().__init__(
+            num_ifos,
+            layers=layers,
+            classes=1,
+            kernel_size=kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=norm_layer,
+        )
+
+        self.locater = torch.nn.Sequential(
+            torch.nn.Linear(self.fc.out_features, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 2),
+        )
+
+    def _forward_impl(self, x: Tensor) -> Tensor:
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        for layer in self.residual_layers:
+            x = layer(x)
+
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+
+        return x
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self._forward_impl(x)
+        presence = self.fc(x)
+        location = self.locater(x)
+        mu = torch.sigmoid(location[:, 0])
+        log_var = location[:, 1]
+
+        return presence, mu, log_var
