@@ -1,5 +1,5 @@
 import torch
-from ml4gw.utils import sample_kernels
+from ml4gw.utils.slicing import sample_kernels
 
 from train.data.supervised.supervised import SupervisedAframeDataset
 
@@ -27,8 +27,8 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
     def on_before_batch_transfer(self, batch, _):
         if self.trainer.training and self.waveforms_from_disk:
             X, waveforms = batch
-            waveforms, new_signal_idx = self.slice_waveforms(waveforms)
-            batch = X, waveforms, new_signal_idx
+            waveforms = self.slice_waveforms(waveforms)
+            batch = X, waveforms
         return batch
 
     def on_after_batch_transfer(self, batch, _):
@@ -36,8 +36,8 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
             if self.waveforms_from_disk:
-                [batch], waveforms, new_signal_idx = batch
-                batch = self.inject(batch, waveforms, new_signal_idx)
+                [batch], waveforms = batch
+                batch = self.inject(batch, waveforms)
             else:
                 [batch] = batch
                 batch = self.inject(batch)
@@ -61,7 +61,7 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         return batch
 
     @torch.no_grad()
-    def inject(self, X, waveforms=None, new_signal_idx=None):
+    def inject(self, X, waveforms=None):
         if self.waveforms_from_disk and waveforms is None:
             raise ValueError(
                 "Waveforms should be passed to the `inject` method "
@@ -100,15 +100,17 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         # If we're loading waveforms from disk, we'll have sliced
         # the waveforms already in `on_before_batch_transfer`
         if not self.waveforms_from_disk:
-            responses, new_signal_idx = self.slice_waveforms(responses)
+            responses = self.slice_waveforms(responses)
         kernels, idx = sample_kernels(
             responses, kernel_size=X.size(-1), coincident=True, return_idx=True
         )
-        mu = new_signal_idx / kernels.shape[-1]
+        mu = (self.new_signal_idx - idx) / kernels.shape[-1]
+        mu = mu.to(X.device)
 
         # perform augmentations on the responses themselves,
         # keep track of which indices have been augmented
-        swap_indices = mute_indices = []
+        swap_indices = []
+        mute_indices = []
         idx = torch.where(mask)[0]
         if self.swapper is not None:
             kernels, swap_indices = self.swapper(kernels)
@@ -124,7 +126,9 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         mask[idx[mute_indices]] = 0
         y = torch.zeros((X.size(0), 1), device=X.device)
         y[mask] += 1
-        mu = mu[~swap_indices * ~mute_indices]
+        mu[swap_indices] = -1
+        mu[mute_indices] = -1
+        mu = mu[mu >= 0]
 
         X = self.whitener(X, psds)
         return X, (y, mu)
@@ -146,14 +150,20 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         if self.hparams.num_valid_views == 1:
             step = 0
         else:
-            step = kernel_size - self.left_pad_size - self.right_pad_size
+            # Account for filter size because X_bg is whitened
+            step = (
+                kernel_size
+                - self.left_pad_size
+                - self.right_pad_size
+                + self.filter_size
+            )
             step /= self.hparams.num_valid_views - 1
 
         mu = [
-            self.left_pad_size + i * step
+            self.left_pad_size - self.filter_size // 2 + i * step
             for i in range(self.hparams.num_valid_views)
         ]
-        mu = torch.Tensor(mu) / kernel_size
+        mu = torch.Tensor(mu).to(X_bg.device) / kernel_size
 
         batch_size = X_bg.shape[0]
         mu = mu.unsqueeze(-1).repeat(1, batch_size)

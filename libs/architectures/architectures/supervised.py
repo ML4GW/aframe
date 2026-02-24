@@ -309,7 +309,7 @@ class SupervisedTimeDomainRegression(ResNet1D, SupervisedArchitecture):
         )
 
         self.locater = torch.nn.Sequential(
-            torch.nn.Linear(self.fc.out_features, 256),
+            torch.nn.Linear(self.fc.in_features, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 64),
             torch.nn.ReLU(),

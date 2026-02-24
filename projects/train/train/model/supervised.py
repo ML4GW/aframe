@@ -32,14 +32,16 @@ class SupervisedAframeRegression(SupervisedAframe):
         *args,
         **kwargs,
     ) -> None:
-        super().__init__(arch, *args, *kwargs)
+        super().__init__(arch, *args, **kwargs)
         self.loss_weights = loss_weights
 
     def compute_loss_fn(self, **losses):
         return sum(
             [
-                loss * weight
-                for loss, weight in zip(losses, self.loss_weights, strict=True)
+                losses[key] * weight
+                for key, weight in zip(
+                    losses.keys(), self.loss_weights, strict=True
+                )
             ]
         )
 
@@ -47,11 +49,11 @@ class SupervisedAframeRegression(SupervisedAframe):
         X, y, mu = batch
         y_hat, mu_hat, log_var_hat = self(X)
 
-        mask = y == 1
+        mask = (y == 1).squeeze()
         losses = {
             "classifier_loss": F.binary_cross_entropy_with_logits(y_hat, y),
             "locater_loss": F.gaussian_nll_loss(
-                mu_hat[mask], mu[mask], torch.exp(log_var_hat[mask])
+                mu_hat[mask], mu, torch.exp(log_var_hat[mask])
             ),
         }
         return losses
@@ -76,7 +78,9 @@ class SupervisedAframeRegression(SupervisedAframe):
         self.metric.update(shift, y_bg, y_fg)
 
         mu = mu.view(*mu_hat.shape)
-        valid_nll_loss = F.gaussian_nll_loss(mu_hat, mu, log_var_hat).mean()
+        valid_nll_loss = F.gaussian_nll_loss(
+            mu_hat, mu, torch.exp(log_var_hat)
+        ).mean()
 
         # lightning will take care of updating then
         # computing the metric at the end of the
@@ -92,6 +96,7 @@ class SupervisedAframeRegression(SupervisedAframe):
         self.log(
             "valid_nll_loss",
             valid_nll_loss,
+            batch_size=batch,
             on_step=True,
             on_epoch=True,
             sync_dist=True,

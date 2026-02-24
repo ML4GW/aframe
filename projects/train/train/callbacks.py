@@ -87,7 +87,9 @@ class SaveAugmentedBatch(Callback):
             if trainer.datamodule.waveforms_from_disk:
                 [X], waveforms = next(iter(trainer.train_dataloader))
                 X = X.to(device)
-                waveforms = waveforms.to(device)
+                waveforms = trainer.datamodule.slice_waveforms(
+                    waveforms.to(device)
+                )
                 X, y = trainer.datamodule.inject(X, waveforms)
             else:
                 [X] = next(iter(trainer.train_dataloader))
