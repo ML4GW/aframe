@@ -6,5 +6,6 @@ from .supervised import (
     SupervisedMultiModalResNet,
     SupervisedSpectrogramDomainResNet,
     SupervisedTimeDomainResNet,
+    SupervisedTimeDomainRegression,
     SupervisedTimeSpectrogramResNet,
 )
