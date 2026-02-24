@@ -420,7 +420,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         waveforms = torch.nn.functional.pad(waveforms, [left_pad, right_pad])
         waveforms = waveforms[..., start_idx:stop_idx]
 
-        return waveforms
+        new_signal_idx = signal_idx + left_pad
+
+        return waveforms, new_signal_idx
 
     def load_val_background(self, fnames: list[str]):
         self._logger.info("Loading validation background data")
