@@ -1,4 +1,5 @@
 import torch
+from torch.nn import functional as F
 from architectures.supervised import SupervisedArchitecture
 
 from train.model.base import AframeBase
@@ -17,10 +18,84 @@ class SupervisedAframe(AframeBase):
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         X, y = batch
         y_hat = self(X)
-        return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
+        return F.binary_cross_entropy_with_logits(y_hat, y)
 
     def score(self, X):
         return self(X)
+
+
+class SupervisedAframeRegression(SupervisedAframe):
+    def __init__(
+        self,
+        arch: SupervisedArchitecture,
+        loss_weights: tuple[float, float],
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(arch, *args, *kwargs)
+        self.loss_weights = loss_weights
+
+    def compute_loss_fn(self, **losses):
+        return sum(
+            [
+                loss * weight
+                for loss, weight in zip(losses, self.loss_weights, strict=True)
+            ]
+        )
+
+    def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
+        X, y, mu = batch
+        y_hat, mu_hat, log_var_hat = self(X)
+
+        mask = y == 1
+        losses = {
+            "classifier_loss": F.binary_cross_entropy_with_logits(y_hat, y),
+            "locater_loss": F.gaussian_nll_loss(
+                mu_hat[mask], mu[mask], torch.exp(log_var_hat[mask])
+            ),
+        }
+        return losses
+
+    def validation_step(self, batch, _) -> None:
+        shift, X_bg, X_inj, mu = batch
+        y_bg, _, _ = self.score(X_bg)
+
+        # compute predictions over multiple views of
+        # each injection and use their average as our
+        # prediction
+        num_views, batch, *shape = X_inj.shape
+        X_inj = X_inj.view(num_views * batch, *shape)
+        y_fg, mu_hat, log_var_hat = self.score(X_inj)
+
+        y_fg = y_fg.view(num_views, batch)
+        y_fg = y_fg.mean(0)
+
+        # include the shift associated with this data
+        # in our outputs to reconstruct background
+        # timeseries at aggregation time
+        self.metric.update(shift, y_bg, y_fg)
+
+        mu = mu.view(*mu_hat.shape)
+        valid_nll_loss = F.gaussian_nll_loss(mu_hat, mu, log_var_hat).mean()
+
+        # lightning will take care of updating then
+        # computing the metric at the end of the
+        # validation epoch
+        self.log(
+            "valid_auroc",
+            self.metric,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+        )
+
+        self.log(
+            "valid_nll_loss",
+            valid_nll_loss,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+        )
 
 
 class SupervisedMultiModalAframe(SupervisedAframe):
@@ -36,7 +111,7 @@ class SupervisedMultiModalAframe(SupervisedAframe):
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         (X, X_fft), y = batch
         y_hat = self(X, X_fft)
-        return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
+        return F.binary_cross_entropy_with_logits(y_hat, y)
 
     def validation_step(self, batch, _) -> None:
         shift, (X_bg, X_bg_fft), (X_inj, X_inj_fft) = batch
@@ -106,12 +181,8 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
     ) -> Tensor | dict[str, Tensor]:
         (X, X_spec), y = batch
         y_hat_X, y_hat_X_spec = self(X, X_spec)
-        loss_X = torch.nn.functional.binary_cross_entropy_with_logits(
-            y_hat_X, y
-        )
-        loss_X_spec = torch.nn.functional.binary_cross_entropy_with_logits(
-            y_hat_X_spec, y
-        )
+        loss_X = F.binary_cross_entropy_with_logits(y_hat_X, y)
+        loss_X_spec = F.binary_cross_entropy_with_logits(y_hat_X_spec, y)
         return {
             "loss_X": loss_X,
             "loss_X_spec": loss_X_spec,
