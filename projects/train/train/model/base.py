@@ -155,6 +155,7 @@ class AframeBase(pl.LightningModule):
                     on_epoch=True,
                     prog_bar=False,
                     logger=True,
+                    sync_dist=True,
                 )
             loss = self.compute_loss_fn(**loss)
 
@@ -166,6 +167,7 @@ class AframeBase(pl.LightningModule):
             on_epoch=True,
             prog_bar=True,
             logger=True,
+            sync_dist=True,
         )
         return loss
 
