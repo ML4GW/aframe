@@ -64,7 +64,7 @@ def data_iterator(
         dur = block_buffer.shape[-1] / STRAIN_SAMPLE_RATE
         # Need enough time to be able to crop out edge effects
         # from resampling
-        if dur >= BLOCK_SIZE + 2 * crop_length:
+        if dur >= BLOCK_DURATION + 2 * crop_length:
             x = resample(frame_buffer, factor, b, a)
             x = x[:, slc]
             block_buffer = block_buffer[:, BLOCK_SIZE:]

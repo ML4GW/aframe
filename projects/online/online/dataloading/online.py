@@ -182,7 +182,7 @@ def data_iterator(
             dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
             # Need enough time to be able to crop out edge effects
             # from resampling
-            if dur >= sample_rate + 2 * crop_length:
+            if dur >= BLOCK_DURATION + 2 * crop_length:
                 x = resample(frame_buffer, factor, b, a)
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, BLOCK_SIZE:]
