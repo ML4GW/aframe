@@ -14,6 +14,9 @@ from online.dataloading.utils import (
     is_gwf,
 )
 
+BLOCK_DURATION = 1
+BLOCK_SIZE = int(BLOCK_DURATION * GWF_SAMPLE_RATE)
+
 
 def get_prefix(datadir: Path):
     if not datadir.exists():
@@ -98,10 +101,9 @@ def data_iterator(
 
     frame_buffer = np.zeros((len(ifos), 0))
     # slicing will take out 1 second of data from a buffer,
-    # removing `crop_size` samples on the right and, because
-    # frames come in 1-second chunks, `sample_rate - crop_size`
-    # samples on the left.
-    slc = slice(-int(crop_size + sample_rate), -int(crop_size))
+    # removing `crop_size` samples on the right and
+    # `BLOCK_SIZE - crop_size` samples on the left.
+    slc = slice(-int(crop_size + BLOCK_SIZE), -int(crop_size))
     last_ready = [True] * len(ifos)
     while True:
         frames = []
@@ -183,7 +185,7 @@ def data_iterator(
             if dur >= sample_rate + 2 * crop_length:
                 x = resample(frame_buffer, factor, b, a)
                 x = x[:, slc]
-                frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
+                frame_buffer = frame_buffer[:, BLOCK_SIZE:]
                 # yield last_ready, which corresponds to
                 # the data quality bits of the previous second
                 # of data, i.e. the middle second of the

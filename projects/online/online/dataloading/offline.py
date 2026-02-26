@@ -16,6 +16,9 @@ import multiprocessing as mp
 
 STATE_VECTOR_SAMPLE_RATE = 16
 
+BLOCK_DURATION = 1
+BLOCK_SIZE = int(BLOCK_DURATION * GWF_SAMPLE_RATE)
+
 
 class OfflineFrameFileLoader:
     def __init__(
@@ -217,10 +220,9 @@ def offline_data_iterator(
 
     frame_buffer = np.zeros((len(ifos), 0))
     # slicing will take out 1 second of data from a buffer,
-    # removing `crop_size` samples on the right and, because
-    # frames come in 1-second chunks, `sample_rate - crop_size`
-    # samples on the left.
-    buffer_slc = slice(-int(crop_size + sample_rate), -int(crop_size))
+    # removing `crop_size` samples on the right and
+    # `BLOCK_SIZE - crop_size` samples on the left.
+    buffer_slc = slice(-int(crop_size + BLOCK_SIZE), -int(crop_size))
 
     last_ready = [True] * len(ifos)
 
@@ -259,9 +261,13 @@ def offline_data_iterator(
             logging.debug(f"Reading frames from timestamp {t0}")
             frames = []
             frame_slc = slice(
-                int(i * GWF_SAMPLE_RATE), int((i + 1) * GWF_SAMPLE_RATE)
+                int(i * GWF_SAMPLE_RATE),
+                int((i + BLOCK_DURATION) * GWF_SAMPLE_RATE),
             )
-            state_vector_slc = slice(int(i * 16), int((i + 1) * 16))
+            state_vector_slc = slice(
+                int(i * STATE_VECTOR_SAMPLE_RATE),
+                int((i + BLOCK_DURATION) * STATE_VECTOR_SAMPLE_RATE),
+            )
             for j, ifo in enumerate(ifos):
                 frames.append(strain[j, frame_slc])
                 # if state channels were specified,
@@ -300,7 +306,7 @@ def offline_data_iterator(
                 if dur >= sample_rate + 2 * crop_length:
                     x = resample(frame_buffer, factor, b, a)
                     x = x[:, buffer_slc]
-                    frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
+                    frame_buffer = frame_buffer[:, BLOCK_SIZE:]
                     # yield last_ready, which corresponds to
                     # the data quality bits of the previous second
                     # of data, i.e. the middle second of the
@@ -312,4 +318,4 @@ def offline_data_iterator(
                     )
 
                 last_ready = ready
-                t0 += 1
+                t0 += BLOCK_DURATION
