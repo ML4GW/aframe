@@ -102,8 +102,9 @@ def data_iterator(
     frame_buffer = np.zeros((len(ifos), 0))
     # slicing will take out 1 second of data from a buffer,
     # removing `crop_size` samples on the right and
-    # `BLOCK_SIZE - crop_size` samples on the left.
-    slc = slice(-int(crop_size + BLOCK_SIZE), -int(crop_size))
+    # `BLOCK_DURATION * sample_rate - crop_size` samples on the left.
+    resampled_block_size = BLOCK_DURATION * sample_rate
+    slc = slice(-int(crop_size + resampled_block_size), -int(crop_size))
     last_ready = [True] * len(ifos)
     while True:
         frames = []
