@@ -303,6 +303,7 @@ class AddCoords1d(nn.Module):
         # Result shape: [batch_size, channels + 1, length]
         return torch.cat([x, pos], dim=1)
 
+
 class CoordConv1d(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
         super().__init__()
@@ -349,21 +350,35 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
             stride_type=stride_type,
             norm_layer=norm_layer,
         )
-        self.backbone.conv1 = CoordConv1d(2, 64, kernel_size=7, stride=1, padding=3, bias=False)
+        self.backbone.conv1 = CoordConv1d(
+            2, 64, kernel_size=7, stride=1, padding=3, bias=False
+        )
         in_channels = self.backbone.residual_layers[-1][-1].conv2.out_channels
         self.dilated_layer = nn.Sequential(
-            nn.Conv1d(in_channels, in_channels, kernel_size=3, padding=2, dilation=2),
+            nn.Conv1d(
+                in_channels, in_channels, kernel_size=3, padding=2, dilation=2
+            ),
             nn.ReLU(),
-            nn.Conv1d(in_channels, in_channels, kernel_size=3, padding=8, dilation=8),
+            nn.Conv1d(
+                in_channels, in_channels, kernel_size=3, padding=8, dilation=8
+            ),
             nn.ReLU(),
-            nn.Conv1d(in_channels, in_channels, kernel_size=3, padding=32, dilation=32),
-            nn.ReLU()
+            nn.Conv1d(
+                in_channels,
+                in_channels,
+                kernel_size=3,
+                padding=32,
+                dilation=32,
+            ),
+            nn.ReLU(),
         )
         self.heatmap_head = nn.Sequential(
-            nn.Conv1d(self.backbone.fc.in_features, 128, kernel_size=3, padding=1),
+            nn.Conv1d(
+                self.backbone.fc.in_features, 128, kernel_size=3, padding=1
+            ),
             nn.ReLU(),
             nn.Conv1d(128, 1, kernel_size=1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
         _convert_padding_mode(self)
 
@@ -385,4 +400,3 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
         x = torch.flatten(x, 1)
         y = self.backbone.fc(x)
         return y, heatmap.squeeze(1)
-
