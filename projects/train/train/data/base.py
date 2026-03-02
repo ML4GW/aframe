@@ -421,7 +421,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         waveforms = waveforms[..., start_idx:stop_idx]
 
         # Signals are now at this index
-        self.new_signal_idx = signal_idx + left_pad
+        self.new_signal_idx = signal_idx - start_idx
 
         return waveforms
 

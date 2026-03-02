@@ -104,7 +104,8 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         kernels, idx = sample_kernels(
             responses, kernel_size=X.size(-1), coincident=True, return_idx=True
         )
-        mu = (self.new_signal_idx - idx) / kernels.shape[-1]
+        mu = self.new_signal_idx - idx - self.filter_size / 2
+        mu /= self.hparams.kernel_length * self.hparams.sample_rate
         mu = mu.to(X.device)
 
         # perform augmentations on the responses themselves,
@@ -145,7 +146,7 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         X_fg = torch.stack(X_fg)
 
         # Get the position of each signal in the injected dataset,
-        # normalized by the length of the full kernel
+        # normalized by the length of the whitened kernel
         kernel_size = X_bg.shape[-1]
         if self.hparams.num_valid_views == 1:
             step = 0
