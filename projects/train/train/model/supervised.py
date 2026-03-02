@@ -29,11 +29,25 @@ class SupervisedAframeRegression(SupervisedAframe):
         self,
         arch: SupervisedArchitecture,
         loss_weights: tuple[float, float],
+        alpha: float = 20,
+        sigma: float = 0.01,
         *args,
         **kwargs,
     ) -> None:
         super().__init__(arch, *args, **kwargs)
         self.loss_weights = loss_weights
+        self.alpha = alpha
+        self.sigma = sigma
+
+    def weighted_mse_loss(self, heatmap_hat, heatmap):
+        weights = 1 + self.alpha * heatmap
+        return (weights * (heatmap_hat - heatmap) ** 2).mean()
+
+    def generate_heatmap(self, mu: Tensor, sigma: float, length: int) -> Tensor:
+        x = torch.arange(length, device=mu.device).float()
+        sigma *= length
+        heatmap = torch.exp(-((x - mu.unsqueeze(-1))**2) / (2 * sigma**2))
+        return heatmap
 
     def compute_loss_fn(self, **losses):
         return sum(
@@ -47,27 +61,29 @@ class SupervisedAframeRegression(SupervisedAframe):
 
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         X, y, mu = batch
-        y_hat, mu_hat, log_var_hat = self(X)
+        mask = y.bool().squeeze()
 
-        mask = (y == 1).squeeze()
+        y_hat, heatmap_hat = self(X)
+        heatmap = torch.zeros_like(heatmap_hat, dtype=torch.float, device=X.device)
+        mu *= heatmap_hat.shape[-1]
+        heatmap[mask] = self.generate_heatmap(mu, sigma=self.sigma, length=heatmap_hat.shape[-1])
+
         losses = {
             "classifier_loss": F.binary_cross_entropy_with_logits(y_hat, y),
-            "locater_loss": F.gaussian_nll_loss(
-                mu_hat[mask], mu, torch.exp(log_var_hat[mask])
-            ),
+            "weighted_mse_loss": self.weighted_mse_loss(heatmap_hat, heatmap),
         }
         return losses
 
     def validation_step(self, batch, _) -> None:
         shift, X_bg, X_inj, mu = batch
-        y_bg, _, _ = self.score(X_bg)
+        y_bg, heatmap_bg_hat = self.score(X_bg)
 
         # compute predictions over multiple views of
         # each injection and use their average as our
         # prediction
         num_views, batch, *shape = X_inj.shape
         X_inj = X_inj.view(num_views * batch, *shape)
-        y_fg, mu_hat, log_var_hat = self.score(X_inj)
+        y_fg, heatmap_fg_hat = self.score(X_inj)
 
         y_fg = y_fg.view(num_views, batch)
         y_fg = y_fg.mean(0)
@@ -77,30 +93,57 @@ class SupervisedAframeRegression(SupervisedAframe):
         # timeseries at aggregation time
         self.metric.update(shift, y_bg, y_fg)
 
-        mu = mu.view(*mu_hat.shape)
-        valid_nll_loss = F.gaussian_nll_loss(
-            mu_hat, mu, torch.exp(log_var_hat)
-        ).mean()
+        heatmap_bg = torch.zeros_like(heatmap_bg_hat, dtype=torch.float, device=heatmap_bg_hat.device)
+        mu = mu.view(num_views * batch)
+        heatmap_fg = self.generate_heatmap(mu, self.sigma, heatmap_fg_hat.shape[-1])
+
+        valid_bg_mse = self.weighted_mse_loss(heatmap_bg_hat, heatmap_bg)
+        valid_fg_mse = self.weighted_mse_loss(heatmap_fg_hat, heatmap_fg)
+
+        metric_dict = {
+            "valid_auroc": self.metric,
+            "valid_bg_weighted_mse": valid_bg_mse,
+            "valid_fg_weighted_mse": valid_fg_mse,
+        }
 
         # lightning will take care of updating then
         # computing the metric at the end of the
         # validation epoch
-        self.log(
-            "valid_auroc",
-            self.metric,
-            on_step=True,
+        self.log_dict(
+            metric_dict,
             on_epoch=True,
             sync_dist=True,
+            batch_size=batch,
         )
 
-        self.log(
-            "valid_nll_loss",
-            valid_nll_loss,
-            batch_size=batch,
-            on_step=True,
-            on_epoch=True,
-            sync_dist=True,
+    def configure_optimizers(self):
+        if not torch.distributed.is_initialized():
+            world_size = 1
+        else:
+            world_size = torch.distributed.get_world_size()
+
+        # scale lr by number of GPUs
+        # https://arxiv.org/pdf/1706.02677.pdf
+        lr = self.hparams.learning_rate * world_size
+        self._logger.info(f"Scaled lr by {world_size} to {lr}")
+
+        backbone_params = self.model.backbone.parameters()
+        heatmap_params = self.model.heatmap_head.parameters()
+
+        optimizer = torch.optim.AdamW([
+            {"params": backbone_params, "lr": lr},
+            {"params": heatmap_params, "lr": lr},
+        ], weight_decay=self.hparams.weight_decay
         )
+
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            pct_start=self.hparams.pct_lr_ramp,
+            max_lr=lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+        )
+        scheduler_config = {"scheduler": scheduler, "interval": "step"}
+        return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
 
 
 class SupervisedMultiModalAframe(SupervisedAframe):
