@@ -43,10 +43,12 @@ class SupervisedAframeRegression(SupervisedAframe):
         weights = 1 + self.alpha * heatmap
         return (weights * (heatmap_hat - heatmap) ** 2).mean()
 
-    def generate_heatmap(self, mu: Tensor, sigma: float, length: int) -> Tensor:
+    def generate_heatmap(
+        self, mu: Tensor, sigma: float, length: int
+    ) -> Tensor:
         x = torch.arange(length, device=mu.device).float()
         sigma *= length
-        heatmap = torch.exp(-((x - mu.unsqueeze(-1))**2) / (2 * sigma**2))
+        heatmap = torch.exp(-((x - mu.unsqueeze(-1)) ** 2) / (2 * sigma**2))
         return heatmap
 
     def compute_loss_fn(self, **losses):
@@ -64,9 +66,13 @@ class SupervisedAframeRegression(SupervisedAframe):
         mask = y.bool().squeeze()
 
         y_hat, heatmap_hat = self(X)
-        heatmap = torch.zeros_like(heatmap_hat, dtype=torch.float, device=X.device)
+        heatmap = torch.zeros_like(
+            heatmap_hat, dtype=torch.float, device=X.device
+        )
         mu *= heatmap_hat.shape[-1]
-        heatmap[mask] = self.generate_heatmap(mu, sigma=self.sigma, length=heatmap_hat.shape[-1])
+        heatmap[mask] = self.generate_heatmap(
+            mu, sigma=self.sigma, length=heatmap_hat.shape[-1]
+        )
 
         losses = {
             "classifier_loss": F.binary_cross_entropy_with_logits(y_hat, y),
@@ -93,9 +99,13 @@ class SupervisedAframeRegression(SupervisedAframe):
         # timeseries at aggregation time
         self.metric.update(shift, y_bg, y_fg)
 
-        heatmap_bg = torch.zeros_like(heatmap_bg_hat, dtype=torch.float, device=heatmap_bg_hat.device)
+        heatmap_bg = torch.zeros_like(
+            heatmap_bg_hat, dtype=torch.float, device=heatmap_bg_hat.device
+        )
         mu = mu.view(num_views * batch)
-        heatmap_fg = self.generate_heatmap(mu, self.sigma, heatmap_fg_hat.shape[-1])
+        heatmap_fg = self.generate_heatmap(
+            mu, self.sigma, heatmap_fg_hat.shape[-1]
+        )
 
         valid_bg_mse = self.weighted_mse_loss(heatmap_bg_hat, heatmap_bg)
         valid_fg_mse = self.weighted_mse_loss(heatmap_fg_hat, heatmap_fg)
@@ -130,10 +140,12 @@ class SupervisedAframeRegression(SupervisedAframe):
         backbone_params = self.model.backbone.parameters()
         heatmap_params = self.model.heatmap_head.parameters()
 
-        optimizer = torch.optim.AdamW([
-            {"params": backbone_params, "lr": lr},
-            {"params": heatmap_params, "lr": lr},
-        ], weight_decay=self.hparams.weight_decay
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": backbone_params, "lr": lr},
+                {"params": heatmap_params, "lr": lr},
+            ],
+            weight_decay=self.hparams.weight_decay,
         )
 
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
