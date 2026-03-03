@@ -40,8 +40,18 @@ class SupervisedAframeRegression(SupervisedAframe):
         self.sigma = sigma
 
     def weighted_mse_loss(self, heatmap_hat, heatmap):
-        weights = 1 + self.alpha * heatmap
-        return (weights * (heatmap_hat - heatmap) ** 2).mean()
+        true_peak_mask = heatmap > 0
+        false_peak_mask = heatmap_hat > 0.1
+        peak_mask = true_peak_mask | false_peak_mask
+        if peak_mask.sum() == 0:
+            peak_loss = torch.tensor(0.0, device=heatmap.device)
+        else:
+            peak_loss = (1 + self.alpha) * (
+                heatmap_hat[peak_mask] - heatmap[peak_mask]
+            ) ** 2
+
+        bg_loss = torch.clamp(heatmap_hat[~peak_mask], min=0) ** 2
+        return peak_loss.mean() + bg_loss.mean()
 
     def generate_heatmap(
         self, mu: Tensor, sigma: float, length: int
@@ -108,13 +118,23 @@ class SupervisedAframeRegression(SupervisedAframe):
         )
 
         valid_bg_mse = self.weighted_mse_loss(heatmap_bg_hat, heatmap_bg)
-        valid_fg_mse = self.weighted_mse_loss(heatmap_fg_hat, heatmap_fg)
+
+        heatmap_fg_hat = heatmap_fg_hat.view(
+            num_views, batch, heatmap_fg_hat.shape[-1]
+        )
+        heatmap_fg = heatmap_fg.view(num_views, batch, heatmap_fg.shape[-1])
 
         metric_dict = {
             "valid_auroc": self.metric,
             "valid_bg_weighted_mse": valid_bg_mse,
-            "valid_fg_weighted_mse": valid_fg_mse,
         }
+        for i in range(num_views):
+            metric_dict[f"valid_fg_weighted_mse_view_{i}"] = (
+                self.weighted_mse_loss(heatmap_fg_hat[i], heatmap_fg[i])
+            )
+        metric_dict["valid_fg_weighted_mse"] = self.weighted_mse_loss(
+            heatmap_fg_hat, heatmap_fg
+        )
 
         # lightning will take care of updating then
         # computing the metric at the end of the

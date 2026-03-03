@@ -317,10 +317,22 @@ class CoordConv1d(nn.Module):
         return x
 
 
+class ClippedLeakyReLU(nn.Module):
+    def __init__(self, negative_slope=0.01, max_val=1.0):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.max_val = max_val
+
+    def forward(self, x):
+        x = nn.functional.leaky_relu(x, negative_slope=self.negative_slope)
+        return torch.clamp(x, max=self.max_val)
+
+
 def _convert_padding_mode(model, mode="reflect"):
     for _, module in model.named_modules():
         if isinstance(module, nn.Conv1d):
             module.padding_mode = mode
+            module.stride = 1
     return model
 
 
@@ -335,6 +347,7 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
+        final_activation: str | None = "sigmoid",
         stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
         norm_layer: Optional[NormLayer] = None,
     ) -> None:
@@ -351,34 +364,48 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
             norm_layer=norm_layer,
         )
         self.backbone.conv1 = CoordConv1d(
-            2, 64, kernel_size=7, stride=1, padding=3, bias=False
+            2, 64, kernel_size=7, stride=2, padding=3, bias=False
         )
         in_channels = self.backbone.residual_layers[-1][-1].conv2.out_channels
         self.dilated_layer = nn.Sequential(
             nn.Conv1d(
-                in_channels, in_channels, kernel_size=3, padding=2, dilation=2
-            ),
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels, in_channels, kernel_size=3, padding=8, dilation=8
+                in_channels,
+                in_channels,
+                kernel_size=kernel_size,
+                padding=2,
+                dilation=2,
             ),
             nn.ReLU(),
             nn.Conv1d(
                 in_channels,
                 in_channels,
-                kernel_size=3,
+                kernel_size=kernel_size,
+                padding=8,
+                dilation=8,
+            ),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels,
+                in_channels,
+                kernel_size=kernel_size,
                 padding=32,
                 dilation=32,
             ),
             nn.ReLU(),
+        )
+
+        activation = (
+            nn.Sigmoid()
+            if final_activation == "sigmoid"
+            else ClippedLeakyReLU()
         )
         self.heatmap_head = nn.Sequential(
             nn.Conv1d(
                 self.backbone.fc.in_features, 128, kernel_size=3, padding=1
             ),
             nn.ReLU(),
-            nn.Conv1d(128, 1, kernel_size=1),
-            nn.Sigmoid(),
+            nn.Conv1d(128, 1, kernel_size=1, bias=False),
+            activation,
         )
         _convert_padding_mode(self)
 
