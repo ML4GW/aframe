@@ -16,6 +16,9 @@ import multiprocessing as mp
 
 STATE_VECTOR_SAMPLE_RATE = 16
 
+BLOCK_DURATION = 1
+BLOCK_SIZE = int(BLOCK_DURATION * GWF_SAMPLE_RATE)
+
 
 class OfflineFrameFileLoader:
     def __init__(
@@ -191,6 +194,7 @@ def offline_data_iterator(
     sample_rate: float,
     ifo_suffix: str = None,
     state_channels: Optional[dict[str, str]] = None,
+    numtaps: Optional[int] = 60,
 ) -> Generator[tuple[torch.Tensor, float, list[bool]], None, None]:
     """
     Similar to `data_iterator` above, but does not
@@ -207,14 +211,19 @@ def offline_data_iterator(
             f"evenly divide the frame sample rate {GWF_SAMPLE_RATE}"
         )
     factor = int(factor)
-    b, a = build_resample_filter(factor)
+    b, a = build_resample_filter(factor, numtaps)
+    # Need to crop off at least half the filter size from
+    # both sides of the resampled data. Stick with powers of
+    # 2 to avoid issues coverting between time and samples.
+    crop_size = 2 ** np.ceil(np.log2((numtaps / 2) / factor))
+    crop_length = crop_size / sample_rate
 
     frame_buffer = np.zeros((len(ifos), 0))
-    # slice corresponds to middle second of
-    # a 3 second buffer; the middle second is
-    # yielded at each step to mitigate resampling
-    # edge effects
-    buffer_slc = slice(-int(2 * sample_rate), -int(sample_rate))
+    # slicing will take out 1 second of data from a buffer,
+    # removing `crop_size` samples on the right and
+    # `BLOCK_DURATION * sample_rate - crop_size` samples on the left.
+    resampled_block_size = BLOCK_DURATION * sample_rate
+    buffer_slc = slice(-int(crop_size + resampled_block_size), -int(crop_size))
 
     last_ready = [True] * len(ifos)
 
@@ -253,9 +262,13 @@ def offline_data_iterator(
             logging.debug(f"Reading frames from timestamp {t0}")
             frames = []
             frame_slc = slice(
-                int(i * GWF_SAMPLE_RATE), int((i + 1) * GWF_SAMPLE_RATE)
+                int(i * GWF_SAMPLE_RATE),
+                int((i + BLOCK_DURATION) * GWF_SAMPLE_RATE),
             )
-            state_vector_slc = slice(int(i * 16), int((i + 1) * 16))
+            state_vector_slc = slice(
+                int(i * STATE_VECTOR_SAMPLE_RATE),
+                int((i + BLOCK_DURATION) * STATE_VECTOR_SAMPLE_RATE),
+            )
             for j, ifo in enumerate(ifos):
                 frames.append(strain[j, frame_slc])
                 # if state channels were specified,
@@ -289,17 +302,21 @@ def offline_data_iterator(
                 frame = np.stack(frames)
                 frame_buffer = np.append(frame_buffer, frame, axis=1)
                 dur = frame_buffer.shape[-1] / GWF_SAMPLE_RATE
-                # Need at least 3 seconds to be able to crop out edge effects
-                # from resampling and just yield the middle second
-                if dur >= 3:
+                # Need enough time to be able to crop out edge effects
+                # from resampling
+                if dur >= BLOCK_DURATION + 2 * crop_length:
                     x = resample(frame_buffer, factor, b, a)
                     x = x[:, buffer_slc]
-                    frame_buffer = frame_buffer[:, GWF_SAMPLE_RATE:]
+                    frame_buffer = frame_buffer[:, BLOCK_SIZE:]
                     # yield last_ready, which corresponds to
                     # the data quality bits of the previous second
                     # of data, i.e. the middle second of the
                     # buffer that is being yielded as well
-                    yield torch.Tensor(x.copy()).double(), t0 - 1, last_ready
+                    yield (
+                        torch.Tensor(x.copy()).double(),
+                        t0 - crop_length,
+                        last_ready,
+                    )
 
                 last_ready = ready
-                t0 += 1
+                t0 += BLOCK_DURATION
