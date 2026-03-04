@@ -100,7 +100,10 @@ def estimate_tb(run_dir: Path, start_time: float) -> float:
 def pipeline_online():
     online_processes = 0
     for p in psutil.process_iter(["username", "name"]):
-        if p.info["username"] == "aframe" and p.info["name"] == "online":
+        if (
+            p.info["username"] == "aframe.online"
+            and p.info["name"] == "online"
+        ):
             online_processes += 1
     return online_processes >= EXPECTED_PROCESS_COUNT
 
