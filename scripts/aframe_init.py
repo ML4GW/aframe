@@ -108,7 +108,7 @@ def write_content(content: str, path: Path):
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
     # bind /local/aframe for finding scitokens
-    cmd += "--bind /local/aframe "
+    cmd += "--bind /local/aframe.online,$ONLINE_DATADIR"
     cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
     cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
@@ -116,13 +116,14 @@ def create_online_runfile(path: Path):
     cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
     cmd += "--env BEARER_TOKEN_FILE=$BEARER_TOKEN_FILE "
     cmd += "--env SCITOKEN_FILE=$SCITOKEN_FILE "
-    cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/online "
+    cmd += "$AFRAME_CONTAINER/online.sif /opt/env/bin/online "
     cmd += "--config $config 2>> monitoring.log"
 
     monitor_cmd = "apptainer run "
     monitor_cmd += f" --bind {path} "
-    monitor_cmd += "$AFRAME_CONTAINER_ROOT/online.sif /opt/env/bin/monitor "
-    monitor_cmd += f"--run_dir {path} --out_dir $MONITOR_OUTDIR &"
+    monitor_cmd += "$AFRAME_CONTAINER/online.sif /opt/env/bin/monitor "
+    monitor_cmd += f"--run_dir {path} --out_dir $MONITOR_OUTDIR "
+    monitor_cmd += ">> summary_pages.log 2>&1 &"
 
     content = f"""
     #!/bin/bash
@@ -142,41 +143,43 @@ def create_online_runfile(path: Path):
     # it is recommended not to store token
     # on /home/ filesystem: should be in
     # /local/$USER somewhere
-    export BEARER_TOKEN_FILE=
-    export SCITOKEN_FILE=
+    export BEARER_TOKEN_FILE=/local/aframe.online/scitoken
+    export SCITOKEN_FILE=/local/aframe.online/scitoken
 
     export AFRAME_KEYTAB=/home/aframe.online/robot/aframe-online_robot_aframe.ldas.cit.keytab
     export AFRAME_CREDKEY=aframe-online/robot/aframe.ldas.cit
 
+    export RUN_DIR={path}
+
     # trained model weights
-    export AMPLFI_HL_WEIGHTS=
-    export AMPLFI_HLV_WEIGHTS=
-    export AFRAME_WEIGHTS=
+    export AMPLFI_HL_WEIGHTS=$RUN_DIR/models/amplfi-hl.ckpt
+    export AMPLFI_HLV_WEIGHTS=$RUN_DIR/models/amplfi-hl.ckpt
+    export AFRAME_WEIGHTS=$RUN_DIR/models/aframe.pt
 
     # file containing timeslide events detected
     # by a model with the AFRAME_WEIGHTS above
-    export ONLINE_BACKGROUND_FILE=
+    export ONLINE_BACKGROUND_FILE=$RUN_DIR/data/background.hdf5
     # file containing detected events from an
     # injected campaign using AFRAME_WEIGHTS
-    export ONLINE_FOREGROUND_FILE=
+    export ONLINE_FOREGROUND_FILE=$RUN_DIR/data/foreground.hdf5
     # file containing events that were rejected
     # during the injection simulation process
-    export ONLINE_REJECTED_FILE=
+    export ONLINE_REJECTED_FILE=$RUN_DIR/data/rejected-parameters.hdf5
 
     # location where low latency data
-    # is streamed, typically /dev/shm/kakfka
-    export ONLINE_DATADIR=/dev/shm/kafka/
+    # is streamed, typically /kafka
+    export ONLINE_DATADIR=/kafka/
 
     # where results and deployment logs will be writen
-    export AFRAME_ONLINE_OUTDIR={path}
+    export AFRAME_ONLINE_OUTDIR=$RUN_DIR/output
 
     # Location of Aframe containers
-    export AFRAME_CONTAINER_ROOT=
+    export AFRAME_CONTAINER=$HOME/images/aframe/online.sif
 
-    config={path}/config.yaml
+    config=$RUN_DIR/config.yaml
 
     # Fill out and uncomment the following to perform monitoring
-    # export MONITOR_OUTDIR=
+    # export MONITOR_OUTDIR=$HOME/public_html/{path.stem}
     # {monitor_cmd}
 
     export CUDA_VISIBLE_DEVICES=
