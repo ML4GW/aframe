@@ -1,4 +1,5 @@
 import torch
+from torch.nn import functional as F
 from architectures.supervised import SupervisedArchitecture
 
 from train.model.base import AframeBase
@@ -17,10 +18,161 @@ class SupervisedAframe(AframeBase):
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         X, y = batch
         y_hat = self(X)
-        return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
+        return F.binary_cross_entropy_with_logits(y_hat, y)
 
     def score(self, X):
         return self(X)
+
+
+class SupervisedAframeRegression(SupervisedAframe):
+    def __init__(
+        self,
+        arch: SupervisedArchitecture,
+        loss_weights: tuple[float, float],
+        alpha: float = 20,
+        sigma: float = 0.01,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(arch, *args, **kwargs)
+        self.loss_weights = loss_weights
+        self.alpha = alpha
+        self.sigma = sigma
+
+    def weighted_mse_loss(self, heatmap_hat, heatmap):
+        true_peak_mask = heatmap > 0
+        false_peak_mask = heatmap_hat > 0.1
+        peak_mask = true_peak_mask | false_peak_mask
+        weights = 1 + self.alpha * peak_mask
+        peak_loss = weights * (heatmap_hat - heatmap) ** 2
+        peak_loss = peak_loss[peak_mask]
+
+        bg_loss = torch.clamp(heatmap_hat[~peak_mask], min=0) ** 2
+        return peak_loss.mean() + bg_loss.mean()
+
+    def generate_heatmap(
+        self, mu: Tensor, sigma: float, length: int
+    ) -> Tensor:
+        x = torch.arange(length, device=mu.device).float()
+        sigma *= length
+        heatmap = torch.exp(-((x - mu.unsqueeze(-1)) ** 2) / (2 * sigma**2))
+        return heatmap
+
+    def compute_loss_fn(self, **losses):
+        return sum(
+            [
+                losses[key] * weight
+                for key, weight in zip(
+                    losses.keys(), self.loss_weights, strict=True
+                )
+            ]
+        )
+
+    def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
+        X, y, mu = batch
+        mask = y.bool().squeeze()
+
+        y_hat, heatmap_hat = self(X)
+        heatmap = torch.zeros_like(
+            heatmap_hat, dtype=torch.float, device=X.device
+        )
+        mu *= heatmap_hat.shape[-1]
+        heatmap[mask] = self.generate_heatmap(
+            mu, sigma=self.sigma, length=heatmap_hat.shape[-1]
+        )
+
+        losses = {
+            "classifier_loss": F.binary_cross_entropy_with_logits(y_hat, y),
+            "weighted_mse_loss": self.weighted_mse_loss(heatmap_hat, heatmap),
+        }
+        return losses
+
+    def validation_step(self, batch, _) -> None:
+        shift, X_bg, X_inj, mu = batch
+        y_bg, heatmap_bg_hat = self.score(X_bg)
+
+        # compute predictions over multiple views of
+        # each injection and use their average as our
+        # prediction
+        num_views, batch, *shape = X_inj.shape
+        X_inj = X_inj.view(num_views * batch, *shape)
+        y_fg, heatmap_fg_hat = self.score(X_inj)
+
+        y_fg = y_fg.view(num_views, batch)
+        y_fg = y_fg.mean(0)
+
+        # include the shift associated with this data
+        # in our outputs to reconstruct background
+        # timeseries at aggregation time
+        self.metric.update(shift, y_bg, y_fg)
+
+        heatmap_bg = torch.zeros_like(
+            heatmap_bg_hat, dtype=torch.float, device=heatmap_bg_hat.device
+        )
+        mu = mu.view(num_views * batch)
+        heatmap_fg = self.generate_heatmap(
+            mu, self.sigma, heatmap_fg_hat.shape[-1]
+        )
+
+        valid_bg_mse = self.weighted_mse_loss(heatmap_bg_hat, heatmap_bg)
+
+        heatmap_fg_hat = heatmap_fg_hat.view(
+            num_views, batch, heatmap_fg_hat.shape[-1]
+        )
+        heatmap_fg = heatmap_fg.view(num_views, batch, heatmap_fg.shape[-1])
+
+        metric_dict = {
+            "valid_auroc": self.metric,
+            "valid_bg_weighted_mse": valid_bg_mse,
+        }
+        for i in range(num_views):
+            metric_dict[f"valid_fg_weighted_mse_view_{i}"] = (
+                self.weighted_mse_loss(heatmap_fg_hat[i], heatmap_fg[i])
+            )
+        metric_dict["valid_fg_weighted_mse"] = self.weighted_mse_loss(
+            heatmap_fg_hat, heatmap_fg
+        )
+
+        # lightning will take care of updating then
+        # computing the metric at the end of the
+        # validation epoch
+        self.log_dict(
+            metric_dict,
+            on_epoch=True,
+            sync_dist=True,
+            batch_size=batch,
+        )
+
+    def configure_optimizers(self):
+        if not torch.distributed.is_initialized():
+            world_size = 1
+        else:
+            world_size = torch.distributed.get_world_size()
+
+        # scale lr by number of GPUs
+        # https://arxiv.org/pdf/1706.02677.pdf
+        lr = self.hparams.learning_rate * world_size
+        self._logger.info(f"Scaled lr by {world_size} to {lr}")
+
+        backbone_params = self.model.backbone.parameters()
+        heatmap_params = self.model.heatmap_head.parameters()
+
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": backbone_params, "lr": lr},
+                {"params": heatmap_params, "lr": lr},
+            ],
+            weight_decay=self.hparams.weight_decay,
+        )
+
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            pct_start=self.hparams.pct_lr_ramp,
+            max_lr=lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+        )
+        scheduler_config = {"scheduler": scheduler, "interval": "step"}
+        return {"optimizer": optimizer, "lr_scheduler": scheduler_config}
 
 
 class SupervisedMultiModalAframe(SupervisedAframe):
@@ -36,7 +188,7 @@ class SupervisedMultiModalAframe(SupervisedAframe):
     def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
         (X, X_fft), y = batch
         y_hat = self(X, X_fft)
-        return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
+        return F.binary_cross_entropy_with_logits(y_hat, y)
 
     def validation_step(self, batch, _) -> None:
         shift, (X_bg, X_bg_fft), (X_inj, X_inj_fft) = batch
@@ -106,12 +258,8 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
     ) -> Tensor | dict[str, Tensor]:
         (X, X_spec), y = batch
         y_hat_X, y_hat_X_spec = self(X, X_spec)
-        loss_X = torch.nn.functional.binary_cross_entropy_with_logits(
-            y_hat_X, y
-        )
-        loss_X_spec = torch.nn.functional.binary_cross_entropy_with_logits(
-            y_hat_X_spec, y
-        )
+        loss_X = F.binary_cross_entropy_with_logits(y_hat_X, y)
+        loss_X_spec = F.binary_cross_entropy_with_logits(y_hat_X_spec, y)
         return {
             "loss_X": loss_X,
             "loss_X_spec": loss_X_spec,

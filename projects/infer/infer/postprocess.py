@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 from ledger.events import EventSet
@@ -10,6 +8,7 @@ class Postprocessor:
         self,
         t0: float,
         shifts: list[float],
+        kernel_length: float,
         psd_length: float,
         fduration: float,
         inference_sampling_rate: float,
@@ -25,6 +24,8 @@ class Postprocessor:
                 GPS time of the start of the data segment
             shifts:
                 Time shifts to applied to each interferometer
+            kernel_length:
+                Length of the window seen by the network in seconds
             psd_length:
                 Length of the PSD data used in inference in seconds
             fduration:
@@ -43,7 +44,7 @@ class Postprocessor:
         # offset our initial time both by the psd data
         # that we're going to slough off as well as by
         # the filter settle-in and integration time
-        self.t0 = t0 + psd_length - fduration / 2 - integration_window_length
+        self.t0 = t0 + psd_length - fduration / 2 - kernel_length
         self.offset = int(psd_length * inference_sampling_rate)
 
         # convert our window lengths to sample units
@@ -69,7 +70,7 @@ class Postprocessor:
         integrated = np.convolve(y, window, mode="full")
         return integrated[: -window_size + 1]
 
-    def cluster(self, y) -> EventSet:
+    def cluster(self, y, pred_times) -> EventSet:
         # initial our search index to be in the first
         # half window of the timeseries. Then all we
         # need to know is whether there's a louder event
@@ -95,8 +96,7 @@ class Postprocessor:
                 # the value and reset the index to be the
                 # first value outside the current window
                 events.append(val)
-                t = self.t0 + i / self.inference_sampling_rate
-                times.append(t)
+                times.append(pred_times[i])
                 i += window_size + 1
 
         # record all this info and some
@@ -107,13 +107,25 @@ class Postprocessor:
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
         return EventSet(events, times, shifts, Tb)
 
-    def __call__(self, y: Optional[np.ndarray] = None) -> EventSet:
+    def __call__(
+        self, y: np.ndarray | None = None, h: np.ndarray | None = None
+    ) -> EventSet:
         # in the case where we didn't perform
         # injections on this shift
         # just return an empty event set
         if y is None:
             return EventSet()
         y = y[self.offset :]
+
+        duration = len(y) / self.inference_sampling_rate
+        times = np.arange(
+            self.t0, self.t0 + duration, 1 / self.inference_sampling_rate
+        )
+        pred_times = np.argmax(h, axis=-1) / h.shape[-1] + times
+        pred_times = pred_times[self.offset :]
+
         y = self.integrate(y)
-        y = self.cluster(y)
+        pred_times = self.integrate(pred_times)
+
+        y = self.cluster(y, pred_times)
         return y

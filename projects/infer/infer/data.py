@@ -110,12 +110,14 @@ class Sequence:
         self._started = {}
         self._done = {}
         self._sequences = {}
+        self._heatmap_sequences = {}
         size = len(self) * self.batch_size
         for i in range(2):
             seq_id = self.id + i
             self._started[seq_id] = False
             self._done[seq_id] = False
             self._sequences[seq_id] = np.zeros(size)
+            self._heatmap_sequences[seq_id] = np.zeros((size, 192))
 
         # if there are no injections, we can mark
         # the injection sequence as started and done
@@ -219,12 +221,15 @@ class Sequence:
                 with limiter:
                     yield x, x_inj
 
-    def __call__(self, y, request_id, sequence_id):
+    def __call__(self, output, request_id, sequence_id):
+        h, y = output
+
         # insert the response at the appropriate
         # spot in the corresponding output array
         start = request_id * self.batch_size
         stop = (request_id + 1) * self.batch_size
         self._sequences[sequence_id][start:stop] = y[:, 0]
+        self._heatmap_sequences[sequence_id][start:stop] = h
 
         # indicate that the first response for
         # this sequence has returned, and possibly
@@ -238,10 +243,20 @@ class Sequence:
         # slicing off the dummy data from the last batch
         if self.done:
             background = self._sequences[self.id][self.slice]
+            background_heatmaps = self._heatmap_sequences[self.id][self.slice]
             foreground = None
+            foreground_heatmaps = None
             if self.injection_set is not None:
                 foreground = self._sequences[self.id + 1][self.slice]
-            return background, foreground
+                foreground_heatmaps = self._heatmap_sequences[self.id + 1][
+                    self.slice
+                ]
+            return (
+                background,
+                background_heatmaps,
+                foreground,
+                foreground_heatmaps,
+            )
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)

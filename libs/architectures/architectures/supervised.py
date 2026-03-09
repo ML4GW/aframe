@@ -7,6 +7,7 @@ from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from torch import Tensor
 import torch
+from torch import nn
 
 
 class SupervisedArchitecture(Architecture):
@@ -280,3 +281,148 @@ class SupervisedTimeSpectrogramResNet(SupervisedArchitecture):
         time_domain_output = self.time_domain_resnet(X)
         spec_domain_output = self.spectrogram_resnet(X_spec)
         return time_domain_output, spec_domain_output
+
+
+class AddCoords1d(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        """
+        Args:
+            x: Input tensor of shape (batch_size, channels, length)
+        """
+        batch_size, _, length = x.size()
+        # Create a linear ramp from -1 to 1
+        # [length] -> [1, 1, length]
+        pos = torch.linspace(-1, 1, length, device=x.device, dtype=x.dtype)
+        pos = pos.view(1, 1, length)
+        # Expand to match batch size: [batch_size, 1, length]
+        pos = pos.expand(batch_size, -1, -1)
+        # Concatenate the coordinate channel to the input
+        # Result shape: [batch_size, channels + 1, length]
+        return torch.cat([x, pos], dim=1)
+
+
+class CoordConv1d(nn.Module):
+    def __init__(self, in_channels, out_channels, **kwargs):
+        super().__init__()
+        self.add_coords = AddCoords1d()
+        # Note: in_channels + 1 because of the extra coordinate channel
+        self.conv = nn.Conv1d(in_channels + 1, out_channels, **kwargs)
+
+    def forward(self, x):
+        x = self.add_coords(x)
+        x = self.conv(x)
+        return x
+
+
+class ClippedLeakyReLU(nn.Module):
+    def __init__(self, negative_slope=0.01, max_val=1.0):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.max_val = max_val
+
+    def forward(self, x):
+        x = nn.functional.leaky_relu(x, negative_slope=self.negative_slope)
+        return torch.clamp(x, max=self.max_val)
+
+
+def _convert_padding_mode(model, mode="reflect"):
+    for _, module in model.named_modules():
+        if isinstance(module, nn.Conv1d):
+            module.padding_mode = mode
+    return model
+
+
+class SupervisedTimeDomainRegression(SupervisedArchitecture):
+    def __init__(
+        self,
+        num_ifos: int,
+        sample_rate: float,
+        kernel_length: float,
+        layers: list[int],
+        kernel_size: int = 3,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        final_activation: str | None = "sigmoid",
+        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
+        norm_layer: Optional[NormLayer] = None,
+    ) -> None:
+        super().__init__()
+        self.backbone = ResNet1D(
+            num_ifos,
+            layers=layers,
+            classes=1,
+            kernel_size=kernel_size,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            stride_type=stride_type,
+            norm_layer=norm_layer,
+        )
+        self.backbone.conv1 = CoordConv1d(
+            2, 64, kernel_size=7, stride=1, padding=3, bias=False
+        )
+        in_channels = self.backbone.residual_layers[-1][-1].conv2.out_channels
+        self.dilated_layer = nn.Sequential(
+            nn.Conv1d(
+                in_channels,
+                in_channels,
+                kernel_size=kernel_size,
+                padding=2,
+                dilation=2,
+            ),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels,
+                in_channels,
+                kernel_size=kernel_size,
+                padding=8,
+                dilation=8,
+            ),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels,
+                in_channels,
+                kernel_size=kernel_size,
+                padding=32,
+                dilation=32,
+            ),
+            nn.ReLU(),
+        )
+
+        activation = (
+            nn.Sigmoid()
+            if final_activation == "sigmoid"
+            else ClippedLeakyReLU()
+        )
+        self.heatmap_head = nn.Sequential(
+            nn.Conv1d(
+                self.backbone.fc.in_features, 128, kernel_size=3, padding=1
+            ),
+            nn.ReLU(),
+            nn.Conv1d(128, 1, kernel_size=1, bias=False),
+            activation,
+        )
+        _convert_padding_mode(self)
+
+    def _forward_impl(self, x):
+        x = self.backbone.conv1(x)
+        x = self.backbone.bn1(x)
+        x = self.backbone.relu(x)
+        x = self.backbone.maxpool(x)
+
+        for layer in self.backbone.residual_layers:
+            x = layer(x)
+
+        return x
+
+    def forward(self, x):
+        x = self._forward_impl(x)
+        heatmap = self.heatmap_head(self.dilated_layer(x))
+        x = self.backbone.avgpool(x)
+        x = torch.flatten(x, 1)
+        y = self.backbone.fc(x)
+        return y, heatmap.squeeze(1)

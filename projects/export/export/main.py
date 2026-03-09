@@ -140,7 +140,7 @@ def export(
         input_shape_dict = {
             key: (batch_size,) + tuple(batch_file[key].shape[1:])
             for key in batch_file.keys()
-            if key != "y"
+            if not key.startswith("output")
         }
 
     # the network will have some different keyword
