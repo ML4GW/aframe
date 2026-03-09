@@ -332,7 +332,6 @@ def _convert_padding_mode(model, mode="reflect"):
     for _, module in model.named_modules():
         if isinstance(module, nn.Conv1d):
             module.padding_mode = mode
-            module.stride = 1
     return model
 
 
@@ -364,7 +363,7 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
             norm_layer=norm_layer,
         )
         self.backbone.conv1 = CoordConv1d(
-            2, 64, kernel_size=7, stride=2, padding=3, bias=False
+            2, 64, kernel_size=7, stride=1, padding=3, bias=False
         )
         in_channels = self.backbone.residual_layers[-1][-1].conv2.out_channels
         self.dilated_layer = nn.Sequential(
