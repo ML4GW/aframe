@@ -79,6 +79,7 @@ class TritonOutputs:
         # Allocate one row of outputs per stream and keep track of which
         # streams have had a response and which have had their final one.
         self.outputs = np.zeros((num_streams, num_steps * batch_size))
+        self.heatmap = np.zeros((num_streams, num_steps * batch_size, 192))
         self._started = {base_id + i: False for i in range(num_streams)}
         self._done = {base_id + i: False for i in range(num_streams)}
 
@@ -106,11 +107,14 @@ class TritonOutputs:
             If all `(num_streams, num_steps * batch_size)` outputs are present,
             they are returned. Otherwise None.
         """
+        h, y = y
+
         # Write the response into its stream's row with this step's offset.
         stream = sequence_id - self.base_id
         start = request_id * self.batch_size
         stop = (request_id + 1) * self.batch_size
         self.outputs[stream, start:stop] = y[:, 0]
+        self.heatmap[stream, start:stop] = h
 
         # Record that the stream has started, and whether this was the
         # response to its last step.
@@ -119,7 +123,7 @@ class TritonOutputs:
             self._done[sequence_id] = True
 
         if self.done:
-            return self.outputs
+            return self.outputs, self.heatmap
         return None
 
 
@@ -189,9 +193,9 @@ def infer_triton(
                 time.sleep(1e-2)
 
     # Wait for the callback to give back the full outputs
-    outputs = client.get()
+    outputs, heatmap = client.get()
     while outputs is None:
-        outputs = client.get()
+        outputs, heatmap = client.get()
         time.sleep(1e-1)
 
-    return sequence.results(outputs, postprocessors)
+    return sequence.results(outputs, heatmap, postprocessors)

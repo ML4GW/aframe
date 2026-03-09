@@ -202,7 +202,7 @@ class ShiftBatchSequence:
         return list(range(num_shifts)) + list(self.injected_idx)
 
     def results(
-        self, outputs: np.ndarray, postprocessors: list[Postprocessor]
+        self, outputs: np.ndarray, heatmap: np.ndarray, postprocessors: list[Postprocessor]
     ) -> list[
         tuple[EventSet, RecoveredInjectionSet, np.ndarray, np.ndarray | None]
     ]:
@@ -225,6 +225,7 @@ class ShiftBatchSequence:
         """
         # Trim the outputs from the padded final batch
         outputs = outputs[:, : self.stream_layout.num_outputs]
+        heatmap = heatmap[:, : self.stream_layout.num_outputs]
 
         # Split the rows into each shift's background and injected outputs.
         # The first S rows are the background streams, and row S + j is the
@@ -234,18 +235,24 @@ class ShiftBatchSequence:
             outputs[:num_shifts],
             outputs[num_shifts:],
         )
-
+        background_heatmap, foreground_heatmap = (
+            heatmap[:num_shifts],
+            heatmap[num_shifts:],
+        )
+        
         # Postprocess each shift's outputs into events, and match its
         # injected events to that shift's injections.
         results = []
         for s, postprocessor in enumerate(postprocessors):
             background_ts = background_outputs[s]
-            background = postprocessor(background_ts)
+            background_heatmap_ts = background_heatmap[s]
+            background = postprocessor(background_ts, background_heatmap_ts)
             foreground_ts = None
             if s in self.injected_idx:
                 idx = self.injected_idx.index(s)
                 foreground_ts = foreground_outputs[idx]
-            foreground = self.recover(postprocessor(foreground_ts), s)
+                foreground_heatmap_ts = foreground_heatmap[idx]
+            foreground = self.recover(postprocessor(background_ts, foreground_heatmap_ts), s)
 
             results.append(
                 (
