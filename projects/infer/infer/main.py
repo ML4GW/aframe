@@ -85,9 +85,11 @@ def infer(
         time.sleep(1e-1)
     logging.info("Inference complete, postprocessing output timeseries")
 
-    background_ts, foreground_ts = result
-    background = postprocessor(background_ts)
-    foreground = postprocessor(foreground_ts)
+    background_ts, background_heatmap, foreground_ts, foreground_heatmap = (
+        result
+    )
+    background = postprocessor(background_ts, background_heatmap)
+    foreground = postprocessor(foreground_ts, foreground_heatmap)
 
     logging.info("Recovering injections from foreground events")
     foreground = sequence.recover(foreground)
