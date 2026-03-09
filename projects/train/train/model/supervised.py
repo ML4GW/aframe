@@ -43,12 +43,9 @@ class SupervisedAframeRegression(SupervisedAframe):
         true_peak_mask = heatmap > 0
         false_peak_mask = heatmap_hat > 0.1
         peak_mask = true_peak_mask | false_peak_mask
-        if peak_mask.sum() == 0:
-            peak_loss = torch.tensor(0.0, device=heatmap.device)
-        else:
-            peak_loss = (1 + self.alpha) * (
-                heatmap_hat[peak_mask] - heatmap[peak_mask]
-            ) ** 2
+        weights = 1 + self.alpha * peak_mask
+        peak_loss = weights * (heatmap_hat - heatmap) ** 2
+        peak_loss = peak_loss[peak_mask]
 
         bg_loss = torch.clamp(heatmap_hat[~peak_mask], min=0) ** 2
         return peak_loss.mean() + bg_loss.mean()
