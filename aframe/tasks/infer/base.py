@@ -305,7 +305,7 @@ class Hdf5InferBase(InferBase):
 
 @inherits(InferParameters)
 class RnPInferBase(InferBase):
-    injection_files = luigi.ListParameter(default=[])
+    injection_file_dir = luigi.PathParameter()
     channel = luigi.Parameter(
         description="Name of channel within injection files"
     )
@@ -315,12 +315,18 @@ class RnPInferBase(InferBase):
         description="Number of injection files to process per condor job.",
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.injection_files = list(
+            Path(self.injection_file_dir).glob("*.hdf")
+        )
+
     def _workflow_requires(self):
         return {}
 
     def _workflow_condition(self) -> bool:
         return bool(self.injection_files) and all(
-            Path(f).exists() for f in self.injection_files
+            f.exists() for f in self.injection_files
         )
 
     def _create_branch_map(self):
