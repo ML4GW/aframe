@@ -14,7 +14,7 @@ import utils.data as data_utils
 from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter
-from aframe.tasks import ExportLocal, TestingWaveforms
+from aframe.tasks import ExportLocal, TestingWaveforms, Train
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 
 
@@ -117,7 +117,11 @@ class InferBase(
         return self.tmp_dir / "metadata.json"
 
     def workflow_requires(self):
-        reqs = {"model_repository": ExportLocal.req(self)}
+        reqs = {
+            "model_repository": ExportLocal.req(
+                self, train_task=self.train_task
+            )
+        }
         reqs.update(self._workflow_requires())
         return reqs
 
@@ -305,6 +309,8 @@ class Hdf5InferBase(InferBase):
 
 @inherits(InferParameters)
 class RnPInferBase(InferBase):
+    train_task = Train
+
     injection_file_dir = luigi.PathParameter()
     channel = luigi.Parameter(
         description="Name of channel within injection files"
@@ -318,7 +324,7 @@ class RnPInferBase(InferBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.injection_files = list(
-            Path(self.injection_file_dir).glob("*.hdf")
+            Path(self.injection_file_dir).rglob("*.gwf")
         )
 
     def _workflow_requires(self):

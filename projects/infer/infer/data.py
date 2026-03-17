@@ -3,6 +3,7 @@ import math
 import re
 from abc import ABC, abstractmethod
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Optional
 from zlib import adler32
 
@@ -207,6 +208,7 @@ class Hdf5Sequence(BaseSequence):
         shifts: list[float],
     ):
         self.background_fname = background_fname
+        self.inference_filenames = [background_fname]
         self.ifos = ifos
 
         if len(ifos) != len(shifts):
@@ -308,7 +310,7 @@ class Hdf5Sequence(BaseSequence):
 class RnPSequence(BaseSequence):
     def __init__(
         self,
-        injection_files: list[str],
+        injection_files: list[Path],
         channel: str,
         ifos: list[str],
         sample_rate: float,
@@ -355,7 +357,7 @@ class RnPSequence(BaseSequence):
 
     def _setup(
         self,
-        injection_files: list[str],
+        injection_files: list[Path],
         channel: str,
         ifos: list[str],
     ):
@@ -370,7 +372,9 @@ class RnPSequence(BaseSequence):
 
         injection_files = sorted(injection_files)
 
-        matches = [FNAME_RE.search(fname) for fname in injection_files]
+        self.inference_filenames = [fname.name for fname in injection_files]
+
+        matches = [FNAME_RE.search(fname.name) for fname in injection_files]
         if not all(matches):
             raise ValueError(
                 "All injection files must match expected name pattern"

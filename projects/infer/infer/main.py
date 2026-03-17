@@ -38,7 +38,7 @@ def infer(
         "at GPS time {}".format(
             sequence.id,
             sequence.duration,
-            sequence.background_fname,
+            sequence.inference_filenames,
             sequence.shifts / sequence.sample_rate,
             sequence.sample_rate,
             sequence.t0,
