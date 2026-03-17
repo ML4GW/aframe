@@ -337,8 +337,7 @@ class RnPInferBase(InferBase):
         files = sorted(self.injection_files)
         branch_map = {}
         for i, start in enumerate(range(0, len(files), self.files_per_job)):
-            end = min(start + self.files_per_job, len(files))
-            chunk = files[start:end]
+            chunk = files[start : start + self.files_per_job]
             branch_map[i] = (chunk, shifts)
         return branch_map
 
