@@ -75,36 +75,19 @@ class BaseSequence(ABC):
             self._done[seq_id] = False
             self._sequences[seq_id] = np.zeros(size)
 
-    def _finalize_sequence(self, has_foreground: bool = True):
-        if not self.done:
-            return None
-
-        # if both the background and foreground
-        # sequences have completed, return them both,
-        # slicing off the dummy data from the last batch
-        background = self._sequences[self.id][self.slice]
-        foreground = None
-        if has_foreground:
-            foreground = self._sequences[self.id + 1][self.slice]
-        return background, foreground
-
-    def _record_response(self, y, request_id, sequence_id):
-        # insert the response at the appropriate
-        # spot in the corresponding output array
-        start = request_id * self.batch_size
-        stop = (request_id + 1) * self.batch_size
-        self._sequences[sequence_id][start:stop] = y[:, 0]
-
-        # indicate that the first response for
-        # this sequence has returned, and possibly
-        # that the last one has returned as well
-        self._started[sequence_id] = True
-        if request_id == len(self) - 1:
-            self._done[sequence_id] = True
-
     @abstractmethod
     def _setup(self, **kwargs):
         """Subclasses must set sample_rate, size, t0, duration, and shifts."""
+        pass
+
+    @property
+    @abstractmethod
+    def inference_filenames(self):
+        pass
+
+    @property
+    @abstractmethod
+    def has_foreground(self):
         pass
 
     @property
@@ -146,6 +129,60 @@ class BaseSequence(ABC):
         # slicing off the actual useful inference requests
         # corresponding to the excess
         return math.ceil((self.size - max(self.shifts)) / self.step_size)
+
+    def _finalize_sequence(self, has_foreground: bool = True):
+        if not self.done:
+            return None
+
+        # if both the background and foreground
+        # sequences have completed, return them both,
+        # slicing off the dummy data from the last batch
+        background = self._sequences[self.id][self.slice]
+        foreground = None
+        if has_foreground:
+            foreground = self._sequences[self.id + 1][self.slice]
+        return background, foreground
+
+    def _record_response(self, y, request_id, sequence_id):
+        # insert the response at the appropriate
+        # spot in the corresponding output array
+        start = request_id * self.batch_size
+        stop = (request_id + 1) * self.batch_size
+        self._sequences[sequence_id][start:stop] = y[:, 0]
+
+        # indicate that the first response for
+        # this sequence has returned, and possibly
+        # that the last one has returned as well
+        self._started[sequence_id] = True
+        if request_id == len(self) - 1:
+            self._done[sequence_id] = True
+
+    def __call__(self, y, request_id, sequence_id):
+        self._record_response(y, request_id, sequence_id)
+        return self._finalize_sequence(has_foreground=self.has_foreground)
+
+    def _get_data_indices(self, batch_idx: int, shift: int = 0):
+        # if this is the last batch, we may need to pad it
+        # to make it a full batch
+        last = batch_idx == len(self) - 1
+        # grab the current batch of updates from the file
+        # and stack it into a 2D array
+        start = batch_idx * self.step_size + shift
+
+        # for all but last batch just
+        # increase by step size
+        end = start + self.step_size
+
+        # if this is the last batch
+        # and we need to pad it
+        # just step by the remainder
+        if last and self.remainder:
+            end = start + self.remainder
+
+        return start, end, last
+
+    def _pad_last_batch(self, data: np.ndarray):
+        return np.pad(data, ((0, 0), (0, self.num_pad)), "constant")
 
 
 class Hdf5Sequence(BaseSequence):
@@ -208,7 +245,6 @@ class Hdf5Sequence(BaseSequence):
         shifts: list[float],
     ):
         self.background_fname = background_fname
-        self.inference_filenames = [background_fname]
         self.ifos = ifos
 
         if len(ifos) != len(shifts):
@@ -253,36 +289,26 @@ class Hdf5Sequence(BaseSequence):
         self.injection_set = injection_set
         self.shifts = np.array([int(i * self.sample_rate) for i in shifts])
 
+    @property
+    def inference_filenames(self):
+        return [self.background_fname]
+
+    @property
+    def has_foreground(self):
+        return self.injection_set is not None
+
     def __iter__(self):
         with h5py.File(self.background_fname, "r") as f:
             for i in range(len(self)):
-                # if this is the last batch, we may need to pad it
-                # to make it a full batch
-                last = i == len(self) - 1
-                # grab the current batch of updates from the file
-                # and stack it into a 2D array
                 x = []
                 for ifo, shift in zip(self.ifos, self.shifts, strict=True):
-                    start = shift + i * self.step_size
-
-                    # for all but last batch just
-                    # increase by step size
-                    end = start + self.step_size
-
-                    # if this is the last batch
-                    # and we need to pad it
-                    # just step by the remainder
-                    if last and self.remainder:
-                        end = start + self.remainder
-
+                    start, end, last = self._get_data_indices(i, shift)
                     data = f[ifo][start:end]
-                    # if this is the last batch
-                    # possibly pad it to make it a full batch
-                    if last:
-                        data = np.pad(data, (0, self.num_pad), "constant")
-
                     x.append(data)
+
                 x = np.stack(x).astype(np.float32)
+                x = self._pad_last_batch(x) if last else x
+
                 # if there are any injections for this shift,
                 # inject waveforms into a copy of the background
                 x_inj = None
@@ -296,12 +322,6 @@ class Hdf5Sequence(BaseSequence):
                 # rate limited if we specified a max rate
                 with self.limiter:
                     yield x, x_inj
-
-    def __call__(self, y, request_id, sequence_id):
-        self._record_response(y, request_id, sequence_id)
-        return self._finalize_sequence(
-            has_foreground=self.injection_set is not None
-        )
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:
         return RecoveredInjectionSet.recover(foreground, self.injection_set)
@@ -370,11 +390,11 @@ class RnPSequence(BaseSequence):
         if not injection_files:
             raise ValueError("Must provide at least one injection file")
 
-        injection_files = sorted(injection_files)
+        self.injection_files = sorted(injection_files)
 
-        self.inference_filenames = [fname.name for fname in injection_files]
-
-        matches = [FNAME_RE.search(fname.name) for fname in injection_files]
+        matches = [
+            FNAME_RE.search(fname.name) for fname in self.injection_files
+        ]
         if not all(matches):
             raise ValueError(
                 "All injection files must match expected name pattern"
@@ -386,7 +406,7 @@ class RnPSequence(BaseSequence):
         self.t0 = min(starts)
         self.duration = sum(durations)
         self.size = int(self.duration * self.sample_rate)
-        self.timeseries = np.zeros((len(ifos), self.size))
+        self.timeseries = np.zeros((len(ifos), self.size), dtype=np.float32)
 
         # Load and resample data from each file
         for file, start, duration in zip(
@@ -400,42 +420,25 @@ class RnPSequence(BaseSequence):
                 [injected[ch].value for ch in self.channels]
             )
 
+    @property
+    def inference_filenames(self):
+        return [fname.name for fname in self.injection_files]
+
+    @property
+    def has_foreground(self):
+        return True
+
     def __iter__(self):
         for i in range(len(self)):
-            # if this is the last batch, we may need to pad it
-            # to make it a full batch
-            last = i == len(self) - 1
-            # grab the current batch of updates from the file
-            # and stack it into a 2D array
-            start = i * self.step_size
-
-            # for all but last batch just
-            # increase by step size
-            end = start + self.step_size
-
-            # if this is the last batch
-            # and we need to pad it
-            # just step by the remainder
-            if last and self.remainder:
-                end = start + self.remainder
+            start, end, last = self._get_data_indices(i)
 
             x_inj = self.timeseries[:, start:end]
-
-            if last:
-                x_inj = np.pad(x_inj, ((0, 0), (0, self.num_pad)), "constant")
-
-            # TODO: Do we need this type conversion?
-            x_inj = x_inj.astype(np.float32)
+            x_inj = self._pad_last_batch(x_inj) if last else x_inj
 
             # yield the same data twice, as we normally
             # expect to pass background and foreground
             with self.limiter:
                 yield x_inj, x_inj
 
-    def __call__(self, y, request_id, sequence_id):
-        self._record_response(y, request_id, sequence_id)
-        return self._finalize_sequence(has_foreground=True)
-
-    # TODO: format the foreground into whatever R&P expects
     def recover(self, foreground: EventSet) -> EventSet:
         return foreground
