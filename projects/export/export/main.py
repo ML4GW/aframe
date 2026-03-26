@@ -225,4 +225,8 @@ def export(
     snapshotter.config.sequence_batching.max_sequence_idle_microseconds = int(
         6e10
     )
+
+    # Limit the number of threads the snapshotter uses to avoid system limits
+    snapshotter.config.parameters["intra_op_thread_count"].string_value = "2"
+
     snapshotter.config.write()
