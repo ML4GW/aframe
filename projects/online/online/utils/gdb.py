@@ -87,7 +87,7 @@ class GraceDb(_GraceDb):
         self.kafka_producer = GraceDbKafkaProducer(
             bootstrap_servers="kafka-dev.ligo.org:9092",
             service_url=server.service_url,
-            ca_cert_path=certifi.where()
+            ca_cert_path=certifi.where(),
         )
         self.server = server
         self.write_dir = write_dir
