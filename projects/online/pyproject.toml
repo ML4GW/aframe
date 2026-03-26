@@ -22,7 +22,7 @@ dependencies = [
     "scipy<1.15",
     "matplotlib==3.9.4",
     "ligo-skymap>=2.4.0,<3",
-    "ligo-gracedb[kafka]==2.15.4",
+    "ligo-gracedb[kafka]>=2.15.4",
     "tables>=3.9",
 ]
 
