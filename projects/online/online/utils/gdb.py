@@ -1,4 +1,3 @@
-import certifi
 import json
 import logging
 from datetime import datetime, timezone
@@ -8,7 +7,6 @@ import bilby
 import h5py
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-from ligo.gracedb.kafka import GraceDbKafkaProducer
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
@@ -84,11 +82,10 @@ class GraceDb(_GraceDb):
             use_auth="scitoken",
             api_version="v2",
         )
-        self.kafka_producer = GraceDbKafkaProducer(
-            bootstrap_servers="kafka-dev.ligo.org:9092",
-            service_url=server.service_url,
-            ca_cert_path=certifi.where(),
-        )
+
+        # The kafka producer will be set in the subprocess that uses it
+        self.kafka_producer = None
+
         self.server = server
         self.write_dir = write_dir
         if logger is None:

@@ -3,6 +3,9 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import certifi
+from ligo.gracedb.kafka import GraceDbKafkaProducer
+
 from .utils import subprocess_wrapper
 
 if TYPE_CHECKING:
@@ -23,6 +26,13 @@ def event_creation_subprocess(
 
     # override with subprocesses logger
     gdb.logger = logger
+
+    # Need to create the producer within the subprocess that uses it
+    gdb.kafka_producer = GraceDbKafkaProducer(
+        bootstrap_servers="kafka-dev.ligo.org:9092",
+        service_url=gdb.server.service_url,
+        ca_cert_path=certifi.where(),
+    )
     while True:
         event = event_queue.get()
         logger.debug("Putting event in pastro queue")
