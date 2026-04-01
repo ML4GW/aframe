@@ -104,6 +104,7 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
             kafka=self.kafka_producer,
+            http_fallback=True,
         )
 
         self.logger.debug("Event created")
