@@ -2,7 +2,6 @@ import pickle
 import tempfile
 
 import numpy as np
-
 from p_astro import Pastro
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
@@ -25,6 +24,6 @@ def test_pastro(events, foreground, rejected, astro_event_rate):
         with open(temp_file.name, "rb") as f:
             loaded = pickle.load(f)
 
-        test = np.random.randn(1000)
+        test = np.random.default_rng().standard_normal(1000)
         assert np.allclose(pastro(test), loaded(test))
         assert test.shape == loaded(test).shape

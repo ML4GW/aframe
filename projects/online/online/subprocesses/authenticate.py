@@ -1,7 +1,8 @@
-import time
-import os
 import logging
-from .utils import subprocess_wrapper, run_subprocess_with_logging
+import os
+import time
+
+from .utils import run_subprocess_with_logging, subprocess_wrapper
 
 logger = logging.getLogger("authenticate-subprocess")
 

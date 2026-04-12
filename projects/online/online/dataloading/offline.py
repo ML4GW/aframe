@@ -1,18 +1,19 @@
-import os
-import numpy as np
-from pathlib import Path
-from online.dataloading.utils import (
-    build_resample_filter,
-    resample,
-    parse_frame_name,
-    GWF_SAMPLE_RATE,
-)
-from typing import List, Optional, Generator
-from gwpy.timeseries import TimeSeriesDict
 import logging
-import torch
 import multiprocessing as mp
+import os
+from collections.abc import Generator
+from pathlib import Path
 
+import numpy as np
+import torch
+from gwpy.timeseries import TimeSeriesDict
+
+from online.dataloading.utils import (
+    GWF_SAMPLE_RATE,
+    build_resample_filter,
+    parse_frame_name,
+    resample,
+)
 
 STATE_VECTOR_SAMPLE_RATE = 16
 
@@ -81,7 +82,7 @@ class OfflineFrameFileLoader:
         logging.info(f"Analyzing intersection: {start} to {end}")
         return start, end
 
-    def find_frames(self, ifo: str, start: float, end: float) -> List[str]:
+    def find_frames(self, ifo: str, start: float, end: float) -> list[str]:
         """
         Find all files that overlap with the given time range.
         """
@@ -189,12 +190,12 @@ def chunk_loader_worker(
 
 def offline_data_iterator(
     datadir: Path,
-    channels: List[str],
-    ifos: List[str],
+    channels: list[str],
+    ifos: list[str],
     sample_rate: float,
     ifo_suffix: str = None,
-    state_channels: Optional[dict[str, str]] = None,
-    numtaps: Optional[int] = 60,
+    state_channels: dict[str, str] | None = None,
+    numtaps: int | None = 60,
 ) -> Generator[tuple[torch.Tensor, float, list[bool]], None, None]:
     """
     Similar to `data_iterator` above, but does not

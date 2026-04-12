@@ -1,14 +1,15 @@
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from astropy import cosmology, units as u
 import lal
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
 import torch
 from amplfi.utils.result import AmplfiResult
+from astropy import cosmology
+from astropy import units as u
 from ml4gw.waveforms.conversion import chirp_mass_and_mass_ratio_to_components
+from scipy.interpolate import interp1d
 
 torch.set_num_threads(1)
 
@@ -188,7 +189,7 @@ def warmup_amplfi(
     samples_per_event: int,
     device: torch.device,
     spectral_density: "SpectralDensity",
-    lowpass: Optional[float] = None,
+    lowpass: float | None = None,
     n_iters: int = 10,
 ):
     for ifos, (amplfi, _) in ifos_to_model.items():

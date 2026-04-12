@@ -5,7 +5,6 @@ Tools for deploying helm charts
 import logging
 import subprocess
 import time
-from typing import Dict, List, Optional
 
 import kr8s
 
@@ -51,7 +50,7 @@ class HelmChart:
             logging.error(f"Error installing helm chart: {e}")
             raise
 
-    def build_command(self, values: Dict[str, str]) -> List[str]:
+    def build_command(self, values: dict[str, str]) -> list[str]:
         for k, v in values.items():
             self.base_cmd += ["--set", f"{k}={v}"]
 
@@ -75,7 +74,7 @@ class RayCluster(HelmChart):
     def __init__(
         self,
         release: str,
-        chart_path: Optional[str] = None,
+        chart_path: str | None = None,
         chart_version: str = "0.1.3",
     ):
         # if no chart path is provided, use the chart

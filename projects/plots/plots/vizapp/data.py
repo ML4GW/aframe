@@ -1,13 +1,12 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from bokeh.models import MultiChoice
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
+
 from plots.vetos import VETO_CATEGORIES, VetoParser
 
 
@@ -40,7 +39,7 @@ class DataManager:
         results_dir: Path,
         waveforms_dir: Path,
         ifos: list[str],
-        vetos: Optional[VETO_CATEGORIES] = None,
+        vetos: VETO_CATEGORIES | None = None,
     ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos

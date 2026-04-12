@@ -2,8 +2,8 @@ import logging
 import time
 from pathlib import Path
 
-from .utils.parse_logs import estimate_tb, pipeline_online
 from .pages import EventPage, SummaryPage
+from .utils.parse_logs import estimate_tb, pipeline_online
 
 
 def main(

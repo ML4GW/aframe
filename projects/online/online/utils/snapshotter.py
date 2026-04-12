@@ -1,5 +1,4 @@
 import torch
-
 from utils.preprocessing import BackgroundSnapshotter
 
 

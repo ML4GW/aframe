@@ -1,14 +1,14 @@
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, List, Sequence
 
 import h5py
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
-
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
-from plots.vizapp.infer.utils import get_indices, get_strain_fname
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
+
+from plots.vizapp.infer.utils import get_indices, get_strain_fname
 
 
 class EventAnalyzer:
@@ -32,7 +32,7 @@ class EventAnalyzer:
         lowpass: float,
         fftlength: float,
         device: str,
-        ifos: List[str],
+        ifos: list[str],
         padding: int = 3,
     ):
         self.model = model
@@ -204,7 +204,7 @@ class EventAnalyzer:
 
         return nn, integrated, whitened
 
-    def get_fft(self, strain: Dict[str, np.ndarray]):
+    def get_fft(self, strain: dict[str, np.ndarray]):
         ffts = {}
         for ifo in self.ifos:
             data = strain[ifo]
@@ -216,7 +216,7 @@ class EventAnalyzer:
 
         return freqs, ffts
 
-    def qscan(self, strain: Dict[str, np.ndarray]):
+    def qscan(self, strain: dict[str, np.ndarray]):
         qscans = []
         for ifo in self.ifos:
             data = strain[ifo]

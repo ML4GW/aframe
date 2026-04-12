@@ -1,16 +1,17 @@
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional
+from typing import TYPE_CHECKING
 
 import torch
 from bokeh.layouts import column, row
 from bokeh.models import Div, TabPanel, Tabs
+from utils.logging import configure_logging
+from utils.s3 import open_file
 
 from plots.vetos import VETO_CATEGORIES
 from plots.vizapp.data import DataManager
 from plots.vizapp.pages import Analysis, Summary
-from utils.logging import configure_logging
-from utils.s3 import open_file
 
 if TYPE_CHECKING:
     from plots.pages import Page
@@ -27,8 +28,8 @@ class App:
         background_dir: Path,
         waveforms_dir: Path,
         results_dir: Path,
-        ifos: List[str],
-        mass_combos: List[tuple],
+        ifos: list[str],
+        mass_combos: list[tuple],
         source_prior: Callable,
         kernel_length: float,
         psd_length: float,
@@ -42,7 +43,7 @@ class App:
         valid_frac: float,
         fftlength: float,
         device: str = "cpu",
-        vetos: Optional[VETO_CATEGORIES] = None,
+        vetos: VETO_CATEGORIES | None = None,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
@@ -82,11 +83,11 @@ class App:
         )
 
         # initialize all our pages and their constituent plots
-        self.pages: list["Page"] = []
+        self.pages: list[Page] = []
         tabs = []
 
         for page in [Summary, Analysis]:
-            page: "Page" = page(self)
+            page: Page = page(self)
             self.pages.append(page)
 
             title = page.__class__.__name__

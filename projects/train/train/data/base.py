@@ -2,9 +2,8 @@ import glob
 import logging
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Optional, Union
 
 import h5py
 import lightning.pytorch as pl
@@ -13,17 +12,17 @@ from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
 from ml4gw.utils.slicing import unfold_windows
+from utils.preprocessing import PsdEstimator
 
 from train import augmentations as aug
 from train.data.utils import fs as fs_utils
-from train.metrics import get_timeslides
 from train.data.waveforms import (
     ChunkedWaveformDataset,
     Hdf5WaveformLoader,
     WaveformLoader,
     WaveformSampler,
 )
-from utils.preprocessing import PsdEstimator
+from train.metrics import get_timeslides
 
 Tensor = torch.Tensor
 Distribution = torch.distributions.Distribution
@@ -39,7 +38,7 @@ SECONDS_PER_DAY = 86400
 # https://github.com/Lightning-AI/lightning/issues/16830,
 # we should switch to using a CombinedLoader for validation
 class ZippedDataset(torch.utils.data.IterableDataset):
-    def __init__(self, *datasets, minimum: Optional[int] = None):
+    def __init__(self, *datasets, minimum: int | None = None):
         super().__init__()
         self.datasets = datasets
         self.minimum = minimum
@@ -170,14 +169,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         waveform_prob: float = 1,
         left_pad: float = 0,
         right_pad: float = 0,
-        fftlength: Optional[float] = None,
-        highpass: Optional[float] = None,
-        lowpass: Optional[float] = None,
-        snr_sampler: Optional[
-            Union[TransformedDist, Callable[[int], Tensor]]
-        ] = None,
+        fftlength: float | None = None,
+        highpass: float | None = None,
+        lowpass: float | None = None,
+        snr_sampler: TransformedDist | Callable[[int], Tensor] | None = None,
         # validation args
-        valid_stride: Optional[float] = None,
+        valid_stride: float | None = None,
         num_valid_views: int = 4,
         min_valid_duration: float = 15000,
         valid_livetime: float = (3600 * 12),
@@ -239,9 +236,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         if bucket is None:
             return
         logger.info(
-            "Downloading background data from S3 bucket {} to {}".format(
-                bucket, self.background_dir
-            )
+            f"Downloading background data from S3 bucket {bucket} "
+            f"to {self.background_dir}"
         )
         fs_utils.download_training_data(bucket, self.background_dir)
 
@@ -249,9 +245,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         if bucket is None:
             return
         logger.info(
-            "Downloading waveform data from S3 bucket {} to {}".format(
-                bucket, self.waveforms_dir
-            )
+            f"Downloading waveform data from S3 bucket {bucket} "
+            f"to {self.waveforms_dir}"
         )
         fs_utils.download_training_data(bucket, self.waveforms_dir)
 

@@ -1,5 +1,4 @@
 from collections import namedtuple
-from typing import Optional
 
 import torch
 from ml4gw.nn.resnet.resnet_1d import GroupNorm1DGetter, NormLayer, convN
@@ -15,7 +14,7 @@ class XylophoneResidualBlock(torch.nn.Module):
         kernel_size: int,
         stride: int = 1,
         dilation: int = 1,
-        norm_layer: Optional[NormLayer] = None,
+        norm_layer: NormLayer | None = None,
     ):
         super().__init__()
         self.conv1 = convN(inplanes, planes, kernel_size, stride, 1, dilation)
@@ -84,7 +83,7 @@ class Xylophone(torch.nn.Module):
         self,
         num_ifos: int,
         classes: int,
-        norm_layer: Optional[NormLayer] = None,
+        norm_layer: NormLayer | None = None,
         base_channels: int = 8,
     ):
         super().__init__()

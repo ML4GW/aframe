@@ -1,10 +1,7 @@
-from typing import Optional
-
 import numpy as np
+from ledger.events import SECONDS_IN_YEAR, EventSet
 from numpy.polynomial import Polynomial
 from scipy.stats import gaussian_kde
-
-from ledger.events import SECONDS_IN_YEAR, EventSet
 
 
 class BackgroundModel:
@@ -52,7 +49,7 @@ class KdeAndPolynomialBackground(BackgroundModel):
             background events
     """
 
-    def __init__(self, *args, split: Optional[float] = None, **kwargs):
+    def __init__(self, *args, split: float | None = None, **kwargs):
         self.split = split
         super().__init__(*args, **kwargs)
 

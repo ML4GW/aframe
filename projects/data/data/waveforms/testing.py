@@ -1,10 +1,9 @@
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, List, Optional
-
-import numpy as np
 
 import data.waveforms.utils as utils
+import numpy as np
 from data.waveforms.rejection import rejection_sample
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
 
@@ -12,8 +11,8 @@ from ledger.injections import InterferometerResponseSet, waveform_class_factory
 def testing_waveforms(
     start: float,
     end: float,
-    ifos: List[str],
-    shifts: List[float],
+    ifos: list[str],
+    shifts: list[float],
     spacing: float,
     buffer: float,
     prior: Callable,
@@ -30,7 +29,7 @@ def testing_waveforms(
     max_num_samples: int,
     output_dir: Path,
     jitter: float = 0.1,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ):
     """
     Generates testing waveforms via rejection sampling
@@ -111,8 +110,11 @@ def testing_waveforms(
         )
 
     # seed process based on start, end and shift
-    if seed is not None:
+    rng = (
         utils.seed_worker(start, end, shifts, seed)
+        if seed is not None
+        else np.random.default_rng()
+    )
 
     # calculate the injection times, determining
     # the number of samples we'll need to generate
@@ -126,7 +128,7 @@ def testing_waveforms(
     num_signals = len(injection_times)
 
     # add random jitter to injection times
-    jitter = np.random.uniform(-jitter, jitter, size=num_signals)
+    jitter = rng.uniform(-jitter, jitter, size=num_signals)
     injection_times += jitter
 
     # calculate psd that will be used for snr calculation

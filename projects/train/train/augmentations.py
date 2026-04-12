@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 from ml4gw import gw
 from ml4gw.distributions import PowerLaw
@@ -75,8 +73,8 @@ class SnrRescaler(torch.nn.Module):
     def __init__(
         self,
         sample_rate: float,
-        highpass: Optional[float] = None,
-        lowpass: Optional[float] = None,
+        highpass: float | None = None,
+        lowpass: float | None = None,
     ) -> None:
         super().__init__()
         self.sample_rate = sample_rate
@@ -87,7 +85,7 @@ class SnrRescaler(torch.nn.Module):
         self,
         responses: gw.WaveformTensor,
         psds: torch.Tensor,
-        target_snrs: Union[BatchTensor, float, None],
+        target_snrs: BatchTensor | float | None,
     ) -> gw.WaveformTensor:
         # we can either specify one PSD for all batch
         # elements, or a PSD for each batch element
@@ -95,9 +93,7 @@ class SnrRescaler(torch.nn.Module):
             raise ValueError(
                 "Background PSDs must either be two dimensional "
                 "or have a PSD specified for every element in the "
-                "batch. Expected {}, found {}".format(
-                    len(responses), len(psds)
-                )
+                f"batch. Expected {len(responses)}, found {len(psds)}"
             )
 
         # interpolate the number of PSD frequency bins down
@@ -199,8 +195,8 @@ class WaveformProjector(torch.nn.Module):
         self,
         ifos: list[str],
         sample_rate: float,
-        highpass: Optional[float] = None,
-        lowpass: Optional[float] = None,
+        highpass: float | None = None,
+        lowpass: float | None = None,
     ) -> None:
         super().__init__()
         tensors, vertices = gw.get_ifo_geometry(*ifos)
@@ -215,8 +211,8 @@ class WaveformProjector(torch.nn.Module):
         dec: torch.Tensor,
         psi: torch.Tensor,
         phi: torch.Tensor,
-        snrs: Union[torch.Tensor, float, None] = None,
-        psds: Optional[torch.Tensor] = None,
+        snrs: torch.Tensor | float | None = None,
+        psds: torch.Tensor | None = None,
         **polarizations: torch.Tensor,
     ) -> torch.Tensor:
         responses = gw.compute_observed_strain(

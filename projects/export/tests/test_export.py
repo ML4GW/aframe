@@ -8,11 +8,10 @@ import hermes.quiver as qv
 import numpy as np
 import pytest
 import torch
+from export.main import export
 from google.protobuf import text_format
 from ml4gw.nn.resnet import ResNet1D
 from tritonclient.grpc.model_config_pb2 import ModelConfig
-
-from export.main import export
 from utils.preprocessing import BatchWhitener
 
 
@@ -30,7 +29,9 @@ def weights_dir():
 
 @pytest.fixture
 def batch_file(tmp_path, batch_size, num_ifos, sample_rate, kernel_length):
-    data = np.random.randn(batch_size, num_ifos, sample_rate * kernel_length)
+    data = np.random.default_rng().standard_normal(
+        (batch_size, num_ifos, sample_rate * kernel_length)
+    )
     file = tmp_path / "batch_file.h5"
     with h5py.File(file, "w") as f:
         f.create_dataset("X", data=data)

@@ -1,15 +1,13 @@
 import logging
 import math
 from contextlib import nullcontext
-from typing import Optional
 from zlib import adler32
 
 import h5py
 import numpy as np
-from ratelimiter import RateLimiter
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
+from ratelimiter import RateLimiter
 
 
 class Sequence:
@@ -21,7 +19,7 @@ class Sequence:
         shifts: list[float],
         inference_sampling_rate: float,
         batch_size: int,
-        rate: Optional[float] = None,
+        rate: float | None = None,
     ):
         """
         Object used for iterating over a segment of data,

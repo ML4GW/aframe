@@ -1,7 +1,6 @@
 import io
 import os
 import shutil
-from typing import Optional
 
 import h5py
 import s3fs
@@ -21,7 +20,7 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
     to ensure all the hyperparameters are logged to the WandB dashboard.
     """
 
-    def get_wandb_logger(self, trainer) -> Optional[WandbLogger]:
+    def get_wandb_logger(self, trainer) -> WandbLogger | None:
         for logger in trainer.loggers:
             if isinstance(logger, WandbLogger):
                 return logger

@@ -2,13 +2,11 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Optional
 
 import numpy as np
 from gwpy.time import tconvert
-
 from ledger.events import EventSet
 from online.dataloading.online import get_prefix
 
@@ -16,7 +14,7 @@ SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
 
 
 def gps_from_timestamp(timestamp: float):
-    return float(tconvert(datetime.fromtimestamp(timestamp, tz=timezone.utc)))
+    return float(tconvert(datetime.fromtimestamp(timestamp, tz=UTC)))
 
 
 @dataclass
@@ -24,10 +22,10 @@ class Event:
     gpstime: float
     detection_statistic: float
     far: float
-    ifos: List[str]
-    channels: List[str]
+    ifos: list[str]
+    channels: list[str]
     datadir: Path
-    ifo_suffix: Optional[str] = None
+    ifo_suffix: str | None = None
 
     def get_frame_write_time(self):
         """
@@ -107,10 +105,10 @@ class Searcher:
         far_threshold: float,
         online_inference_rate: float,
         refractory_period: float,
-        ifos: List[str],
+        ifos: list[str],
         channels: str,
         datadir: Path,
-        ifo_suffix: Optional[str] = None,
+        ifo_suffix: str | None = None,
     ) -> None:
         self.online_inference_rate = online_inference_rate
         self.refractory_period = refractory_period
@@ -140,9 +138,9 @@ class Searcher:
         time_since_last = timestamp - self.last_detection_time
         if time_since_last < self.refractory_period:
             logging.warning(
-                "Detected event with detection statistic {:0.3f} "
-                "but it has only been {:0.2f}s since last detection, "
-                "so skipping".format(value, time_since_last)
+                f"Detected event with detection statistic {value:0.3f} "
+                f"but it has only been {time_since_last:0.2f}s since "
+                "last detection, so skipping"
             )
             return True
         return False
@@ -159,8 +157,8 @@ class Searcher:
         logging.debug("FAR computed")
 
         logging.info(
-            "Event coalescence time found to be {:0.3f} "
-            "with FAR {:0.3e} Hz".format(timestamp, far)
+            f"Event coalescence time found to be {timestamp:0.3f} "
+            f"with FAR {far:0.3e} Hz"
         )
 
         self.last_detection_time = timestamp
@@ -183,7 +181,7 @@ class Searcher:
         significance_outputs: np.ndarray,
         timing_outputs: np.ndarray,
         t0: float,
-    ) -> Optional[Event]:
+    ) -> Event | None:
         """
         Search for above-threshold events in the
         timeseries of integrated network outputs

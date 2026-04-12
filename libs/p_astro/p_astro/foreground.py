@@ -1,9 +1,8 @@
 import numpy as np
 from astropy.cosmology import Cosmology
-from scipy.stats import gaussian_kde
-
 from ledger.events import RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
+from scipy.stats import gaussian_kde
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 

@@ -1,12 +1,13 @@
-from typing import Literal, Optional
+from typing import Literal
 
-from architectures import Architecture
-from architectures.networks import S4Model, WaveNet, Xylophone
+import torch
 from jaxtyping import Float
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
 from torch import Tensor
-import torch
+
+from architectures import Architecture
+from architectures.networks import S4Model, WaveNet, Xylophone
 
 
 class SupervisedArchitecture(Architecture):
@@ -34,8 +35,8 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        norm_layer: NormLayer | None = None,
     ) -> None:
         super().__init__(
             num_ifos,
@@ -61,8 +62,8 @@ class SupervisedFrequencyDomainResNet(ResNet1D, SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        norm_layer: NormLayer | None = None,
     ) -> None:
         super().__init__(
             num_ifos * 2,
@@ -83,7 +84,7 @@ class SupervisedTimeDomainXylophone(Xylophone, SupervisedArchitecture):
         num_ifos: int,
         sample_rate: float,
         kernel_length: float,
-        norm_layer: Optional[NormLayer] = None,
+        norm_layer: NormLayer | None = None,
     ):
         super().__init__(
             num_ifos,
@@ -102,7 +103,7 @@ class SupervisedTimeDomainWaveNet(WaveNet, SupervisedArchitecture):
         layers_per_block: int,
         num_blocks: int,
         kernel_size: int = 2,
-        norm_layer: Optional[NormLayer] = None,
+        norm_layer: NormLayer | None = None,
     ):
         super().__init__(
             num_ifos,
@@ -125,8 +126,8 @@ class SupervisedSpectrogramDomainResNet(ResNet2D, SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        norm_layer: NormLayer | None = None,
     ) -> None:
         super().__init__(
             num_ifos,
@@ -154,7 +155,7 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
         prenorm: bool = True,
         dt_min: float = 0.001,
         dt_max: float = 0.1,
-        lr: Optional[float] = None,
+        lr: float | None = None,
     ) -> None:
         length = int(kernel_length * sample_rate)
         super().__init__(
@@ -190,8 +191,8 @@ class SupervisedMultiModalResNet(SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        norm_layer: NormLayer | None = None,
         **kwargs,
     ):
         super().__init__()
@@ -246,9 +247,9 @@ class SupervisedTimeSpectrogramResNet(SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        time_norm_layer: Optional[NormLayer] = None,
-        spec_norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        time_norm_layer: NormLayer | None = None,
+        spec_norm_layer: NormLayer | None = None,
         **kwargs,
     ):
         super().__init__()

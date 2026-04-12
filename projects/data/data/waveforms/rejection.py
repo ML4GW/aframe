@@ -1,25 +1,24 @@
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
-
 from data.waveforms.utils import convert_to_detector_frame, load_psds
 from ledger.injections import (
     BilbyParameterSet,
     InjectionParameterSet,
     WaveformPolarizationSet,
 )
+from ml4gw.gw import compute_ifo_snr, compute_observed_strain, get_ifo_geometry
 
-ResponseSetFields = Dict[str, Union[np.ndarray, float]]
+ResponseSetFields = dict[str, np.ndarray | float]
 
 
 def rejection_sample(
     num_signals: int,
     prior: Callable,
-    ifos: List[str],
+    ifos: list[str],
     minimum_frequency: float,
     reference_frequency: float,
     sample_rate: float,
@@ -29,9 +28,9 @@ def rejection_sample(
     highpass: float,
     lowpass: float,
     snr_threshold: float,
-    psd: Union[Path, torch.Tensor],
+    psd: Path | torch.Tensor,
     max_num_samples: int,
-) -> Tuple[ResponseSetFields, InjectionParameterSet]:
+) -> tuple[ResponseSetFields, InjectionParameterSet]:
     # get the detector tensors and vertices
     # for projecting our waveforms
     tensors, vertices = get_ifo_geometry(*ifos)

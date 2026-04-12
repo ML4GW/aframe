@@ -1,7 +1,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import hermes.quiver as qv
 import s3fs
@@ -18,14 +17,14 @@ def export_and_launch_triton(
     batch_size: int,
     fduration: float,
     psd_length: float,
-    repository_directory: Optional[str] = None,
-    fftlength: Optional[float] = None,
-    highpass: Optional[float] = None,
-    lowpass: Optional[float] = None,
+    repository_directory: str | None = None,
+    fftlength: float | None = None,
+    highpass: float | None = None,
+    lowpass: float | None = None,
     streams_per_gpu: int = 1,
-    aframe_instances: Optional[int] = None,
+    aframe_instances: int | None = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
-    endpoint_url: Optional[str] = None,
+    endpoint_url: str | None = None,
     clean: bool = False,
     verbose: bool = False,
 ):

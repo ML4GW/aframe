@@ -1,10 +1,8 @@
 from pathlib import Path
-from typing import List
 
 import torch
-from utils import x_per_y
-
 from ledger.injections import WaveformSet, waveform_class_factory
+from utils import x_per_y
 
 Distribution = torch.distributions.Distribution
 
@@ -25,7 +23,7 @@ class WaveformSampler(torch.nn.Module):
     def __init__(
         self,
         *args,
-        ifos: List[str],
+        ifos: list[str],
         sample_rate: float,
         val_waveform_file: Path,
         **kwargs,

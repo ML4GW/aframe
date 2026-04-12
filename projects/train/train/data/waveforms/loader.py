@@ -1,15 +1,14 @@
-from pathlib import Path
-
 import logging
 import math
 import warnings
-from typing import Iterable, Optional
+from collections.abc import Iterable
+from pathlib import Path
 
 import h5py
 import numpy as np
 import torch
-
 from ledger.injections import WaveformPolarizationSet
+
 from .sampler import WaveformSampler
 
 
@@ -90,7 +89,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         batch_size: int,
         batches_per_epoch: int,
         chunk_size: int = 1000,
-        path: Optional[Path] = None,
+        path: Path | None = None,
     ):
         self.fnames = fnames
         self.channels = channels
@@ -125,18 +124,17 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
             self.sizes[fname] = len(dset)
             if dset.chunks is None:
                 warnings.warn(
-                    "File {} contains datasets that were generated "
+                    f"File {fnames} contains datasets that were generated "
                     "without using chunked storage. This can have "
                     "severe performance impacts at data loading time. "
                     "If you need faster loading, try re-generating "
-                    "your datset with chunked storage turned on.".format(
-                        fnames
-                    ),
+                    "your datset with chunked storage turned on.",
                     stacklevel=2,
                 )
 
         self.waveform_size = dset.shape[1]
         self.probs = np.array([i / self.total for i in self.sizes.values()])
+        self.rng = np.random.default_rng()
 
     @property
     def num_channels(self):
@@ -179,7 +177,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         )
 
         for i in range(self.chunks_per_batch):
-            fname = np.random.choice(self.fnames, p=self.probs)
+            fname = self.rng.choice(self.fnames, p=self.probs)
 
             chunk_size = min(
                 self.chunk_size, self.batch_size - i * self.chunk_size
@@ -187,7 +185,7 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
 
             # select a random starting index for the chunk
             max_start = self.sizes[fname] - chunk_size
-            start = np.random.randint(0, max_start + 1)
+            start = self.rng.integers(0, max_start + 1)
 
             # load the chunk and insert it into the batch
             chunk = self.load_chunk(fname, start, chunk_size)

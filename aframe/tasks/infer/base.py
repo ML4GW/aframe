@@ -7,9 +7,9 @@ import h5py
 import law
 import luigi
 import numpy as np
+import utils.data as data_utils
 from luigi.util import inherits
 
-import utils.data as data_utils
 from aframe.base import AframeSingularityTask
 from aframe.config import paths
 from aframe.parameters import PathParameter
@@ -202,7 +202,6 @@ class InferBase(
 
     def run(self):
         from hermes.aeriel.client import InferenceClient
-
         from infer.data import Sequence
         from infer.main import infer
         from infer.postprocess import Postprocessor

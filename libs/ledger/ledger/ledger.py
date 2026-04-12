@@ -101,9 +101,7 @@ class Ledger:
                 _length = len(value)
             elif len(value) != _length:
                 raise ValueError(
-                    "Field {} has {} entries, expected {}".format(
-                        key, len(value), _length
-                    )
+                    f"Field {key} has {len(value)} entries, expected {_length}"
                 )
         self._length = _length or 0
 
@@ -195,8 +193,8 @@ class Ledger:
                         f.attrs[key] = value
                 else:
                     raise TypeError(
-                        "Couldn't save unknown annotation {} "
-                        "for field {}".format(kind, key)
+                        f"Couldn't save unknown annotation {kind} "
+                        f"for field {key}"
                     )
 
     @classmethod
@@ -213,9 +211,8 @@ class Ledger:
                 return group[field]
             except KeyError:
                 raise ValueError(
-                    "{} group of archive {} has no dataset {}".format(
-                        group, f.filename, field
-                    )
+                    f"{group} group of archive {f.filename} has "
+                    f"no dataset {field}"
                 ) from None
 
         kwargs = {}
@@ -234,9 +231,7 @@ class Ledger:
                     value = None
             elif kind not in ("parameter", "waveform"):
                 raise TypeError(
-                    "Couldn't load unknown annotation {} for field {}".format(
-                        kind, key
-                    )
+                    f"Couldn't load unknown annotation {kind} for field {key}"
                 )
             else:
                 value = _try_get(kind + "s", key)
@@ -293,7 +288,7 @@ class Ledger:
             # technically faster in the replace=True case to
             # just do a randint but they're both O(10^-5)s
             # so gonna go for the simpler implementation
-            idx = np.random.choice(n, size=(N,), replace=replace)
+            idx = np.random.default_rng().choice(n, size=(N,), replace=replace)
             return cls._load_with_idx(f, idx)
 
     @classmethod
@@ -304,18 +299,16 @@ class Ledger:
             return ours
         elif ours != theirs:
             raise ValueError(
-                "Can't append {} with {} value {} when ours is {}".format(
-                    cls.__name__, key, theirs, ours
-                )
+                f"Can't append {cls.__name__} with {key} value {theirs} "
+                f"when ours is {ours}"
             )
         return ours
 
     def append(self, other) -> None:
         if not isinstance(other, type(self)):
             raise TypeError(
-                "unsupported operand type(s) for |: '{}' and '{}'".format(
-                    type(self), type(other)
-                )
+                f"unsupported operand type(s) for |: '{type(self)}' "
+                f"and '{type(other)}'"
             )
 
         new_dict = {}

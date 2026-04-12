@@ -7,7 +7,6 @@ for pedagogical purposes.
 """
 
 import math
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -22,7 +21,7 @@ class DropoutNd(nn.Module):
         super().__init__()
         if p < 0 or p >= 1:
             raise ValueError(
-                "dropout probability has to be in [0, 1), but got {}".format(p)
+                f"dropout probability has to be in [0, 1), but got {p}"
             )
         self.p = p
         self.tie = tie
@@ -123,7 +122,7 @@ class S4D(nn.Module):
         transposed: bool = True,
         dt_min: float = 0.001,
         dt_max: float = 0.1,
-        lr: Optional[float] = None,
+        lr: float | None = None,
     ):
         super().__init__()
         self.transposed = transposed
@@ -193,7 +192,7 @@ class S4Model(nn.Module):
         prenorm: bool = False,
         dt_min: float = 0.001,
         dt_max: float = 0.1,
-        lr: Optional[float] = None,
+        lr: float | None = None,
     ):
         super().__init__()
 

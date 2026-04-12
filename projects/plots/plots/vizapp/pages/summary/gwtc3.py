@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple
 from urllib.request import urlretrieve
 
 import astropy.cosmology as cosmo
@@ -9,7 +8,6 @@ import h5py
 import numpy as np
 import scipy.stats as stats
 from tqdm import tqdm
-
 from utils.cosmology import DEFAULT_COSMOLOGY
 
 catalog_results = {
@@ -65,7 +63,7 @@ catalog_results = {
 
 def get_injection_data(
     injection_file: Path,
-    pipelines: List[str],
+    pipelines: list[str],
     detection_criterion: str,
 ):
     injection_params = {}
@@ -115,7 +113,7 @@ def logprob_mass2_lognorm(m2, m1, params):
     return np.where(
         m2 < m1,
         stats.lognorm.logpdf(m2, sig_lognorm_m2, scale=m2_mean) + logc,
-        np.NINF,
+        -np.inf,
     )
 
 
@@ -147,7 +145,7 @@ def logprob_spin(sx, sy, sz, params):
     smax = params["smax"]
     s2 = sx**2 + sy**2 + sz**2
     return np.where(
-        s2 < smax**2, -np.log(4 * np.pi) - np.log(smax) - np.log(s2), np.NINF
+        s2 < smax**2, -np.log(4 * np.pi) - np.log(smax) - np.log(s2), -np.inf
     )
 
 
@@ -232,8 +230,8 @@ def get_logVT(log_dN, selection, T_obs, N_draw, p_draw):
 
 
 def get_logdNs(
-    mass_combos: List[Tuple[float]],
-    injection_params: Dict,
+    mass_combos: list[tuple[float]],
+    injection_params: dict,
     sig_lognorm: float,
     smax_ns: float,
     smax_bh: float,
@@ -263,12 +261,12 @@ def get_logdNs(
 
 
 def main(
-    mass_combos: List[float],
+    mass_combos: list[float],
     injection_file: Path,
     detection_criterion: str,
-    detection_thresholds: List[float],
+    detection_thresholds: list[float],
     output_dir: Path,
-    pipelines: List[str] = None,
+    pipelines: list[str] = None,
     sig_lognorm: float = 0.1,
     smax_ns: float = 0.4,
     smax_bh: float = 0.998,

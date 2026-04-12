@@ -4,7 +4,6 @@ import configparser
 import shutil
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional
 
 from jsonargparse import ArgumentParser
 
@@ -196,7 +195,7 @@ def create_online_runfile(path: Path):
 
 
 def create_offline_runfile(
-    path: Path, pipeline: str, s3_bucket: Optional[Path] = None
+    path: Path, pipeline: str, s3_bucket: Path | None = None
 ):
     # if s3 bucket is provided
     # store training data and training info there

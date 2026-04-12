@@ -1,17 +1,19 @@
 import logging
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import List, Optional, Generator
+
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
+
 from online.dataloading.utils import (
-    resample,
+    GWF_SAMPLE_RATE,
+    PATH_LIKE,
     build_resample_filter,
     fname_re,
-    PATH_LIKE,
-    GWF_SAMPLE_RATE,
     is_gwf,
+    resample,
 )
 
 BLOCK_DURATION = 1
@@ -33,17 +35,13 @@ def get_prefix(datadir: Path):
     prefixes = {i.group("prefix") for i in matches}
     if len(prefixes) > 1:
         raise ValueError(
-            "Too many prefixes {} in data directory '{}'".format(
-                list(prefixes), datadir
-            )
+            f"Too many prefixes {list(prefixes)} in data directory '{datadir}'"
         )
 
     durations = {i.group("duration") for i in matches}
     if len(durations) > 1:
         raise ValueError(
-            "Too many lengths {} in data directory '{}'".format(
-                list(durations), datadir
-            )
+            f"Too many lengths {list(durations)} in data directory '{datadir}'"
         )
     return list(prefixes)[0], int(list(durations)[0]), t0
 
@@ -62,20 +60,20 @@ def reset_t0(datadir, last_t0):
         elapsed = (time.time() - tick) // 1
         if not elapsed % 10:
             logging.info(
-                "No new frames available since timestamp {}, "
-                "elapsed time {}s".format(last_t0, elapsed)
+                f"No new frames available since timestamp {last_t0}, "
+                f"elapsed time {elapsed}s"
             )
 
 
 def data_iterator(
     datadir: Path,
-    channels: List[str],
-    ifos: List[str],
+    channels: list[str],
+    ifos: list[str],
     sample_rate: float,
     ifo_suffix: str = None,
-    state_channels: Optional[dict[str, str]] = None,
-    timeout: Optional[float] = None,
-    numtaps: Optional[int] = 60,
+    state_channels: dict[str, str] | None = None,
+    timeout: float | None = None,
+    numtaps: int | None = 60,
 ) -> Generator[tuple[torch.Tensor, float, list[bool]], None, None]:
     if ifo_suffix is not None:
         ifo_dir = "_".join([ifos[0], ifo_suffix])
@@ -124,9 +122,7 @@ def data_iterator(
                 tock = time.time()
                 if timeout is not None and (tock - tick > timeout):
                     logging.warning(
-                        "Couldn't find frame file {} after {}s".format(
-                            fname, timeout
-                        )
+                        f"Couldn't find frame file {fname} after {timeout}s"
                     )
 
                     yield None, t0, [False] * len(ifos)
@@ -214,10 +210,8 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
                 "Cannot generate TimeSeries with 2-dimensional data"
             ):
                 logging.warning(
-                    "Channel {} from file {} got corrupted and was "
-                    "read as 2D, attempting reread {}".format(
-                        channel, fname, i + 1
-                    )
+                    f"Channel {channel} from file {fname} got corrupted "
+                    f"and was read as 2D, attempting reread {i + 1}"
                 )
                 time.sleep(1e-1)
                 continue
@@ -229,15 +223,15 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
         except RuntimeError as e:
             if str(e).startswith("Failed to read the core"):
                 logging.warning(
-                    "Channel {} from file {} had corrupted header, "
-                    "attempting reread {}".format(channel, fname, i + 1)
+                    f"Channel {channel} from file {fname} had "
+                    f"corrupted header, attempting reread {i + 1}"
                 )
                 time.sleep(2e-1)
                 continue
             elif str(e).startswith("Missing FrEndOfFile structure"):
                 logging.warning(
-                    "File {} was missing FrEndOfFile structure, "
-                    "attempting reread {}".format(fname, i + 1)
+                    f"File {fname} was missing FrEndOfFile structure, "
+                    f"attempting reread {i + 1}"
                 )
                 time.sleep(1e-1)
                 continue
@@ -246,10 +240,8 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
 
         if len(x) != x.sample_rate.value:
             logging.warning(
-                "Channel {} in file {} got corrupted with "
-                "length {}, attempting reread {}".format(
-                    channel, fname, len(x), i + 1
-                )
+                f"Channel {channel} in file {fname} got corrupted with "
+                f"length {len(x)}, attempting reread {i + 1}"
             )
             del x
             time.sleep(1e-1)
@@ -257,6 +249,4 @@ def read_channel(fname: PATH_LIKE, channel: str, num_retries: int = 3):
 
         return x
     else:
-        raise ValueError(
-            "Failed to read channel {} in file {}".format(channel, fname)
-        )
+        raise ValueError(f"Failed to read channel {channel} in file {fname}")

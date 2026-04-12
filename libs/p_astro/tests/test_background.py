@@ -2,7 +2,6 @@ import pickle
 import tempfile
 
 import numpy as np
-
 from p_astro.background import KdeAndPolynomialBackground
 
 
@@ -23,6 +22,6 @@ def test_background(events):
         with open(temp_file.name, "rb") as f:
             loaded = pickle.load(f)
 
-        test = np.random.randn(1000)
+        test = np.random.default_rng().standard_normal(1000)
         assert np.allclose(model(test), loaded(test))
         assert test.shape == loaded(test).shape

@@ -3,7 +3,6 @@ import json
 import shlex
 import sys
 from pathlib import Path
-from typing import Dict
 
 import law
 import luigi
@@ -25,7 +24,7 @@ class TrainLocal(TrainBase, AframeSingularityTask):
     def default_image(self):
         return "train.sif"
 
-    def sandbox_env(self, _) -> Dict[str, str]:
+    def sandbox_env(self, _) -> dict[str, str]:
         env = super().sandbox_env(_)
         for key in ["name", "entity", "project", "group", "tags", "api_key"]:
             value = getattr(wandb(), key)
@@ -103,7 +102,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
         # read in training config into a json string
         # to pass to the remote training job via
         # the jsonargparse command line
-        with open(self.config, "r") as f:
+        with open(self.config) as f:
             doc = yaml.safe_load(f)
             json_string = json.dumps(doc)
         return json_string
@@ -170,7 +169,7 @@ class TrainRemote(KubernetesJobTask, RemoteTrainBase):
             "metadata": {"name": "git-creds", "type": "Opaque"},
         }
         ssh_key = Path.home() / ".ssh" / "id_rsa"
-        with open(ssh_key, "r") as f:
+        with open(ssh_key) as f:
             key = f.read()
 
         ssh_key = base64.b64encode(key.encode("ascii")).decode("ascii")

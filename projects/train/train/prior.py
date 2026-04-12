@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import torch
 
@@ -7,8 +7,8 @@ class AframePrior:
     def __init__(
         self,
         priors: dict[str, torch.distributions.Distribution],
-        conversion_function: Optional[Callable] = None,
-        constraint_function: Optional[Callable] = None,
+        conversion_function: Callable | None = None,
+        constraint_function: Callable | None = None,
     ):
         """
         A class for sampling parameters from a prior distribution

@@ -1,12 +1,11 @@
 import numpy as np
 import pytest
-
 from ledger import events, injections
 
 
 class TestEventSet:
     def test_append(self):
-        det_stats = np.random.randn(10)
+        det_stats = np.random.default_rng().standard_normal(10)
         times = np.arange(10)
         shifts = np.arange(10)
         obj1 = events.EventSet(det_stats, times, shifts, 100)

@@ -1,10 +1,9 @@
 import logging
+import subprocess
 import sys
+import traceback
 from logging.handlers import QueueHandler
 from multiprocessing import Process, Queue
-from typing import Union, Optional
-import traceback
-import subprocess
 
 
 def subprocess_wrapper(
@@ -18,9 +17,9 @@ def subprocess_wrapper(
 
     def wrapper(
         error_queue: Queue,
-        level: Union[int, str],
+        level: int | str,
         name: str,
-        log_queue: Optional[Queue],
+        log_queue: Queue | None,
         *args,
         **kwargs,
     ):

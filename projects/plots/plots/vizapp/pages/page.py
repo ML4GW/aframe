@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bokeh.layouts import LayoutDOM
-
     from ledger.events import EventSet, RecoveredInjectionSet
+
     from plots.vizapp.app import App
 
 

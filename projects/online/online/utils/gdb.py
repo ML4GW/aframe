@@ -1,23 +1,24 @@
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
+
 import bilby
 import h5py
+import matplotlib.pyplot as plt
 from gwpy.time import tconvert
 from ligo.gracedb.rest import GraceDb as _GraceDb
-from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
-from online.utils.searcher import Event
-import matplotlib.pyplot as plt
 from ligo.skymap.tool.ligo_skymap_from_samples import (
     main as ligo_skymap_from_samples,
 )
+from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
+from online.utils.searcher import Event
 
 if TYPE_CHECKING:
-    from astropy.io.fits import BinTableHDU
     from amplfi.utils.result import AmplfiResult
+    from astropy.io.fits import BinTableHDU
 from enum import Enum
 
 
@@ -72,7 +73,7 @@ class GraceDb(_GraceDb):
         *args,
         server: GdbServer,
         write_dir: Path,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -126,7 +127,7 @@ class GraceDb(_GraceDb):
         # TODO: determine underlying issue here
         # Handle issue where sometimes the pipeline lags,
         # and the frame file has already left the buffer
-        submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
+        submission_time = float(tconvert(datetime.now(tz=UTC)))
         try:
             t_write = event.get_frame_write_time()
         except FileNotFoundError:
@@ -243,7 +244,7 @@ class GraceDb(_GraceDb):
         result: bilby.core.result.Result,
         graceid: str,
         event_dir: Path,
-        ifos: List[str],
+        ifos: list[str],
     ):
         event_dir = self.write_dir / event_dir
         filename = event_dir / "posterior_samples.dat"

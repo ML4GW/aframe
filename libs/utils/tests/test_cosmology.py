@@ -1,9 +1,9 @@
-from utils.cosmology import (
-    volume_element,
-    get_astrophysical_volume,
-    DEFAULT_COSMOLOGY,
-)
 import numpy as np
+from utils.cosmology import (
+    DEFAULT_COSMOLOGY,
+    get_astrophysical_volume,
+    volume_element,
+)
 
 
 def test_zero_redshift_volume_element():

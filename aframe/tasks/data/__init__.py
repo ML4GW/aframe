@@ -8,4 +8,8 @@ DATAFIND_ENV_VARS = [
 ]
 from .fetch import Fetch  # noqa: E402
 from .segments import Query  # noqa: E402
-from .waveforms import TestingWaveforms, TrainingWaveforms, ValidationWaveforms  # noqa: E402
+from .waveforms import (  # noqa: E402
+    TestingWaveforms,
+    TrainingWaveforms,
+    ValidationWaveforms,
+)

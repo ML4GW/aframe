@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
-from ....prior import AframePrior
-from ..sampler import WaveformSampler
 import torch
 
+from ....prior import AframePrior
+from ..sampler import WaveformSampler
 
 if TYPE_CHECKING:
     pass
