@@ -15,7 +15,8 @@ From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 %post
 apt-get update
-apt-get install -y build-essential
+# TODO: remove git once things are stable
+apt-get install -y build-essential git
 apt-get clean
 
 cd /opt/aframe/projects/train
