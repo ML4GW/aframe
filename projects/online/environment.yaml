@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   # python/env management
-  - python>=3.11,<3.13
+  - python>=3.11,<3.14
   - pip
   - uv
   # C libraries not available on PyPI
