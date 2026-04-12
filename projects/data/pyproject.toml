@@ -14,7 +14,21 @@ dependencies = [
     "priors",
     "ml4gw>=0.7.2",
     "aframe",
+    "gwpy>=3.0.8,<4",
+    "gwosc",
+    "lalsuite",
+    "jsonargparse>=4.18.0",
+    "ciecplib",
+    "requests-gssapi",
+    "python-ligo-lw>=1.8.3,<2",
 ]
+
+[project.scripts]
+fetch-data = "data.fetch.cli:main"
+generate-segments = "data.segments.cli:main"
+generate-training-waveforms = "data.waveforms.cli:training"
+generate-testing-waveforms = "data.waveforms.cli:testing"
+generate-validation-waveforms = "data.waveforms.cli:validation"
 
 [dependency-groups]
 dev = ["pytest>=8.2.1,<9"]
