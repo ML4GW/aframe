@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
+From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 %files
 # only copy precisely the files we need to keep things
@@ -12,8 +12,9 @@ From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
-apk update
-apk add build-essential --no-cache
+apt-get update
+apt-get install -y build-essential
+apt-get clean
 
 cd /opt/aframe/projects/infer
 # Set venv dir outside of project for 
