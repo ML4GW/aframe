@@ -39,6 +39,7 @@ explicit = true
 aframe = { path = "../../", editable = true }
 utils = { path = "../../libs/utils", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
+# TODO: point at released version once available
 ml4gw-hermes = { git = "https://github.com/ML4GW/hermes", branch = "dev" }
 
 [build-system]
