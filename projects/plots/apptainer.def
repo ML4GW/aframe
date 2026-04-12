@@ -12,7 +12,7 @@ From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 %post
 # install git for pip installation
 apt-get update
-apt-get install -y build-essential
+apt-get install -y build-essential git
 apt-get clean
 
 cd /opt/aframe/projects/plots
