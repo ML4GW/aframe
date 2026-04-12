@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -31,7 +31,9 @@ class TestInjectionSet:
         # patched so that we know what to expect.
         # Include duplicate and out-of-order indices
         idx = np.array([1, 0, 2, 1])
-        with patch("numpy.random.choice", return_value=idx):
+        mock_rng = MagicMock()
+        mock_rng.choice.return_value = idx
+        with patch("numpy.random.default_rng", return_value=mock_rng):
             new = obj.__class__.sample_from_file(fname, 3)
         assert len(new) == 4
         for key, field in obj.__dataclass_fields__.items():
