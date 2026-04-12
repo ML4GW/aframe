@@ -3,11 +3,11 @@ name = "ledger"
 version = "0.1.0"
 description = "Objects for storing and manipulating aframe data"
 authors = [{ name = "Ethan Marx", email = "emarx@mit.edu" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "h5py>=3.10.0,<4",
-    "numpy>=1.26.4,<2",
+    "numpy>=2",
     "pycbc>=2.5.1,<3",
     "utils",
 ]
