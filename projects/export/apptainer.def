@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
+From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 %files
 . /opt/aframe/projects/export/
@@ -8,9 +8,6 @@ From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
-apk update
-apk add build-essential --no-cache
-
 cd /opt/aframe/projects/export
 # Set venv dir outside of project for 
 # when binding the repo into the container
