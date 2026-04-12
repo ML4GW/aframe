@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 import numpy as np
-from jsonargparse import ArgumentParser
 
 import data.waveforms.utils as utils
 from data.waveforms.rejection import rejection_sample
@@ -178,10 +177,6 @@ def testing_waveforms(
     return waveform_fname, rejected_fname
 
 
-parser = ArgumentParser()
-parser.add_function_arguments(testing_waveforms)
-
-
 def main(args):
-    args = args.testing_waveforms.as_dict()
-    testing_waveforms(**args)
+    args_dict = {k: v for k, v in args.as_dict().items() if k != "config"}
+    testing_waveforms(**args_dict)
