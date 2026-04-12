@@ -1,10 +1,10 @@
 from collections.abc import Callable, Sequence
-from typing import Optional
 
 import torch
-from architectures import Architecture
 from jaxtyping import Float
 from ml4gw.nn.autoencoder import ConvolutionalAutoencoder, SkipConnection
+
+from architectures import Architecture
 
 Tensor = Float[torch.Tensor, "batch channels time"]
 Module = Callable[..., torch.nn.Module]
@@ -41,9 +41,9 @@ class ConvolutionalAutoencoder(
         kernel_size: int,
         stride: int = 1,
         activation: torch.nn.Module = torch.nn.ReLU,
-        output_activation: Optional[torch.nn.Module] = None,
+        output_activation: torch.nn.Module | None = None,
         norm: Module = torch.nn.BatchNorm1d,
-        skip_connection: Optional[SkipConnection] = None,
+        skip_connection: SkipConnection | None = None,
     ) -> None:
         super().__init__(
             in_channels=num_ifos,

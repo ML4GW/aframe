@@ -1,8 +1,7 @@
 import logging
 
-from jsonargparse import ActionConfigFile, ArgumentParser
-
 from data.segments.segments import DataQualityDict
+from jsonargparse import ActionConfigFile, ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument("--config", action=ActionConfigFile)
@@ -24,8 +23,6 @@ def main(args=None):
     segments = DataQualityDict.query_segments(**args_dict)
 
     logging.info(
-        "Discovered {} valid segments, writing to {}".format(
-            len(segments), output_file
-        )
+        f"Discovered {len(segments)} valid segments, writing to {output_file}"
     )
     segments.write(output_file)

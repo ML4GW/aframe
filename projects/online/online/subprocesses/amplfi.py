@@ -1,14 +1,17 @@
 import logging
+from typing import TYPE_CHECKING
+
 import torch
-from typing import Optional, TYPE_CHECKING
 from amplfi.train.prior import AmplfiPrior
-from torch.multiprocessing import Array, Queue
-from online.utils.searcher import Event
-from online.utils.pe import postprocess_samples
-from .utils import subprocess_wrapper
-from online.utils.email_alerts import send_detection_email
 from astropy.time import Time
 from ligo.skymap.io.fits import gps_to_iso8601
+from torch.multiprocessing import Array, Queue
+
+from online.utils.email_alerts import send_detection_email
+from online.utils.pe import postprocess_samples
+from online.utils.searcher import Event
+
+from .utils import subprocess_wrapper
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb
@@ -23,7 +26,7 @@ def amplfi_subprocess(
     inference_params: list[str],
     amplfi_parameter_sampler: AmplfiPrior,
     shared_samples: Array,
-    emails: Optional[list[str]] = None,
+    emails: list[str] | None = None,
     email_far_threshold: float = 1e-6,
     nside: int = 64,
     min_samples_per_pix: int = 5,

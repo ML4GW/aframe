@@ -1,12 +1,11 @@
-from .main import main
-
 import logging
 from pathlib import Path
 
 import yaml
 from jsonargparse import ArgumentParser
-
 from utils.logging import configure_logging
+
+from .main import main
 
 
 def cli():
@@ -55,7 +54,7 @@ def cli():
     config = args.run_dir / "config.yaml"
     if not config.exists():
         raise FileNotFoundError(f"Config file not found: {config}")
-    with open(config, "r") as f:
+    with open(config) as f:
         online_args = yaml.safe_load(f)
 
     main(**vars(args), online_args=online_args, logger=logger)

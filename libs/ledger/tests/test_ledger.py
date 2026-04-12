@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-
 from ledger import ledger
 
 
@@ -152,12 +151,12 @@ class TestInjectionSet:
 
         ids = np.array([1001, 1002, 1003])
         age = np.array([31, 35, 39])
-        waves = np.random.randn(3, 10)
+        waves = np.random.default_rng().standard_normal((3, 10))
 
         obj = DummyWaveform(ids, age, waves)
         assert len(obj) == 3
 
-        waves2 = np.random.randn(3, 10)
+        waves2 = np.random.default_rng().standard_normal((3, 10))
         obj2 = DummyWaveform(ids + 3, age - 2, waves2)
         obj.append(obj2)
         assert len(obj) == 6

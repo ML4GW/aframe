@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import torch
-
 from hermes.quiver import Platform
 from hermes.quiver.streaming import utils as streaming_utils
-
 from utils.preprocessing import BackgroundSnapshotter
 
 if TYPE_CHECKING:
@@ -34,7 +32,7 @@ def add_streaming_input_preprocessor(
     inference_sampling_rate: float,
     fduration: float,
     preprocessor: torch.nn.Module,
-    preproc_instances: Optional[int] = None,
+    preproc_instances: int | None = None,
     streams_per_gpu: int = 1,
 ) -> "ExposedTensor":
     """Create a snapshotter model and add it to the repository"""

@@ -1,10 +1,11 @@
 import shutil
 from pathlib import Path
-from typing import Dict, Literal
+from typing import Literal
 
 import law
 import luigi
 from luigi.util import inherits
+from utils import data as data_utils
 
 from aframe.config import paths
 from aframe.parameters import PathParameter, load_prior
@@ -12,9 +13,8 @@ from aframe.tasks.data.base import AframeDataTask
 from aframe.tasks.data.condor.workflows import StaticMemoryWorkflow
 from aframe.tasks.data.fetch import FetchTest
 from aframe.tasks.data.waveforms.base import WaveformParams
-from utils import data as data_utils
 
-TsWorkflowRequires = Dict[Literal["test_segments"], law.Task]
+TsWorkflowRequires = dict[Literal["test_segments"], law.Task]
 
 
 class TestingWaveformsParams(WaveformParams):
@@ -173,7 +173,6 @@ class DeployTestingWaveforms(
         import io
 
         import h5py
-
         from data.waveforms.testing import testing_waveforms
 
         prior = load_prior(self.prior)

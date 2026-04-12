@@ -1,8 +1,9 @@
-import psutil
+from datetime import UTC, datetime
 from pathlib import Path
-from gwpy.time import tconvert
-from datetime import datetime, timezone
+
+import psutil
 import pytz
+from gwpy.time import tconvert
 
 EXPECTED_PROCESS_COUNT = 6
 
@@ -24,9 +25,7 @@ def get_log_files(log_dir: Path, start_time: float) -> list:
         datetime.fromtimestamp(mtime, tz=pytz.timezone("US/Pacific"))
         for mtime in modified_times
     ]
-    modified_utc_datetimes = [
-        dt.astimezone(timezone.utc) for dt in modified_datetimes
-    ]
+    modified_utc_datetimes = [dt.astimezone(UTC) for dt in modified_datetimes]
     relevant_log_files = [
         f
         for f, dt in zip(all_log_files, modified_utc_datetimes, strict=True)
@@ -38,7 +37,7 @@ def get_log_files(log_dir: Path, start_time: float) -> list:
 def get_timestamp_from_log_statement(log_statement: str) -> float:
     datetime_string = log_statement[:23]
     datetime_string = datetime_string.replace(",", ".")
-    return datetime.fromisoformat(datetime_string).replace(tzinfo=timezone.utc)
+    return datetime.fromisoformat(datetime_string).replace(tzinfo=UTC)
 
 
 def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
@@ -85,13 +84,13 @@ def get_tb_from_log_text(log_text: list[str], start_time: float) -> float:
 
 def estimate_tb(run_dir: Path, start_time: float) -> float:
     log_dir = run_dir / "output" / "logs"
-    start_time = tconvert(start_time).replace(tzinfo=timezone.utc)
+    start_time = tconvert(start_time).replace(tzinfo=UTC)
     log_files = get_log_files(log_dir, start_time)
     if not log_files:
         return 0.0
     log_text = []
     for log_file in log_files:
-        with open(log_file, "r") as f:
+        with open(log_file) as f:
             log_text.append(f.readlines())
     log_text = [line for sublist in log_text for line in sublist]
     return get_tb_from_log_text(log_text, start_time)
@@ -117,7 +116,7 @@ def data_ready(run_dir: Path):
     # there's anything more efficient than loading
     # the entire log file. The files change each
     # day, so this shouldn't ever be too bad
-    with open(log_file, "r") as f:
+    with open(log_file) as f:
         lines = f.readlines()
 
     failure_lines = [

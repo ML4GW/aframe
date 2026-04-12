@@ -2,10 +2,10 @@ import logging
 from unittest.mock import MagicMock
 
 from utils.data import (
-    segments_from_paths,
-    get_num_shifts_from_Tb,
     get_num_shifts_from_num_signals,
+    get_num_shifts_from_Tb,
     is_analyzeable_segment,
+    segments_from_paths,
 )
 
 

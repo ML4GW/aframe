@@ -1,7 +1,4 @@
-from typing import Optional
-
 import numpy as np
-
 from ledger.events import EventSet
 
 
@@ -107,7 +104,7 @@ class Postprocessor:
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
         return EventSet(events, times, shifts, Tb)
 
-    def __call__(self, y: Optional[np.ndarray] = None) -> EventSet:
+    def __call__(self, y: np.ndarray | None = None) -> EventSet:
         # in the case where we didn't perform
         # injections on this shift
         # just return an empty event set
