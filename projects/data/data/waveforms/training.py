@@ -1,7 +1,5 @@
 from typing import Callable
 
-from jsonargparse import ArgumentParser
-
 from data.waveforms.utils import convert_to_detector_frame
 from ledger.injections import BilbyParameterSet, WaveformPolarizationSet
 
@@ -65,17 +63,12 @@ def training_waveforms(
     return waveforms
 
 
-parser = ArgumentParser()
-parser.add_function_arguments(training_waveforms)
-parser.add_argument("--output_file", "-o", type=str)
-
-
 def main(args):
-    args = args.training_waveforms.as_dict()
-    output_file = args.pop("output_file")
-    waveforms = training_waveforms(**args)
+    args_dict = {k: v for k, v in args.as_dict().items() if k != "config"}
+    output_file = args_dict.pop("output_file")
+    waveforms = training_waveforms(**args_dict)
     chunks = (
-        min(64, args["num_signals"]),
+        min(64, args_dict["num_signals"]),
         waveforms.get_waveforms().shape[-1],
     )
     waveforms.write(output_file, chunks=chunks)

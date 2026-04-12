@@ -1,11 +1,21 @@
 import logging
 import os
 
+from jsonargparse import ActionConfigFile, ArgumentParser
+
 from data.fetch.fetch import fetch
 
+parser = ArgumentParser()
+parser.add_argument("--config", action=ActionConfigFile)
+parser.add_function_arguments(fetch)
+parser.add_argument("--output_directory", "-o", type=str)
+parser.add_argument("--prefix", "-p", type=str, default="background")
 
-def main(args):
-    args_dict = {k: v for k, v in args.as_dict().items() if k != "config"}
+
+def main(args=None):
+    cfg = parser.parse_args(args)
+    args_dict = {k: v for k, v in cfg.as_dict().items() if k != "config"}
+
     output_directory = args_dict.pop("output_directory")
     prefix = args_dict.pop("prefix")
     X = fetch(**args_dict)
