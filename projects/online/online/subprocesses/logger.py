@@ -1,9 +1,10 @@
-from typing import TYPE_CHECKING
 import logging
-from logging.handlers import TimedRotatingFileHandler, QueueHandler
-from datetime import datetime, timezone
 import sys
+from datetime import UTC, datetime
+from logging.handlers import QueueHandler, TimedRotatingFileHandler
 from multiprocessing import Process, Queue
+from typing import TYPE_CHECKING
+
 from online.subprocesses.utils import subprocess_wrapper
 
 if TYPE_CHECKING:
@@ -15,11 +16,11 @@ if TYPE_CHECKING:
 class TimestampFormatter(logging.Formatter):
     def format(self, record):
         # original log timestamp using UTC converter
-        recorded = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        recorded = datetime.fromtimestamp(record.created, tz=UTC)
         recorded = recorded.strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
 
         # time log is processed by logging subprocess
-        processed = datetime.now(tz=timezone.utc)
+        processed = datetime.now(tz=UTC)
         processed = processed.strftime("%H:%M:%S,%f")[:-3]
 
         message = (
@@ -46,7 +47,7 @@ def configure_logging(logdir: "Path", verbose: bool = False):
     stdout_handler.setFormatter(TimestampFormatter())
     logger.addHandler(stdout_handler)
 
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    timestamp = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%S")
     run_log_dir = logdir / timestamp
     run_log_dir.mkdir(exist_ok=True, parents=True)
 

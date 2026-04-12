@@ -1,13 +1,11 @@
 import logging
 from pathlib import Path
-from typing import List, Optional
 
 import h5py
 import numpy as np
 from bilby.core.prior import PriorDict
 from bokeh.io import save
 from bokeh.layouts import gridplot
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from priors.priors import log_normal_masses
@@ -31,9 +29,9 @@ class SensitiveVolumePlot:
         background: EventSet,
         foreground: RecoveredInjectionSet,
         rejected_params: InjectionParameterSet,
-        mass_combos: List[tuple],
+        mass_combos: list[tuple],
         source_prior: PriorDict,
-        dt: Optional[float] = None,
+        dt: float | None = None,
         max_far: float = 100 / SECONDS_PER_MONTH,
         sigma: float = 0.1,
     ):

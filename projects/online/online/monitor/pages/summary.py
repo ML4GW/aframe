@@ -1,15 +1,15 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 from gwpy.time import tconvert
 
 from online.monitor.pages import MonitorPage
-from online.monitor.utils.plotting import (
-    latency_plot,
-    ifar_plot,
-    event_rate_plots,
-)
 from online.monitor.utils.parse_logs import data_ready, pipeline_online
+from online.monitor.utils.plotting import (
+    event_rate_plots,
+    ifar_plot,
+    latency_plot,
+)
 
 
 class SummaryPage(MonitorPage):
@@ -30,7 +30,7 @@ class SummaryPage(MonitorPage):
                     f"event time in {self.dataframe_file}, {self.start_time}"
                 )
             else:
-                self.start_time = float(tconvert(datetime.now(timezone.utc)))
+                self.start_time = float(tconvert(datetime.now(UTC)))
                 self.logger.info(
                     "start_time was None and dataframe file does not exist, "
                     "setting start_time to current time"
@@ -64,7 +64,7 @@ class SummaryPage(MonitorPage):
         )
         date_format = "%Y-%m-%d %H:%M:%S"
         start_time = tconvert(self.start_time).strftime(date_format)
-        current_time = datetime.now(timezone.utc).strftime(date_format)
+        current_time = datetime.now(UTC).strftime(date_format)
         html_body = f"""
             <style>
                 .green {{

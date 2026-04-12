@@ -73,8 +73,8 @@ def _download(
                 break
             except (ResponseStreamingError, FSTimeoutError, ClientError):
                 logging.info(
-                    "Download attempt {} for object {} "
-                    "was interrupted, retrying".format(i + 1, source)
+                    f"Download attempt {i + 1} for object {source} "
+                    "was interrupted, retrying"
                 )
                 time.sleep(5)
                 try:
@@ -84,8 +84,8 @@ def _download(
 
     else:
         raise RuntimeError(
-            "Failed to download object {} due to repeated "
-            "connection interruptions".format(source)
+            f"Failed to download object {source} due to repeated "
+            "connection interruptions"
         )
 
 
@@ -94,9 +94,8 @@ def download_training_data(bucket: str, data_dir: str):
     Download s3 data if it doesn't exist.
     """
     logging.info(
-        "Downloading data from S3 bucket {} to local directory {}".format(
-            bucket, data_dir
-        )
+        f"Downloading data from S3 bucket {bucket} "
+        f"to local directory {data_dir}"
     )
 
     # make a local directory to cache data if it

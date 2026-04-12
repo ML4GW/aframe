@@ -1,41 +1,43 @@
 import atexit
-import numpy as np
 import logging
 import signal
+import traceback
+from collections.abc import Iterable
 from pathlib import Path
 from queue import Empty
-from typing import Iterable, List, Optional, Tuple, Literal
-import traceback
-from online.utils.email_alerts import send_error_email, send_init_email
+from typing import Literal
+
+import numpy as np
 import torch
 from amplfi.train.architectures.flows import FlowArchitecture
 from amplfi.train.prior import AmplfiPrior
 from architectures import Architecture
+from ledger.events import EventSet
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
+from utils.preprocessing import BatchWhitener
 
-from ledger.events import EventSet
-from online.utils.buffer import InputBuffer, OutputBuffer
 from online.dataloading import (
     data_iterator,
-    offline_data_iterator,
     ngdd_data_iterator,
+    offline_data_iterator,
 )
-from online.utils.pe import run_amplfi, warmup_amplfi
-from online.utils.searcher import Searcher
-from online.utils.snapshotter import OnlineSnapshotter
-from utils.preprocessing import BatchWhitener
 from online.subprocesses import (
     amplfi_subprocess,
-    pastro_subprocess,
-    event_creation_subprocess,
     authenticate_subprocess,
-    setup_logging,
     cleanup_subprocesses,
+    event_creation_subprocess,
+    pastro_subprocess,
+    setup_logging,
     signal_handler,
 )
 from online.subprocesses.authenticate import authenticate
+from online.utils.buffer import InputBuffer, OutputBuffer
+from online.utils.email_alerts import send_error_email, send_init_email
 from online.utils.gdb import GdbServer
+from online.utils.pe import run_amplfi, warmup_amplfi
+from online.utils.searcher import Searcher
+from online.utils.snapshotter import OnlineSnapshotter
 
 SECONDS_PER_DAY = 86400
 # igwn_auth_utils finds tokens only if they have at least 10 minutes left
@@ -161,12 +163,12 @@ def search(
     amplfi_whitener: Whiten,
     samples_per_event: int,
     shared_samples: Array,
-    data_it: Iterable[Tuple[torch.Tensor, float, bool]],
+    data_it: Iterable[tuple[torch.Tensor, float, bool]],
     update_size: float,
     time_offset: float,
     device: str,
     outdir: Path,
-    emails: Optional[list[str]] = None,
+    emails: list[str] | None = None,
 ):
     significance_outputs, timing_outputs = None, None
 
@@ -240,16 +242,16 @@ def search(
             # but don't search for events
             if X is not None:
                 logging.debug(
-                    "Frame {} is not analysis ready. Using dummy values "
-                    "for inference and ignoring any triggers".format(t0)
+                    f"Frame {t0} is not analysis ready. Using dummy values "
+                    "for inference and ignoring any triggers"
                 )
                 pass
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
                 logging.warning(
-                    "Missing frame files after timestep {}, "
-                    "resetting states".format(t0)
+                    f"Missing frame files after timestep {t0}, "
+                    "resetting states"
                 )
 
                 state = snapshotter.reset()
@@ -349,8 +351,8 @@ def main(
     rejected_path: Path,
     outdir: Path,
     datadir: Path,
-    inference_params: List[str],
-    channels: List[str],
+    inference_params: list[str],
+    channels: list[str],
     sample_rate: float,
     kernel_length: float,
     online_inference_rate: float,
@@ -365,11 +367,11 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: Literal["frames", "ngdd"] = "frames",
-    state_channels: Optional[list[str]] = None,
-    fftlength: Optional[float] = None,
-    highpass: Optional[float] = None,
-    amplfi_highpass: Optional[float] = None,
-    lowpass: Optional[float] = None,
+    state_channels: list[str] | None = None,
+    fftlength: float | None = None,
+    highpass: float | None = None,
+    amplfi_highpass: float | None = None,
+    lowpass: float | None = None,
     refractory_period: float = 8,
     far_threshold: float = 1,
     server: "GdbServer" = "local",
@@ -377,7 +379,7 @@ def main(
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
     samples_per_event: int = 20000,
-    emails: Optional[list[str]] = None,
+    emails: list[str] | None = None,
     email_far_threshold: float = 1e-6,
     auth_refresh: int = 9600,
     nside: int = 64,

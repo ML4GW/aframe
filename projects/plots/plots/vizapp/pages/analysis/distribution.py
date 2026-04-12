@@ -328,12 +328,9 @@ class DistributionPlot:
         self.foreground = foreground
 
         title = (
-            "{} background events from {:0.2f} "
-            "days worth of data; {} injections overlayed"
-        ).format(
-            len(self.background),
-            self.background.Tb / 3600 / 24,
-            len(self.foreground),
+            f"{len(self.background)} background events from "
+            f"{self.background.Tb / 3600 / 24:0.2f} days worth "
+            f"of data; {len(self.foreground)} injections overlayed"
         )
         background_dict, foreground_dict = self.asdict(
             self.background, self.foreground

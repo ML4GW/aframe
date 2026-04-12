@@ -1,6 +1,6 @@
-import s3fs
-
 from pathlib import Path
+
+import s3fs
 
 
 def open_file(path: str | Path, mode: str = "rb"):

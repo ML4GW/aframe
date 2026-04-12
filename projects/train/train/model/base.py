@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import Union
 
 import lightning.pytorch as pl
 import torch
@@ -88,7 +87,7 @@ class AframeBase(pl.LightningModule):
         """
         raise NotImplementedError
 
-    def train_step(self, batch: Tensor) -> Union[Tensor, dict[str, Tensor]]:
+    def train_step(self, batch: Tensor) -> Tensor | dict[str, Tensor]:
         """
         Override this method to dictate how your model
         produces loss(es) to be optimized during training.

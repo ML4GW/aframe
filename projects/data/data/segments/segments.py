@@ -1,5 +1,5 @@
 import subprocess
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from gwpy.segments import DataQualityDict, DataQualityFlag, SegmentList
 
@@ -64,7 +64,7 @@ class DataQualityDict(DataQualityDict):
         flags: Iterable[str],
         start: float,
         end: float,
-        min_duration: Optional[float] = None,
+        min_duration: float | None = None,
         **kwargs,
     ) -> SegmentList:
         flags = set(flags)
@@ -95,7 +95,7 @@ class DataQualityDict(DataQualityDict):
         flags: Iterable[str],
         start: float,
         end: float,
-        min_duration: Optional[float] = None,
+        min_duration: float | None = None,
         **kwargs,
     ) -> SegmentList:
         # if the requested time period

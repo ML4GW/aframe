@@ -76,7 +76,7 @@ class TuneRemote(RemoteTrainBase, AframeRayTask):
 
     def configure_cluster(self, cluster: "RayCluster"):
         # get ssh key for git-sync init container
-        with open(ssh().ssh_file, "r") as f:
+        with open(ssh().ssh_file) as f:
             ssh_key = f.read()
 
         secret = s3().get_s3_credentials()

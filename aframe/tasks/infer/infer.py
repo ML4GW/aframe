@@ -194,7 +194,7 @@ class Infer(AframeSingularityTask):
         foreground_lengths = np.zeros(num_files)
         shifts = np.zeros((num_files, len(self.shifts)))
         for i, f in enumerate(files):
-            with open(f, "r") as f:
+            with open(f) as f:
                 data = json.load(f)
             background_lengths[i] = data["background_length"]
             foreground_lengths[i] = data["foreground_length"]

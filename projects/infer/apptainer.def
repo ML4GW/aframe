@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ghcr.io/astral-sh/uv:0.6.10-python3.10-bookworm-slim
+From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 %files
 # only copy precisely the files we need to keep things
@@ -13,7 +13,7 @@ From: ghcr.io/astral-sh/uv:0.6.10-python3.10-bookworm-slim
 
 %post
 apt-get update
-apt-get install -y build-essential
+apt-get install -y build-essential git
 apt-get clean
 
 cd /opt/aframe/projects/infer

@@ -1,21 +1,21 @@
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, List, Optional
 
 import h5py
 import jsonargparse
 import numpy as np
 from bokeh.io import save
 from bokeh.layouts import gridplot
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
-from plots.legacy import compute, tools
-from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
-from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
 from priors.priors import log_normal_masses
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 from utils.logging import configure_logging
+
+from plots.legacy import compute, tools
+from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
+from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -46,16 +46,16 @@ def main(
     background: Path,
     foreground: Path,
     rejected_params: Path,
-    ifos: List[str],
-    mass_combos: List[tuple],
+    ifos: list[str],
+    mass_combos: list[tuple],
     source_prior: Callable,
     output_dir: Path,
-    log_file: Optional[Path] = None,
-    dt: Optional[float] = None,
+    log_file: Path | None = None,
+    dt: float | None = None,
     max_far: float = 365,
     sigma: float = 0.1,
     verbose: bool = False,
-    vetos: Optional[List[VETO_CATEGORIES]] = None,
+    vetos: list[VETO_CATEGORIES] | None = None,
 ):
     """
     Compute and plot the sensitive volume of an aframe analysis

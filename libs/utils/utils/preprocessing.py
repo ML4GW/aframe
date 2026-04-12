@@ -1,15 +1,14 @@
 from collections.abc import Callable
 
 import torch
-from torch import Tensor
-
 from ml4gw.transforms import (
-    SpectralDensity,
-    Whiten,
     Decimator,
     SingleQTransform,
+    SpectralDensity,
+    Whiten,
 )
 from ml4gw.utils.slicing import unfold_windows
+from torch import Tensor
 
 
 class BackgroundSnapshotter(torch.nn.Module):
@@ -259,7 +258,7 @@ class BatchWhitener(torch.nn.Module):
         else:
             raise ValueError(
                 "Expected input to be either 2 or 3 dimensional, "
-                "but found shape {}".format(x.shape)
+                f"but found shape {x.shape}"
             )
 
         # Estimate PSD and prepare data
@@ -392,7 +391,7 @@ class MultiModalPreprocessor(torch.nn.Module):
         else:
             raise ValueError(
                 "Expected input to be either 2 or 3 dimensional, "
-                "but found shape {}".format(x.shape)
+                f"but found shape {x.shape}"
             )
 
         # Estimate PSD and prepare data
@@ -566,7 +565,7 @@ class TimeSpectrogramPreprocessor(torch.nn.Module):
         else:
             raise ValueError(
                 "Expected input to be either 2 or 3 dimensional, "
-                "but found shape {}".format(x.shape)
+                f"but found shape {x.shape}"
             )
 
         # Estimate PSD and prepare data

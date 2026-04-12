@@ -1,9 +1,9 @@
 import os
 
 import jsonargparse
+from utils.logging import configure_logging
 
 from export.remote.main import export_and_launch_triton
-from utils.logging import configure_logging
 
 
 def build_parser():

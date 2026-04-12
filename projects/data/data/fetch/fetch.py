@@ -1,5 +1,3 @@
-from typing import List
-
 from gwpy.timeseries import TimeSeries, TimeSeriesDict
 
 # channel names that signal to fetch open data
@@ -7,7 +5,7 @@ OPEN_DATA_CHANNELS = ["H1", "L1", "V1"]
 
 
 def _fetch_open_data(
-    ifos: List[str], start: float, end: float, **kwargs
+    ifos: list[str], start: float, end: float, **kwargs
 ) -> TimeSeriesDict:
     ts_dict = TimeSeriesDict()
     for ifo in ifos:

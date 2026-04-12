@@ -1,11 +1,11 @@
 import re
-from typing import Union
-from scipy import signal
-from gwpy.signal import filter_design
-import numpy as np
 from pathlib import Path
 
-PATH_LIKE = Union[str, Path]
+import numpy as np
+from gwpy.signal import filter_design
+from scipy import signal
+
+PATH_LIKE = str | Path
 GWF_SAMPLE_RATE = 16384
 
 patterns = {

@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from data.waveforms.utils import convert_to_detector_frame
 from ledger.injections import BilbyParameterSet, WaveformPolarizationSet

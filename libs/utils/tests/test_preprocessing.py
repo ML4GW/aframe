@@ -1,12 +1,12 @@
+import pytest
+import torch
 from utils.preprocessing import (
     BackgroundSnapshotter,
-    PsdEstimator,
     BatchWhitener,
     MultiModalPreprocessor,
+    PsdEstimator,
     TimeSpectrogramPreprocessor,
 )
-import torch
-import pytest
 
 
 class TestBackgroundSnapshotter:

@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: a31adc04c6ab7b4b2865356004c78d78100bb7e7aa3a8254a3fa8190d6d243e9
+    linux-64: 6f79beb3f876f034f1b8aec1fc1e0cdfb4d00b47f80675b4f082c452ff724c3a
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -140,9 +140,9 @@ package:
   manager: conda
   platform: linux-64
   dependencies:
+    luigi: '>=2.8.2'
     python: ''
     six: '>=1.10'
-    luigi: '>=2.8.2'
   url: https://conda.anaconda.org/conda-forge/noarch/law-0.1.20-pyh29332c3_2.conda
   hash:
     md5: bd7d23497790ed63c4f5e8849cd1b5ff
@@ -243,9 +243,9 @@ package:
   manager: conda
   platform: linux-64
   dependencies:
-    ncurses: '>=6.5,<7.0a0'
     __glibc: '>=2.17,<3.0.a0'
     libgcc: '>=13'
+    ncurses: '>=6.5,<7.0a0'
   url: https://conda.anaconda.org/conda-forge/linux-64/libedit-3.1.20250104-pl5321h7949ede_0.conda
   hash:
     md5: c277e0a4d549b03ac1e9d6cbbe3d017b
@@ -489,10 +489,10 @@ package:
   platform: linux-64
   dependencies:
     python: ''
+    python-daemon: <2.2.0
     python-dateutil: '>=2.7.5,<3'
     tenacity: '>=9'
     tornado: '>=5.0,<7'
-    python-daemon: <2.2.0
     typing_extensions: '>=4.12.2'
   url: https://conda.anaconda.org/conda-forge/noarch/luigi-3.8.0-pyhcf101f3_0.conda
   hash:
@@ -533,14 +533,14 @@ package:
   manager: conda
   platform: linux-64
   dependencies:
-    python: ''
-    libgcc: '>=14'
-    libstdcxx: '>=14'
     __glibc: '>=2.17,<3.0.a0'
-    liblapack: '>=3.9.0,<4.0a0'
     libblas: '>=3.9.0,<4.0a0'
-    python_abi: 3.12.*
     libcblas: '>=3.9.0,<4.0a0'
+    libgcc: '>=14'
+    liblapack: '>=3.9.0,<4.0a0'
+    libstdcxx: '>=14'
+    python: ''
+    python_abi: 3.12.*
   url: https://conda.anaconda.org/conda-forge/linux-64/numpy-2.4.3-py312h33ff503_0.conda
   hash:
     md5: 5930ee8a175a242b4f001b1e9e72024f
@@ -606,10 +606,10 @@ package:
     libzlib: '>=1.3.1,<2.0a0'
     ncurses: '>=6.5,<7.0a0'
     openssl: '>=3.5.5,<4.0a0'
+    pip: ''
     readline: '>=8.3,<9.0a0'
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
-    pip: ''
   url: https://conda.anaconda.org/conda-forge/linux-64/python-3.12.13-hd63d673_0_cpython.conda
   hash:
     md5: 7eccb41177e15cc672e1babe9056018e
@@ -621,9 +621,9 @@ package:
   manager: conda
   platform: linux-64
   dependencies:
-    python: ''
     docutils: ''
     lockfile: '>=0.10'
+    python: ''
     setuptools: <82
   url: https://conda.anaconda.org/conda-forge/noarch/python-daemon-2.1.2-pyhcf101f3_4.conda
   hash:
@@ -817,9 +817,9 @@ package:
   manager: conda
   platform: linux-64
   dependencies:
-    libstdcxx: '>=14'
-    libgcc: '>=14'
     __glibc: '>=2.17,<3.0.a0'
+    libgcc: '>=14'
+    libstdcxx: '>=14'
   url: https://conda.anaconda.org/conda-forge/linux-64/uv-0.11.6-h0f56927_0.conda
   hash:
     md5: f78bab5fcaf462a4309c88c18def5574

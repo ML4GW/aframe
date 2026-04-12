@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 
@@ -9,7 +8,7 @@ from ledger.injections import InjectionParameterSet
 def events():
     return EventSet(
         detection_time=np.arange(1000),
-        detection_statistic=np.random.randn(1000),
+        detection_statistic=np.random.default_rng().standard_normal(1000),
         shift=np.zeros(1000),
         Tb=10,
     )
@@ -19,7 +18,7 @@ def events():
 def foreground():
     foreground = {}
     for field in RecoveredInjectionSet.__dataclass_fields__:
-        foreground[field] = np.random.randn(1000)
+        foreground[field] = np.random.default_rng().standard_normal(1000)
 
     foreground["num_injections"] = 1000
     foreground["redshift"] = np.linspace(0, 1, 1000)
@@ -30,7 +29,7 @@ def foreground():
 def rejected():
     rejected = {}
     for field in InjectionParameterSet.__dataclass_fields__:
-        rejected[field] = np.random.randn(1000)
+        rejected[field] = np.random.default_rng().standard_normal(1000)
 
     rejected["redshift"] = np.linspace(0, 1, 1000)
     return InjectionParameterSet(**rejected)

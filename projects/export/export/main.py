@@ -1,13 +1,12 @@
 import io
 import logging
-from typing import Optional
 
 import h5py
 import hermes.quiver as qv
 import torch
+from utils.s3 import open_file
 
 from export.snapshotter import add_streaming_input_preprocessor
-from utils.s3 import open_file
 
 
 def scale_model(model, instances):
@@ -35,9 +34,9 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
-    num_outputs: Optional[int] = 1,
-    aframe_instances: Optional[int] = None,
-    preproc_instances: Optional[int] = None,
+    num_outputs: int | None = 1,
+    aframe_instances: int | None = None,
+    preproc_instances: int | None = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
     clean: bool = False,
     verbose: bool = False,
@@ -214,8 +213,8 @@ def export(
         # and the snapshotter as a part of its models
         if aframe not in ensemble.models:
             raise ValueError(
-                "Ensemble model '{}' already in repository "
-                "but doesn't include model 'aframe'".format(ensemble_name)
+                f"Ensemble model '{ensemble_name}' already in repository "
+                "but doesn't include model 'aframe'"
             )
         # TODO: checks for snapshotter and preprocessor
 

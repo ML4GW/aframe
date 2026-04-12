@@ -7,20 +7,20 @@ authors = [
     { name = "Alec Gunny", email = "alecg@mit.edu" },
     { name = "Will Benoit", email = "benoit090@umn.edu" },
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 readme = "README.md"
 license = "MIT"
 dependencies = [
     "torchmetrics>=0.11,<0.12",
-    "torch==2.5.0",
-    "lightning==2.2.1",
+    "torch>=2.5.0",
+    "lightning>=2.2.1",
     "jsonargparse[signatures]~=4.29",
     "wandb>=0.15",
     "bokeh~=3.0",
     "ray[default, tune]>=2.8.0,<3",
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
-    "urllib3>=1.25.4,<1.27",
+    "urllib3>=2",
     "utils",
     "ml4gw>=0.7.7",
     "aframe",

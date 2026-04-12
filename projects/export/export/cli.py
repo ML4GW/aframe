@@ -1,9 +1,9 @@
 import os
 
 import jsonargparse
+from utils.logging import configure_logging
 
 from export.main import export
-from utils.logging import configure_logging
 
 
 def build_parser():

@@ -1,8 +1,7 @@
-from jsonargparse import ActionConfigFile, ArgumentParser
-
 from data.waveforms.rejection import rejection_sample
 from data.waveforms.testing import testing_waveforms
 from data.waveforms.training import training_waveforms
+from jsonargparse import ActionConfigFile, ArgumentParser
 from ledger.injections import WaveformSet, waveform_class_factory
 
 training_parser = ArgumentParser()

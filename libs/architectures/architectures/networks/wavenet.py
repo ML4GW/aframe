@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import torch
@@ -8,7 +8,7 @@ from ml4gw.nn.norm import GroupNorm1DGetter, NormLayer
 
 class GatedActivation(torch.nn.Module):
     def __init__(self):
-        super(GatedActivation, self).__init__()
+        super().__init__()
         self.tanh = nn.Tanh()
         self.sig = nn.Sigmoid()
 
@@ -25,7 +25,7 @@ class WavenetBlock(torch.nn.Module):
         skip_channels: int,
         dilation: int,
         kernel_size: int = 2,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        norm_layer: Callable[..., nn.Module] | None = None,
         last: bool = False,
     ):
         super().__init__()
@@ -93,7 +93,7 @@ class WaveNet(torch.nn.Module):
         layers_per_block: int,
         num_blocks: int,
         kernel_size: int = 2,
-        norm_layer: Optional[NormLayer] = None,
+        norm_layer: NormLayer | None = None,
     ):
         self.norm_layer = norm_layer or GroupNorm1DGetter()
         super().__init__()

@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
 from ledger import ledger
 
 
@@ -32,7 +31,9 @@ class TestInjectionSet:
         # patched so that we know what to expect.
         # Include duplicate and out-of-order indices
         idx = np.array([1, 0, 2, 1])
-        with patch("numpy.random.choice", return_value=idx):
+        mock_rng = MagicMock()
+        mock_rng.choice.return_value = idx
+        with patch("numpy.random.default_rng", return_value=mock_rng):
             new = obj.__class__.sample_from_file(fname, 3)
         assert len(new) == 4
         for key, field in obj.__dataclass_fields__.items():
@@ -152,12 +153,12 @@ class TestInjectionSet:
 
         ids = np.array([1001, 1002, 1003])
         age = np.array([31, 35, 39])
-        waves = np.random.randn(3, 10)
+        waves = np.random.default_rng().standard_normal((3, 10))
 
         obj = DummyWaveform(ids, age, waves)
         assert len(obj) == 3
 
-        waves2 = np.random.randn(3, 10)
+        waves2 = np.random.default_rng().standard_normal((3, 10))
         obj2 = DummyWaveform(ids + 3, age - 2, waves2)
         obj.append(obj2)
         assert len(obj) == 6
