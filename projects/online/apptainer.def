@@ -9,6 +9,7 @@ Stage: build
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../libs/p_astro /opt/aframe/libs/p_astro
 ../../pyproject.toml /opt/aframe/pyproject.toml
+../../../amplfi /opt/amplfi
 
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop

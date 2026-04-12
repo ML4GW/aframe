@@ -12,9 +12,9 @@ From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
-apt-get update
-apt-get install -y build-essential
-apt-get clean
+apk update
+apk install -y build-essential
+apk clean
 
 cd /opt/aframe/projects/infer
 # Set venv dir outside of project for 
