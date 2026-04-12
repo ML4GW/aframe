@@ -15,8 +15,7 @@ From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
 
 %post
 apk update
-apk install -y build-essential
-apk clean
+apk add build-essential --no-cache
 
 cd /opt/aframe/projects/train
 # Set venv dir outside of project for 

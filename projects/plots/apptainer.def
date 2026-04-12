@@ -12,8 +12,7 @@ From: ghcr.io/astral-sh/uv:0.11.6-python3.12-alpine
 %post
 # install git for pip installation
 apk update
-apk install -y build-essential
-apk clean
+apk add build-essential --no-cache
 
 cd /opt/aframe/projects/plots
 # Set venv dir outside of project for 
