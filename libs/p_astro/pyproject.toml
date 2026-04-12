@@ -3,11 +3,11 @@ name = "p_astro"
 version = "0.1.0"
 description = "Functions for calculating p_astro of events"
 authors = [{ name = "Will Benoit", email = "benoi090@umn.edu" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "astropy>=6.0",
-    "numpy~=1.26",
+    "numpy>=2",
     "ledger",
     "utils",
 ]

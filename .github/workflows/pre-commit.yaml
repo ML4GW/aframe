@@ -5,16 +5,11 @@ on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.9"
-    - uses: pre-commit/action@v3.0.1
+    - uses: astral-sh/setup-uv@v5
+    - run: uvx prek run --all-files

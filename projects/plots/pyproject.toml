@@ -3,7 +3,7 @@ name = "plots"
 version = "0.0.1"
 description = "Aframe performance summary plots"
 authors = [{ name = "Alec Gunny" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "bokeh~=3.0",
     "scipy~=1.7",
@@ -17,7 +17,7 @@ dependencies = [
     "lalsuite~=7.19",
     "jsonargparse>=4.27.4,<5",
     "omegaconf~=2.2",
-    "urllib3>=1.25.4,<1.27",
+    "urllib3>=2",
 ]
 
 [project.scripts]

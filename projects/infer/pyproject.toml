@@ -7,16 +7,16 @@ authors = [
     { name = "Ethan Marx" },
     { name = "Will Benoit" },
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "ratelimiter~=1.2",
     "jsonargparse~=4.24",
     "tqdm~=4.66",
-    "ml4gw-hermes[torch]>=0.2.1",
+    "ml4gw-hermes[torch]",
     "aframe",
     "utils",
     "ledger",
-    "urllib3>=1.25.4,<1.27",
+    "urllib3>=2",
 ]
 
 [project.scripts]
@@ -25,7 +25,7 @@ infer = "infer.cli:main"
 [dependency-groups]
 dev = [
     "jupyter>=1.0.0,<2",
-    "pytest~=7.3",
+    "pytest>=8,<9",
 ]
 
 [tool.uv]
@@ -39,6 +39,7 @@ explicit = true
 aframe = { path = "../../", editable = true }
 utils = { path = "../../libs/utils", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
+ml4gw-hermes = { git = "https://github.com/ML4GW/hermes", branch = "dev" }
 
 [build-system]
 requires = ["hatchling"]

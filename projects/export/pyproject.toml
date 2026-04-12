@@ -3,19 +3,19 @@ name = "export"
 version = "0.1.0"
 description = "Export aframe for IaaS inference"
 authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "ml4gw>=0.8.0",
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
-    "ml4gw-hermes[torch]>=0.2.1",
+    "ml4gw-hermes[torch]",
     "aframe",
     "utils",
     "jsonargparse>=4.27.1,<5",
-    "nvidia-cudnn-cu11==8.9.6.50",
-    "tensorrt==8.5.2.2",
-    "urllib3>=1.25.4,<1.27",
+    "nvidia-cudnn-cu11",
+    "tensorrt",
+    "urllib3>=2",
 ]
 
 [project.scripts]
@@ -36,6 +36,7 @@ explicit = true
 [tool.uv.sources]
 aframe = { path = "../../", editable = true }
 utils = { path = "../../libs/utils", editable = true }
+ml4gw-hermes = { git = "https://github.com/ML4GW/hermes", branch = "dev" }
 
 [build-system]
 requires = ["hatchling"]

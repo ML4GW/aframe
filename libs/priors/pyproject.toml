@@ -3,12 +3,12 @@ name = "priors"
 version = "0.1.0"
 description = "Priors used for aframe analysis"
 authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "astropy>=5.0",
     "bilby>=2.2.2,<3",
-    "numpy>=1.26.4,<2",
+    "numpy>=2",
     "utils",
 ]
 
