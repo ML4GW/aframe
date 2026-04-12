@@ -2,26 +2,15 @@ name: aframe-data
 channels:
   - conda-forge
 dependencies:
-  # python/env dependencies
+  # python/env management
   - python>=3.10,<3.13
   - pip
   - uv
-  - jsonargparse
-  # general GW/auth deps
-  - gwpy>=3.0.8,<4
-  - gwosc
-  - lalsuite
-  - astropy
-  - bilby>1.4,<2
+  # C libraries not available on PyPI
   - libgcc
-  # auth libs
   - krb5
-  - ciecplib
-  - requests-gssapi
-  # frame file I/O dependencies
   - python-ldas-tools-framecpp<3.0.0
   - python-nds2-client
-  - python-ligo-lw
-  # luigi / law
+  # workflow orchestration
   - luigi
   - law
