@@ -8,6 +8,10 @@ From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
 %post
+apt-get update
+apt-get install -y build-essential git
+apt-get clean
+
 cd /opt/aframe/projects/export
 # Set venv dir outside of project for 
 # when binding the repo into the container
