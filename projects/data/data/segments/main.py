@@ -15,8 +15,6 @@ def main(args):
     segments = DataQualityDict.query_segments(**args_dict)
 
     logging.info(
-        "Discovered {} valid segments, writing to {}".format(
-            len(segments), output_file
-        )
+        f"Discovered {len(segments)} valid segments, writing to {output_file}"
     )
     segments.write(output_file)

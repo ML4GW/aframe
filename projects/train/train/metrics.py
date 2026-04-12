@@ -1,11 +1,9 @@
 import itertools
 from collections import defaultdict
-from typing import Optional
 
 import torch
 from torchmetrics import Metric
 from torchmetrics.classification import BinaryAUROC
-
 from utils import x_per_y
 
 
@@ -155,7 +153,7 @@ class TimeSlide(torch.utils.data.IterableDataset):
         return size // self.stride_size + 1
 
     def new_bounds(
-        self, start: Optional[int] = None, stop: Optional[int] = None
+        self, start: int | None = None, stop: int | None = None
     ) -> "TimeSlide":
         """
         Basically return a new timeslide that points to the

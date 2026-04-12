@@ -1,8 +1,8 @@
 import torch
 from architectures.supervised import SupervisedArchitecture
 
-from train.model.base import AframeBase
 from train.metrics import TimeSlideAUROC
+from train.model.base import AframeBase
 
 Tensor = torch.Tensor
 

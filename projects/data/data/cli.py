@@ -1,4 +1,5 @@
 from jsonargparse import ActionConfigFile, ArgumentParser
+from utils.logging import configure_logging
 
 from data.fetch.cli import parser as fetch_parser
 from data.fetch.main import main as fetch
@@ -12,7 +13,6 @@ from data.waveforms.cli import (
 from data.waveforms.testing import main as testing_waveforms
 from data.waveforms.training import main as training_waveforms
 from data.waveforms.validation import main as validation_waveforms
-from utils.logging import configure_logging
 
 
 def main(args=None):

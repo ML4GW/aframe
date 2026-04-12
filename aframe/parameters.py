@@ -1,11 +1,10 @@
 import importlib
 from pathlib import Path
-from typing import Union
 
 import luigi
 from cloudpathlib import CloudPath
 
-PATH_LIKE = Union[CloudPath, Path, str]
+PATH_LIKE = CloudPath | Path | str
 
 
 class PathParameter(luigi.Parameter):

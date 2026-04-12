@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Literal
 
 import numpy as np
 from gwosc import datasets
@@ -44,10 +44,10 @@ class VetoParser:
     def __init__(
         self,
         veto_definer_file: Path,
-        gate_paths: Dict[str, Path],
+        gate_paths: dict[str, Path],
         start: float,
         stop: float,
-        ifos: List[str],
+        ifos: list[str],
     ):
         self.logger = logging.getLogger("vizapp")
         self.vetos = DataQualityDict.from_veto_definer_file(veto_definer_file)

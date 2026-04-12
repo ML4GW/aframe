@@ -1,9 +1,8 @@
 import logging
 import os
 
-from jsonargparse import ActionConfigFile, ArgumentParser
-
 from data.fetch.fetch import fetch
+from jsonargparse import ActionConfigFile, ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument("--config", action=ActionConfigFile)

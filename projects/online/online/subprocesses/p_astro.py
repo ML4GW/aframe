@@ -1,20 +1,18 @@
 import logging
+import pickle
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from torch.multiprocessing import Queue
-
-from .utils import subprocess_wrapper
-
 import h5py
-import pickle
-
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
 from p_astro.p_astro import Pastro
+from torch.multiprocessing import Queue
+
+from .utils import subprocess_wrapper
 
 if TYPE_CHECKING:
     from online.utils.gdb import GraceDb

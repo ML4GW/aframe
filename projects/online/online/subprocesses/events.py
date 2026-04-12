@@ -1,6 +1,6 @@
-from queue import Queue
 import logging
 from pathlib import Path
+from queue import Queue
 from typing import TYPE_CHECKING
 
 import certifi

@@ -33,16 +33,11 @@ def infer(
         foreground: Foreground events
     """
     logging.info(
-        "Beginning inference on sequence {} corresponding "
-        "to {}s of data from {} with shifts {} and sample rate {}, beginning "
-        "at GPS time {}".format(
-            sequence.id,
-            sequence.duration,
-            sequence.background_fname,
-            sequence.shifts / sequence.sample_rate,
-            sequence.sample_rate,
-            sequence.t0,
-        )
+        f"Beginning inference on sequence {sequence.id} corresponding "
+        f"to {sequence.duration}s of data from {sequence.background_fname} "
+        f"with shifts {sequence.shifts / sequence.sample_rate} and "
+        f"sample rate {sequence.sample_rate}, beginning at "
+        f"GPS time {sequence.t0}"
     )
 
     for i, (x, x_inj) in enumerate(tqdm(sequence)):

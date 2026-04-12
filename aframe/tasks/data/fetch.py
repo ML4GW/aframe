@@ -74,13 +74,12 @@ class Fetch(law.LocalWorkflow, StaticMemoryWorkflow, AframeDataTask):
         start, duration = self.branch_data
         start = int(float(start))
         duration = int(float(duration))
-        fname = "{}-{}-{}.hdf5".format(self.prefix, start, duration)
+        fname = f"{self.prefix}-{start}-{duration}.hdf5"
         fname = self.data_dir / fname
         return s3_or_local(fname)
 
     def run(self):
         import h5py
-
         from data.fetch.fetch import fetch
 
         start, duration = self.branch_data

@@ -1,12 +1,12 @@
 # import logging
-from typing import List, Optional
 
 import arrakis
 import numpy as np
 import torch
+
 from online.dataloading.utils import (
-    resample,
     build_resample_filter,
+    resample,
 )
 
 STRAIN_SAMPLE_RATE = 16384
@@ -15,11 +15,11 @@ BLOCK_SIZE = int(BLOCK_DURATION * STRAIN_SAMPLE_RATE)
 
 
 def data_iterator(
-    strain_channels: List[str],
-    ifos: List[str],
+    strain_channels: list[str],
+    ifos: list[str],
     sample_rate: float,
-    state_channels: Optional[dict[str, str]] = None,
-    numtaps: Optional[int] = 60,
+    state_channels: dict[str, str] | None = None,
+    numtaps: int | None = 60,
 ) -> torch.Tensor:
     channels = strain_channels + state_channels
     # build resampling filter

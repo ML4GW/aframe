@@ -3,17 +3,16 @@ from dataclasses import dataclass, make_dataclass
 
 import h5py
 import numpy as np
-from astropy.cosmology import z_at_value
-from astropy.cosmology import Cosmology
+from astropy.cosmology import Cosmology, z_at_value
 from astropy.units import Mpc
 from lalsimulation import (
     SimInspiralTransformPrecessingNewInitialConditions,
     SimInspiralTransformPrecessingWvf2PE,
 )
 from pycbc.waveform import get_td_waveform
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
-from utils.cosmology import DEFAULT_COSMOLOGY
 
 # Solar mass in kg
 MSUN = 1.988409902147041637325262574352366540e30
@@ -404,17 +403,14 @@ class InjectionMetadata(Ledger):
         super().__post_init__()
         if self.num_injections < self._length:
             raise ValueError(
-                "{} has fewer total injections {} than "
-                "number of waveforms {}".format(
-                    self.__class__.__name__, self.num_injections, self._length
-                )
+                f"{self.__class__.__name__} has fewer total injections "
+                f"{self.num_injections} than number of waveforms "
+                f"{self._length}"
             )
         if self.sample_rate is None and self._length > 0:
             raise ValueError(
                 "Must specify sample rate if not "
-                "initializing {} as empty container ".format(
-                    self.__class__.__name__
-                )
+                f"initializing {self.__class__.__name__} as empty container "
             )
         elif self.sample_rate is None or not self._length:
             return
@@ -424,10 +420,8 @@ class InjectionMetadata(Ledger):
             duration = value.shape[-1] / self.sample_rate
             if duration != self.duration:
                 raise ValueError(
-                    "Specified waveform duration of {} but "
-                    "waveform '{}' has duration {}".format(
-                        self.duration, key, duration
-                    )
+                    f"Specified waveform duration of {self.duration} but "
+                    f"waveform '{key}' has duration {duration}"
                 )
 
     @property
@@ -689,9 +683,7 @@ class InjectionParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
             elif not theirs:
                 return ours
             elif ours != theirs:
-                raise ValueError(
-                    "Incompatible ifos {} and {}".format(ours, theirs)
-                )
+                raise ValueError(f"Incompatible ifos {ours} and {theirs}")
             return ours
         return super().compare_metadata(key, ours, theirs)
 
@@ -757,10 +749,8 @@ class InterferometerResponseSet(WaveformSet):
     @classmethod
     def _raise_bad_shift_dim(cls, fname, dim1, dim2):
         raise ValueError(
-            "Specified shifts with {} dimensions, but "
-            "{} from file {} has {} dimensions".format(
-                dim1, cls.__name__, fname, dim2
-            )
+            f"Specified shifts with {dim1} dimensions, but "
+            f"{cls.__name__} from file {fname} has {dim2} dimensions"
         )
 
     def get_shift(self, shift):
@@ -862,13 +852,9 @@ class InterferometerResponseSet(WaveformSet):
 
                 if fshifts.shape[-1] != shifts.shape[-1]:
                     raise ValueError(
-                        "Specified {} shifts when {} ifos "
-                        "are present in {} {}".format(
-                            shifts.shape[-1],
-                            fshifts.shape[-1],
-                            cls.__name__,
-                            fname,
-                        )
+                        f"Specified {shifts.shape[-1]} shifts when "
+                        f"{fshifts.shape[-1]} ifos are present in "
+                        f"{cls.__name__} {fname}"
                     )
 
                 shift_mask = False

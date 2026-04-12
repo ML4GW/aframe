@@ -2,7 +2,6 @@ import logging
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import List
 
 from jsonargparse import ArgumentParser
 from spython.main import Client
@@ -11,7 +10,7 @@ from spython.main import Client
 BASE_DIR: Path = Path(__file__).resolve().parent.parent / "projects"
 
 # List of all available project names
-PROJECTS: List[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
+PROJECTS: list[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
 
 
 def build_container(project_name: str, container_root: Path) -> str:
@@ -51,7 +50,7 @@ def build_container(project_name: str, container_root: Path) -> str:
         os.chdir(cwd)
 
 
-def validate_projects(projects: List[str]) -> None:
+def validate_projects(projects: list[str]) -> None:
     invalid = [p for p in projects if p not in PROJECTS]
     if invalid:
         raise ValueError(
@@ -60,7 +59,7 @@ def validate_projects(projects: List[str]) -> None:
         )
 
 
-def build(projects: List[str], container_root: Path, max_workers: int) -> None:
+def build(projects: list[str], container_root: Path, max_workers: int) -> None:
     if not container_root:
         logging.info("Container root path is not set.")
         return

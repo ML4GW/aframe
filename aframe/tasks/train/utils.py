@@ -4,7 +4,6 @@ import subprocess
 import sys
 from queue import Queue
 from threading import Thread
-from typing import List
 
 
 def read_stream(stream, process, q):
@@ -34,7 +33,7 @@ def stream_process(process):
             sys.stdout.write(line)
 
 
-def stream_command(command: List[str]):
+def stream_command(command: list[str]):
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ
     )
@@ -43,9 +42,7 @@ def stream_command(command: List[str]):
     process.wait()
     if process.returncode:
         raise RuntimeError(
-            "Command '{}' failed with return code {} and stderr:\n{}".format(
-                shlex.join(command),
-                process.returncode,
-                process.stderr.read().decode(),
-            )
+            f"Command '{shlex.join(command)}' failed with return code "
+            f"{process.returncode} and "
+            f"stderr:\n{process.stderr.read().decode()}"
         ) from None

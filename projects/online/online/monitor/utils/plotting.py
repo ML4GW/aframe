@@ -1,14 +1,14 @@
+import logging
+import warnings
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-from gwpy.timeseries import TimeSeries
-from pathlib import Path
 import pandas as pd
+from gwpy.timeseries import TimeSeries
 from scipy.stats import poisson
-import warnings
-import logging
-
-from datetime import datetime, timedelta, timezone
 
 IFOS = ["H1", "L1", "V1"]
 SECONDS_PER_YEAR = 365 * 86400
@@ -201,9 +201,9 @@ def event_rate_plots(plotsdir: Path, df: pd.DataFrame) -> None:
     """
     plt.figure(figsize=(10, 6))
     df.set_index("datetime", inplace=True)
-    df = df.tz_localize(timezone.utc)
+    df = df.tz_localize(UTC)
 
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(UTC)
     one_day_ago = current_time - timedelta(days=1)
     one_week_ago = current_time - timedelta(weeks=1)
 
@@ -214,8 +214,8 @@ def event_rate_plots(plotsdir: Path, df: pd.DataFrame) -> None:
     # It doesn't harm anything, so catch them to make output cleaner.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-        past_day = past_day.tz_convert(timezone.utc)
-        past_week = past_week.tz_convert(timezone.utc)
+        past_day = past_day.tz_convert(UTC)
+        past_week = past_week.tz_convert(UTC)
         if len(past_day) > 0:
             past_day.resample("1h").size().plot()
         else:

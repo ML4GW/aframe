@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from ml4gw.utils.slicing import sample_kernels
 
@@ -11,8 +9,8 @@ class SupervisedAframeDataset(BaseAframeDataset):
     def __init__(
         self,
         *args,
-        swap_prob: Optional[float] = None,
-        mute_prob: Optional[float] = None,
+        swap_prob: float | None = None,
+        mute_prob: float | None = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
