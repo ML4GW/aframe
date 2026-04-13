@@ -1,13 +1,16 @@
 from collections.abc import Callable
 
+import math
 import torch
 from torch import Tensor
+from typing import Literal
 
 from ml4gw.transforms import (
     SpectralDensity,
     Whiten,
     Decimator,
     SingleQTransform,
+    Heterodyne,
 )
 from ml4gw.utils.slicing import unfold_windows
 
@@ -589,3 +592,183 @@ class TimeSpectrogramPreprocessor(torch.nn.Module):
 
         # first input is timeseries and second input is spectrogram
         return x[1], spec
+
+
+class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
+    """
+    Calculate the PSDs and whiten an entire batch of kernels at once
+    and then heterodyne the timeseries.
+
+    Applies heterodyne transform to the desired `kernel_length` of the
+    strain. If `keep_last_n_seconds` is passed, returns only the final
+    portion of the heterodyned strain.
+
+    Args:
+        kernel_length (float): Length of output kernels in seconds.
+        sample_rate (float): Input sampling rate in Hz.
+        inference_sampling_rate (float): Sampling rate of network output in Hz.
+            Determines the overlap between kernels.
+        batch_size (int): Number of kernels to extract from input.
+        fduration (float): Duration of the whitening filter in seconds
+        fftlength (float): FFT length for PSD calculation in seconds.
+        chirp_mass_low (float): 
+            Lower bound of chirp mass range (in solar masses).
+        chirp_mass_high (float): 
+            Upper bound of chirp mass range (in solar masses).
+        num_chirp_masses (int): 
+            Number of chirp mass samples to generate.
+        chirp_mass_spacing (Literal["linear", "log"]): 
+            Spacing of chirp mass grid. Use "linear" for evenly spaced
+            values or "log" for logarithmic spacing.
+        keep_last_n_seconds (float): 
+            If > 0, only keep the last `n` seconds of the kernel_length. If 0,
+            keep the full kernel_length.
+        highpass (float, optional): Highpass frequency in Hz. Applied during
+            whitening. Defaults to None.
+        lowpass (float, optional): Lowpass frequency in Hz. Applied during
+            whitening. Defaults to None.
+
+    Example:
+        >>> preprocessor = HeterodyneTimeDomainPreprocessor(
+        ...     kernel_length=8, sample_rate=2048,
+        ...     inference_sampling_rate=16, batch_size=128,
+        ...     fduration=2, fftlength=2, chirp_mass_low=1.0,
+        ...     chirp_mass_high=2.5, num_chirp_masses=100,
+        ...     chirp_mass_spacing="log", keep_last_n_seconds=4.0,
+        ... )
+        >>> x = torch.randn(2, 16384)  # (channels, time)
+        >>> X = preprocessor(x)  # shape: (batch_size, channels x num_chirp_masses, kernel_size)
+    """
+
+    def __init__(
+        self,
+        kernel_length: float,
+        sample_rate: float,
+        inference_sampling_rate: float,
+        batch_size: int,
+        fduration: float,
+        fftlength: float,
+        chirp_mass_low: float = 1.0, 
+        chirp_mass_high: float = 2.5, 
+        num_chirp_masses: int = 100, 
+        chirp_mass_spacing: Literal["linear", "log"] = "log", 
+        keep_last_n_seconds: float = 0.0,
+        highpass: float | None = None,
+        lowpass: float | None = None,
+    ) -> None:
+        super().__init__()
+        # Calculate stride between kernels based on inference sampling rate
+        self.stride_size = int(sample_rate / inference_sampling_rate)
+        # Convert kernel length to samples
+        self.kernel_size = int(kernel_length * sample_rate)
+
+        # do length calculations in units of samples,
+        # then convert back to length to guard for intification
+        strides = (batch_size - 1) * self.stride_size
+        fsize = int(fduration * sample_rate)
+        size = strides + self.kernel_size + fsize
+        length = size / sample_rate
+
+        # Initialize PSD estimator with calculated total length
+        self.psd_estimator = PsdEstimator(
+            length,
+            sample_rate,
+            fftlength=fftlength,
+            overlap=None,
+            average="median",
+            fast=highpass is not None,
+        )
+        # Initialize whitening module
+        self.whitener = Whiten(fduration, sample_rate, highpass, lowpass)
+
+        self.chirp_mass_grid = self._create_chirp_mass_grid(
+            chirp_mass_low,
+            chirp_mass_high,
+            num_chirp_masses,
+            chirp_mass_spacing,
+        )
+
+        self.keep_last_n_samples = int(
+            keep_last_n_seconds * sample_rate
+        )
+
+        self.heterodyne_transform = Heterodyne(
+            sample_rate=int(sample_rate), 
+            kernel_length=int(kernel_length),
+            chirp_mass=self.chirp_mass_grid,
+            return_type="time"
+        )
+    
+    def _create_chirp_mass_grid(
+        self,
+        chirp_mass_low: float,
+        chirp_mass_high: float,
+        num_chirp_masses: int,
+        chirp_mass_spacing: Literal["linear", "log"],
+    ) -> torch.Tensor:
+        if chirp_mass_spacing == "linear":
+            return torch.linspace(
+                chirp_mass_low, chirp_mass_high, num_chirp_masses
+            )
+        elif chirp_mass_spacing == "log":
+            return torch.logspace(
+                math.log10(chirp_mass_low),
+                math.log10(chirp_mass_high),
+                num_chirp_masses,
+            )
+        else:
+            raise ValueError(
+                f"Invalid chirp mass spacing: {chirp_mass_spacing}"
+            )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Estimate PSD, whiten data, and unfold kernels.
+
+        Args:
+            x (Tensor): Input data of shape (batch, channels, time) or
+                (channels, time).
+
+        Returns:
+            Tensor: Extracted and optionally augmented kernels of shape
+                (batch_size, channels, kernel_size).
+
+            If return_whitened=True, returns tuple of (kernels, whitened_data).
+
+        Raises:
+            ValueError: If input is not 2 or 3 dimensional.
+        """
+        # Determine number of channels for later reshaping
+        if x.ndim == 3:
+            num_channels = x.size(1)
+        elif x.ndim == 2:
+            num_channels = x.size(0)
+        else:
+            raise ValueError(
+                "Expected input to be either 2 or 3 dimensional, "
+                "but found shape {}".format(x.shape)
+            )
+
+        # Estimate PSD and prepare data
+        x, psd = self.psd_estimator(x.double())
+        # Apply whitening using estimated PSD
+        whitened = self.whitener(x, psd)
+
+        # unfold x and then put it into the expected shape.
+        # Note that if x has both signal and background
+        # batch elements, they will be interleaved along
+        # the batch dimension after unfolding
+        x = unfold_windows(whitened, self.kernel_size, self.stride_size)
+        # Reshape to (batch_size, channels, kernel_size)
+        x = x.reshape(-1, num_channels, self.kernel_size)
+        # Heterodyne the whitened timeseries
+        x = self.heterodyne_transform(x)
+        # Reshaping x from (batch_size, channels, num_chirp_mass, kernel_size) to
+        # (batch_size, channels x num_chirp_mass, kernel_size)
+        _B, _C, _M, _T = x.shape
+        x = x.reshape(_B, _C*_M, _T)
+        # Returning the desired length of heterodyned strain in the time dimension
+        if self.keep_last_n_samples > 0:
+            return x[..., -self.keep_last_n_samples:]
+        else:
+            return x

@@ -1,0 +1,38 @@
+# commented args (i.e. comments with colon at end 
+# to illustrate a value needs to be filled out)
+# represent values filled out
+# by the export task at run time. To build a functional
+# standalone config, add these in yourself.
+
+logfile:
+weights:
+batch_file:
+repository_directory:
+num_ifos: 2
+kernel_length: 8.0
+inference_sampling_rate: 4
+sample_rate: 2048
+batch_size: 128
+fduration: 2
+psd_length: 64
+preprocessor:
+  class_path: utils.preprocessing.HeterodyneTimeDomainPreprocessor
+  init_args:
+    kernel_length: 8.0
+    sample_rate: 2048
+    inference_sampling_rate: 4
+    batch_size: 128
+    fduration: 2
+    fftlength: 2
+    chirp_mass_low: 1.0 
+    chirp_mass_high: 2.5 
+    num_chirp_masses: 100
+    chirp_mass_spacing: "log" 
+    keep_last_n_seconds: 4.0
+    highpass: 32.0
+streams_per_gpu: 12
+# num_outputs:
+aframe_instances: 1
+platform: TENSORRT
+clean: true
+verbose: true
