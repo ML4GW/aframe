@@ -2,24 +2,22 @@ Bootstrap: docker
 From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 %files
-. /opt/aframe/projects/export/
-../../libs/utils /opt/aframe/libs/utils
-../../aframe /opt/aframe/aframe
-../../pyproject.toml /opt/aframe/pyproject.toml
+@@FILES_BLOCK@@
 
 %post
 apt-get update
-apt-get install -y build-essential git
-apt-get clean
+apt-get install -y --no-install-recommends build-essential git
+rm -rf /var/lib/apt/lists/*
 
-cd /opt/aframe/projects/export
-# Set venv dir outside of project for 
+cd /opt/aframe/projects/@@PROJECT@@
+# Set venv dir outside of project for
 # when binding the repo into the container
 export UV_PROJECT_ENVIRONMENT=/opt/env
+
 uv export --frozen --all-extras -o requirements.txt
 uv pip sync requirements.txt --system
 
 %environment
-# Append venv dir to PATH so the 
+# Append venv dir to PATH so the
 # environment is active by default
 export PATH="/opt/env/bin:$PATH"
