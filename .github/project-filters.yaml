@@ -1,6 +1,7 @@
 workflow: &workflow
   - '.github/lib-filters.yaml'
   - '.github/workflows/lib-tests.yaml'
+  - 'container_templates/**'
 
 data:
   - *workflow
