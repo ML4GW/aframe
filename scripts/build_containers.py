@@ -1,5 +1,6 @@
 import logging
 import os
+import tomllib
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -8,29 +9,87 @@ from spython.main import Client
 
 # Define the directory where the projects are located
 BASE_DIR: Path = Path(__file__).resolve().parent.parent / "projects"
+TEMPLATES_DIR: Path = (
+    Path(__file__).resolve().parent.parent / "container_templates"
+)
 
 # List of all available project names
 PROJECTS: list[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
 
 
+def _get_files_block(project_name: str) -> str:
+    """
+    Build the %files block for an apptainer definition by reading the
+    project's [tool.uv.sources] and resolving which local paths to copy.
+    """
+    pyproject_path = BASE_DIR / project_name / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        data = tomllib.load(f)
+
+    sources = data["tool"]["uv"]["sources"]
+
+    lines = [f". /opt/aframe/projects/{project_name}/"]
+    seen: set[str] = set()
+
+    for source in sources.values():
+        path = source.get("path", "")
+        if not path:
+            # git source
+            continue
+
+        normalized = path.rstrip("/")
+
+        if normalized == "../..":
+            entry = "../../aframe /opt/aframe/aframe"
+        else:
+            lib_name = normalized.removeprefix("../../libs/")
+            entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
+
+        if entry not in seen:
+            seen.add(entry)
+            lines.append(entry)
+
+    lines.append("../../aframe /opt/aframe/aframe")
+    lines.append("../../pyproject.toml /opt/aframe/pyproject.toml")
+    return "\n".join(lines)
+
+
+def create_definition_file(project_name: str) -> Path:
+    """
+    Create the apptainer definition file for a project from the appropriate
+    template and write it to projects/<project>/apptainer.def.
+
+    Projects with a conda-lock.yml use the micromamba template; all others
+    use the uv template.
+    """
+    project_dir = BASE_DIR / project_name
+    is_micromamba = (project_dir / "conda-lock.yml").exists()
+    template_name = "micromamba.def" if is_micromamba else "uv.def"
+    template_text = (TEMPLATES_DIR / template_name).read_text()
+
+    files_block = _get_files_block(project_name)
+    definition_text = template_text.replace(
+        "@@PROJECT@@", project_name
+    ).replace("@@FILES_BLOCK@@", files_block)
+
+    output_path = project_dir / "apptainer.def"
+    output_path.write_text(definition_text)
+    logging.info(f"Wrote template {template_name} to {output_path}")
+    return output_path
+
+
 def build_container(project_name: str, container_root: Path) -> str:
     project_path = BASE_DIR / project_name
     container_path = container_root / f"{project_name}.sif"
+
+    create_definition_file(project_name)
     definition_path = project_path / "apptainer.def"
+
     # change directory to project path since
     # that's the root from where
     # the apptainer def files are defined
     cwd = os.getcwd()
     os.chdir(project_path)
-
-    # skip this project if there
-    # is no associated apptainer definition file
-    if not definition_path.exists():
-        out = (
-            f"Apptainer definition file for {project_name} "
-            "does not exist. Skipping build."
-        )
-        return out
 
     # build the container
     image, cmd = Client.build(
@@ -114,16 +173,30 @@ def main():
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=None,  # Set a default number of workers
+        default=None,
         help="Maximum number of concurrent builds. Can be useful to set if "
         "your local TMPDIR is being overfilled when building containers. "
         "Default is `None`.",
+    )
+
+    parser.add_argument(
+        "--definition-only",
+        action="store_true",
+        default=False,
+        help="Write the definition files(s) for the specified project, and "
+        "do not build the container images.",
     )
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
 
     validate_projects(args.projects)
+
+    if args.definition_only:
+        for project in args.projects:
+            create_definition_file(project)
+        return
+
     build(args.projects, args.container_root, args.max_workers)
 
 

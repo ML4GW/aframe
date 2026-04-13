@@ -54,7 +54,7 @@ ledger = { path = "../../libs/ledger", editable = true }
 p_astro = { path = "../../libs/p_astro", editable = true }
 architectures = { path = "../../libs/architectures", editable = true }
 # TODO: point at released version once available
-amplfi = { path = "../../../amplfi", editable = true }
+amplfi = { git = "https://github.com/wbenoit26/amplfi", branch = "dev" }
 
 [build-system]
 requires = ["hatchling"]

@@ -77,6 +77,14 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    -
+      name: Install definition generation dependencies
+      run: python -m pip install jsonargparse spython
+
+    -
+      name: Write apptainer definition
+      run: python scripts/build_containers.py --definition-only ${{ matrix.project }}
+
     # build the singularity image as a sandbox directory
     # inside a docker container that has singularity
     # installed (take a big breath). Then tar that directory
