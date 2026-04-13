@@ -61,8 +61,8 @@ class AframeCLI(LightningCLI):
         # the model and the architecture for in_channels.
         try:
             parser.link_arguments(
-            "data.init_args.num_chirp_masses",
-            "model.init_args.arch.init_args.num_chirp_masses",
+                "data.init_args.num_chirp_masses",
+                "model.init_args.arch.init_args.num_chirp_masses",
             )
         except Exception:
             pass

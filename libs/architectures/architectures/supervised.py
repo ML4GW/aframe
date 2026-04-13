@@ -287,10 +287,11 @@ class SupervisedHeterodyneTimeDomainResNet(SupervisedArchitecture):
     Time Domain ResNet that processes a Heterodyned timeseries.
 
     Args:
-        num_chirp_masses (int): 
+        num_chirp_masses (int):
             Number of chirp masses used to define the input channel
             dimension (in_channels = num_ifos x num_chirp_masses).
     """
+
     def __init__(
         self,
         num_ifos: int,
@@ -306,7 +307,7 @@ class SupervisedHeterodyneTimeDomainResNet(SupervisedArchitecture):
     ) -> None:
         super().__init__()
         self.time_domain_resnet = ResNet1D(
-            in_channels=num_ifos*num_chirp_masses,
+            in_channels=num_ifos * num_chirp_masses,
             layers=layers,
             classes=1,
             kernel_size=kernel_size,
@@ -316,5 +317,6 @@ class SupervisedHeterodyneTimeDomainResNet(SupervisedArchitecture):
             stride_type=stride_type,
             norm_layer=norm_layer,
         )
+
     def forward(self, X):
         return self.time_domain_resnet(X)

@@ -611,16 +611,16 @@ class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
         batch_size (int): Number of kernels to extract from input.
         fduration (float): Duration of the whitening filter in seconds
         fftlength (float): FFT length for PSD calculation in seconds.
-        chirp_mass_low (float): 
+        chirp_mass_low (float):
             Lower bound of chirp mass range (in solar masses).
-        chirp_mass_high (float): 
+        chirp_mass_high (float):
             Upper bound of chirp mass range (in solar masses).
-        num_chirp_masses (int): 
+        num_chirp_masses (int):
             Number of chirp mass samples to generate.
-        chirp_mass_spacing (Literal["linear", "log"]): 
+        chirp_mass_spacing (Literal["linear", "log"]):
             Spacing of chirp mass grid. Use "linear" for evenly spaced
             values or "log" for logarithmic spacing.
-        keep_last_n_seconds (float): 
+        keep_last_n_seconds (float):
             If > 0, only keep the last `n` seconds of the kernel_length. If 0,
             keep the full kernel_length.
         highpass (float, optional): Highpass frequency in Hz. Applied during
@@ -637,7 +637,8 @@ class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
         ...     chirp_mass_spacing="log", keep_last_n_seconds=4.0,
         ... )
         >>> x = torch.randn(2, 16384)  # (channels, time)
-        >>> X = preprocessor(x)  # shape: (batch_size, channels x num_chirp_masses, kernel_size)
+        >>> X = preprocessor(x)
+        >>> # X: (batch_size, channels x num_chirp_masses, kernel_size)
     """
 
     def __init__(
@@ -648,10 +649,10 @@ class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
         batch_size: int,
         fduration: float,
         fftlength: float,
-        chirp_mass_low: float = 1.0, 
-        chirp_mass_high: float = 2.5, 
-        num_chirp_masses: int = 100, 
-        chirp_mass_spacing: Literal["linear", "log"] = "log", 
+        chirp_mass_low: float = 1.0,
+        chirp_mass_high: float = 2.5,
+        num_chirp_masses: int = 100,
+        chirp_mass_spacing: Literal["linear", "log"] = "log",
         keep_last_n_seconds: float = 0.0,
         highpass: float | None = None,
         lowpass: float | None = None,
@@ -688,17 +689,15 @@ class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
             chirp_mass_spacing,
         )
 
-        self.keep_last_n_samples = int(
-            keep_last_n_seconds * sample_rate
-        )
+        self.keep_last_n_samples = int(keep_last_n_seconds * sample_rate)
 
         self.heterodyne_transform = Heterodyne(
-            sample_rate=int(sample_rate), 
+            sample_rate=int(sample_rate),
             kernel_length=int(kernel_length),
             chirp_mass=self.chirp_mass_grid,
-            return_type="time"
+            return_type="time",
         )
-    
+
     def _create_chirp_mass_grid(
         self,
         chirp_mass_low: float,
@@ -763,12 +762,13 @@ class HeterodyneTimeDomainPreprocessor(torch.nn.Module):
         x = x.reshape(-1, num_channels, self.kernel_size)
         # Heterodyne the whitened timeseries
         x = self.heterodyne_transform(x)
-        # Reshaping x from (batch_size, channels, num_chirp_mass, kernel_size) to
-        # (batch_size, channels x num_chirp_mass, kernel_size)
+        # Reshaping x from (batch_size, channels, num_chirp_mass, kernel_size)
+        # to (batch_size, channels x num_chirp_mass, kernel_size)
         _B, _C, _M, _T = x.shape
-        x = x.reshape(_B, _C*_M, _T)
-        # Returning the desired length of heterodyned strain in the time dimension
+        x = x.reshape(_B, _C * _M, _T)
+        # Returning the desired length of heterodyned strain in the
+        # time dimension
         if self.keep_last_n_samples > 0:
-            return x[..., -self.keep_last_n_samples:]
+            return x[..., -self.keep_last_n_samples :]
         else:
             return x
