@@ -39,8 +39,11 @@ def _get_files_block(project_name: str) -> str:
 
         normalized = path.rstrip("/")
 
-        lib_name = normalized.removeprefix("../../libs/")
-        entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
+        if normalized == "../..":
+            entry = "../../aframe /opt/aframe/aframe"
+        else:
+            lib_name = normalized.removeprefix("../../libs/")
+            entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
 
         if entry not in seen:
             seen.add(entry)
