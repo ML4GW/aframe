@@ -1,3 +1,4 @@
+projects/*/apptainer.def
 **/__pycache__
 **/.ipynb_checkpoints
 **/*.log

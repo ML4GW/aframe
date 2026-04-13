@@ -3,12 +3,7 @@ From: mambaorg/micromamba:1.5
 Stage: build
 
 %files
-. /opt/aframe/projects/data/
-../../libs/utils /opt/aframe/libs/utils
-../../libs/ledger /opt/aframe/libs/ledger
-../../libs/priors /opt/aframe/libs/priors
-../../aframe /opt/aframe/aframe
-../../pyproject.toml /opt/aframe/pyproject.toml
+@@FILES_BLOCK@@
 
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
@@ -16,31 +11,25 @@ mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 # install git for pip installation
 apt-get update
 apt-get install -y --no-install-recommends git
-apt-get install -y build-essential
-apt-get clean
+apt-get install -y --no-install-recommends build-essential openssh-client
+rm -rf /var/lib/apt/lists/*
 
 # activate micromamba and create environment from lockfile
-/bin/bash /root/.bashrc
-micromamba create -p /opt/env -f /opt/aframe/projects/data/conda-lock.yml
+micromamba create -p /opt/env -f /opt/aframe/projects/@@PROJECT@@/conda-lock.yml
 
 # install uv so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \
     pip install --no-build-isolation uv
 
-export CONDA_PREFIX=/root/micromamba
-cd /opt/aframe/projects/data/
+cd /opt/aframe/projects/@@PROJECT@@/
 micromamba run -p /opt/env \
     uv export --frozen --all-extras -o requirements.txt
-    
-# Needs to be pip sync to discover conda env
+
 micromamba run -p /opt/env \
     uv pip install -r requirements.txt
 
 # initialize our shell so that we can execute
 # commands in our environment at run time
-micromamba shell init --shell=bash --root-prefix=~/micromamba
-
-
 # set path, and add it to /etc/profile
 # so that it will be set if login shell
 # is invoked
