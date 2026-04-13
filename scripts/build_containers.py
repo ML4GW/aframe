@@ -46,6 +46,7 @@ def _get_files_block(project_name: str) -> str:
             seen.add(entry)
             lines.append(entry)
 
+    lines.append("../../aframe /opt/aframe/aframe")
     lines.append("../../pyproject.toml /opt/aframe/pyproject.toml")
     return "\n".join(lines)
 
