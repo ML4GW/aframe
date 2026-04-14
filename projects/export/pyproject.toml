@@ -13,8 +13,8 @@ dependencies = [
     "aframe",
     "utils",
     "jsonargparse>=4.27.1,<5",
-    "nvidia-cudnn-cu11",
-    "tensorrt",
+    "nvidia-cudnn-cu12",
+    "tensorrt>=10.0",
     "urllib3>=2",
 ]
 
