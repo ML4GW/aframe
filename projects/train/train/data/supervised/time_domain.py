@@ -43,8 +43,8 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
             Spacing of chirp mass grid. Use "linear" for evenly spaced
             values or "log" for logarithmic spacing.
         keep_last_n_seconds (float):
-            If > 0, only keep the last `n` seconds of the kernel_length. If 0,
-            keep the full kernel_length.
+            If provided, only the last `n` seconds of the kernel_length are
+            returned. Otherwise, the full kernel_length is returned.
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         chirp_mass_high: float = 2.5,
         num_chirp_masses: int = 100,
         chirp_mass_spacing: Literal["linear", "log"] = "log",
-        keep_last_n_seconds: float = 0.0,
+        keep_last_n_seconds: float = None,
         *args,
         **kwargs,
     ):
@@ -66,15 +66,18 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
             chirp_mass_spacing,
         )
 
-        self.keep_last_n_samples = int(
-            keep_last_n_seconds * self.hparams.sample_rate
-        )
+        self.keep_last_n_seconds = keep_last_n_seconds
+
+        if self.keep_last_n_seconds is not None:
+            self.keep_last_n_samples = int(
+                self.keep_last_n_seconds * self.hparams.sample_rate
+            )
 
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
         self.heterodyne_transform = Heterodyne(
-            sample_rate=int(self.hparams.sample_rate),
-            kernel_length=int(self.hparams.kernel_length),
+            sample_rate=self.hparams.sample_rate,
+            kernel_length=self.hparams.kernel_length,
             chirp_mass=self.chirp_mass_grid,
             return_type="time",
         )
@@ -117,7 +120,7 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         _V_fg, _B_fg, _C_fg, _M_fg, _T_fg = X_fg.shape
         X_fg = X_fg.view(_V_fg, _B_fg, _C_fg * _M_fg, _T_fg)
 
-        if self.keep_last_n_samples > 0:
+        if self.keep_last_n_seconds is not None:
             return X_bg[..., -self.keep_last_n_samples :], X_fg[
                 ..., -self.keep_last_n_samples :
             ]
@@ -131,7 +134,7 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         _B, _C, _M, _T = X.shape
         X = X.view(_B, _C * _M, _T)
 
-        if self.keep_last_n_samples > 0:
+        if self.keep_last_n_seconds is not None:
             return X[..., -self.keep_last_n_samples :], y
         else:
             return X, y

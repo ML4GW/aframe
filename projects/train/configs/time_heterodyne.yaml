@@ -57,7 +57,7 @@ data:
     chirp_mass_high: 2.5
     num_chirp_masses: 100
     chirp_mass_spacing: "log"
-    keep_last_n_seconds: 4
+    keep_last_n_seconds: null
     # highpass: 
     # lowpass: 
     fftlength: 2
