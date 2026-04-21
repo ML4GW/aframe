@@ -5,6 +5,8 @@ from utils.preprocessing import (
     MultiModalPreprocessor,
     TimeSpectrogramPreprocessor,
 )
+from utils.augmentation import HeterodyneAugmentor
+from ml4gw.transforms import Heterodyne
 import torch
 import pytest
 
@@ -246,6 +248,59 @@ class TestBatchWhitener:
         kernels = whitener(x)
         kernels_aug = whitener_aug(x)
         assert torch.allclose(kernels_aug, kernels * 2)
+
+    def test_with_heterodyne_augmentor(self):
+        heterodyne_augmentor = HeterodyneAugmentor(
+            sample_rate=self.sample_rate,
+            kernel_length=self.kernel_length,
+            chirp_mass_low=1.0,
+            chirp_mass_high=2.5,
+            num_chirp_masses=10,
+            chirp_mass_spacing="log",
+            keep_last_n_seconds=None,
+        )
+
+        whitener = BatchWhitener(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+        )
+
+        whitener_aug = BatchWhitener(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+            augmentor=heterodyne_augmentor,
+        )
+
+        channels = 2
+        total_samples = int(
+            (
+                (self.batch_size - 1) * whitener.stride_size
+                + whitener.kernel_size
+            )
+            * 2
+        )
+        x = torch.randn(channels, total_samples)
+
+        heterodyne = Heterodyne(
+            sample_rate=self.sample_rate,
+            kernel_length=self.kernel_length,
+            chirp_mass=heterodyne_augmentor.chirp_mass_grid,
+            return_type="time",
+        )
+
+        kernels_heterodyned = heterodyne(whitener(x))
+        _B, _C, _M, _T = kernels_heterodyned.shape
+        kernels = kernels_heterodyned.reshape(_B, _C * _M, _T)
+        kernels_aug = whitener_aug(x)
+        assert torch.allclose(kernels_aug, kernels)
 
 
 class TestMultiModalPreprocessor:
