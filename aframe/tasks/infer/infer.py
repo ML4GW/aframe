@@ -16,11 +16,14 @@ from hermes.aeriel.serve import serve
 from luigi.util import inherits
 
 from aframe.base import AframeSingularityTask
-from aframe.tasks.infer.base import InferBase, InferParameters
+from aframe.tasks.infer.base import (
+    Hdf5InferBase,
+    InferParameters,
+    RnPInferBase,
+)
 
 
-@inherits(InferParameters)
-class DeployInferLocal(InferBase):
+class _DeployInferLocalMixin:
     """
     Launch inference on local gpus
     """
@@ -103,11 +106,20 @@ class DeployInferLocal(InferBase):
         return ServerContext(self)
 
 
-@inherits(DeployInferLocal)
-class Infer(AframeSingularityTask):
+@inherits(InferParameters)
+class DeployInferHdf5Local(_DeployInferLocalMixin, Hdf5InferBase):
+    pass
+
+
+@inherits(InferParameters)
+class DeployInferRnPLocal(_DeployInferLocalMixin, RnPInferBase):
+    pass
+
+
+class _InferAggregateBase:
     """
-    Law Task that aggregates results from
-    individual condor inference jobs
+    Shared aggregation logic for Infer and InferRnP.
+    Not meant to be instantiated directly.
     """
 
     remove_tmpdir = luigi.BoolParameter(
@@ -124,31 +136,15 @@ class Infer(AframeSingularityTask):
         super().__init__(*args, **kwargs)
         self.foreground_output = self.output_dir / "foreground.hdf5"
         self.background_output = self.output_dir / "background.hdf5"
-        self.zero_lag_output = self.output_dir / "0lag.hdf5"
         self.timeseries_output = self.output_dir / "timeseries.hdf5"
 
     def output(self):
         output = {}
         output["foreground"] = law.LocalFileTarget(self.foreground_output)
         output["background"] = law.LocalFileTarget(self.background_output)
-        if self.zero_lag:
-            output["zero_lag"] = law.LocalFileTarget(self.zero_lag_output)
         if self.return_timeseries:
             output["timeseries"] = law.LocalFileTarget(self.timeseries_output)
         return output
-
-    def requires(self):
-        # deploy the condor inference jobs;
-        # reduce job status poll interval
-        # so that jobs can be submitted faster
-        return DeployInferLocal.req(
-            self,
-            request_memory=self.request_memory,
-            request_disk=self.request_disk,
-            request_cpus=self.request_cpus,
-            workflow=self.workflow,
-            poll_interval=0.2,
-        )
 
     @property
     def targets(self):
@@ -183,7 +179,7 @@ class Infer(AframeSingularityTask):
     def get_metadata(self):
         """
         Read in shift and length metadata from the metadata
-        files created by each `DeployInferLocal` condor job.
+        files created by each condor job.
         This data is read from the metadata files rather than
         the hdf5 files because the read operation is O(1000)
         times faster this way
@@ -192,7 +188,7 @@ class Infer(AframeSingularityTask):
         num_files = len(files)
         background_lengths = np.zeros(num_files)
         foreground_lengths = np.zeros(num_files)
-        shifts = np.zeros((num_files, len(self.shifts)))
+        shifts = np.zeros((num_files, len(self.ifos)))
         for i, f in enumerate(files):
             with open(f, "r") as f:
                 data = json.load(f)
@@ -229,6 +225,37 @@ class Infer(AframeSingularityTask):
             )
             index_array = np.array(index, dtype=dtype)
             f.create_dataset("index", data=index_array)
+
+
+@inherits(DeployInferHdf5Local)
+class Infer(_InferAggregateBase, AframeSingularityTask):
+    """
+    Law Task that aggregates results from
+    individual condor inference jobs
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.zero_lag_output = self.output_dir / "0lag.hdf5"
+
+    def output(self):
+        output = super().output()
+        if self.zero_lag:
+            output["zero_lag"] = law.LocalFileTarget(self.zero_lag_output)
+        return output
+
+    def requires(self):
+        # deploy the condor inference jobs;
+        # reduce job status poll interval
+        # so that jobs can be submitted faster
+        return DeployInferHdf5Local.req(
+            self,
+            request_memory=self.request_memory,
+            request_disk=self.request_disk,
+            request_cpus=self.request_cpus,
+            workflow=self.workflow,
+            poll_interval=0.2,
+        )
 
     def run(self):
         import shutil
@@ -280,6 +307,60 @@ class Infer(AframeSingularityTask):
             background = EventSet.read(self.background_output)
             background = background.sort_by("detection_statistic")
             background.write(self.background_output)
+
+        if self.remove_tmpdir:
+            shutil.rmtree(self.output_dir / "tmp")
+
+
+@inherits(DeployInferRnPLocal)
+class InferRnP(_InferAggregateBase, AframeSingularityTask):
+    """
+    Law Task that aggregates results from
+    individual condor inference jobs for RnP inputs.
+    """
+
+    def requires(self):
+        return DeployInferRnPLocal.req(
+            self,
+            request_memory=self.request_memory,
+            request_disk=self.request_disk,
+            request_cpus=self.request_cpus,
+            workflow=self.workflow,
+            poll_interval=0.2,
+        )
+
+    def run(self):
+        import shutil
+
+        from ledger.events import EventSet
+
+        background_lengths, foreground_lengths, _ = self.get_metadata()
+        background_length = sum(background_lengths)
+        foreground_length = sum(foreground_lengths)
+        foreground_mask = foreground_lengths > 0
+
+        logging.info("Aggregating background files")
+        EventSet.aggregate(
+            self.background_files,
+            self.background_output,
+            clean=False,
+            length=background_length,
+        )
+        logging.info("Aggregating foreground files")
+        EventSet.aggregate(
+            self.foreground_files[foreground_mask],
+            self.foreground_output,
+            clean=False,
+            length=foreground_length,
+        )
+
+        if self.return_timeseries:
+            logging.info("Aggregating timeseries files")
+            self.aggregate_timeseries()
+
+        background = EventSet.read(self.background_output)
+        background = background.sort_by("detection_statistic")
+        background.write(self.background_output)
 
         if self.remove_tmpdir:
             shutil.rmtree(self.output_dir / "tmp")
