@@ -48,7 +48,7 @@ def main(
         detected_events = [
             event
             for event in detected_event_dir.iterdir()
-            if float(event.name.split("_")[1])
+            if float(event.name.split("_")[1]) > summary_page.start_time
         ]
 
         # The event page will be created/updated only if the event directory

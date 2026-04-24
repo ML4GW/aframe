@@ -81,7 +81,12 @@ class GraceDb(_GraceDb):
             **kwargs,
             service_url=server.service_url,
             use_auth="scitoken",
+            api_version="v2",
         )
+
+        # The kafka producer will be set in the subprocess that uses it
+        self.kafka_producer = None
+
         self.server = server
         self.write_dir = write_dir
         if logger is None:
@@ -99,6 +104,8 @@ class GraceDb(_GraceDb):
             pipeline="aframe",
             filename=str(filename),
             search="AllSky",
+            kafka=self.kafka_producer,
+            http_fallback=True,
         )
 
         self.logger.debug("Event created")

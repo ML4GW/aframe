@@ -1,6 +1,7 @@
 import atexit
 import logging
 import signal
+from math import floor
 import traceback
 from collections.abc import Iterable
 from pathlib import Path
@@ -55,6 +56,7 @@ def load_model(model: Architecture, weights: Path):
     arch_weights = {
         k.removeprefix("model."): v
         for k, v in checkpoint["state_dict"].items()
+        if k.startswith("model.")
     }
     model.load_state_dict(arch_weights)
     model.eval()
@@ -64,8 +66,9 @@ def load_model(model: Architecture, weights: Path):
 def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
     model, checkpoint = load_model(model, weights)
     scaler_weights = {
-        k.removeprefix("scalar."): v
+        k.removeprefix("scaler."): v
         for k, v in checkpoint["state_dict"].items()
+        if k.startswith("scaler.")
     }
     scaler = ChannelWiseScaler(num_params)
     scaler.load_state_dict(scaler_weights)
@@ -242,15 +245,15 @@ def search(
             # but don't search for events
             if X is not None:
                 logging.debug(
-                    f"Frame {t0} is not analysis ready. Using dummy values "
-                    "for inference and ignoring any triggers"
+                    f"Frame {floor(t0)} is not analysis ready. Using dummy "
+                    "values for inference and ignoring any triggers"
                 )
                 pass
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
                 logging.warning(
-                    f"Missing frame files after timestep {t0}, "
+                    f"Missing frame files after timestep {floor(t0)}, "
                     "resetting states"
                 )
 
@@ -264,7 +267,7 @@ def search(
         elif not in_spec:
             # the frame is analysis ready, but previous frames
             # weren't, so reset our running states
-            logging.info(f"Frame {t0} is ready again, resetting states")
+            logging.info(f"Frame {floor(t0)} is ready again, resetting states")
             state = snapshotter.reset()
             input_buffer.reset()
             output_buffer.reset()
