@@ -7,6 +7,10 @@ from utils.preprocessing import (
     PsdEstimator,
     TimeSpectrogramPreprocessor,
 )
+from utils.augmentation import HeterodyneAugmentor
+from ml4gw.transforms import Heterodyne
+import torch
+import pytest
 
 
 class TestBackgroundSnapshotter:

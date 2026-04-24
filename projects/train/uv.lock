@@ -4237,7 +4237,7 @@ dependencies = [
 requires-dist = [
     { name = "astropy", specifier = ">=6.0.1" },
     { name = "h5py", specifier = "~=3.6" },
-    { name = "ml4gw", specifier = ">=0.7.10" },
+    { name = "ml4gw", specifier = ">=0.8.0" },
     { name = "numpy", specifier = ">=2" },
     { name = "s3fs", specifier = ">=2024,<2025" },
 ]

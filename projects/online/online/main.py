@@ -1,6 +1,7 @@
 import atexit
 import logging
 import signal
+from math import floor
 import traceback
 from collections.abc import Iterable
 from pathlib import Path
@@ -244,15 +245,15 @@ def search(
             # but don't search for events
             if X is not None:
                 logging.debug(
-                    f"Frame {t0} is not analysis ready. Using dummy values "
-                    "for inference and ignoring any triggers"
+                    f"Frame {floor(t0)} is not analysis ready. Using dummy "
+                    "values for inference and ignoring any triggers"
                 )
                 pass
             # or if it's because frames were dropped within the stream
             # in which case we should reset our states
             else:
                 logging.warning(
-                    f"Missing frame files after timestep {t0}, "
+                    f"Missing frame files after timestep {floor(t0)}, "
                     "resetting states"
                 )
 
