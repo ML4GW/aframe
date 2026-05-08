@@ -7,6 +7,8 @@ if you use `Aframe` software in your work.
 
 ## Aframe GW Event Candidates in O4 - GCN Circulars
 
+Aframe was deployed on the live LVK data analysis in the end of August 2025. The following events were detected.
+
 | Event ID | GCN Circular | Month |
 |----------|-------------|-------|
 | [S251117dq](https://gracedb.ligo.org/superevents/S251117dq/view/) | [42727](https://gcn.nasa.gov/circulars/42727) | Nov 2025 |
