@@ -5,11 +5,7 @@ See our [documentation](https://ml4gw-aframe.readthedocs.io/en/latest/index.html
 Please cite ["A machine-learning pipeline for real-time detection of gravitational waves from compact binary coalescences"](https://arxiv.org/abs/2403.18661) 
 if you use `Aframe` software in your work.
 
-## Aframe GW Event Candidates in O4
-
-Aframe was deployed live on the LVK O4 data. The following are the events detected by Aframe.
-
-## Aframe GW Event Candidates - GCN Circulars
+## Aframe GW Event Candidates in O4 - GCN Circulars
 
 | Event ID | GCN Circular | Month |
 |----------|-------------|-------|
