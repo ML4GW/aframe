@@ -1,1 +1,1 @@
-from .infer import Infer
+from .infer import Infer, InferRnP
