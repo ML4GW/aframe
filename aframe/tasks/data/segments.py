@@ -1,3 +1,5 @@
+import logging
+
 import luigi
 
 from aframe.parameters import PathParameter
@@ -36,11 +38,19 @@ class Query(AframeDataTask):
         from data.segments.segments import DataQualityDict
 
         flags = self.get_flags()
+        logging.info(
+            f"Querying active segments in interval ({self.start}, {self.end})"
+        )
         segments = DataQualityDict.query_segments(
             flags,
             self.start,
             self.end,
             self.min_duration,
+        )
+        logging.info(
+            "Discovered {} valid segments, writing to {}".format(
+                len(segments), self.output().path
+            )
         )
         with self.output().open("w") as f:
             segments.write(f, format="segwizard")
