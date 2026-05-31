@@ -29,9 +29,13 @@ class AframeCLI(LightningCLI):
             apply_on="parse",
         )
         parser.link_arguments(
-            "data.init_args.sample_rate",
+            (
+                "data.init_args.sample_rate",
+                "data.init_args.model_input_sample_rate",
+            ),
             "model.init_args.arch.init_args.sample_rate",
             apply_on="parse",
+            compute_fn=lambda sr, msr: msr if msr is not None else sr,
         )
 
         parser.link_arguments(

@@ -9,6 +9,7 @@ from typing import Callable, Optional, Union
 import h5py
 import lightning.pytorch as pl
 import torch
+import torchaudio
 from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
@@ -118,6 +119,10 @@ class BaseAframeDataset(pl.LightningDataModule):
             of the whitened timeseries.
         psd_length:
             Length in seconds of the PSD used for whitening.
+        model_input_sample_rate:
+            If set, resample the whitened time series to this rate (Hz)
+            before passing data to the model. Must be lower than
+            `sample_rate`. If ``None``, no resampling is performed.
         waveform_prob:
             Probability that a batch element will contain a waveform.
         left_pad:
@@ -177,6 +182,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         kernel_length: float,
         fduration: float,
         psd_length: float,
+        model_input_sample_rate: Optional[int] = None,
         # augmentation args
         waveform_prob: float = 1,
         left_pad: float = 0,
@@ -317,6 +323,11 @@ class BaseAframeDataset(pl.LightningDataModule):
             + self.hparams.fduration
             + self.hparams.psd_length
         )
+
+    @property
+    def model_sample_rate(self) -> int:
+        """Sample rate seen by the model (after optional resampling)."""
+        return self.hparams.model_input_sample_rate or self.hparams.sample_rate
 
     @property
     def filter_size(self) -> int:
@@ -480,6 +491,11 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.hparams.highpass,
             self.hparams.lowpass,
         )
+        if self.hparams.model_input_sample_rate is not None:
+            self.resampler = torchaudio.transforms.Resample(
+                orig_freq=int(self.hparams.sample_rate),
+                new_freq=int(self.hparams.model_input_sample_rate),
+            )
 
     def sample_extrinsic(self, X: torch.Tensor):
         """
