@@ -9,7 +9,6 @@ from typing import Callable, Optional, Union
 import h5py
 import lightning.pytorch as pl
 import torch
-import torchaudio
 from ml4gw.augmentations import SignalInverter, SignalReverser
 from ml4gw.dataloading import Hdf5TimeSeriesDataset
 from ml4gw.transforms import Whiten
@@ -491,11 +490,6 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.hparams.highpass,
             self.hparams.lowpass,
         )
-        if self.hparams.model_input_sample_rate is not None:
-            self.resampler = torchaudio.transforms.Resample(
-                orig_freq=int(self.hparams.sample_rate),
-                new_freq=int(self.hparams.model_input_sample_rate),
-            )
 
     def sample_extrinsic(self, X: torch.Tensor):
         """
