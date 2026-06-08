@@ -1,9 +1,9 @@
 import math
-import torch
-from torch import Tensor
 from typing import Literal
 
+import torch
 from ml4gw.transforms import Heterodyne
+from torch import Tensor
 
 
 class HeterodyneAugmentor(torch.nn.Module):
