@@ -1,9 +1,9 @@
 import atexit
 import logging
 import signal
-from math import floor
 import traceback
 from collections.abc import Iterable
+from math import floor
 from pathlib import Path
 from queue import Empty
 from typing import Literal
