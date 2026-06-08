@@ -1,9 +1,10 @@
 import math
-import torch
 from typing import Literal
 
-from train.data.supervised.supervised import SupervisedAframeDataset
+import torch
 from ml4gw.transforms import Heterodyne
+
+from train.data.supervised.supervised import SupervisedAframeDataset
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):

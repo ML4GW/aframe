@@ -1,5 +1,7 @@
 import pytest
 import torch
+from ml4gw.transforms import Heterodyne
+from utils.augmentation import HeterodyneAugmentor
 from utils.preprocessing import (
     BackgroundSnapshotter,
     BatchWhitener,
@@ -7,10 +9,6 @@ from utils.preprocessing import (
     PsdEstimator,
     TimeSpectrogramPreprocessor,
 )
-from utils.augmentation import HeterodyneAugmentor
-from ml4gw.transforms import Heterodyne
-import torch
-import pytest
 
 
 class TestBackgroundSnapshotter:

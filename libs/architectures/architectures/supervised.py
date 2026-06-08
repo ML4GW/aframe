@@ -302,8 +302,8 @@ class SupervisedHeterodyneTimeDomainResNet(SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
-        stride_type: Optional[list[Literal["stride", "dilation"]]] = None,
-        norm_layer: Optional[NormLayer] = None,
+        stride_type: list[Literal["stride", "dilation"]] | None = None,
+        norm_layer: NormLayer | None = None,
         **kwargs,
     ) -> None:
         super().__init__()
