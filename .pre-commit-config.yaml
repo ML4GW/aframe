@@ -16,7 +16,19 @@ repos:
   - id: end-of-file-fixer
   - id: check-yaml
     exclude: ^charts/raycluster/templates/
+- repo: https://github.com/snakemake/snakefmt
+  rev: v2.0.1
+  hooks:
+    - id: snakefmt
 - repo: https://github.com/gruntwork-io/pre-commit
   rev: v0.1.15
   hooks:
     - id: helmlint
+- repo: local
+  hooks:
+    - id: conda-lock
+      name: conda-lock
+      entry: python scripts/conda_relock.py
+      language: python
+      additional_dependencies: ["conda-lock>=4"]
+      files: (snakemake|data|online)\.(yaml|conda-lock\.yml)$

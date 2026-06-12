@@ -15,7 +15,7 @@ apt-get install -y --no-install-recommends build-essential openssh-client
 rm -rf /var/lib/apt/lists/*
 
 # activate micromamba and create environment from lockfile
-micromamba create -p /opt/env -f /opt/aframe/projects/@@PROJECT@@/conda-lock.yml
+micromamba create -p /opt/env -f /opt/aframe/projects/@@PROJECT@@/@@PROJECT@@.conda-lock.yml
 
 # install uv so we can install local deps of deps editably
 micromamba run -p /opt/env python -m \

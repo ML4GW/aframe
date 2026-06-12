@@ -1,0 +1,20 @@
+# Local development environment, not using containers.
+#
+# The local profile runs all rules as subprocesses in the active
+# environment, so the project CLIs and their dependencies must be
+# installed directly. The C libraries (framecpp, nds2) are not on
+# PyPI and must come from conda; uv installs the rest:
+#
+#     conda env create -f pipeline/envs/dev.yaml
+#     conda activate aframe-dev
+#     uv sync --all-packages
+name: aframe-dev
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.11,<3.13  # capped at <3.13 for lalsuite compatibility
+  - snakemake>=9.0
+  - python-ldas-tools-framecpp<3.0.0
+  - python-nds2-client
+  - uv

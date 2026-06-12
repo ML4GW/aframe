@@ -1,0 +1,13 @@
+# Snakemake local execution profile.
+#
+#     snakemake --profile pipeline/profiles/local
+#
+# Runs every rule as a subprocess locally. Should be use with 
+# the aframe-dev conda environment (pipeline/envs/dev.yaml) 
+# with the uv dependencies installed so that all project CLIs 
+# are available.
+#
+# Intended for dry-runs (-n) or single-rule testing (--until <rule>).
+
+cores: all
+rerun-incomplete: true

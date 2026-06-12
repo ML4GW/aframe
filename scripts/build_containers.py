@@ -59,11 +59,11 @@ def create_definition_file(project_name: str) -> Path:
     Create the apptainer definition file for a project from the appropriate
     template and write it to projects/<project>/apptainer.def.
 
-    Projects with a conda-lock.yml use the micromamba template; all others
-    use the uv template.
+    Projects with a <project>.conda-lock.yml use the micromamba template; all
+    others use the uv template.
     """
     project_dir = BASE_DIR / project_name
-    is_micromamba = (project_dir / "conda-lock.yml").exists()
+    is_micromamba = (project_dir / f"{project_name}.conda-lock.yml").exists()
     template_name = "micromamba.def" if is_micromamba else "uv.def"
     template_text = (TEMPLATES_DIR / template_name).read_text()
 
