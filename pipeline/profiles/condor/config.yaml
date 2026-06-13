@@ -29,7 +29,18 @@ rerun-incomplete: true
 keep-going: false
 
 software-deployment-method: apptainer
-apptainer-args: "--nv --bind $AFRAME_DATA_DIRS"
+
+# $AFRAME_DATA_DIRS binds the run/data/waveform dirs into the container.
+# Setting $AFRAME_DEV to any non-empty value binds the $PWD to /opt/aframe.
+# Because snakemake should be run from the repo's root directory, this
+# is the equivalent of the --dev flag for law.
+# $HOME is passed explicitly to prevent condor from rebinding it to the
+# working directory, which causes cache files to be written to te repo.
+apptainer-args: >-
+  "--nv"
+  "--bind $AFRAME_DATA_DIRS" 
+  "${AFRAME_DEV:+--bind $PWD:/opt/aframe}" 
+  "--env HOME=$HOME"
 
 default-resources:
   # Forward environment variables from the submit node.
@@ -46,3 +57,29 @@ default-resources:
   # Static defaults, can be overridden per rule.
   request_memory: 8GB
   request_disk: 1GB
+
+# Per-rule memory based on observed values
+set-resources:
+  generate_train_segments:
+    request_memory: 512MB
+  generate_test_segments:
+    request_memory: 512MB
+  fetch_train_background:
+    request_memory: 2GB
+  fetch_test_background:
+    request_memory: 2GB
+  testing_waveforms_branch:
+    request_memory: 5GB
+  validation_waveforms_branch:
+    request_memory: 2GB
+  aggregate_testing_waveforms:
+    request_memory: 1GB
+  aggregate_validation_waveforms:
+    request_memory: 1GB
+  training_waveforms:
+    request_memory: 64GB
+
+# `fetch` downloads with nproc=3, so give the fetch rules a few cores.
+set-threads:
+  fetch_train_background: 4
+  fetch_test_background: 4

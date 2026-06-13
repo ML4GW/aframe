@@ -26,7 +26,7 @@ def rejection_sample(
     waveform_approximant: str,
     right_pad: float,
     highpass: float,
-    lowpass: float,
+    lowpass: float | None,
     snr_threshold: float,
     psd: Path | torch.Tensor,
     max_num_samples: int,
