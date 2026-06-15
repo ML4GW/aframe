@@ -28,19 +28,22 @@ htcondor-held-timeout: 600
 rerun-incomplete: true
 keep-going: false
 
+# Cores available to localrules
+local-cores: 16
+
 software-deployment-method: apptainer
 
 # $AFRAME_DATA_DIRS binds the run/data/waveform dirs into the container.
 # Setting $AFRAME_DEV to any non-empty value binds the $PWD to /opt/aframe.
 # Because snakemake should be run from the repo's root directory, this
 # is the equivalent of the --dev flag for law.
-# $HOME is passed explicitly to prevent condor from rebinding it to the
-# working directory, which causes cache files to be written to te repo.
+# Snakemake invokes apptainer with `--home <workdir>`, which sets $HOME
+# to the repo root and creates caches there. A `--home $HOME` overrides it.
 apptainer-args: >-
-  "--nv"
-  "--bind $AFRAME_DATA_DIRS" 
-  "${AFRAME_DEV:+--bind $PWD:/opt/aframe}" 
-  "--env HOME=$HOME"
+  --nv
+  --bind $AFRAME_DATA_DIRS
+  ${AFRAME_DEV:+--bind $PWD:/opt/aframe}
+  --home $HOME
 
 default-resources:
   # Forward environment variables from the submit node.

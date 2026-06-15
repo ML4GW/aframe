@@ -171,7 +171,7 @@ def testing_waveforms(
     waveform_fname = output_dir / "waveforms.hdf5"
     utils.io_with_blocking(response_set.write, waveform_fname)
 
-    rejected_fname = output_dir / "rejected-parameters.hdf5"
+    rejected_fname = output_dir / "rejected_parameters.hdf5"
     utils.io_with_blocking(rejected_params.write, rejected_fname)
 
     # TODO: compute probability of all parameters against
