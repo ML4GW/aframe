@@ -16,10 +16,9 @@ This rule adds the preprocessing args shared with inference.
 """
 
 import os
-from pathlib import Path
 
-run_dir = Path(config["run_dir"])
 train_out = run_dir / "train"
+train_log_dir = log_dir / "train"
 
 TRAIN_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "train.sif")
 
@@ -79,6 +78,8 @@ if config.get("remote_train", False):
             train_waveforms=_train_waveform_inputs,
         output:
             touch(str(train_out / "remote_train.done")),
+        log:
+            str(train_log_dir / "train_remote.log"),
         localrule: True
         params:
             **train_data_params,
@@ -86,7 +87,7 @@ if config.get("remote_train", False):
             waveforms_dir=config["remote_waveforms_dir"],
             save_dir=config["remote_run_dir"],
         shell:
-            "train-remote --train_args fit" + train_cli_args
+            "train-remote --train_args fit" + train_cli_args + " &> {log}"
 
 else:
 
@@ -106,6 +107,8 @@ else:
         output:
             weights=str(train_out / "model.pt"),
             batch=str(train_out / "batch.hdf5"),
+        log:
+            str(train_log_dir / "train.log"),
         localrule: config.get("gpu_rules_local", True)
         container:
             TRAIN_CONTAINER
@@ -116,4 +119,4 @@ else:
             save_dir=str(train_out),
         shell:
             "AFRAME_TRAIN_WAVEFORMS_DIR={params.waveforms_dir}"
-            " python -m train fit" + train_cli_args
+            " python -m train fit" + train_cli_args + " &> {log}"

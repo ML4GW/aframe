@@ -28,6 +28,9 @@ config.setdefault("background_dir", str(Path(config["run_dir"]) / "data"))
 config.setdefault("waveforms_dir", str(Path(config["background_dir"]) / "waveforms"))
 config.setdefault("log_dir", str(Path(config["run_dir"]) / "logs"))
 
+run_dir = Path(config["run_dir"])
+log_dir = Path(config["log_dir"])
+
 
 include: "projects/data/data.smk"
 include: "projects/train/train.smk"

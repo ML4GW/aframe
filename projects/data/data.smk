@@ -37,7 +37,7 @@ train_bg = bg_dir / "train"
 test_bg = bg_dir / "test"
 train_waveforms = waveform_dir / "train"
 test_waveforms = waveform_dir / "test"
-log_dir = Path(config["log_dir"])
+data_log_dir = log_dir / "data"
 
 DATA_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "data.sif")
 
@@ -158,7 +158,7 @@ checkpoint generate_train_segments:
     output:
         str(train_bg / "segments.txt"),
     log:
-        str(log_dir / "generate_train_segments.log"),
+        str(data_log_dir / "generate_train_segments.log"),
     container:
         DATA_CONTAINER
     params:
@@ -181,7 +181,7 @@ checkpoint generate_test_segments:
     output:
         str(test_bg / "segments.txt"),
     log:
-        str(log_dir / "generate_test_segments.log"),
+        str(data_log_dir / "generate_test_segments.log"),
     container:
         DATA_CONTAINER
     params:
@@ -206,7 +206,7 @@ rule fetch_train_background:
     output:
         str(train_bg / "background" / "background-{start}-{duration}.hdf5"),
     log:
-        str(log_dir / "fetch_train_background-{start}-{duration}.log"),
+        str(data_log_dir / "fetch_train_background-{start}-{duration}.log"),
     container:
         DATA_CONTAINER
     params:
@@ -232,7 +232,7 @@ rule fetch_test_background:
     output:
         str(test_bg / "background" / "background-{start}-{duration}.hdf5"),
     log:
-        str(log_dir / "fetch_test_background-{start}-{duration}.log"),
+        str(data_log_dir / "fetch_test_background-{start}-{duration}.log"),
     container:
         DATA_CONTAINER
     params:
@@ -339,7 +339,7 @@ the rejected parameters for this branch.
             test_waveforms / "tmp" / "{wbranch_id}" / "rejected_parameters.hdf5"
         ),
     log:
-        str(log_dir / "testing_waveforms_branch-{wbranch_id}.log"),
+        str(data_log_dir / "testing_waveforms_branch-{wbranch_id}.log"),
     container:
         DATA_CONTAINER
     params:
@@ -393,7 +393,7 @@ rule aggregate_testing_waveforms:
         waveforms=str(test_waveforms / "waveforms.hdf5"),
         rejected=str(test_waveforms / "rejected_parameters.hdf5"),
     log:
-        str(log_dir / "aggregate_testing_waveforms.log"),
+        str(data_log_dir / "aggregate_testing_waveforms.log"),
     container:
         DATA_CONTAINER
     params:
@@ -415,7 +415,7 @@ chunk, matching the law DeployValidationWaveforms task.
     output:
         str(train_waveforms / "tmp" / "waveforms-{vbranch_id}.hdf5"),
     log:
-        str(log_dir / "val_waveforms_branch-{vbranch_id}.log"),
+        str(data_log_dir / "val_waveforms_branch-{vbranch_id}.log"),
     container:
         DATA_CONTAINER
     params:
@@ -462,7 +462,7 @@ rule aggregate_val_waveforms:
     output:
         str(train_waveforms / "val_waveforms.hdf5"),
     log:
-        str(log_dir / "aggregate_val_waveforms.log"),
+        str(data_log_dir / "aggregate_val_waveforms.log"),
     container:
         DATA_CONTAINER
     params:
@@ -479,7 +479,7 @@ if config.get("pregenerate_training_waveforms", False):
         output:
             str(train_waveforms / "training_waveforms.hdf5"),
         log:
-            str(log_dir / "training_waveforms.log"),
+            str(data_log_dir / "training_waveforms.log"),
         container:
             DATA_CONTAINER
         params:

@@ -14,7 +14,7 @@ dependencies = [
     "utils",
     "jsonargparse>=4.27.1,<5",
     "nvidia-cudnn-cu12",
-    "tensorrt>=10.0",
+    "tensorrt==10.16.1.11",
     "urllib3>=2",
 ]
 
