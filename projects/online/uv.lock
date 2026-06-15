@@ -441,6 +441,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/c5/ad5ca082b2610defc488679690df8137300c6bb396b24f783e3d74873fa4/bilby.cython-0.5.3-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:264ccd8ca1adabc794931ed6deb5082ad0ed4b52694be8158cb421a80a752bca", size = 351851, upload-time = "2024-08-23T15:22:07.895Z" },
     { url = "https://files.pythonhosted.org/packages/13/26/f0b46d56d278665b484ec421dc571fb28bdd81635137d00e0edc2c8fddc9/bilby.cython-0.5.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:44e5e381c2861e26a4e1fd5c591ea0c3c9a0e2f0d8c78f28f8704abf2945cd8d", size = 1014120, upload-time = "2024-08-23T15:22:09.942Z" },
     { url = "https://files.pythonhosted.org/packages/11/de/02429d598ec5ed4c70113a2c3e8b76a5b113885f85eacdcdaf19cbb6d23d/bilby.cython-0.5.3-cp312-cp312-win_amd64.whl", hash = "sha256:2758256339d7c3703014b265d3a77e0299d5c6264f962bc311c989ac453cbd60", size = 357801, upload-time = "2024-08-23T15:54:20.941Z" },
+    { url = "https://files.pythonhosted.org/packages/73/b9/e8a78c082d8708ea4cc9c65b53dfed9d1d6bc9b3a44d712811b9e55022ee/bilby_cython-0.5.3-cp311-cp311-win_amd64.whl", hash = "sha256:d39ad43c8962a32b7c561ee07f0f9fb9e656a7847b30176695007b31426d2474", size = 363731, upload-time = "2026-02-23T16:52:49.722Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/a2/6a8e2a8a0721b758745e2a35f91c5ff380cf0f795408bc74b9aa8c589f0a/bilby_cython-0.5.3-cp312-cp312-win_amd64.whl", hash = "sha256:9aabbcce359c63c78cf1c1bf4d714c438a2936ddd4e061fe90b3320415dd12f6", size = 361366, upload-time = "2026-02-23T16:52:50.964Z" },
 ]
 
 [[package]]
@@ -640,6 +642,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/a8/fb783cb0abe2b5fded9f55e5703015cdf1c9c85b3669087c538dd15a6a86/comm-0.2.2.tar.gz", hash = "sha256:3fd7a84065306e07bea1773df6eb8282de51ba82f77c72f9c85716ab11fe980e", size = 6210, upload-time = "2024-03-12T16:53:41.133Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/75/49e5bfe642f71f272236b5b2d2691cf915a7283cc0ceda56357b61daa538/comm-0.2.2-py3-none-any.whl", hash = "sha256:e6fb86cb70ff661ee8c9c14e7d36d6de3b4066f1441be4063df9c5009f0a64d3", size = 7180, upload-time = "2024-03-12T16:53:39.226Z" },
+]
+
+[[package]]
+name = "confluent-kafka"
+version = "2.14.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/e5/58ac277094b03a51d9725798d0e53a60c1be69dc4330ae9cedc2d9efa430/confluent_kafka-2.14.2.tar.gz", hash = "sha256:fc827265571a778b1ff560ab2f3ec5dce3c573c29eb4cf6ded9718d55a5e4262", size = 289180, upload-time = "2026-06-03T09:53:37.63Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/00/b2ceee24d353fd06186be2f6cdd9835926eca5266de3358530c5d11c4af4/confluent_kafka-2.14.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:b3470171eb52dc149e3abf7cbcc485f388c0dbd1dd7516e5fd18a35baa39271f", size = 4181908, upload-time = "2026-06-03T09:50:38.285Z" },
+    { url = "https://files.pythonhosted.org/packages/98/78/daf09df7bd45c82c300ab7df0eb4a49bee7609e0b71254e4b9e44f068fb0/confluent_kafka-2.14.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:3bcd5dc82ee4b921e1a54e6b9130a0d43de99dd3021ddf3a2557fbf505df8d62", size = 4178406, upload-time = "2026-06-03T09:50:42.843Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/a2/c3c94d893133ad31a2cb8a0444ba5dfe77d066a9d66687775c33068684c9/confluent_kafka-2.14.2-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:c6abedb91fd8fcd0dcea8491f71efd37d136c12c4afa2216fd8d85585f53c4ea", size = 4798777, upload-time = "2026-06-03T09:50:48.276Z" },
+    { url = "https://files.pythonhosted.org/packages/37/86/6e7f2ccb44a069a0789fea9e0ec2d440146dcbe6128be60efda72cfe5de2/confluent_kafka-2.14.2-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:6e4abff7d6c1a27787ece44f3e56bcda9b0fa0a141c9b651a6cd13fbc7f943f9", size = 4594242, upload-time = "2026-06-03T09:50:55.355Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/90/46032c39848155de5f82eb00fde8de290b2808c160eea1caead2cdcb6b62/confluent_kafka-2.14.2-cp311-cp311-win_amd64.whl", hash = "sha256:01399706d1fe314b85b62f86d045fc8696f482bf625064aa7c0ccb7149e629b2", size = 4391698, upload-time = "2026-06-03T09:51:05.432Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/52/274192cfcca6d0b8b8093255f02e61f112dc425024dbb723438272d5f16b/confluent_kafka-2.14.2-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:35755d6adb2d6ed5b3f517fa8d2cec0e8cb5b668e652cc7a691fe317b727bcb9", size = 4187586, upload-time = "2026-06-03T09:51:09.653Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/85/942ab3188cb252cc0ea43bb8c6b4bce036f8b6168b2d9857e158ec136a09/confluent_kafka-2.14.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:facc957bf97e69e467b1935d96eddced0abb7e7bcd2af025847d42c990116523", size = 4183057, upload-time = "2026-06-03T09:51:14.252Z" },
+    { url = "https://files.pythonhosted.org/packages/64/9a/ed6be7e0874463aa40660903f8b191eb94ea0d21a11d0f07f953bf12319a/confluent_kafka-2.14.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:6ea5321c7f3861be9245239514ddcfc8dc21e8046f819a53b0f98c4e79b006d6", size = 4803705, upload-time = "2026-06-03T09:51:21.775Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/58/5c5b84f6f9e6c1d8b50dfa1d8231d77ba1c626d2f4233549a4b81f826620/confluent_kafka-2.14.2-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:7db5f58948eeb7b85b8c5ab440fddbd5a7465fee48185e5ae37bb2c190eb715d", size = 4598707, upload-time = "2026-06-03T09:51:28.351Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/fb/65118d1557599e9e4cbc8bb1ed0f0b9832d2dcbae281ecc285caeb2a7305/confluent_kafka-2.14.2-cp312-cp312-win_amd64.whl", hash = "sha256:b19e4939e1cefe4ed93985e64b121ba492632ad36a23a43f5299402522b24385", size = 4392203, upload-time = "2026-06-03T09:51:34.068Z" },
 ]
 
 [[package]]
@@ -1970,16 +1990,22 @@ wheels = [
 
 [[package]]
 name = "ligo-gracedb"
-version = "2.14.2"
+version = "2.15.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "igwn-auth-utils" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/63/d42ee081193d7bbd0f449d3eb46566669207d35117e68d74518cf5e41c27/ligo_gracedb-2.14.2.tar.gz", hash = "sha256:cd93fd50c7a999f88ef969826e678bdf99e242090b6d439d230e5f4f8043f39b", size = 2396894, upload-time = "2025-04-11T15:44:18.597Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/9e/f42a01226fcf9403456b6e994b61c9c07f3944d592e7af042b5f0dc83135/ligo_gracedb-2.15.7.tar.gz", hash = "sha256:440435665a4797f6c9942abfd6dca5adab94416f8e9af25f6e97a11d7c554d37", size = 2445398, upload-time = "2026-04-02T13:15:12.85Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/ad/e00cc582adb7d0f41363e94a894624a357bfeded7aa143ed9c1820ef1d2e/ligo_gracedb-2.14.2-py3-none-any.whl", hash = "sha256:6463af190ac27c136df0a074c4ea1261b407fc568a2a71a4fa04686797e725f5", size = 2454508, upload-time = "2025-04-11T15:44:17.177Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/ba/a90388f76e6a678b62ef5a5f58a8e6bdae6bf08bb487ddbf5a13a6a82ab1/ligo_gracedb-2.15.7-py3-none-any.whl", hash = "sha256:b7e7f0770766954def4c1eb42aa5d8ad7a445e54f71ecbc6b2201f952af8cc33", size = 2517794, upload-time = "2026-04-02T13:15:09.793Z" },
+]
+
+[package.optional-dependencies]
+kafka = [
+    { name = "certifi" },
+    { name = "confluent-kafka" },
 ]
 
 [[package]]
@@ -2152,7 +2178,7 @@ wheels = [
 
 [[package]]
 name = "ml4gw"
-version = "0.7.8"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jaxtyping" },
@@ -2161,9 +2187,9 @@ dependencies = [
     { name = "torch" },
     { name = "torchaudio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/cf/76629bfe5b515c354cb6c45968a9780e86fa731a691856a29670a416f706/ml4gw-0.7.8.tar.gz", hash = "sha256:1aa3cd1e0137613817465269d32a3183d33f0e0d89f301394215dea0bc089586", size = 118257, upload-time = "2025-10-03T13:48:14.953Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/56/abb490d353f989802f918ee92cf6c9a37336483aa20c7f17df7730d81744/ml4gw-0.8.0.tar.gz", hash = "sha256:43a2411ae348f8f911fdc0e2defd4fa54370414fa8b51c63518de3cb805754ba", size = 121709, upload-time = "2026-04-17T13:15:20.347Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/10/a7e1e074dc08eaf0ff39a085316f14d8754e7b9cef77a922eaabe9348068/ml4gw-0.7.8-py3-none-any.whl", hash = "sha256:9871464276f460cadbdaba8d7e74c9671b333b705661e1386e72e7413d128fb7", size = 128386, upload-time = "2025-10-03T13:48:13.718Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/22/64102f10ad7f9043083d8bafcf84b8f2e8abc84bfc214fd04dd8d243ece9/ml4gw-0.8.0-py3-none-any.whl", hash = "sha256:0b4377541d5a90dcf9c728efa4008b4d57b942452acf564856ac58f599273070", size = 132926, upload-time = "2026-04-17T13:15:18.751Z" },
 ]
 
 [[package]]
@@ -2620,7 +2646,7 @@ dependencies = [
     { name = "architectures" },
     { name = "arrakis" },
     { name = "ledger" },
-    { name = "ligo-gracedb" },
+    { name = "ligo-gracedb", extra = ["kafka"] },
     { name = "ligo-skymap" },
     { name = "matplotlib" },
     { name = "ml4gw" },
@@ -2644,10 +2670,10 @@ requires-dist = [
     { name = "architectures", editable = "../../libs/architectures" },
     { name = "arrakis", specifier = ">=0.2.0,<0.3" },
     { name = "ledger", editable = "../../libs/ledger" },
-    { name = "ligo-gracedb", specifier = ">=2.14.1" },
+    { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.15.4" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
     { name = "matplotlib", specifier = "==3.9.4" },
-    { name = "ml4gw", specifier = "==0.7.8" },
+    { name = "ml4gw", specifier = ">=0.8.0" },
     { name = "numpy", specifier = "<2.0.0" },
     { name = "omegaconf", specifier = ">=2.3.0,<3" },
     { name = "p-astro", editable = "../../libs/p_astro" },
@@ -4243,7 +4269,7 @@ dependencies = [
 requires-dist = [
     { name = "astropy", specifier = ">=6.0.1" },
     { name = "h5py", specifier = "~=3.6" },
-    { name = "ml4gw", specifier = ">=0.7.2" },
+    { name = "ml4gw", specifier = ">=0.8.0" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "s3fs", specifier = ">=2024,<2025" },
 ]
