@@ -7,3 +7,5 @@ projects/*/apptainer.def
 **/id_rsa
 **/*.hdf5
 **/*.ipynb
+.snakemake/
+pipeline/.env

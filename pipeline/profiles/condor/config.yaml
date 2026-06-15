@@ -1,0 +1,48 @@
+# Snakemake HTCondor execution profile.
+#
+#     snakemake --profile pipeline/profiles/condor
+#
+# Requirements on the submit node:
+#   - The aframe-smk conda environment (pipeline/envs/snakemake.yaml),
+#     which provides snakemake and snakemake-executor-plugin-htcondor.
+#   - A valid LIGO SciToken (htgettoken -a vault.ligo.org)
+#   - LIGO_GROUP and LIGO_USERNAME set for accounting
+#   - AFRAME_CONTAINER_ROOT pointing at the built .sif images
+#   - AFRAME_DATA_DIRS: comma-separated directories to bind into
+#     containers (run_dir, background_dir, waveforms_dir parents)
+#
+
+executor: htcondor
+
+# Maximum number of simultaneously submitted jobs. (placeholder)
+jobs: 500
+
+# Wait for output files to appear on the shared filesystem after a job
+# completes (placeholder)
+latency-wait: 60
+
+# Resubmit failed jobs and time out held jobs. (placeholders)
+retries: 2
+htcondor-held-timeout: 600
+
+rerun-incomplete: true
+keep-going: false
+
+software-deployment-method: apptainer
+apptainer-args: "--nv --bind $AFRAME_DATA_DIRS"
+
+default-resources:
+  # Forward environment variables from the submit node.
+  getenv: LIGO_*, AWS_*, AFRAME_*, WANDB_*, PATH, HOME, USER, BEARER_TOKEN_FILE, KRB5*
+
+  # Pass through authentication and account info as raw job ad attributes
+  # using the classad_ prefix. The plugin supports passing attributes
+  # via the htcondor_submit_ prefix, but it wraps string values in
+  # double-quotes which breaks submit commands.
+  classad_OAuthServicesNeeded: scitokens
+  classad_AcctGroup: $ENV(LIGO_GROUP)
+  classad_AcctGroupUser: $ENV(LIGO_USERNAME)
+
+  # Static defaults, can be overridden per rule.
+  request_memory: 8GB
+  request_disk: 1GB

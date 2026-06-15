@@ -12,12 +12,12 @@ apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 ```
 to build the `data` container. 
 
-The container will first build an environment using the [`conda-lock.yml`](./conda-lock.yml), and then install local dependencies defined in the [`pyproject.toml`](./pyproject.toml).
+The container will first build an environment using the [`data.conda-lock.yml`](./data.conda-lock.yml), and then install local dependencies defined in the [`pyproject.toml`](./pyproject.toml).
 
-If the dependencies in the [`environment.yaml`](./environment.yaml) require modifications, the `conda-lock.yml` will need to be updated
+If the dependencies in the [`data.yaml`](./data.yaml) require modifications, the `data.conda-lock.yml` will need to be updated
 
 ```bash
-conda-lock -f environment.yaml -p linux-64
+conda-lock -f data.yaml -p linux-64
 ```
 
 and the container image will need to be rebuilt.

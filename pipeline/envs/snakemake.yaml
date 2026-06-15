@@ -1,0 +1,29 @@
+# Snakemake orchestrator environment.
+#
+# This is the only environment required on the submit node when running
+# the condor profile: all other dependencies are installed in containers.
+#
+# Users should install this environment via the conda-lock file in this
+# directpry (snakemake.conda-lock.yml). This requires conda-lock to be 
+# available in a base environment first, e.g.:
+#
+#     conda install -c conda-forge conda-lock   # or: pip install conda-lock
+#
+# then:
+#
+#     conda-lock install --name aframe-smk pipeline/envs/snakemake.conda-lock.yml
+#     conda activate aframe-smk
+#
+# If this file needs to be changed, the lock file should be
+# regenerated:
+#
+#     conda-lock lock --file pipeline/envs/snakemake.yaml \
+#       --platform linux-64 --lockfile pipeline/envs/snakemake.conda-lock.yml
+name: aframe-smk
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.11
+  - snakemake>=9.0
+  - snakemake-executor-plugin-htcondor
