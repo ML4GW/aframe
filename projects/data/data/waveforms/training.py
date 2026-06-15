@@ -6,7 +6,7 @@ from ledger.injections import BilbyParameterSet, WaveformPolarizationSet
 
 def training_waveforms(
     num_signals: int,
-    sample_rate: int,
+    sample_rate: float,
     waveform_duration: float,
     prior: Callable,
     minimum_frequency: float,

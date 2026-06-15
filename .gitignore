@@ -7,5 +7,12 @@ projects/*/apptainer.def
 **/id_rsa
 **/*.hdf5
 **/*.ipynb
+
+# pipeline/experiment artifacts
 .snakemake/
 pipeline/.env
+*.yaml
+
+# astropy/matplotlib caches that can land in the repo from container jobs
+.astropy/
+.cache/

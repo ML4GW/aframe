@@ -5,6 +5,12 @@ Stage: build
 %files
 @@FILES_BLOCK@@
 
+%environment
+# Put the conda env on PATH. The snakemake apptainer integration
+# uses `apptainer exec`, which ignores %runscript; prepending
+# to PATH here makes the project commands findable.
+export PATH=/opt/env/bin:$PATH
+
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 

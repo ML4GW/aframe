@@ -7,20 +7,20 @@
 # =============================================================================
 
 # --- Output directories ------------------------------------------------------
-# Experiment-specific outputs (train/, export/, infer/, plots/) are
-# written here.
+# REQUIRED: experiment-specific outputs (train/, export/, infer/, plots/) are
+# written here. There is no default, so set this in your run config.
 run_dir: /path/to/run
 
 # Background strain data directory, containing train/ and test/
 # subdirectories of fetched HDF5 files. Defaults to {run_dir}/data if
 # omitted. Can be shared across experiments that cover the same GPS range,
 # channels, and sample rate to avoid re-downloading data.
-background_dir: /path/to/shared/background
+# background_dir: /path/to/shared/background
 
 # Waveform data directory for training, validation, and testing waveforms.
 # Defaults to {background_dir}/waveforms if omitted. Can be shared across
 # experiments with identical waveform parameters.
-waveforms_dir: /path/to/shared/waveforms
+# waveforms_dir: /path/to/shared/waveforms
 
 # --- Interferometers ---------------------------------------------------------
 ifos:
@@ -80,6 +80,9 @@ highpass: 32.0          # Hz
 lowpass: null           # Hz; null to skip lowpass filtering
 snr_threshold: 4.0      # minimum network SNR for rejection sampling
 max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
+
+# Number of condor jobs that validation waveforms are split across
+num_validation_jobs: 200
 
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`

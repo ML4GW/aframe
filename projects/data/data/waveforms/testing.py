@@ -23,7 +23,7 @@ def testing_waveforms(
     waveform_approximant: str,
     right_pad: float,
     highpass: float,
-    lowpass: float,
+    lowpass: float | None,
     snr_threshold: float,
     psd_file: Path,
     max_num_samples: int,
@@ -120,7 +120,7 @@ def testing_waveforms(
     # the number of samples we'll need to generate
     injection_times = utils.calc_segment_injection_times(
         start,
-        end - max(shifts),  # TODO: should account for uneven last batch too
+        end,
         spacing,
         buffer,
         waveform_duration,
