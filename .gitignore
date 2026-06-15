@@ -13,6 +13,7 @@ projects/*/apptainer.def
 pipeline/.env
 *.yaml
 
-# astropy/matplotlib caches that can land in the repo from container jobs
+# astropy/matplotlib/CUDA caches that can land in the repo from container jobs
 .astropy/
 .cache/
+.nv/

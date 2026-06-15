@@ -1505,8 +1505,8 @@ wheels = [
 
 [[package]]
 name = "ml4gw-hermes"
-version = "0.2.2.post25+git.30408bdd.dirty"
-source = { git = "https://github.com/ML4GW/hermes?branch=dev#30408bdde795e2d8e5c46f0cf908bf17815db8cc" }
+version = "0.2.2.post27+git.75ae0381.dirty"
+source = { git = "https://github.com/ML4GW/hermes?branch=dev#75ae0381e4ff28e4586a204b46633a64184946d8" }
 dependencies = [
     { name = "numpy" },
     { name = "protobuf" },

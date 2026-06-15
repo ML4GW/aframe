@@ -30,19 +30,12 @@ config.setdefault("log_dir", str(Path(config["run_dir"]) / "logs"))
 
 
 include: "projects/data/data.smk"
-
-
-# Final data products. The training_waveforms rule is only defined when
-# pregenerate_training_waveforms is True, so request it only in that case.
-targets = [
-    *rules.aggregate_val_waveforms.output,
-    *rules.aggregate_testing_waveforms.output,
-]
-if config.get("pregenerate_training_waveforms", False):
-    targets += rules.training_waveforms.output
+include: "projects/train/train.smk"
+include: "projects/export/export.smk"
 
 
 rule all:
     default_target: True
     input:
-        targets,
+        rules.aggregate_testing_waveforms.output,
+        rules.export.output,

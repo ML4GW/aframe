@@ -84,9 +84,24 @@ max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
 # Number of condor jobs that validation waveforms are split across
 num_validation_jobs: 200
 
+# --- Execution -----------------------------------------------------------------
+# Run the GPU rules on the node where snakemake is
+# invoked instead of submitting them to the cluster.
+# Flip to false once GPU-capable pool resources (e.g. OSG)vare available.
+gpu_rules_local: true
+
 # --- Training ----------------------------------------------------------------
-# Lightning CLI YAML config for `train fit`
-train_config: projects/train/configs/bbh.yaml
+# Lightning CLI YAML config for `train fit`.
+train_config: projects/train/train.yaml
+
+# Submit training to Nautilus via train-remote instead of
+# running it locally. Requires the data to be mirrored to
+# S3 and AWS_* credentials plus WANDB_API_KEY in the environment.
+# Not functional yet.
+remote_train: false
+# remote_run_dir: s3://aframe/runs/my-run
+# remote_background_dir: s3://aframe/data/train
+# remote_waveforms_dir: s3://aframe/data/waveforms/train
 
 # --- Export ------------------------------------------------------------------
 # Export CLI YAML config
@@ -95,7 +110,9 @@ export_config: projects/export/export.yaml
 # --- Inference ---------------------------------------------------------------
 # These must match the values used at export time in export_config.
 psd_length: 64.0                 # seconds of PSD data
+kernel_length: 1.5               # model input window (seconds). Match to export config.
 fduration: 1.0                   # whitening filter duration (seconds)
+fftlength: null                  # FFT length for whitening PSD (seconds)
 inference_sampling_rate: 4.0     # Hz
 inference_batch_size: 128        # inference windows per request
 integration_window_length: 1.5   # seconds
