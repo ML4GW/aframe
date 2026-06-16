@@ -324,7 +324,7 @@ def main(
                 sv[p][f"{m1}-{m2}"][i] = vt / T_obs
                 err[p][f"{m1}-{m2}"][i] = sigma_vt / T_obs
 
-    outfile = output_dir / "gwtc-3_pipeline_sv.h5"
+    outfile = output_dir / "gwtc-3_pipeline_sv.hdf5"
     with h5py.File(outfile, "w") as f:
         f.create_dataset(f"{detection_criterion}", data=detection_thresholds)
         for p in pipelines:

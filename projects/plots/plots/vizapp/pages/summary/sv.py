@@ -133,7 +133,7 @@ class SensitiveVolumePlot:
 
     def save(self, output_dir: Path):
         # save raw data to h5
-        with h5py.File(output_dir / "sensitive_volume.h5", "w") as f:
+        with h5py.File(output_dir / "sensitive_volume.hdf5", "w") as f:
             f.create_dataset("thresholds", data=self.thresholds)
             f.create_dataset("fars", data=self.fars)
             for i, combo in enumerate(self.mass_combos):
