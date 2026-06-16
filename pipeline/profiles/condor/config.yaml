@@ -81,11 +81,11 @@ set-resources:
     request_memory: 2GB
   testing_waveforms_branch:
     request_memory: 5GB
-  validation_waveforms_branch:
+  val_waveforms_branch:
     request_memory: 2GB
   aggregate_testing_waveforms:
     request_memory: 1GB
-  aggregate_validation_waveforms:
+  aggregate_val_waveforms:
     request_memory: 1GB
   training_waveforms:
     request_memory: 64GB
