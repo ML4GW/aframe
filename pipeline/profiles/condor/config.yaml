@@ -81,6 +81,10 @@ set-resources:
     request_memory: 1GB
   training_waveforms:
     request_memory: 64GB
+  infer_branch:
+    request_memory: 6GB
+  aggregate_infer:
+    request_memory: 32GB
 
 # `fetch` downloads with nproc=3, so give the fetch rules a few cores.
 set-threads:

@@ -35,10 +35,11 @@ log_dir = Path(config["log_dir"])
 include: "projects/data/data.smk"
 include: "projects/train/train.smk"
 include: "projects/export/export.smk"
+include: "projects/infer/infer.smk"
 
 
 rule all:
     default_target: True
     input:
-        rules.aggregate_testing_waveforms.output,
         rules.export.output,
+        rules.stop_triton.output,

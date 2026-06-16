@@ -7,9 +7,8 @@ authors = [
     { name = "Ethan Marx" },
     { name = "Will Benoit" },
 ]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.13" # Capped for lalsuite
 dependencies = [
-    "ratelimiter~=1.2",
     "jsonargparse~=4.24",
     "tqdm~=4.66",
     "psutil>=5.9",

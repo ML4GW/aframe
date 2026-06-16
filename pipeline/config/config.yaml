@@ -123,10 +123,19 @@ zero_lag: false                  # also analyze unshifted (zero-lag) data
 # Triton server settings
 model_name: aframe-stream
 model_version: -1
-triton_image: hermes/tritonserver:23.01
+triton_image: /home/william.benoit/images/aframe/tritonserver_26.05.sif
 gpus: "0"  # comma-separated GPU IDs for the Triton server
 
-# Average inference-request rate per GPU (Hz), null to disable.
+# Server self-stops if it receives no inference for this many seconds, so an
+# interrupted/crashed run doesn't leave Triton lingering on the GPU. Must
+# exceed the longest expected gap between requests (e.g. condor scheduling
+# between inference branches). Set to 0 to disable.
+triton_idle_timeout: 1200
+
+# Average inference-request rate per GPU (Hz); null to disable throttling.
+# The per-branch rate is 2 * rate_per_gpu / streams_per_gpu, with
+# streams_per_gpu set in the export config, so the aggregate server load
+# is held at rate_per_gpu * num_gpus.
 rate_per_gpu: 70.0
 
 # --- Plots -------------------------------------------------------------------
