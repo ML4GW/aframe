@@ -18,8 +18,9 @@ run_dir: /path/to/run
 # background_dir: /path/to/shared/background
 
 # Waveform data directory for training, validation, and testing waveforms.
-# Defaults to {background_dir}/waveforms if omitted. Can be shared across
-# experiments with identical waveform parameters.
+# Defaults to {run_dir}/waveforms if omitted. Kept separate from
+# background_dir so background and waveforms can point at different storage. 
+# Can be shared across experiments with identical waveform parameters.
 # waveforms_dir: /path/to/shared/waveforms
 
 # --- Interferometers ---------------------------------------------------------
