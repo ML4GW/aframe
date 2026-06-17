@@ -1,0 +1,37 @@
+name: snakemake dry-run
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:
+      - "Snakefile"
+      - "**/*.smk"
+      - "pipeline/**"
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install snakemake
+        run: pip install "snakemake>=9.0"
+
+      - name: validate the pipeline DAG
+        run: |
+          snakemake -n --cores 2 \
+            --configfile pipeline/config/config.yaml \
+            --config run_dir=/tmp/aframe-ci-run
