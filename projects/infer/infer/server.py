@@ -73,6 +73,10 @@ def triton_server(
 def _activity_since(monitor_csv: Path, pos: int) -> tuple[int, bool]:
     """Read ServerMonitor stats rows appended since byte offset ``pos``.
 
+    The CSV has columns (timestamp, ip, model, count, queue, compute_input,
+    compute_infer, compute_output, request). This function uses ``count``,
+    the number of inferences since the previous query, to check for activity.
+
     Returns the new offset and whether any of those rows recorded inferences.
     """
     if not monitor_csv.exists():
