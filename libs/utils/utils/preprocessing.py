@@ -173,7 +173,8 @@ class BatchWhitener(torch.nn.Module):
             Determines the overlap between kernels.
         batch_size (int): Number of kernels to extract from input.
         fduration (float): Duration of the whitening filter in seconds
-        fftlength (float): FFT length for PSD calculation in seconds.
+        fftlength (float, optional): FFT length for PSD calculation in
+            seconds. If None, defaults to kernel_length + fduration.
         augmentor (Callable, optional): Function to apply augmentation.
             Called with shape (batch, channels, kernel_size). Defaults to None.
         highpass (float, optional): Highpass frequency in Hz. Applied during
@@ -200,13 +201,15 @@ class BatchWhitener(torch.nn.Module):
         inference_sampling_rate: float,
         batch_size: int,
         fduration: float,
-        fftlength: float,
+        fftlength: float | None = None,
         augmentor: Callable[[Tensor], Tensor] | None = None,
         highpass: float | None = None,
         lowpass: float | None = None,
         return_whitened: bool = False,
     ) -> None:
         super().__init__()
+        # Mirror the training data module's null-fftlength fallback
+        fftlength = fftlength or (kernel_length + fduration)
         # Calculate stride between kernels based on inference sampling rate
         self.stride_size = int(sample_rate / inference_sampling_rate)
         # Convert kernel length to samples

@@ -2,9 +2,6 @@
 
 Rules:
   export: compile the trained model into an accelerated format
-
-The export_config YAML specifies all static export parameters.
-Weights, batch_file, and repository_directory are determined here.
 """
 
 import os
@@ -39,7 +36,17 @@ snakemake is invoked.
     container:
         EXPORT_CONTAINER
     params:
-        export_config=config["export_config"],
+        preprocessor=config["export_preprocessor"],
+        num_ifos=len(config["ifos"]),
+        kernel_length=config["kernel_length"],
+        sample_rate=config["sample_rate"],
+        inference_sampling_rate=config["inference_sampling_rate"],
+        batch_size=config["inference_batch_size"],
+        fduration=config["fduration"],
+        fftlength=config.get("fftlength") or "null",
+        psd_length=config["psd_length"],
+        highpass=config["highpass"],
+        streams_per_gpu=config["streams_per_gpu"],
         weights=(
             (config["remote_run_dir"] + "/model.pt")
             if remote_train
@@ -52,8 +59,24 @@ snakemake is invoked.
         ),
     shell:
         "python -m export"
-        " --config {params.export_config}"
         " --weights {params.weights}"
         " --batch_file {params.batch_file}"
         " --repository_directory {output.model_repo}"
+        " --preprocessor {params.preprocessor}"
+        " --num_ifos {params.num_ifos}"
+        " --kernel_length {params.kernel_length}"
+        " --sample_rate {params.sample_rate}"
+        " --inference_sampling_rate {params.inference_sampling_rate}"
+        " --batch_size {params.batch_size}"
+        " --fduration {params.fduration}"
+        " --psd_length {params.psd_length}"
+        " --streams_per_gpu {params.streams_per_gpu}"
+        " --preprocessor.init_args.kernel_length {params.kernel_length}"
+        " --preprocessor.init_args.sample_rate {params.sample_rate}"
+        " --preprocessor.init_args.inference_sampling_rate"
+        " {params.inference_sampling_rate}"
+        " --preprocessor.init_args.batch_size {params.batch_size}"
+        " --preprocessor.init_args.fduration {params.fduration}"
+        " --preprocessor.init_args.fftlength {params.fftlength}"
+        " --preprocessor.init_args.highpass {params.highpass}"
         " &> {log}"
