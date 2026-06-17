@@ -10,6 +10,7 @@ Weights, batch_file, and repository_directory are determined here.
 import os
 
 export_out = run_dir / "export"
+export_log_dir = log_dir / "export"
 
 EXPORT_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "export.sif")
 
@@ -32,6 +33,8 @@ snakemake is invoked.
         _train_artifacts,
     output:
         model_repo=directory(str(export_out / "model_repo")),
+    log:
+        str(export_log_dir / "export.log"),
     localrule: config.get("gpu_rules_local", True)
     container:
         EXPORT_CONTAINER
@@ -53,3 +56,4 @@ snakemake is invoked.
         " --weights {params.weights}"
         " --batch_file {params.batch_file}"
         " --repository_directory {output.model_repo}"
+        " &> {log}"

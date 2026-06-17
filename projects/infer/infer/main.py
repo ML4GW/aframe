@@ -13,7 +13,6 @@ def infer(
     client: InferenceClient,
     sequence: Sequence,
     postprocessor: Postprocessor,
-    return_timeseries: bool = False,
 ):
     """
     Perform inference on a sequence of data.
@@ -25,12 +24,13 @@ def infer(
             Sequence object
         postprocessor:
             Postprocessor object
-        return_timeseries:
-            If true, return full inference output timeseries
 
     Returns:
         background: Background events
         foreground: Foreground events
+        background_ts: Background detection statistic timeseries
+        foreground_ts: Foreground detection statistic timeseries (None if the
+            segment had no injections)
     """
     logging.info(
         f"Beginning inference on sequence {sequence.id} corresponding "
@@ -88,6 +88,4 @@ def infer(
     foreground = sequence.recover(foreground)
 
     logging.info(f"Finished processing sequence {sequence.id}")
-    if return_timeseries:
-        return background, foreground, background_ts, foreground_ts
-    return background, foreground
+    return background, foreground, background_ts, foreground_ts

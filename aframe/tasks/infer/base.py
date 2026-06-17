@@ -237,20 +237,24 @@ class InferBase(
         )
 
         with client:
-            outputs = infer(
-                client, sequence, postprocessor, self.return_timeseries
+            background, foreground, background_ts, foreground_ts = infer(
+                client, sequence, postprocessor
             )
         if self.return_timeseries:
-            background, foreground, background_ts, foreground_ts = outputs
             with h5py.File(self.timeseries_output, "w") as f:
+                # t0: segment start, for identifying the segment.
+                # sample_t0: GPS time of the first timeseries sample,
+                # offset by the postprocessor
                 f.attrs["t0"] = sequence.t0
+                f.attrs["sample_t0"] = postprocessor.t0
+                f.attrs["inference_sampling_rate"] = (
+                    postprocessor.inference_sampling_rate
+                )
                 f.attrs["shifts"] = postprocessor.shifts
                 f.create_dataset("background", data=background_ts)
                 if foreground_ts is None:
                     foreground_ts = np.zeros(0)
                 f.create_dataset("foreground", data=foreground_ts)
-        else:
-            background, foreground = outputs
 
         background.write(self.background_output)
         foreground.write(self.foreground_output)

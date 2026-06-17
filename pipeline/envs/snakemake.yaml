@@ -25,5 +25,6 @@ channels:
   - bioconda
 dependencies:
   - python>=3.11
+  - uv
   - snakemake>=9.0
   - snakemake-executor-plugin-htcondor

@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 39a55f193b97f32f2a2631810bf136ec7a562ca6635b14aff8fd3cbcb4522de9
+    linux-64: 8285cb1c517a0e6242576ff726a566771ecd09b146a3e9a24726289484b09b72
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -101,7 +101,7 @@ package:
   category: main
   optional: false
 - name: backports.zstd
-  version: 1.5.0
+  version: 1.6.0
   manager: conda
   platform: linux-64
   dependencies:
@@ -110,10 +110,10 @@ package:
     python: ''
     python_abi: 3.13.*
     zstd: '>=1.5.7,<1.6.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-64/backports.zstd-1.5.0-py313h18e8e13_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/backports.zstd-1.6.0-py313h18e8e13_0.conda
   hash:
-    md5: 0de0c2c1f2677ea074bdda91de5a4c01
-    sha256: 310e114a783b249517d1dd6e74b3f339af30e947bc93446ae4e4e9c86fff7478
+    md5: fbc7d3707f09cae6648e6eb1b6203a5c
+    sha256: d7aca2b34335035ef80eaaebff4e5a0ae524b6f3792a82a144d38c4a81f42916
   category: main
   optional: false
 - name: brotli-python
@@ -2017,6 +2017,20 @@ package:
   hash:
     md5: cbb88288f74dbe6ada1c6c7d0a97223e
     sha256: feff959a816f7988a0893201aa9727bbb7ee1e9cec2c4f0428269b489eb93fb4
+  category: main
+  optional: false
+- name: uv
+  version: 0.11.21
+  manager: conda
+  platform: linux-64
+  dependencies:
+    __glibc: '>=2.17,<3.0.a0'
+    libgcc: '>=14'
+    libstdcxx: '>=14'
+  url: https://conda.anaconda.org/conda-forge/linux-64/uv-0.11.21-h26efc2c_0.conda
+  hash:
+    md5: bc8a3f6c735e986f4d3048da2122c01d
+    sha256: c54d123d054b3f94af34efd1a2aac72dc46fcaad5d022aada7e111522f0cf045
   category: main
   optional: false
 - name: wrapt

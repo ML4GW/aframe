@@ -1,13 +1,24 @@
 import logging
 import math
-from contextlib import nullcontext
+import time
 from zlib import adler32
 
 import h5py
 import numpy as np
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InterferometerResponseSet, waveform_class_factory
-from ratelimiter import RateLimiter
+
+
+def _throttle(deadline: float, interval: float) -> float:
+    """Sleep until deadline, then return the next one interval later.
+
+    Time already spent this iteration counts toward the interval, so a slow
+    iteration shortens or eliminates the sleep.
+    """
+    now = time.monotonic()
+    if now < deadline:
+        time.sleep(deadline - now)
+    return max(now, deadline) + interval
 
 
 class Sequence:
@@ -162,17 +173,10 @@ class Sequence:
         return math.ceil((self.size - max(self.shifts)) / self.step_size)
 
     def __iter__(self):
-        if self.rate is not None:
-            # rate refers to the average number of requests
-            # per second, but remember that each yield
-            # corresponds to two inference requests. Rather
-            # than splitting the period in half, we'll allow
-            # two calls during a given period to help account
-            # for the time required to e.g. serialize the data
-            # into inference requests
-            limiter = RateLimiter(max_calls=2, period=3.5 / self.rate)
-        else:
-            limiter = nullcontext()
+        # rate is the average number of requests per second. Each yield is
+        # two inference requests, so space yields 2 / rate seconds apart.
+        interval = 2 / self.rate if self.rate is not None else 0.0
+        deadline = time.monotonic()
 
         with h5py.File(self.background_fname, "r") as f:
             for i in range(len(self)):
@@ -212,10 +216,9 @@ class Sequence:
                         x.copy(), self.t0 + offset
                     )
 
-                # return the two sets of updates, possibly
-                # rate limited if we specified a max rate
-                with limiter:
-                    yield x, x_inj
+                # return the two sets of updates, throttled to rate
+                deadline = _throttle(deadline, interval)
+                yield x, x_inj
 
     def __call__(self, y, request_id, sequence_id):
         # insert the response at the appropriate
