@@ -36,10 +36,11 @@ include: "projects/data/data.smk"
 include: "projects/train/train.smk"
 include: "projects/export/export.smk"
 include: "projects/infer/infer.smk"
+include: "projects/plots/plots.smk"
 
 
 rule all:
     default_target: True
     input:
-        rules.export.output,
         rules.stop_triton.output,
+        rules.sensitive_volume.output,

@@ -28,6 +28,14 @@ htcondor-held-timeout: 600
 rerun-incomplete: true
 keep-going: false
 
+# Each rule's stdout/stderr goes to a log file, so trim console output 
+# to just a progress counter and job-stats summary. show-failed-logs 
+# dumps a failed job's log to the console so failures aren't silent.
+quiet:
+  - rules
+  - reason
+show-failed-logs: true
+
 # Cores available to localrules
 local-cores: 16
 
@@ -73,18 +81,20 @@ set-resources:
     request_memory: 2GB
   testing_waveforms_branch:
     request_memory: 5GB
-  validation_waveforms_branch:
+  val_waveforms_branch:
     request_memory: 2GB
   aggregate_testing_waveforms:
     request_memory: 1GB
-  aggregate_validation_waveforms:
+  aggregate_val_waveforms:
     request_memory: 1GB
   training_waveforms:
     request_memory: 64GB
   infer_branch:
-    request_memory: 6GB
+    request_memory: 2GB
   aggregate_infer:
     request_memory: 32GB
+  sensitive_volume:
+    request_memory: 20GB
 
 # `fetch` downloads with nproc=3, so give the fetch rules a few cores.
 set-threads:

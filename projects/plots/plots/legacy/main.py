@@ -42,6 +42,32 @@ GATE_PATHS = {
 }
 
 
+def _apply_vetos(background, foreground, vetos, ifos, start, stop):
+    """Filter background and foreground events through veto categories."""
+    veto_parser = VetoParser(VETO_DEFINER_FILE, GATE_PATHS, start, stop, ifos)
+    catalog_vetos = get_catalog_vetos(start, stop)
+    for cat in vetos:
+        for i, ifo in enumerate(ifos):
+            if cat == "CATALOG":
+                cat_vetos = catalog_vetos
+            else:
+                cat_vetos = veto_parser.get_vetos(cat)[ifo]
+            back_count = len(background)
+            fore_count = len(foreground)
+            if len(cat_vetos) > 0:
+                background = background.apply_vetos(cat_vetos, i)
+                foreground = foreground.apply_vetos(cat_vetos, i)
+            logging.info(
+                f"\t{back_count - len(background)} {cat} "
+                f"background events removed for ifo {ifo}"
+            )
+            logging.info(
+                f"\t{fore_count - len(foreground)} {cat} "
+                f"foreground events removed for ifo {ifo}"
+            )
+    return background, foreground
+
+
 def main(
     background: Path,
     foreground: Path,
@@ -111,44 +137,20 @@ def main(
     logging.info(f"\t{len(foreground)} foreground events")
     logging.info(f"\t{len(rejected_params)} rejected events")
 
-    start, stop = (
-        background.detection_time.min(),
-        background.detection_time.max(),
-    )
+    if len(background):
+        start, stop = (
+            background.detection_time.min(),
+            background.detection_time.max(),
+        )
+    else:
+        start = stop = 0.0
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
-    # optionally apply vetos
-    # if user passed list of veto categories
+    # optionally apply vetos if the user passed a list of veto categories
     if vetos is not None:
-        veto_parser = VetoParser(
-            VETO_DEFINER_FILE,
-            GATE_PATHS,
-            start,
-            stop,
-            ifos,
+        background, foreground = _apply_vetos(
+            background, foreground, vetos, ifos, start, stop
         )
-
-        catalog_vetos = get_catalog_vetos(start, stop)
-
-        for cat in vetos:
-            for i, ifo in enumerate(ifos):
-                if cat == "CATALOG":
-                    vetos = catalog_vetos
-                else:
-                    vetos = veto_parser.get_vetos(cat)[ifo]
-                back_count = len(background)
-                fore_count = len(foreground)
-                if len(vetos) > 0:
-                    background = background.apply_vetos(vetos, i)
-                    foreground = foreground.apply_vetos(vetos, i)
-                logging.info(
-                    f"\t{back_count - len(background)} {cat} "
-                    f"background events removed for ifo {ifo}"
-                )
-                logging.info(
-                    f"\t{fore_count - len(foreground)} {cat} "
-                    f"foreground events removed for ifo {ifo}"
-                )
 
     logging.info("Computing data likelihood under source prior")
     source, _ = source_prior(DEFAULT_COSMOLOGY)
@@ -169,9 +171,9 @@ def main(
     v0 /= 10**9
 
     Tb = background.Tb / tools.SECONDS_PER_YEAR
-    max_events = int(max_far * Tb)
-    fars = np.arange(1, max_events + 1) / Tb
-    thresholds = np.sort(background.detection_statistic)[-max_events:][::-1]
+    max_events = min(int(max_far * Tb), len(background))
+    fars = np.arange(1, max_events + 1) / Tb if max_events else np.array([])
+    thresholds = np.sort(background.detection_statistic)[::-1][:max_events]
 
     weights = np.zeros((len(mass_combos), len(source_probs)))
     for i, combo in enumerate(mass_combos):
@@ -186,7 +188,8 @@ def main(
 
         rejected_weights = rejected_prob / source_rejected_probs
         norm = weight.sum() + rejected_weights.sum()
-        weight /= norm
+        if norm > 0:
+            weight /= norm
 
         # finally, enforce recovery time delta by setting weights to 0
         # for events outside of the delta t
@@ -208,7 +211,7 @@ def main(
     aframe_err *= v0
 
     output_dir.mkdir(exist_ok=True, parents=True)
-    with h5py.File(output_dir / "sensitive_volume.h5", "w") as f:
+    with h5py.File(output_dir / "sensitive_volume.hdf5", "w") as f:
         f.create_dataset("thresholds", data=thresholds)
         f.create_dataset("fars", data=fars)
         for i, combo in enumerate(mass_combos):
