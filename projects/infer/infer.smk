@@ -98,6 +98,7 @@ includes zero-lag branches.
 """
     input:
         background=get_test_background_files,
+        waveform_branch_map=str(test_waveforms / "waveform_branch_map.json"),
     output:
         str(infer_dir / "branch_map.json"),
     run:
@@ -123,6 +124,16 @@ includes zero-lag branches.
         num_shifts = _get_num_shifts(
             segments, config["Tb"], max(shifts), psd_length
         )
+        with open(input.waveform_branch_map) as f:
+            wbmap = json.load(f)
+        max_waveform_shift = max(max(b["shifts"]) for b in wbmap.values())
+        num_waveform_shifts = max_waveform_shift / max(shifts)
+        if num_waveform_shifts > num_shifts:
+            raise WorkflowError(
+                f"num_testing_signals requires {num_waveform_shifts} shift "
+                f"multiples but Tb={config['Tb']} only covers {num_shifts}. "
+                f"Reduce num_testing_signals or increase Tb."
+            )
         branch_map, i = {}, 0
         for fname, (start, stop) in zip(input.background, segments):
             if config.get("zero_lag", False):
