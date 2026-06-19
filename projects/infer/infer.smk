@@ -18,8 +18,6 @@ import json
 import os
 from pathlib import Path
 
-import yaml
-
 triton_dir = run_dir / "triton"
 infer_dir = run_dir / "infer"
 infer_log_dir = log_dir / "infer"
@@ -29,8 +27,7 @@ return_timeseries = config.get("return_timeseries", False)
 # How many concurrent inference sequences the Triton server can host.
 # streams_per_gpu is the snapshotter's per-GPU instance count, set at export
 num_gpus = len(str(config["gpus"]).split(","))
-with open(config["export_config"]) as f:
-    streams_per_gpu = yaml.safe_load(f).get("streams_per_gpu", 1)
+streams_per_gpu = config["streams_per_gpu"]
 
 # Each branch has two sequences, background and foreground, so the server can
 # host streams_per_gpu * num_gpus / 2 branches at once. Register this as a
@@ -38,7 +35,7 @@ with open(config["export_config"]) as f:
 workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
 
 # Per-branch request rate that holds aggregate load at rate_per_gpu * num_gpus.
-# num_gpus cancels: more GPUs buy more concurrent branches, not faster ones.
+# num_gpus cancels, so more GPUs results in more concurrent branches.
 rate_per_gpu = config.get("rate_per_gpu")
 infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
 

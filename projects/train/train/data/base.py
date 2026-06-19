@@ -337,7 +337,12 @@ class BaseAframeDataset(pl.LightningDataModule):
         Split background files into training and validation sets
         based on the requested duration of the validation set
         """
-        fnames = glob.glob(f"{self.background_dir}/background/*.hdf5")
+        # Match both the law layout ({bg}/background/background-*.hdf5) and
+        # the snakemake layout ({bg}/background-*.hdf5).
+        # TODO: remove support for law layout
+        fnames = glob.glob(
+            f"{self.background_dir}/**/background-*.hdf5", recursive=True
+        )
         fnames = sorted([Path(fname) for fname in fnames])
         durations = [int(fname.stem.split("-")[-1]) for fname in fnames]
         valid_fnames = []

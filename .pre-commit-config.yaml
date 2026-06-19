@@ -31,4 +31,4 @@ repos:
       entry: python scripts/conda_relock.py
       language: python
       additional_dependencies: ["conda-lock>=4"]
-      files: (snakemake|data|online)\.(yaml|conda-lock\.yml)$
+      files: ^(pipeline/envs/snakemake|projects/data/data|projects/online/online)\.(yaml|conda-lock\.yml)$

@@ -18,8 +18,9 @@ run_dir: /path/to/run
 # background_dir: /path/to/shared/background
 
 # Waveform data directory for training, validation, and testing waveforms.
-# Defaults to {background_dir}/waveforms if omitted. Can be shared across
-# experiments with identical waveform parameters.
+# Defaults to {run_dir}/waveforms if omitted. Kept separate from
+# background_dir so background and waveforms can point at different storage. 
+# Can be shared across experiments with identical waveform parameters.
 # waveforms_dir: /path/to/shared/waveforms
 
 # --- Interferometers ---------------------------------------------------------
@@ -103,28 +104,37 @@ remote_train: false
 # remote_background_dir: s3://aframe/data/train
 # remote_waveforms_dir: s3://aframe/data/waveforms/train
 
-# --- Export ------------------------------------------------------------------
-# Export CLI YAML config
-export_config: projects/export/export.yaml
+# --- Export & inference ------------------------------------------------------
+# Preprocessor class compiled into the served model. Its init_args are
+# supplied from the shared parameters below by export.smk. 
+export_preprocessor: utils.preprocessing.BatchWhitener
 
-# --- Inference ---------------------------------------------------------------
-# These must match the values used at export time in export_config.
+# Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data
-kernel_length: 1.5               # model input window (seconds). Match to export config.
+kernel_length: 1.5               # model input window (seconds)
 fduration: 1.0                   # whitening filter duration (seconds)
-fftlength: null                  # FFT length for whitening PSD (seconds)
+fftlength: null                  # PSD FFT length (s). null -> kernel_length + fduration
 inference_sampling_rate: 4.0     # Hz
 inference_batch_size: 128        # inference windows per request
+
+# Inference postprocessing and livetime.
 integration_window_length: 1.5   # seconds
 cluster_window_length: 8.0       # seconds
 Tb: 31536000.0                   # target background livetime (seconds)
 zero_lag: false                  # also analyze unshifted (zero-lag) data
 
-# Triton server settings
+# Triton server.
 model_name: aframe-stream
 model_version: -1
 triton_image: /home/william.benoit/images/aframe/tritonserver_26.05.sif
-gpus: "0"  # comma-separated GPU IDs for the Triton server
+# Comma-separated GPU IDs for export and inference server only.
+# Pin training GPUs via trainer.devices in the train_config.
+gpus: "0"
+
+# Snapshotter instances hosted per GPU. Baked into the model at export time
+# and used to size the concurrent-inference pool (streams_per_gpu * num_gpus)
+# and the per-branch request rate.
+streams_per_gpu: 6
 
 # Server self-stops if it receives no inference for this many seconds, so an
 # interrupted/crashed run doesn't leave Triton lingering on the GPU. Must
@@ -133,9 +143,8 @@ gpus: "0"  # comma-separated GPU IDs for the Triton server
 triton_idle_timeout: 1200
 
 # Average inference-request rate per GPU (Hz); null to disable throttling.
-# The per-branch rate is 2 * rate_per_gpu / streams_per_gpu, with
-# streams_per_gpu set in the export config, so the aggregate server load
-# is held at rate_per_gpu * num_gpus.
+# The per-branch rate is 2 * rate_per_gpu / streams_per_gpu, so the
+# aggregate server load is held at rate_per_gpu * num_gpus.
 rate_per_gpu: 70.0
 
 # --- Plots -------------------------------------------------------------------

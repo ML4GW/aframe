@@ -19,7 +19,7 @@ jobs: 500
 
 # Wait for output files to appear on the shared filesystem after a job
 # completes (placeholder)
-latency-wait: 60
+latency-wait: 120
 
 # Resubmit failed jobs and time out held jobs. (placeholders)
 retries: 2
@@ -76,21 +76,21 @@ set-resources:
   generate_test_segments:
     request_memory: 512MB
   fetch_train_background:
-    request_memory: 2GB
+    request_memory: 6GB
   fetch_test_background:
-    request_memory: 2GB
+    request_memory: 6GB
   testing_waveforms_branch:
-    request_memory: 5GB
+    request_memory: 8GB
   val_waveforms_branch:
-    request_memory: 2GB
+    request_memory: 6GB
   aggregate_testing_waveforms:
-    request_memory: 1GB
-  aggregate_val_waveforms:
-    request_memory: 1GB
-  training_waveforms:
-    request_memory: 64GB
-  infer_branch:
     request_memory: 2GB
+  aggregate_val_waveforms:
+    request_memory: 2GB
+  training_waveforms:
+    request_memory: 40GB
+  infer_branch:
+    request_memory: 8GB
   aggregate_infer:
     request_memory: 32GB
   sensitive_volume:

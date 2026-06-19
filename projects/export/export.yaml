@@ -1,4 +1,6 @@
-# commented args (i.e. comments with colon at end 
+# TODO: Remove once snakemake is final
+#
+# commented args (i.e. comments with colon at end
 # to illustrate a value needs to be filled out)
 # represent values filled out
 # by the export task at run time. To build a functional

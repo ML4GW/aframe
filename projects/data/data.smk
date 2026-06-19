@@ -15,7 +15,7 @@ Rules:
 Directory layout:
 
   {background_dir}/{train,test}/segments.txt
-  {background_dir}/{train,test}/background/background-{start}-{duration}.hdf5
+  {background_dir}/{train,test}/background-{start}-{duration}.hdf5
   {waveforms_dir}/train/{val_waveforms,training_waveforms}.hdf5
   {waveforms_dir}/test/{waveforms,rejected_parameters}.hdf5
 
@@ -102,8 +102,7 @@ def get_train_background_files(wildcards):
     """All training background file paths."""
     seg_file = checkpoints.generate_train_segments.get(**wildcards).output[0]
     return [
-        str(train_bg / "background" / f"background-{s}-{d}.hdf5")
-        for s, d in _segment_chunks(seg_file)
+        str(train_bg / f"background-{s}-{d}.hdf5") for s, d in _segment_chunks(seg_file)
     ]
 
 
@@ -111,8 +110,7 @@ def get_test_background_files(wildcards):
     """All testing background file paths."""
     seg_file = checkpoints.generate_test_segments.get(**wildcards).output[0]
     return [
-        str(test_bg / "background" / f"background-{s}-{d}.hdf5")
-        for s, d in _segment_chunks(seg_file)
+        str(test_bg / f"background-{s}-{d}.hdf5") for s, d in _segment_chunks(seg_file)
     ]
 
 
@@ -204,7 +202,7 @@ rule fetch_train_background:
     input:
         str(train_bg / "segments.txt"),
     output:
-        str(train_bg / "background" / "background-{start}-{duration}.hdf5"),
+        str(train_bg / "background-{start}-{duration}.hdf5"),
     log:
         str(data_log_dir / "fetch_train_background-{start}-{duration}.log"),
     container:
@@ -213,7 +211,7 @@ rule fetch_train_background:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
         end=lambda wc: int(wc.start) + int(wc.duration),
-        output_directory=str(train_bg / "background"),
+        output_directory=train_bg,
     shell:
         "fetch-data"
         " --start {wildcards.start}"
@@ -230,7 +228,7 @@ rule fetch_test_background:
     input:
         str(test_bg / "segments.txt"),
     output:
-        str(test_bg / "background" / "background-{start}-{duration}.hdf5"),
+        str(test_bg / "background-{start}-{duration}.hdf5"),
     log:
         str(data_log_dir / "fetch_test_background-{start}-{duration}.log"),
     container:
@@ -239,7 +237,7 @@ rule fetch_test_background:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
         end=lambda wc: int(wc.start) + int(wc.duration),
-        output_directory=str(test_bg / "background"),
+        output_directory=test_bg,
     shell:
         "fetch-data"
         " --start {wildcards.start}"
