@@ -10,7 +10,8 @@ Rules:
   aggregate_val_waveforms       merge per-branch validation waveforms
   testing_waveforms_branch      testing waveforms for one branch
   aggregate_testing_waveforms   merge per-branch testing waveforms
-  training_waveforms            training waveform polarizations (optional)
+  training_waveforms_branch     one branch of training waveform polarizations (optional)
+  aggregate_training_waveforms  merge per-branch training waveforms (optional)
 
 Directory layout:
 
@@ -44,6 +45,9 @@ DATA_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "data.sif"
 num_validation_jobs = int(config.get("num_validation_jobs", 200))
 validation_branch_ids = [str(i) for i in range(num_validation_jobs)]
 
+num_training_jobs = int(config.get("num_training_jobs", 10))
+training_branch_ids = [str(i) for i in range(num_training_jobs)]
+
 
 localrules:
     compute_waveform_branches,
@@ -54,6 +58,7 @@ wildcard_constraints:
     duration=r"\d+",
     wbranch_id=r"\d+",
     vbranch_id=r"\d+",
+    tbranch_id=r"\d+",
 
 
 def _fmt_list(values):
@@ -404,14 +409,13 @@ rule aggregate_testing_waveforms:
 rule val_waveforms_branch:
     """Generate one branch of validation waveforms via rejection sampling.
 
-num_validation_signals is split evenly across num_validation_jobs
-branches.  The PSD reference is the last fetched train-background
-chunk, matching the law DeployValidationWaveforms task.
+num_validation_signals is split evenly across num_validation_jobs branches.
+The PSD reference is the last fetched train-background chunk.
 """
     input:
         psd_file=_train_psd_file,
     output:
-        str(train_waveforms / "tmp" / "waveforms-{vbranch_id}.hdf5"),
+        str(train_waveforms / "validation_tmp" / "waveforms-{vbranch_id}.hdf5"),
     log:
         str(data_log_dir / "val_waveforms_branch-{vbranch_id}.log"),
     container:
@@ -454,7 +458,7 @@ rule aggregate_val_waveforms:
     """Merge per-branch validation waveforms into val_waveforms.hdf5."""
     input:
         expand(
-            str(train_waveforms / "tmp" / "waveforms-{vbranch_id}.hdf5"),
+            str(train_waveforms / "validation_tmp" / "waveforms-{vbranch_id}.hdf5"),
             vbranch_id=validation_branch_ids,
         ),
     output:
@@ -465,23 +469,26 @@ rule aggregate_val_waveforms:
         DATA_CONTAINER
     params:
         ifos=config["ifos"],
-        tmp_dir=str(train_waveforms / "tmp"),
+        tmp_dir=str(train_waveforms / "validation_tmp"),
     script:
         "scripts/aggregate_val_waveforms.py"
 
 
 if config.get("pregenerate_training_waveforms", False):
 
-    rule training_waveforms:
-        """Pre-generate training waveform polarizations to disk."""
+    rule training_waveforms_branch:
+        """Generate one branch of training waveform polarizations.
+
+        num_training_signals is split evenly across num_training_jobs branches.
+        """
         output:
-            str(train_waveforms / "training_waveforms.hdf5"),
+            str(train_waveforms / "training_tmp" / "{tbranch_id}.hdf5"),
         log:
-            str(data_log_dir / "training_waveforms.log"),
+            str(data_log_dir / "training_waveforms_branch-{tbranch_id}.log"),
         container:
             DATA_CONTAINER
         params:
-            num_signals=config["num_training_signals"],
+            num_signals=math.ceil(config["num_training_signals"] / num_training_jobs),
             sample_rate=config["sample_rate"],
             waveform_duration=config["waveform_duration"],
             prior=config["prior"],
@@ -501,3 +508,21 @@ if config.get("pregenerate_training_waveforms", False):
             " --right_pad {params.right_pad}"
             " --output_file {output}"
             " &> {log}"
+
+    rule aggregate_training_waveforms:
+        """Merge per-branch training waveforms into training_waveforms.hdf5."""
+        input:
+            expand(
+                str(train_waveforms / "training_tmp" / "{tbranch_id}.hdf5"),
+                tbranch_id=training_branch_ids,
+            ),
+        output:
+            str(train_waveforms / "training_waveforms.hdf5"),
+        log:
+            str(data_log_dir / "aggregate_training_waveforms.log"),
+        container:
+            DATA_CONTAINER
+        params:
+            tmp_dir=str(train_waveforms / "training_tmp"),
+        script:
+            "scripts/aggregate_training_waveforms.py"

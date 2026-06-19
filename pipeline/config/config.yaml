@@ -66,6 +66,9 @@ num_training_signals: 100000
 # Pre-generate training waveforms to disk instead of sampling them
 # on the fly during training.
 pregenerate_training_waveforms: true
+# Number of condor jobs that training waveforms are split across when
+# pregenerate_training_waveforms is true.
+num_training_jobs: 100
 
 # --- Testing / validation waveforms ------------------------------------------
 num_testing_signals: 500000

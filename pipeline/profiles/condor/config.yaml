@@ -87,8 +87,10 @@ set-resources:
     request_memory: 2GB
   aggregate_val_waveforms:
     request_memory: 2GB
-  training_waveforms:
-    request_memory: 40GB
+  training_waveforms_branch:
+    request_memory: 2GB
+  aggregate_training_waveforms:
+    request_memory: 2GB
   infer_branch:
     request_memory: 8GB
   aggregate_infer:
