@@ -104,6 +104,20 @@ def write_content(content: str, path: Path):
     return content
 
 
+def create_snakemake_runfile(path: Path, profile: str):
+    config = path / "config.yaml"
+    cmd = f"snakemake --configfile {config} --profile {profile}"
+    content = f"""
+    #!/bin/bash
+    # Set AFRAME_DEV=1 to bind the working tree into containers.
+    cd {root}
+    source pipeline/.env
+    {cmd}
+    """
+    runfile = path / "run.sh"
+    write_content(content, runfile)
+
+
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
     # bind /local/aframe for finding scitokens
@@ -245,6 +259,18 @@ def main():
     offline_parser.add_argument("--s3-bucket")
     offline_parser.add_argument("--weights-dir", type=Path)
 
+    # snakemake subcommand
+    snakemake_parser = ArgumentParser()
+    snakemake_parser.add_argument(
+        "-d", "--directory", type=Path, required=True
+    )
+    snakemake_parser.add_argument(
+        "--profile",
+        type=str,
+        default="pipeline/profiles/condor",
+        help="Path to the snakemake profile directory",
+    )
+
     # online subcommand
     online_parser = ArgumentParser()
     online_parser.add_argument("-d", "--directory", type=Path, required=True)
@@ -256,6 +282,7 @@ def main():
         "for running aframe offline and online pipelines."
     )
     subcommands = parser.add_subcommands()
+    subcommands.add_subcommand("snakemake", snakemake_parser)
     subcommands.add_subcommand("online", online_parser)
     subcommands.add_subcommand("offline", offline_parser)
 
@@ -263,14 +290,24 @@ def main():
     subcommand = args.subcommand
     args = getattr(args, args.subcommand)
     directory = args.directory.resolve()
-    weights_dir = args.weights_dir.resolve() if args.weights_dir else None
+    weights_dir = getattr(args, "weights_dir", None)
+    if weights_dir:
+        weights_dir = weights_dir.resolve()
 
     # Create the run directory and move in weights if specified
     directory.mkdir(parents=True, exist_ok=True)
     if weights_dir:
         shutil.copytree(weights_dir, directory / "training")
 
-    if subcommand == "offline":
+    if subcommand == "snakemake":
+        run_config = directory / "config.yaml"
+        run_config.write_text(
+            f"# Overrides for pipeline/config/config.yaml.\n"
+            f"run_dir: {directory}\n"
+        )
+        create_snakemake_runfile(directory, args.profile)
+
+    elif subcommand == "offline":
         if args.s3_bucket is not None and not args.s3_bucket.startswith(
             "s3://"
         ):
