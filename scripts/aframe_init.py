@@ -300,10 +300,13 @@ def main():
         shutil.copytree(weights_dir, directory / "training")
 
     if subcommand == "snakemake":
+        train_yaml = root / "projects" / "train" / "train.yaml"
+        shutil.copy(train_yaml, directory / "train.yaml")
         run_config = directory / "config.yaml"
         run_config.write_text(
             f"# Overrides for pipeline/config/config.yaml.\n"
             f"run_dir: {directory}\n"
+            f"train_config: {directory / 'train.yaml'}\n"
         )
         create_snakemake_runfile(directory, args.profile)
 
