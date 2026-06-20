@@ -45,8 +45,8 @@ DATA_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "data.sif"
 num_validation_jobs = int(config.get("num_validation_jobs", 200))
 validation_branch_ids = [str(i) for i in range(num_validation_jobs)]
 
-num_training_jobs = int(config.get("num_training_jobs", 10))
-training_branch_ids = [str(i) for i in range(num_training_jobs)]
+num_train_waveform_jobs = int(config.get("num_train_waveform_jobs", 10))
+training_branch_ids = [str(i) for i in range(num_train_waveform_jobs)]
 
 
 localrules:
@@ -479,7 +479,7 @@ if config.get("pregenerate_training_waveforms", False):
     rule training_waveforms_branch:
         """Generate one branch of training waveform polarizations.
 
-        num_training_signals is split evenly across num_training_jobs branches.
+        num_training_signals is split evenly across num_train_waveform_jobs branches.
         """
         output:
             str(train_waveforms / "training_tmp" / "{tbranch_id}.hdf5"),
@@ -488,7 +488,9 @@ if config.get("pregenerate_training_waveforms", False):
         container:
             DATA_CONTAINER
         params:
-            num_signals=math.ceil(config["num_training_signals"] / num_training_jobs),
+            num_signals=math.ceil(
+                config["num_training_signals"] / num_train_waveform_jobs
+            ),
             sample_rate=config["sample_rate"],
             waveform_duration=config["waveform_duration"],
             prior=config["prior"],
