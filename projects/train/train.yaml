@@ -107,14 +107,17 @@ data:
     num_valid_views: 5
     valid_livetime: 57600 
 trainer:
-  # by default, use a local CSV logger.
-  # Options in train task for using a
-  # wandb logger instead
+  # W&B alternative:
+  # logger:
+  #   class_path: lightning.pytorch.loggers.WandbLogger
+  #   init_args:
+  #     project: aframe
+  #     name: my-run
   logger:
-    - class_path: lightning.pytorch.loggers.CSVLogger
-      init_args:
-        # save_dir:
-        flush_logs_every_n_steps: 10
+    class_path: lightning.pytorch.loggers.CSVLogger
+    init_args:
+      name: lightning_logs
+      flush_logs_every_n_steps: 10
   callbacks:
     # Uncomment below if you want to stop early based on validation score
     # - class_path: lightning.pytorch.callbacks.EarlyStopping
