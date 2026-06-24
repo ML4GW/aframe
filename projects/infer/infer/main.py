@@ -5,13 +5,13 @@ import numpy as np
 from hermes.aeriel.client import InferenceClient
 from tqdm import tqdm
 
-from infer.data import Sequence
+from infer.data import BaseSequence
 from infer.postprocess import Postprocessor
 
 
 def infer(
     client: InferenceClient,
-    sequence: Sequence,
+    sequence: BaseSequence,
     postprocessor: Postprocessor,
 ):
     """
@@ -34,7 +34,7 @@ def infer(
     """
     logging.info(
         f"Beginning inference on sequence {sequence.id} corresponding "
-        f"to {sequence.duration}s of data from {sequence.background_fname} "
+        f"to {sequence.duration}s of data from {sequence.inference_filename} "
         f"with shifts {sequence.shifts / sequence.sample_rate} and "
         f"sample rate {sequence.sample_rate}, beginning at "
         f"GPS time {sequence.t0}"

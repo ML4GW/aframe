@@ -113,6 +113,13 @@ remote_train: false
 # remote_waveforms_dir: s3://aframe/data/waveforms/train
 
 # --- Export & inference ------------------------------------------------------
+# Analysis type:
+#   - hdf5: timeslide background segments + injection set
+#   - rnp: Rates and Populations frames.
+analysis_type: hdf5
+# rnp_frame_dir: /path/to/rnp/frames   # required when analysis_type: rnp
+# rnp_channel: <channel>               # channel within the frames
+
 # Inference mode:
 #   - triton: Triton server on GPU + streaming CPU clients
 #   - inprocess: self-contained GPU jobs, model loaded locally per job
