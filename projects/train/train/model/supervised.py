@@ -185,54 +185,67 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
 
 
 class SupervisedAframeS4(SupervisedAframe):
-    def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
+    # S4D state-space kernel parameters: trained with a small learning rate
+    # and no weight decay. These names match the parameters registered by
+    # ml4gw's S4DKernel; edit this tuple to change which params receive the
+    # special learning rate.
+    SSM_PARAM_NAMES = ("log_dt", "log_A_real", "A_imag")
+
+    def __init__(
+        self,
+        arch: SupervisedArchitecture,
+        *args,
+        ssm_lr: float = 1e-3,
+        **kwargs,
+    ) -> None:
         super().__init__(arch, *args, **kwargs)
+        self.save_hyperparameters("ssm_lr")
 
     def forward(self, X):
         return self.model(X)
 
     def configure_optimizers(self):
         """
-        S4 requires a specific optimizer setup.
+        Configure the optimizer and learning-rate scheduler.
 
-        The S4 layer (A, B, C, dt) parameters typically
-        require a smaller learning rate (typically 0.001),
-        with no weight decay.
-
-        The rest of the model can be trained with a higher learning rate
-        (e.g. 0.004, 0.01) and weight decay (if desired).
+        Parameters whose names appear in SSM_PARAM_NAMES are placed in their
+        own optimizer group with learning rate ssm_lr and zero weight decay.
+        All other parameters use learning_rate (scaled by the distributed
+        world size) and weight_decay. A cosine-annealing schedule decays both
+        groups from their base learning rates over the course of training.
         """
-        if not torch.distributed.is_initialized():
-            world_size = 1
-        else:
-            world_size = torch.distributed.get_world_size()
-
-        # All parameters in the model
-        all_parameters = list(self.model.parameters())
-
-        # General parameters don't contain the special _optim key
-        params = [p for p in all_parameters if not hasattr(p, "_optim")]
-
-        # Create an optimizer with the general parameters
+        world_size = (
+            torch.distributed.get_world_size()
+            if torch.distributed.is_initialized()
+            else 1
+        )
         lr = self.hparams.learning_rate * world_size
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
+
+        ssm_params, other_params = [], []
+        for name, p in self.model.named_parameters():
+            leaf = name.rsplit(".", 1)[-1]
+            if leaf in self.SSM_PARAM_NAMES:
+                ssm_params.append(p)
+            else:
+                other_params.append(p)
+
         optimizer = torch.optim.AdamW(
-            params, lr=lr, weight_decay=self.hparams.weight_decay
+            [
+                {
+                    "params": other_params,
+                    "lr": lr,
+                    "weight_decay": self.hparams.weight_decay,
+                },
+                {
+                    "params": ssm_params,
+                    "lr": self.hparams.ssm_lr,
+                    "weight_decay": 0.0,
+                },
+            ]
         )
 
-        # Add parameters with special hyperparameters
-        hps = [p._optim for p in all_parameters if hasattr(p, "_optim")]
-        hps = [
-            dict(s)
-            for s in sorted(dict.fromkeys(frozenset(hp.items()) for hp in hps))
-        ]  # Unique dicts
-        for hp in hps:
-            params = [
-                p for p in all_parameters if getattr(p, "_optim", None) == hp
-            ]
-            optimizer.add_param_group({"params": params, **hp})
-
-        # Create a lr scheduler
+        # Decay each group from its own base lr, preserving the lr ratio.
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, self.trainer.estimated_stepping_batches
         )

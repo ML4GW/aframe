@@ -7,7 +7,7 @@ requires-python = ">=3.10,<3.13"
 license = "MIT"
 dependencies = [
     "einops>=0.8,<0.9",
-    "ml4gw>=0.7.2",
+    "ml4gw>=0.8.3",
     "h5py>=3.9.0,<4",
     "numpy~=1.26",
 ]
