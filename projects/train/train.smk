@@ -105,7 +105,7 @@ else:
             val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
             train_waveforms=_train_waveform_inputs,
         output:
-            weights=str(train_out / "model.pt"),
+            exported=str(train_out / "model_exported.pt2"),
             batch=str(train_out / "batch.hdf5"),
         log:
             str(train_log_dir / "train.log"),

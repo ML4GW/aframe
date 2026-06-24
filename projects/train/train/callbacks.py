@@ -37,9 +37,15 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def on_train_end(self, trainer, pl_module):
         torch.cuda.empty_cache()
-        module = pl_module.__class__.load_from_checkpoint(
-            self.best_model_path, arch=pl_module.model, metric=pl_module.metric
+        # Restore the best checkpoint's weights for export.
+        # torch>=2.6 defaults torch.load to weights_only=True,
+        # which rejects the pickled distribution objects
+        # (e.g. ml4gw.distributions.Cosine) in the saved hyperparameters.
+        # Set weights_only=False and load the state_dict into pl_module.
+        ckpt = torch.load(
+            self.best_model_path, map_location="cpu", weights_only=False
         )
+        pl_module.load_state_dict(ckpt["state_dict"])
 
         device = pl_module.device
         # Handle the case of loading training waveforms from disk
@@ -47,27 +53,30 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
             [X], waveforms = next(iter(trainer.train_dataloader))
             X = X.to(device)
             waveforms = waveforms.to(device)
-            X, y = trainer.datamodule.inject(X, waveforms)
+            X, _ = trainer.datamodule.inject(X, waveforms)
         else:
             [X] = next(iter(trainer.train_dataloader))
             X = X.to(device)
-            X, y = trainer.datamodule.inject(X)
-        if isinstance(X, tuple):
-            X = tuple(i.cpu() for i in X)
-        else:
-            X = X.cpu()
-        trace = torch.jit.trace(module.model.to("cpu"), X)
+            X, _ = trainer.datamodule.inject(X)
+
+        example = X if isinstance(X, tuple) else (X,)
+        example = tuple(x.cpu() for x in example)
+        pl_module.model.eval()
+        # Dim.AUTO allows the batch size to be dynamic
+        dynamic_shapes = tuple({0: torch.export.Dim.AUTO} for _ in example)
+        exported = torch.export.export(
+            pl_module.model.to("cpu"), example, dynamic_shapes=dynamic_shapes
+        )
 
         save_dir = trainer.logger.save_dir
         if save_dir.startswith("s3://"):
             s3 = s3fs.S3FileSystem()
-            with s3.open(f"{save_dir}/model.pt", "wb") as f:
-                torch.jit.save(trace, f)
-
+            with s3.open(f"{save_dir}/model_exported.pt2", "wb") as f:
+                torch.export.save(exported, f)
             s3.copy(self.best_model_path, f"{save_dir}/best.ckpt")
         else:
-            with open(os.path.join(save_dir, "model.pt"), "wb") as f:
-                torch.jit.save(trace, f)
+            with open(os.path.join(save_dir, "model_exported.pt2"), "wb") as f:
+                torch.export.save(exported, f)
             shutil.copy(
                 self.best_model_path, os.path.join(save_dir, "best.ckpt")
             )

@@ -48,9 +48,9 @@ snakemake is invoked.
         highpass=config["highpass"],
         streams_per_gpu=config["streams_per_gpu"],
         weights=(
-            (config["remote_run_dir"] + "/model.pt")
+            (config["remote_run_dir"] + "/model_exported.pt2")
             if remote_train
-            else str(train_out / "model.pt")
+            else str(train_out / "model_exported.pt2")
         ),
         batch_file=(
             (config["remote_run_dir"] + "/batch.hdf5")

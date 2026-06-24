@@ -763,8 +763,7 @@ def main(
 
     # Load in Aframe and amplfi models
     logging.info(f"Loading Aframe from weights at path {aframe_weights}")
-    aframe = torch.jit.load(aframe_weights)
-    aframe = aframe.to(device)
+    aframe = torch.export.load(aframe_weights).module().to(device)
 
     logging.info(f"Loading HL AMPLFI from weights at path {amplfi_hl_weights}")
     amplfi_hl, scaler_hl = load_amplfi(
