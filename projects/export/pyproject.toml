@@ -7,6 +7,8 @@ requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "ml4gw>=0.8.0",
+    "torch==2.10.0",
+    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
     "ml4gw-hermes[torch]",
@@ -14,7 +16,10 @@ dependencies = [
     "utils",
     "jsonargparse>=4.27.1,<5",
     "nvidia-cudnn-cu12",
-    "tensorrt==10.16.1.11",
+    # CUDA-12 TensorRT build. The default `tensorrt` now resolves to CUDA-13, 
+    # which needs driver >= 580. Delta runs driver 570 (CUDA 12.8). 
+    # Pin the cu12 build, and use the CUDA-12 Triton image, 25.06
+    "tensorrt-cu12==10.11.0.33",
     "urllib3>=2",
 ]
 
@@ -27,11 +32,6 @@ export-and-launch-triton = "export.remote:main"
 dev = ["pytest>=8.3.0,<9"]
 
 [tool.uv]
-
-[[tool.uv.index]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
 
 [tool.uv.sources]
 aframe = { path = "../../", editable = true }
