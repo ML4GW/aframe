@@ -1,18 +1,22 @@
 # Snakemake HTCondor execution profile.
 #
-#     snakemake --profile pipeline/profiles/condor
+#     snakemake --profile pipeline/profiles/ldg
 #
 # Requirements on the submit node:
-#   - The aframe-smk conda environment (pipeline/envs/snakemake.yaml),
-#     which provides snakemake and snakemake-executor-plugin-htcondor.
+#   - The aframe-smk conda environment (pipeline/envs/snakemake.yaml).
 #   - A valid LIGO SciToken (htgettoken -a vault.ligo.org)
 #   - LIGO_GROUP and LIGO_USERNAME set for accounting
 #   - AFRAME_CONTAINER_ROOT pointing at the built .sif images
 #   - AFRAME_DATA_DIRS: comma-separated directories to bind into
 #     containers (run_dir, background_dir, waveforms_dir parents)
+#   - WANDB_API_KEY if using W&B logging
 #
 
 executor: htcondor
+
+# On LDG, use GPUs on the submit node for train/export/infer
+config:
+  gpu_rules_local: true
 
 # Maximum number of simultaneously submitted jobs. (placeholder)
 jobs: 500
@@ -55,7 +59,7 @@ apptainer-args: >-
 
 default-resources:
   # Forward environment variables from the submit node.
-  getenv: LIGO_*, AWS_*, AFRAME_*, WANDB_*, PATH, HOME, USER, BEARER_TOKEN_FILE, KRB5*
+  getenv: AFRAME_*, PATH, HOME, BEARER_TOKEN_FILE, KRB5*
 
   # Pass through authentication and account info as raw job ad attributes
   # using the classad_ prefix. The plugin supports passing attributes
@@ -91,12 +95,12 @@ set-resources:
     request_memory: 2GB
   aggregate_training_waveforms:
     request_memory: 2GB
-  infer_branch:
+  infer_group:
     request_memory: 8GB
   aggregate_infer:
-    request_memory: 32GB
+    request_memory: 4GB
   sensitive_volume:
-    request_memory: 20GB
+    request_memory: 16GB
 
 # `fetch` downloads with nproc=3, so give the fetch rules a few cores.
 set-threads:

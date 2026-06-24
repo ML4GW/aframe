@@ -17,7 +17,7 @@ remote_train = config.get("remote_train", False)
 def _train_artifacts(wildcards):
     if remote_train:
         return [str(train_out / "remote_train.done")]
-    return [str(train_out / "model.pt"), str(train_out / "batch.hdf5")]
+    return [str(train_out / "model_exported.pt2"), str(train_out / "batch.hdf5")]
 
 
 rule export:
@@ -35,6 +35,11 @@ snakemake is invoked.
     localrule: config.get("gpu_rules_local", True)
     container:
         EXPORT_CONTAINER
+    resources:
+        slurm_partition=config.get("inference_partition", "gpuA40x4"),
+        gpu=1,
+        mem_mb=config.get("export_mem_mb", 32000),
+        runtime=10,
     params:
         preprocessor=config["export_preprocessor"],
         num_ifos=len(config["ifos"]),

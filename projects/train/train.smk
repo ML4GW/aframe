@@ -112,6 +112,11 @@ else:
         localrule: config.get("gpu_rules_local", True)
         container:
             TRAIN_CONTAINER
+        resources:
+            slurm_partition=config.get("train_partition", "gpuA40x4"),
+            gpu=config.get("train_num_gpus", 1),
+            mem_mb=config.get("train_mem_mb", 32000),
+            runtime=2880,
         params:
             **train_data_params,
             background_dir=str(train_bg),

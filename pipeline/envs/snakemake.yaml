@@ -28,3 +28,4 @@ dependencies:
   - uv
   - snakemake>=9.0
   - snakemake-executor-plugin-htcondor
+  - snakemake-executor-plugin-slurm

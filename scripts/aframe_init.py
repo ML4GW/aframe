@@ -265,9 +265,10 @@ def main():
         "-d", "--directory", type=Path, required=True
     )
     snakemake_parser.add_argument(
+        "-p",
         "--profile",
         type=str,
-        default="pipeline/profiles/condor",
+        default="pipeline/profiles/ldg",
         help="Path to the snakemake profile directory",
     )
 

@@ -1,0 +1,102 @@
+# Snakemake Slurm execution profile.
+#
+#     snakemake --profile pipeline/profiles/delta
+#
+# Requirements on the submit node:
+#   - The aframe-smk conda environment (pipeline/envs/snakemake.yaml)
+#   - AFRAME_CONTAINER_ROOT pointing at the built .sif images
+#   - AFRAME_DATA_DIRS: comma-separated directories to bind into
+#     containers (run_dir, background_dir, waveforms_dir parents)
+#   - WANDB_API_KEY if using W&B logging
+#
+
+executor: slurm
+
+# Delta's submit nodes have no GPUs, so the GPU rules (train/export/compile)
+# must be submitted as batch jobs, not run locally.
+config:
+  gpu_rules_local: false
+
+jobs: 500
+latency-wait: 120
+retries: 2
+
+quiet:
+  - rules
+  - reason
+show-failed-logs: true
+
+local-cores: 4
+
+software-deployment-method: apptainer
+
+apptainer-args: >-
+  --nv
+  --bind $AFRAME_DATA_DIRS
+  ${AFRAME_DEV:+--bind $PWD:/opt/aframe}
+  --home $HOME
+
+default-resources:
+  slurm_account: bcse-delta-cpu
+  slurm_partition: cpu
+  mem_mb: 8000
+  runtime: 60    # minutes
+
+# GPU rules override the CPU default account with the Delta GPU allocation. 
+# The GPU partition/count can be changed in the run config.
+set-resources:
+  train:
+    slurm_account: bcse-delta-gpu
+  export:
+    slurm_account: bcse-delta-gpu
+  compile_model:
+    slurm_account: bcse-delta-gpu
+  generate_train_segments:
+    mem_mb: 512
+    runtime: 10
+  generate_test_segments:
+    mem_mb: 512
+    runtime: 10
+  fetch_train_background:
+    mem_mb: 6144
+    runtime: 480
+  fetch_test_background:
+    mem_mb: 6144
+    runtime: 480
+  testing_waveforms_branch:
+    mem_mb: 8192
+    runtime: 60
+  val_waveforms_branch:
+    mem_mb: 6144
+    runtime: 60
+  aggregate_testing_waveforms:
+    mem_mb: 2048
+    runtime: 10
+  aggregate_val_waveforms:
+    mem_mb: 2048
+    runtime: 10
+  training_waveforms_branch:
+    mem_mb: 2048
+    runtime: 30
+  aggregate_training_waveforms:
+    mem_mb: 2048
+    runtime: 10
+  # On Delta this is the in-process GPU job (model loaded locally); it needs the
+  # GPU memory headroom. The GPU itself comes from the rule (gpu=1 +
+  # inference_partition). Scale runtime up if branches_per_job is large.
+  infer_group:
+    slurm_account: bcse-delta-gpu
+    mem_mb: 8192
+    runtime: 20
+  aggregate_infer:
+    mem_mb: 4096
+    runtime: 15
+  sensitive_volume:
+    mem_mb: 16384
+    runtime: 15
+
+set-threads:
+  fetch_train_background: 4
+  fetch_test_background: 4
+  train: 16
+  compile_model: 16

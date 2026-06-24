@@ -22,7 +22,8 @@ dependencies = [
 ]
 
 [project.scripts]
-infer = "infer.cli:main"
+infer-triton = "infer.cli:main_triton"
+infer-local = "infer.cli:main_local"
 start-server = "infer.server:main"
 
 [dependency-groups]
