@@ -68,9 +68,18 @@ def create_definition_file(project_name: str) -> Path:
     template_text = (TEMPLATES_DIR / template_name).read_text()
 
     files_block = _get_files_block(project_name)
-    definition_text = template_text.replace(
-        "@@PROJECT@@", project_name
-    ).replace("@@FILES_BLOCK@@", files_block)
+    # Optional per-project hooks
+    post_file = project_dir / "apptainer.post"
+    extra_post = post_file.read_text() if post_file.exists() else ""
+    env_file = project_dir / "apptainer.env"
+    extra_env = env_file.read_text() if env_file.exists() else ""
+
+    definition_text = (
+        template_text.replace("@@PROJECT@@", project_name)
+        .replace("@@FILES_BLOCK@@", files_block)
+        .replace("@@EXTRA_POST@@", extra_post)
+        .replace("@@EXTRA_ENV@@", extra_env)
+    )
 
     output_path = project_dir / "apptainer.def"
     output_path.write_text(definition_text)

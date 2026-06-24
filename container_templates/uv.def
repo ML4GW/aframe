@@ -9,6 +9,8 @@ apt-get update
 apt-get install -y --no-install-recommends build-essential git
 rm -rf /var/lib/apt/lists/*
 
+@@EXTRA_POST@@
+
 cd /opt/aframe/projects/@@PROJECT@@
 # Set venv dir outside of project for
 # when binding the repo into the container
@@ -21,3 +23,5 @@ uv pip sync requirements.txt --system
 # Append venv dir to PATH so the
 # environment is active by default
 export PATH="/opt/env/bin:$PATH"
+
+@@EXTRA_ENV@@
