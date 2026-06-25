@@ -58,7 +58,13 @@ def trace_network_weights(weights_dir, architecture):
         sample_input = torch.randn(
             batch_size, num_ifos, sample_rate * kernel_length
         )
-        weights = weights_dir / f"{num_ifos}-{sample_rate}-{kernel_length}.pt"
+        # batch_size is part of the key because torch.export specializes a
+        # batch dim of 1 to a static 1 even under Dim.AUTO, so a
+        # batch=1 export can't be reused at other batch sizes.
+        weights = (
+            weights_dir
+            / f"{num_ifos}-{sample_rate}-{kernel_length}-{batch_size}.pt"
+        )
         if not weights.exists():
             aframe = architecture(num_ifos)
             example = (sample_input,)
