@@ -61,9 +61,13 @@ def trace_network_weights(weights_dir, architecture):
         weights = weights_dir / f"{num_ifos}-{sample_rate}-{kernel_length}.pt"
         if not weights.exists():
             aframe = architecture(num_ifos)
-            trace = torch.jit.trace(aframe, sample_input)
+            example = (sample_input,)
+            dynamic_shapes = tuple({0: torch.export.Dim.AUTO} for _ in example)
+            exported = torch.export.export(
+                aframe, example, dynamic_shapes=dynamic_shapes
+            )
             with open(weights, "wb") as f:
-                torch.jit.save(trace, f)
+                torch.export.save(exported, f)
 
         shutil.copy(weights, target)
 
