@@ -1,20 +1,24 @@
 """Snakemake rules for batch inference.
 
-Rules:
-  compute_branch_map  checkpoint: enumerate (file, shifts) inference branches
-  start_triton        start the Triton server, record its IP
-  infer_branch        run inference for one (file, shifts) branch
-  aggregate_infer     merge per-branch outputs into final event sets
-  stop_triton         signal the server to shut down
+Two inference modes, selected by `inference_mode` in the run config.
+Both run branches in groups of size `branches_per_job` via
+`infer-triton` / `infer-local`, and both write the same outputs.
+The `compute_branch_map` and `aggregate_infer` rules are shared.
 
+    triton: A Triton server hosts the model, and each group job is a CPU client
+            that streams its branches to it. Best when GPUs are scarce but
+            multiple exist on a node. Realistically, only used on LDG.
 
-At very large branch counts, the DAG branch construction
-can be limited:
+    inprocess: Each group job is one GPU job that loads the model locally.
+               Best when there are many GPUs available and jobs can be
+               scheduled on them; e.g., Delta or OSG.
 
+At very large branch counts the DAG construction can be batched:
     snakemake --batch aggregate_infer=1/10
 """
 
 import json
+import math
 import os
 from pathlib import Path
 
@@ -24,65 +28,44 @@ infer_log_dir = log_dir / "infer"
 zero_lag = config.get("zero_lag", False)
 return_timeseries = config.get("return_timeseries", False)
 
-# How many concurrent inference sequences the Triton server can host.
-# streams_per_gpu is the snapshotter's per-GPU instance count, set at export
-num_gpus = len(str(config["gpus"]).split(","))
-streams_per_gpu = config["streams_per_gpu"]
-
-# Each branch has two sequences, background and foreground, so the server can
-# host streams_per_gpu * num_gpus / 2 branches at once. Register this as a
-# global resource and have each infer_branch consume two streams.
-workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
-
-# Per-branch request rate that holds aggregate load at rate_per_gpu * num_gpus.
-# num_gpus cancels, so more GPUs results in more concurrent branches.
-rate_per_gpu = config.get("rate_per_gpu")
-infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
+INFERENCE_MODE = config.get("inference_mode", "triton")
+INFERENCE_BACKEND = config.get("inference_backend", "export")
+if INFERENCE_MODE not in ("triton", "inprocess"):
+    raise WorkflowError(
+        f"inference_mode must be 'triton' or 'inprocess', got {INFERENCE_MODE}"
+    )
+if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
+    raise WorkflowError(
+        f"inference_backend must be 'export', 'compile', or 'aoti', got {INFERENCE_BACKEND}"
+    )
 
 INFER_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "infer.sif")
 
+AOTI_PKG = str(export_out / "model_aoti.pt2")
 
-localrules:
-    compute_branch_map,
-    start_triton,
-    stop_triton,
+BRANCHES_PER_JOB = config.get("branches_per_job", 1)
 
 
 wildcard_constraints:
     branch_id=r"\d+",
+    group_id=r"\d+",
 
 
-def _infer_branch_params(wildcards, input):
-    with open(input.branch_map) as f:
-        branch = json.load(f)[wildcards.branch_id]
-    return {
-        "fname": branch["fname"],
-        "shifts": _fmt_list(branch["shifts"]),
-    }
+def _num_groups(branch_map_file):
+    with open(branch_map_file) as f:
+        n = len(json.load(f))
+    return math.ceil(n / BRANCHES_PER_JOB)
 
 
-def get_infer_branch_files(wildcards):
-    """Per-branch inference outputs."""
+def get_infer_group_sentinels(wildcards):
+    """One sentinel per group of branches_per_job branches"""
     bmap_file = checkpoints.compute_branch_map.get(**wildcards).output[0]
-    with open(bmap_file) as f:
-        branch_map = json.load(f)
-    ids = list(branch_map.keys())
-    files = {
-        "background": expand(
-            str(infer_dir / "tmp" / "{branch_id}" / "background.hdf5"), branch_id=ids
-        ),
-        "foreground": expand(
-            str(infer_dir / "tmp" / "{branch_id}" / "foreground.hdf5"), branch_id=ids
-        ),
-        "metadata": expand(
-            str(infer_dir / "tmp" / "{branch_id}" / "metadata.json"), branch_id=ids
-        ),
-    }
-    if return_timeseries:
-        files["timeseries"] = expand(
-            str(infer_dir / "tmp" / "{branch_id}" / "timeseries.hdf5"), branch_id=ids
+    return {
+        "sentinels": expand(
+            str(infer_dir / "tmp" / "groups" / "{group_id}.done"),
+            group_id=list(range(_num_groups(bmap_file))),
         )
-    return files
+    }
 
 
 checkpoint compute_branch_map:
@@ -133,7 +116,7 @@ includes zero-lag branches.
             )
         branch_map, i = {}, 0
         for fname, (start, stop) in zip(input.background, segments):
-            if config.get("zero_lag", False):
+            if zero_lag:
                 zero_shifts = [0] * len(shifts)
                 if _is_analyzeable_segment(start, stop, zero_shifts, psd_length):
                     branch_map[str(i)] = {
@@ -154,92 +137,184 @@ includes zero-lag branches.
             json.dump(branch_map, f, indent=2)
 
 
-rule start_triton:
-    """Start the Triton inference server on the submit node."""
-    input:
-        model_repo=str(export_out / "model_repo"),
-    output:
-        str(triton_dir / "triton.started"),
-    log:
-        str(infer_log_dir / "start_triton.log"),
-    params:
-        output_dir=str(triton_dir),
-        ip_file=str(triton_dir / "triton.ip"),
-        stop_sentinel=str(triton_dir / "triton.stop"),
-        logfile=str(triton_dir / "server.log"),
-        model_name=config["model_name"],
-        model_version=config["model_version"],
-        gpus=config["gpus"],
-        batch_size=config["inference_batch_size"],
-        triton_image=config["triton_image"],
-        idle_timeout=config.get("triton_idle_timeout", 3600),
-    script:
-        "scripts/start_triton.py"
+_group_common_params = dict(
+    branches_per_job=BRANCHES_PER_JOB,
+    outdir_root=str(infer_dir / "tmp"),
+    ifos="[" + ",".join(config["ifos"]) + "]",
+    inference_sampling_rate=config["inference_sampling_rate"],
+    batch_size=config["inference_batch_size"],
+    psd_length=config["psd_length"],
+    fduration=config["fduration"],
+    integration_window_length=config["integration_window_length"],
+    cluster_window_length=config["cluster_window_length"],
+    return_timeseries=return_timeseries,
+)
+
+_GROUP_SHELL_SUFFIX = (
+    " --branch_map {input.branch_map}"
+    " --group_id {wildcards.group_id}"
+    " --branches_per_job {params.branches_per_job}"
+    " --waveforms {input.waveforms}"
+    " --outdir_root {params.outdir_root}"
+    " '--ifos={params.ifos}'"
+    " --inference_sampling_rate {params.inference_sampling_rate}"
+    " --batch_size {params.batch_size}"
+    " --psd_length {params.psd_length}"
+    " --fduration {params.fduration}"
+    " --integration_window_length {params.integration_window_length}"
+    " --cluster_window_length {params.cluster_window_length}"
+    " --return_timeseries {params.return_timeseries}"
+    " &> {log}"
+)
 
 
-rule infer_branch:
-    """Run inference for one (background file, shifts) branch."""
-    input:
-        branch_map=str(infer_dir / "branch_map.json"),
-        waveforms=str(test_waveforms / "waveforms.hdf5"),
-        triton_started=str(triton_dir / "triton.started"),
-    output:
-        **(
-            {"timeseries": str(infer_dir / "tmp" / "{branch_id}" / "timeseries.hdf5")}
-            if return_timeseries
-            else {}
-        ),
-        background=str(infer_dir / "tmp" / "{branch_id}" / "background.hdf5"),
-        foreground=str(infer_dir / "tmp" / "{branch_id}" / "foreground.hdf5"),
-        metadata=str(infer_dir / "tmp" / "{branch_id}" / "metadata.json"),
-    log:
-        str(infer_log_dir / "infer_branch-{branch_id}.log"),
-    container:
-        INFER_CONTAINER
-    resources:
-        triton_streams=2,
-    params:
-        branch=_infer_branch_params,
-        ip_file=str(triton_dir / "triton.ip"),
-        outdir=str(infer_dir / "tmp" / "{branch_id}"),
-        ifos="[" + ",".join(config["ifos"]) + "]",
-        model_name=config["model_name"],
-        model_version=config["model_version"],
-        inference_sampling_rate=config["inference_sampling_rate"],
-        batch_size=config["inference_batch_size"],
-        rate=infer_rate,
-        return_timeseries=return_timeseries,
-        psd_length=config["psd_length"],
-        fduration=config["fduration"],
-        integration_window_length=config["integration_window_length"],
-        cluster_window_length=config["cluster_window_length"],
-    shell:
-        "infer"
-        " --client.address $(cat {params.ip_file}):8001"
-        " --client.model_name {params.model_name}"
-        " --client.model_version {params.model_version}"
-        " --data.background_fname {params.branch[fname]}"
-        " --data.injection_set_fname {input.waveforms}"
-        " '--data.ifos={params.ifos}'"
-        " '--data.shifts={params.branch[shifts]}'"
-        " --data.inference_sampling_rate {params.inference_sampling_rate}"
-        " --data.batch_size {params.batch_size}"
-        " --data.rate {params.rate}"
-        " --postprocessor.psd_length {params.psd_length}"
-        " --postprocessor.fduration {params.fduration}"
-        " --postprocessor.integration_window_length"
-        " {params.integration_window_length}"
-        " --postprocessor.cluster_window_length"
-        " {params.cluster_window_length}"
-        " --return_timeseries {params.return_timeseries}"
-        " --outdir {params.outdir}"
-        " &> {log}"
+if INFERENCE_MODE == "triton":
+
+    num_gpus = len(str(config["gpus"]).split(","))
+    streams_per_gpu = config["streams_per_gpu"]
+
+    workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
+    rate_per_gpu = config.get("rate_per_gpu")
+    infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
+
+    localrules:
+        compute_branch_map,
+        start_triton,
+        stop_triton,
+
+    rule start_triton:
+        """Start the Triton inference server on the submit node."""
+        input:
+            model_repo=str(export_out / "model_repo"),
+        output:
+            str(triton_dir / "triton.started"),
+        log:
+            str(infer_log_dir / "start_triton.log"),
+        params:
+            output_dir=str(triton_dir),
+            ip_file=str(triton_dir / "triton.ip"),
+            stop_sentinel=str(triton_dir / "triton.stop"),
+            logfile=str(triton_dir / "server.log"),
+            model_name=config["model_name"],
+            model_version=config["model_version"],
+            gpus=config["gpus"],
+            batch_size=config["inference_batch_size"],
+            triton_image=config["triton_image"],
+            idle_timeout=config.get("triton_idle_timeout", 3600),
+        script:
+            "scripts/start_triton.py"
+
+    rule infer_group:
+        """Stream a group of branches to the Triton server from one CPU client."""
+        input:
+            branch_map=str(infer_dir / "branch_map.json"),
+            waveforms=str(test_waveforms / "waveforms.hdf5"),
+            triton_started=str(triton_dir / "triton.started"),
+        output:
+            touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
+        log:
+            str(infer_log_dir / "infer_group-{group_id}.log"),
+        container:
+            INFER_CONTAINER
+        resources:
+            triton_streams=2,
+        params:
+            **_group_common_params,
+            ip_file=str(triton_dir / "triton.ip"),
+            model_name=config["model_name"],
+            model_version=config["model_version"],
+            rate=infer_rate,
+        shell:
+            "infer-triton"
+            " --address $(cat {params.ip_file}):8001"
+            " --model_name {params.model_name}"
+            " --model_version {params.model_version}"
+            " --rate {params.rate}" + _GROUP_SHELL_SUFFIX
+
+    rule stop_triton:
+        """Shut down the Triton server by creating its stop sentinel."""
+        input:
+            background=str(infer_dir / "background.hdf5"),
+        output:
+            touch(str(triton_dir / "triton.stopped")),
+        shell:
+            "touch " + str(triton_dir / "triton.stop")
+
+else:
+
+    localrules:
+        compute_branch_map,
+
+    if INFERENCE_BACKEND == "aoti":
+        _artifact = AOTI_PKG
+
+        rule compile_model:
+            """Compile model_exported.pt2 to an AOTInductor package."""
+            input:
+                exported=str(train_out / "model_exported.pt2"),
+            output:
+                AOTI_PKG,
+            log:
+                str(infer_log_dir / "compile_model.log"),
+            container:
+                INFER_CONTAINER
+            resources:
+                slurm_partition=config.get("inference_partition", "gpuA40x4"),
+                gpu=1,
+                mem_mb=config.get("compile_mem_mb", 32000),
+                runtime=10,
+            params:
+                num_ifos=len(config["ifos"]),
+                sample_rate=config["sample_rate"],
+                kernel_length=config["kernel_length"],
+                batch_size=config["inference_batch_size"],
+            script:
+                "../export/scripts/compile_aoti.py"
+
+    else:
+        _artifact = str(train_out / "model_exported.pt2")
+
+    rule infer_group:
+        """Run a group of branches in-process on one GPU."""
+        input:
+            branch_map=str(infer_dir / "branch_map.json"),
+            waveforms=str(test_waveforms / "waveforms.hdf5"),
+            artifact=_artifact,
+        output:
+            touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
+        log:
+            str(infer_log_dir / "infer_group-{group_id}.log"),
+        container:
+            INFER_CONTAINER
+        resources:
+            slurm_partition=config.get("inference_partition", "gpuA40x4"),
+            gpu=1,  # slurm
+            request_gpus=1,  # condor
+            mem_mb=config.get("infer_mem_mb", 32000),
+            runtime=config.get("infer_runtime", 60),
+        params:
+            **_group_common_params,
+            weights=_artifact,
+            backend=INFERENCE_BACKEND,
+            aoti_arg=(f" --aoti_path {AOTI_PKG}" if INFERENCE_BACKEND == "aoti" else ""),
+            sample_rate=config["sample_rate"],
+            kernel_length=config["kernel_length"],
+            highpass=config["highpass"],
+            fftlength=config.get("fftlength") or "null",
+        shell:
+            "infer-local"
+            " --weights {params.weights}"
+            " --backend {params.backend}{params.aoti_arg}"
+            " --sample_rate {params.sample_rate}"
+            " --kernel_length {params.kernel_length}"
+            " --highpass {params.highpass}"
+            " --fftlength {params.fftlength}" + _GROUP_SHELL_SUFFIX
 
 
 rule aggregate_infer:
     """Merge per-branch outputs into the final background and foreground."""
     input:
-        unpack(get_infer_branch_files),
+        unpack(get_infer_group_sentinels),
         branch_map=str(infer_dir / "branch_map.json"),
     output:
         **({"zero_lag": str(infer_dir / "0lag.hdf5")} if zero_lag else {}),
@@ -258,13 +333,3 @@ rule aggregate_infer:
         tmp_dir=str(infer_dir / "tmp"),
     script:
         "scripts/aggregate_infer.py"
-
-
-rule stop_triton:
-    """Shut down the Triton server by creating its stop sentinel."""
-    input:
-        background=str(infer_dir / "background.hdf5"),
-    output:
-        touch(str(triton_dir / "triton.stopped")),
-    shell:
-        "touch " + str(triton_dir / "triton.stop")

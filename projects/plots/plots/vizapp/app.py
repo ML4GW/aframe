@@ -109,8 +109,8 @@ class App:
 
     def load_model(self):
         with open_file(self.weights, "rb") as f:
-            model = torch.jit.load(f)
-        return model.to(self.device)
+            exported_program = torch.export.load(f)
+        return exported_program.module().to(self.device)
 
     def update(self, attr, old, new):
         # update the vetos

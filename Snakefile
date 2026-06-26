@@ -42,5 +42,6 @@ include: "projects/plots/plots.smk"
 rule all:
     default_target: True
     input:
-        rules.stop_triton.output,
+        # stop_triton only exists in triton mode
+        *([rules.stop_triton.output] if INFERENCE_MODE == "triton" else []),
         rules.sensitive_volume.output,

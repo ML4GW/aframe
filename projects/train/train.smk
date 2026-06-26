@@ -105,13 +105,18 @@ else:
             val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
             train_waveforms=_train_waveform_inputs,
         output:
-            weights=str(train_out / "model.pt"),
+            exported=str(train_out / "model_exported.pt2"),
             batch=str(train_out / "batch.hdf5"),
         log:
             str(train_log_dir / "train.log"),
         localrule: config.get("gpu_rules_local", True)
         container:
             TRAIN_CONTAINER
+        resources:
+            slurm_partition=config.get("train_partition", "gpuA40x4"),
+            gpu=config.get("train_num_gpus", 1),
+            mem_mb=config.get("train_mem_mb", 32000),
+            runtime=2880,
         params:
             **train_data_params,
             background_dir=str(train_bg),

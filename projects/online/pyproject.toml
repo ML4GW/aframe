@@ -17,6 +17,8 @@ dependencies = [
     "arrakis>=0.2.0,<0.3",
     "amplfi",
     "ml4gw>=0.7.4",
+    "torch==2.10.0",
+    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "omegaconf>=2.3.0,<3",
     "numpy>=2",
     "scipy>=1.9",
@@ -42,11 +44,6 @@ dev = [
 ]
 
 [tool.uv]
-
-[[tool.uv.index]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cu124"
-explicit = true
 
 [tool.uv.sources]
 utils = { path = "../../libs/utils", editable = true }

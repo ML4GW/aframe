@@ -12,6 +12,8 @@ dependencies = [
     "jsonargparse~=4.24",
     "tqdm~=4.66",
     "psutil>=5.9",
+    "torch==2.10.0",
+    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "ml4gw-hermes[torch]",
     "aframe",
     "utils",
@@ -20,7 +22,8 @@ dependencies = [
 ]
 
 [project.scripts]
-infer = "infer.cli:main"
+infer-triton = "infer.cli:main_triton"
+infer-local = "infer.cli:main_local"
 start-server = "infer.server:main"
 
 [dependency-groups]
@@ -30,11 +33,6 @@ dev = [
 ]
 
 [tool.uv]
-
-[[tool.uv.index]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
 
 [tool.uv.sources]
 aframe = { path = "../../", editable = true }

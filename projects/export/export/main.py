@@ -111,9 +111,8 @@ def export(
     logging.info("Initializing model graph")
 
     with open_file(weights, "rb") as f:
-        graph = nn = torch.jit.load(f, map_location="cpu")
-
-    graph.eval()
+        exported_program = torch.export.load(f)
+    graph = nn = exported_program.module()
     logging.info(f"Initialize:\n{nn}")
 
     # instantiate a model repository at the

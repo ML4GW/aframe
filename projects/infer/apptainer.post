@@ -1,0 +1,9 @@
+# CUDA dev toolkit for AOTInductor codegen. 
+# Matches torch 2.10's bundled CUDA 12.8
+apt-get update
+apt-get install -y --no-install-recommends wget ca-certificates
+wget -q https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+apt-get update
+apt-get install -y --no-install-recommends cuda-minimal-build-12-8
+rm -rf /var/lib/apt/lists/* cuda-keyring_1.1-1_all.deb

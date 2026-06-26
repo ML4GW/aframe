@@ -2,7 +2,7 @@ projects/*/apptainer.def
 **/__pycache__
 **/.ipynb_checkpoints
 **/*.log
-**/*.env
+pipeline/*.env
 **/*.venv
 **/id_rsa
 **/*.hdf5
@@ -10,7 +10,6 @@ projects/*/apptainer.def
 
 # pipeline/experiment artifacts
 .snakemake/
-pipeline/.env
 pipeline/config/test_*.yaml
 
 # astropy/matplotlib/CUDA caches that can land in the repo from container jobs
