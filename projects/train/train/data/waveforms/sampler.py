@@ -1,7 +1,8 @@
 from dataclasses import fields
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+import h5py
 import numpy as np
 import torch
 from utils import x_per_y
@@ -31,6 +32,7 @@ class WaveformSampler(torch.nn.Module):
         ifos: List[str],
         sample_rate: float,
         val_waveform_file: Path,
+        num_val_waveforms: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -38,9 +40,17 @@ class WaveformSampler(torch.nn.Module):
         self.sample_rate = sample_rate
         self.val_waveform_file = val_waveform_file
 
-        waveform_set = self.waveform_set_cls.read(val_waveform_file)
-        self.num_val_waveforms = len(waveform_set)
-        self.right_pad = waveform_set.right_pad
+        # Read only metadata; reading the full ledger would load the entire
+        # (potentially many-GB) validation file into memory. num_val_waveforms
+        # optionally caps how many validation waveforms are used.
+        with h5py.File(val_waveform_file, "r") as f:
+            total = int(f.attrs["num_injections"])
+            self.right_pad = float(f.attrs["right_pad"])
+        self.num_val_waveforms = (
+            total
+            if num_val_waveforms is None
+            else min(int(num_val_waveforms), total)
+        )
 
     @property
     def waveform_set_cls(self):
@@ -78,8 +88,11 @@ class WaveformSampler(torch.nn.Module):
         start, stop = self.get_slice_bounds(
             self.num_val_waveforms, world_size, rank
         )
-        waveform_set = self.waveform_set_cls.read(self.val_waveform_file)
-        waveforms = torch.Tensor(waveform_set.waveforms[start:stop])
+        # Load only the [start:stop] slice rather than the whole file.
+        idx = np.arange(start, stop)
+        with h5py.File(self.val_waveform_file, "r") as h5f:
+            waveform_set = self.waveform_set_cls._load_with_idx(h5f, idx)
+        waveforms = torch.Tensor(waveform_set.waveforms)
 
         params: dict[str, torch.Tensor] = {}
         for f in fields(waveform_set):
@@ -87,7 +100,7 @@ class WaveformSampler(torch.nn.Module):
                 continue
             val = getattr(waveform_set, f.name)
             if isinstance(val, np.ndarray):
-                params[f.name] = torch.from_numpy(val[start:stop])
+                params[f.name] = torch.from_numpy(val)
 
         return waveforms, params
 

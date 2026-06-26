@@ -114,4 +114,6 @@ class SupervisedAframeDataset(BaseAframeDataset):
             out[idx[still_injected]] = vals[still_injected]
             params_out[key] = out
 
+        params_out = self.apply_param_transforms(params_out)
+
         return X, y, psds, params_out

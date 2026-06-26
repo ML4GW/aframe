@@ -1,7 +1,8 @@
 import io
 import os
 import shutil
-from typing import Optional
+from typing import Optional, Union, Literal
+from pathlib import Path
 
 import h5py
 import s3fs
@@ -13,6 +14,58 @@ from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities import grad_norm
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
+
+
+class AframeWandbLogger(WandbLogger):
+    """Thin wrapper around WandbLogger with clean type annotations.
+
+    WandbLogger.__init__ uses ForwardRef('Run') / ForwardRef('RunDisabled')
+    for the `experiment` parameter, which breaks jsonargparse's get_type_hints
+    call. This subclass re-declares __init__ without that parameter so the
+    Lightning CLI can instantiate it from a YAML config.
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        save_dir: Union[str, Path] = ".",
+        version: Optional[str] = None,
+        offline: bool = False,
+        dir: Optional[Union[str, Path]] = None,
+        id: Optional[str] = None,
+        anonymous: Optional[bool] = None,
+        project: Optional[str] = None,
+        log_model: Union[Literal["all"], bool] = False,
+        prefix: str = "",
+        checkpoint_name: Optional[str] = None,
+    ):
+        super().__init__(
+            name=name,
+            save_dir=save_dir,
+            version=version,
+            offline=offline,
+            dir=dir,
+            id=id,
+            anonymous=anonymous,
+            project=project,
+            log_model=log_model,
+            prefix=prefix,
+            checkpoint_name=checkpoint_name,
+            save_code=True,
+        )
+
+        self._offline = offline
+
+    @property
+    def experiment(self):
+        # Accessing the parent's experiment property initializes the run
+        exp = super().experiment
+        # The run has a log_code method
+        if not getattr(self, "_code_logged", False):
+            if not getattr(self, "offline", False):
+                exp.log_code("train")
+            self._code_logged = True
+        return exp
 
 
 class WandbSaveConfig(pl.cli.SaveConfigCallback):

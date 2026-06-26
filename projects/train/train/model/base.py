@@ -6,8 +6,6 @@ import lightning.pytorch as pl
 import torch
 from architectures import Architecture
 
-from train.metrics import TimeSlideAUROC
-
 Tensor = torch.Tensor
 
 
@@ -15,37 +13,28 @@ class AframeBase(pl.LightningModule):
     """
     Args:
         arch: Architecture to train on
-        metric: Metric used for evaluation
         learning_rate:
             Hyperparameter controlling size of gradient steps
             during training
         pct_lr_ramp:
             Fraction of number of training epochs over which
             learning rate will ramp up to its specified value
-        patience:
-            Number of epochs to wait for an increase in
-            validation AUROC before terminating training.
-            If left as `None`, will never terminate
-            training early
-        save_top_k_models:
-            Maximum number of best-performing model checkpoints
-            to keep during training
+        weight_decay:
+            L2 regularisation strength
+        verbose:
+            Enable debug-level logging
     """
 
     def __init__(
         self,
         arch: Architecture,
-        metric: TimeSlideAUROC,
         learning_rate: float,
         pct_lr_ramp: float,
         weight_decay: float = 0.0,
         verbose: bool = False,
     ) -> None:
         super().__init__()
-        # construct our model up front and record all
-        # our hyperparameters to our logdir;
         self.model = arch
-        self.metric = metric
         self.verbose = verbose
         self._logger = self.init_logging(verbose)
         self.save_hyperparameters(ignore=["arch", "metric"])
@@ -149,7 +138,7 @@ class AframeBase(pl.LightningModule):
         if isinstance(loss, dict):
             for name, value in loss.items():
                 self.log(
-                    name,
+                    f"train/{name}",
                     value.mean(),
                     on_step=True,
                     on_epoch=True,
@@ -160,7 +149,7 @@ class AframeBase(pl.LightningModule):
 
         loss = loss.mean()
         self.log(
-            "train_loss",
+            "train/loss",
             loss,
             on_step=True,
             on_epoch=True,
@@ -168,36 +157,6 @@ class AframeBase(pl.LightningModule):
             logger=True,
         )
         return loss
-
-    def validation_step(self, batch, _) -> None:
-        shift, X_bg, X_inj, params = batch
-
-        y_bg = self.score(X_bg)
-
-        # compute predictions over multiple views of
-        # each injection and use their average as our
-        # prediction
-        num_views, batch, *shape = X_inj.shape
-        X_inj = X_inj.view(num_views * batch, *shape)
-        y_fg = self.score(X_inj)
-        y_fg = y_fg.view(num_views, batch)
-        y_fg = y_fg.mean(0)
-
-        # include the shift associated with this data
-        # in our outputs to reconstruct background
-        # timeseries at aggregation time
-        self.metric.update(shift, y_bg, y_fg)
-
-        # lightning will take care of updating then
-        # computing the metric at the end of the
-        # validation epoch
-        self.log(
-            "valid_auroc",
-            self.metric,
-            on_step=True,
-            on_epoch=True,
-            sync_dist=True,
-        )
 
     def configure_optimizers(self):
         if not torch.distributed.is_initialized():

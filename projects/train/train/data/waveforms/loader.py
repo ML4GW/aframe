@@ -9,7 +9,6 @@ import h5py
 import numpy as np
 import torch
 
-from ledger.injections import WaveformPolarizationSet
 from .sampler import WaveformSampler
 
 
@@ -37,10 +36,11 @@ class WaveformLoader(WaveformSampler):
         else:
             self.training_waveform_files = [training_waveform_path]
 
-        waveform_set = WaveformPolarizationSet.read(
-            self.training_waveform_files[0]
-        )
-        if waveform_set.right_pad != self.right_pad:
+        # Read only the right_pad attribute; reading the full ledger would
+        # load the entire (potentially hundreds of GB) waveform file into RAM.
+        with h5py.File(self.training_waveform_files[0], "r") as f:
+            file_right_pad = f.attrs["right_pad"]
+        if file_right_pad != self.right_pad:
             raise ValueError(
                 "Training waveform file does not have the same "
                 "right pad as validation waveform file"

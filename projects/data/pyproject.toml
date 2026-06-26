@@ -12,7 +12,7 @@ dependencies = [
     "utils",
     "ledger",
     "priors",
-    "ml4gw>=0.7.2",
+    "ml4gw>=0.8.3",
     "aframe",
 ]
 

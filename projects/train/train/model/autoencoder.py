@@ -2,12 +2,12 @@ import torch
 from architectures.autoencoder import AutoencoderArchitecture
 from ml4gw.transforms import ShiftedPearsonCorrelation
 
-from train.model.base import AframeBase
+from train.model.classification import AframeClassification
 
 Tensor = torch.Tensor
 
 
-class AutoencoderAframe(AframeBase):
+class AutoencoderAframe(AframeClassification):
     # TODO: include extra init arguments for the
     # various loss terms we might like to include.
     # If specific architectures have loss functions

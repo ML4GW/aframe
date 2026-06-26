@@ -86,7 +86,7 @@ def test_non_ndarray_params_skipped(tmp_path):
     setattr(real_ws, target_field, 42.0)
 
     mock_cls = MagicMock()
-    mock_cls.read.return_value = real_ws
+    mock_cls._load_with_idx.return_value = real_ws
 
     with patch.object(
         type(sampler),

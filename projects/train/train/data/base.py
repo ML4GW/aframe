@@ -202,6 +202,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         chunks_per_epoch: int = 1,
         chunk_size: int = 10000,
         verbose: bool = False,
+        param_transforms: Optional[list[Callable]] = None,
     ) -> None:
         super().__init__()
         self.init_logging(verbose)
@@ -223,6 +224,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self._on_device = False
 
         self.dec, self.psi, self.phi = dec, psi, phi
+        self.param_transforms = param_transforms or []
         self.waveform_sampler = waveform_sampler
         # If we're using a `WaveformLoader`, we're loading
         # training waveforms from disk, so have a flag tp
@@ -604,8 +606,16 @@ class BaseAframeDataset(pl.LightningDataModule):
                 signals=signals,
                 params=params,
             )
+            params = self.apply_param_transforms(params)
             batch = (shift, X_bg, X_fg, params)
         return batch
+
+    def apply_param_transforms(
+        self, params: dict[str, Tensor]
+    ) -> dict[str, Tensor]:
+        for transform in self.param_transforms:
+            params = transform(params)
+        return params
 
     @torch.no_grad()
     def inject(self, X: Tensor, waveforms: Tensor, params: dict[str, Tensor]):

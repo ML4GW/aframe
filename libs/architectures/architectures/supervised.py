@@ -1,10 +1,11 @@
 from typing import Literal, Optional
 
 from architectures import Architecture
-from architectures.networks import S4Model, WaveNet, Xylophone
+from architectures.networks import WaveNet, Xylophone
 from jaxtyping import Float
 from ml4gw.nn.resnet.resnet_1d import NormLayer, ResNet1D
 from ml4gw.nn.resnet.resnet_2d import ResNet2D
+from ml4gw.nn.ssm.s4d import S4Model
 from torch import Tensor
 import torch
 
@@ -145,29 +146,23 @@ class SupervisedS4Model(S4Model, SupervisedArchitecture):
     def __init__(
         self,
         num_ifos: int,
-        sample_rate: float,
-        kernel_length: float,
         d_output: int = 1,
         d_model: int = 128,
+        d_state: int = 64,
         n_layers: int = 4,
         dropout: float = 0.1,
-        prenorm: bool = True,
         dt_min: float = 0.001,
         dt_max: float = 0.1,
-        lr: Optional[float] = None,
     ) -> None:
-        length = int(kernel_length * sample_rate)
         super().__init__(
-            length=length,
             d_input=num_ifos,
             d_output=d_output,
             d_model=d_model,
+            d_state=d_state,
             n_layers=n_layers,
             dropout=dropout,
-            prenorm=prenorm,
             dt_min=dt_min,
             dt_max=dt_max,
-            lr=lr,
         )
 
 

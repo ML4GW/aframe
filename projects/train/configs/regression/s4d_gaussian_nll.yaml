@@ -1,0 +1,126 @@
+# S4D chirp-mass regression with a Gaussian (beta-)NLL loss.
+#
+# Predicts chirp_mass AND its uncertainty from whitened strain, using
+# GaussianNLLRegressionAframe (mean + variance head, BetaNLLLoss) on top of an
+# S4D sequence model. The detection score is the negative mean predicted
+# variance (low uncertainty -> signal-like).
+#
+# NOTE: the architecture's d_output must be 2 * len(param_names) (one mean +
+# one variance per parameter).
+
+model:
+  class_path: train.model.regression.GaussianNLLRegressionAframe
+  init_args:
+    arch:
+      class_path: architectures.SupervisedS4Model
+      init_args:
+        num_ifos: 2
+        d_output: 2        # 2 * len(param_names): chirp_mass mean + variance
+        d_model: 64
+        d_state: 64
+        n_layers: 4
+        dropout: 0.2
+
+    param_names:
+      - chirp_mass
+
+    beta_nll: 0.3
+    y_mean: [1.2]          # center of chirp_mass prior
+    y_std: [0.39]          # std of Uniform(0.87, 2.22)
+
+    learning_rate: 1e-3
+    pct_lr_ramp: 0.115
+    weight_decay: 1e-2
+
+data:
+  class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
+  init_args:
+    background_dir: data/bns/background
+    waveforms_dir: data/bns/train
+    ifos: [H1, L1]
+    sample_rate: 2048
+
+    kernel_length: 4.0
+    left_pad: 3.5          # merger floats 3.5-4.0s from the left edge
+    right_pad: 0.0
+
+    batch_size: 16
+    batches_per_epoch: 625
+    chunk_size: 2000
+    chunks_per_epoch: 10
+    num_files_per_batch: 1
+
+    fduration: 1.0
+    fftlength: 2.0
+    psd_length: 20.0
+    highpass: 20
+
+    waveform_prob: 1.0
+    max_num_workers: 8
+
+    valid_stride: 0.5
+    num_valid_views: 1     # regression: multi-view averaging is not useful
+    valid_livetime: 57600
+
+    snr_sampler:
+      class_path: train.augmentations.SnrSampler
+      init_args:
+        alpha: -3
+        max_min_snr: 50.0
+        min_min_snr: 8.0
+        max_snr: 50.0
+        decay_steps: 50000
+
+    param_transforms:
+      - class_path: train.transforms.ChirpMass
+
+    waveform_sampler:
+      class_path: train.data.waveforms.WaveformLoader
+      init_args:
+        ifos: [H1, L1]
+        sample_rate: 2048
+        val_waveform_file: data/bns/val_waveforms.hdf5
+        training_waveform_path: data/bns/train_waveforms.hdf5
+
+    dec:
+      class_path: ml4gw.distributions.Cosine
+    psi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0.0
+        high: 3.14159
+        validate_args: false
+    phi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: -3.14159
+        high: 3.14159
+        validate_args: false
+
+trainer:
+  logger:
+    - class_path: train.callbacks.AframeWandbLogger
+      init_args:
+        name: s4d_chirp_mass_gnll_merger_4s
+        save_dir: logs
+        project: BNS-PUBLICATION
+
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: validation/mae_chirp_mass
+        mode: min
+        patience: 50
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: validation/mae_chirp_mass
+        mode: min
+        save_top_k: 1
+        save_last: true
+        auto_insert_metric_name: false
+
+  accelerator: auto
+  max_epochs: 200
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 20
+  enable_progress_bar: true
