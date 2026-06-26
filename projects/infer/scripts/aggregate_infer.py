@@ -18,6 +18,15 @@ with open(snakemake.input.branch_map) as f:
     branch_map = json.load(f)
 
 tmp_dir = Path(snakemake.params.tmp_dir)
+# Only split zero-shift branches out when a zero_lag output is requested.
+# Otherwise, everything is in background.hdf5 (useful for R&P analysis)
+split_zero_lag = hasattr(snakemake.output, "zero_lag")
+# R&P foregrounds are plain EventSets, not RecoveredInjectionSets.
+foreground_cls = (
+    EventSet
+    if snakemake.params.analysis_type == "rnp"
+    else RecoveredInjectionSet
+)
 background, zero_lag, foreground = [], [], []
 background_length, zero_lag_length, foreground_length = 0, 0, 0
 
@@ -29,7 +38,7 @@ for branch_id, branch in branch_map.items():
         meta = json.load(f)
     foreground.append(fg)
     foreground_length += meta["foreground_length"]
-    if all(s == 0 for s in branch["shifts"]):
+    if split_zero_lag and all(s == 0 for s in branch["shifts"]):
         zero_lag.append(bg)
         zero_lag_length += meta["background_length"]
     else:
@@ -43,7 +52,7 @@ EventSet.aggregate(
     clean=True,
     length=background_length,
 )
-RecoveredInjectionSet.aggregate(
+foreground_cls.aggregate(
     foreground,
     snakemake.output.foreground,
     clean=True,

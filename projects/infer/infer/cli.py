@@ -4,9 +4,11 @@ Two entry points:
     infer-triton: stream branches to a running Triton server.
     infer-local: run branches in-process on a GPU.
 
-Both use the same main.infer() loop with the same Sequence and
-Postprocessor, so outputs are identical and aggregate_infer is
-client agnostic.
+Both use the same main.infer() loop and Postprocessor, so outputs are
+identical and aggregate_infer is client agnostic.
+
+--analysis_type selects the Sequence: hdf5 (timeslide background + injections)
+or rnp (Rates and Populations frames).
 """
 
 import json
@@ -17,7 +19,7 @@ import jsonargparse
 import numpy as np
 from utils.logging import configure_logging
 
-from infer.data import Sequence
+from infer.data import Hdf5Sequence, RnPSequence
 from infer.main import infer
 from infer.postprocess import Postprocessor
 
@@ -53,16 +55,27 @@ def _write_outputs(outdir, results, seq, postproc, return_timeseries):
             )
 
 
-def _run_branch(client, cfg, background_fname, shifts, outdir, rate=None):
-    seq = Sequence(
-        background_fname,
-        cfg.waveforms,
-        cfg.ifos,
-        shifts,
-        cfg.inference_sampling_rate,
-        cfg.batch_size,
-        rate=rate,
-    )
+def _run_branch(client, cfg, branch, outdir, rate=None):
+    shifts = branch["shifts"]
+    if cfg.analysis_type == "rnp":
+        seq = RnPSequence(
+            injection_file=Path(branch["fname"]),
+            channel=cfg.channel,
+            ifos=cfg.ifos,
+            sample_rate=cfg.sample_rate,
+            inference_sampling_rate=cfg.inference_sampling_rate,
+            batch_size=cfg.batch_size,
+        )
+    else:
+        seq = Hdf5Sequence(
+            branch["fname"],
+            cfg.waveforms,
+            cfg.ifos,
+            shifts,
+            cfg.inference_sampling_rate,
+            cfg.batch_size,
+            rate=rate,
+        )
     client.callback = seq
     postproc = Postprocessor(
         t0=seq.t0,
@@ -87,12 +100,10 @@ def _run_group(client, cfg, rate=None, reset=None):
         for branch_id in group:
             if reset:
                 reset()
-            branch = branch_map[branch_id]
             _run_branch(
                 client,
                 cfg,
-                background_fname=branch["fname"],
-                shifts=branch["shifts"],
+                branch=branch_map[branch_id],
                 outdir=Path(cfg.outdir_root) / branch_id,
                 rate=rate,
             )
@@ -105,6 +116,7 @@ def _shared_args(p):
     p.add_argument("--branch_map", type=str)
     p.add_argument("--group_id", type=int)
     p.add_argument("--branches_per_job", type=int)
+    p.add_argument("--analysis_type", type=str, default="hdf5")
     p.add_argument("--waveforms", type=str)
     p.add_argument("--outdir_root", type=str)
     p.add_argument("--return_timeseries", type=bool, default=False)
@@ -150,6 +162,7 @@ def main_local(args=None):
     p.add_argument("--kernel_length", type=float)
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
+    p.add_argument("--channel", type=str, default=None)  # R&P frames
     cfg = p.parse_args(args)
     if cfg.logfile is not None:
         Path(cfg.logfile).parent.mkdir(parents=True, exist_ok=True)

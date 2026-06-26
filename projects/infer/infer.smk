@@ -39,11 +39,21 @@ if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
         f"inference_backend must be 'export', 'compile', or 'aoti', got {INFERENCE_BACKEND}"
     )
 
+ANALYSIS_TYPE = config.get("analysis_type", "hdf5")
+if ANALYSIS_TYPE not in ("hdf5", "rnp"):
+    raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
+if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
+    raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
+
 INFER_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "infer.sif")
 
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
 BRANCHES_PER_JOB = config.get("branches_per_job", 1)
+
+if ANALYSIS_TYPE == "rnp":
+    FRAME_DIR = config["rnp_frame_dir"]
+    CHANNEL = config["rnp_channel"]
 
 
 wildcard_constraints:
@@ -68,77 +78,100 @@ def get_infer_group_sentinels(wildcards):
     }
 
 
-checkpoint compute_branch_map:
-    """Enumerate (background file, shifts) inference branches.
+if ANALYSIS_TYPE == "rnp":
 
-The number of shift multiples is the minimum needed to accumulate
-Tb seconds of background livetime. Branches that are too short to
-analyze after shifting and PSD burn-in are dropped. Optionally
-includes zero-lag branches.
-"""
-    input:
-        background=get_test_background_files,
-        waveform_branch_map=str(test_waveforms / "waveform_branch_map.json"),
-    output:
-        str(infer_dir / "branch_map.json"),
-    run:
-        def _get_num_shifts(segments, Tb, shift, psd_length):
-            if Tb == 0:
-                return 0
-            livetime, num_shifts = 0, 0
-            durations = [stop - start - psd_length for start, stop in segments]
-            while livetime < Tb:
-                num_shifts += 1
-                for dur in durations:
-                    dur -= shift * num_shifts
-                    if dur > 0:
-                        livetime += dur
-            return num_shifts
+    checkpoint compute_branch_map:
+        """Enumerate R&P frame files as one branch each."""
+        output:
+            str(infer_dir / "branch_map.json"),
+        run:
+            files = sorted(str(p) for p in Path(FRAME_DIR).rglob("*.gwf"))
+            if not files:
+                raise WorkflowError(f"No .gwf frames found in {FRAME_DIR}")
+            shifts = [0.0] * len(config["ifos"])
+            branch_map = {
+                str(i): {"fname": f, "shifts": shifts} for i, f in enumerate(files)
+            }
+            Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
+            with open(output[0], "w") as f:
+                json.dump(branch_map, f, indent=2)
 
-        shifts = config["shifts"]
-        psd_length = config["psd_length"]
-        segments = []
-        for fname in input.background:
-            start, duration = map(float, Path(fname).stem.split("-")[-2:])
-            segments.append((start, start + duration))
-        num_shifts = _get_num_shifts(
-            segments, config["Tb"], max(shifts), psd_length
-        )
-        with open(input.waveform_branch_map) as f:
-            wbmap = json.load(f)
-        max_waveform_shift = max(max(b["shifts"]) for b in wbmap.values())
-        num_waveform_shifts = max_waveform_shift / max(shifts)
-        if num_waveform_shifts > num_shifts:
-            raise WorkflowError(
-                f"num_testing_signals requires {num_waveform_shifts} shift "
-                f"multiples but Tb={config['Tb']} only covers {num_shifts}. "
-                f"Reduce num_testing_signals or increase Tb."
+else:
+
+    checkpoint compute_branch_map:
+        """Enumerate (background file, shifts) inference branches.
+
+        The number of shift multiples is the minimum needed to accumulate
+        Tb seconds of background livetime. Branches that are too short to
+        analyze after shifting and PSD burn-in are dropped. Optionally
+        includes zero-lag branches.
+        """
+        input:
+            background=get_test_background_files,
+            waveform_branch_map=str(test_waveforms / "waveform_branch_map.json"),
+        output:
+            str(infer_dir / "branch_map.json"),
+        run:
+            def _get_num_shifts(segments, Tb, shift, psd_length):
+                if Tb == 0:
+                    return 0
+                livetime, num_shifts = 0, 0
+                durations = [stop - start - psd_length for start, stop in segments]
+                while livetime < Tb:
+                    num_shifts += 1
+                    for dur in durations:
+                        dur -= shift * num_shifts
+                        if dur > 0:
+                            livetime += dur
+                return num_shifts
+
+            shifts = config["shifts"]
+            psd_length = config["psd_length"]
+            segments = []
+            for fname in input.background:
+                start, duration = map(float, Path(fname).stem.split("-")[-2:])
+                segments.append((start, start + duration))
+            num_shifts = _get_num_shifts(
+                segments, config["Tb"], max(shifts), psd_length
             )
-        branch_map, i = {}, 0
-        for fname, (start, stop) in zip(input.background, segments):
-            if zero_lag:
-                zero_shifts = [0] * len(shifts)
-                if _is_analyzeable_segment(start, stop, zero_shifts, psd_length):
-                    branch_map[str(i)] = {
-                        "fname": str(fname),
-                        "shifts": zero_shifts,
-                    }
-                    i += 1
-            for j in range(num_shifts):
-                shift = [(j + 1) * s for s in shifts]
-                if _is_analyzeable_segment(start, stop, shift, psd_length):
-                    branch_map[str(i)] = {
-                        "fname": str(fname),
-                        "shifts": shift,
-                    }
-                    i += 1
-        Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
-        with open(output[0], "w") as f:
-            json.dump(branch_map, f, indent=2)
+            with open(input.waveform_branch_map) as f:
+                wbmap = json.load(f)
+            max_waveform_shift = max(max(b["shifts"]) for b in wbmap.values())
+            num_waveform_shifts = max_waveform_shift / max(shifts)
+            if num_waveform_shifts > num_shifts:
+                raise WorkflowError(
+                    f"num_testing_signals requires {num_waveform_shifts} shift "
+                    f"multiples but Tb={config['Tb']} only covers {num_shifts}. "
+                    f"Reduce num_testing_signals or increase Tb."
+                )
+            branch_map, i = {}, 0
+            for fname, (start, stop) in zip(input.background, segments):
+                if zero_lag:
+                    zero_shifts = [0] * len(shifts)
+                    if _is_analyzeable_segment(
+                        start, stop, zero_shifts, psd_length
+                    ):
+                        branch_map[str(i)] = {
+                            "fname": str(fname),
+                            "shifts": zero_shifts,
+                        }
+                        i += 1
+                for j in range(num_shifts):
+                    shift = [(j + 1) * s for s in shifts]
+                    if _is_analyzeable_segment(start, stop, shift, psd_length):
+                        branch_map[str(i)] = {
+                            "fname": str(fname),
+                            "shifts": shift,
+                        }
+                        i += 1
+            Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
+            with open(output[0], "w") as f:
+                json.dump(branch_map, f, indent=2)
 
 
 _group_common_params = dict(
     branches_per_job=BRANCHES_PER_JOB,
+    analysis_type=ANALYSIS_TYPE,
     outdir_root=str(infer_dir / "tmp"),
     ifos="[" + ",".join(config["ifos"]) + "]",
     inference_sampling_rate=config["inference_sampling_rate"],
@@ -154,8 +187,9 @@ _GROUP_SHELL_SUFFIX = (
     " --branch_map {input.branch_map}"
     " --group_id {wildcards.group_id}"
     " --branches_per_job {params.branches_per_job}"
-    " --waveforms {input.waveforms}"
-    " --outdir_root {params.outdir_root}"
+    " --analysis_type {params.analysis_type}"
+    + ("" if ANALYSIS_TYPE == "rnp" else " --waveforms {input.waveforms}")
+    + " --outdir_root {params.outdir_root}"
     " '--ifos={params.ifos}'"
     " --inference_sampling_rate {params.inference_sampling_rate}"
     " --batch_size {params.batch_size}"
@@ -273,13 +307,18 @@ else:
 
     else:
         _artifact = str(train_out / "model_exported.pt2")
+    # Only hdf5 needs the test waveform set.
+    infer_local_inputs = dict(
+        branch_map=str(infer_dir / "branch_map.json"),
+        artifact=_artifact,
+    )
+    if ANALYSIS_TYPE == "hdf5":
+        infer_local_inputs["waveforms"] = str(test_waveforms / "waveforms.hdf5")
 
     rule infer_group:
         """Run a group of branches in-process on one GPU."""
         input:
-            branch_map=str(infer_dir / "branch_map.json"),
-            waveforms=str(test_waveforms / "waveforms.hdf5"),
-            artifact=_artifact,
+            **infer_local_inputs,
         output:
             touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
         log:
@@ -308,7 +347,9 @@ else:
             " --sample_rate {params.sample_rate}"
             " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
-            " --fftlength {params.fftlength}" + _GROUP_SHELL_SUFFIX
+            " --fftlength {params.fftlength}"
+            + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
+            + _GROUP_SHELL_SUFFIX
 
 
 rule aggregate_infer:
@@ -331,5 +372,6 @@ rule aggregate_infer:
         INFER_CONTAINER
     params:
         tmp_dir=str(infer_dir / "tmp"),
+        analysis_type=ANALYSIS_TYPE,
     script:
         "scripts/aggregate_infer.py"
