@@ -115,7 +115,9 @@ class TrainBase(law.Task):
         fftlength = self.fftlength or "null"
         lowpass = self.lowpass or "null"
         args.append("--data.sample_rate=" + str(self.sample_rate))
-        args.append("--data.kernel_length=" + str(self.kernel_length))
+        args.append(
+            "--data.windowing.kernel_length=" + str(self.kernel_length)
+        )
         args.append("--data.fduration=" + str(self.fduration))
         args.append("--data.fftlength=" + str(fftlength))
         args.append("--data.highpass=" + str(self.highpass))
