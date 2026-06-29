@@ -43,15 +43,16 @@ data:
     chunks_per_epoch: 20
     # preprocessing args
     batch_size: 100
-    kernel_length: 8
+    windowing:
+      kernel_length: 8
+      window_lead_min: 0.05   # merger at least 0.05s before right edge
+      window_lead_max: 1.05   # merger at most 1.05s before right edge (sliding_range=1.00s)
     psd_length: 20
     fduration: 2
     # augmentation args
     waveform_prob: 0.277
     swap_prob: 0.014
     mute_prob: 0.055
-    left_pad: 6.95
-    right_pad: 0.05
     # heterodyne preprocessing args
     chirp_mass_low: 1
     chirp_mass_high: 2.5

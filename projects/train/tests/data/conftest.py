@@ -13,6 +13,7 @@ from ledger.injections import (
     waveform_class_factory,
 )
 
+from train.data.windowing import WindowConfig
 from train.metrics import get_timeslides
 
 # ---------------------------------------------------------------------------
@@ -177,12 +178,14 @@ def base_dataset_kwargs(data_dir, waveform_sampler) -> dict:
         "num_files_per_batch": 1,
         "waveform_sampler": waveform_sampler,
         "batch_size": BATCH_SIZE,
-        "kernel_length": KERNEL_LENGTH,
+        "windowing": WindowConfig(
+            kernel_length=KERNEL_LENGTH,
+            window_lead_min=0.0,
+            window_lead_max=KERNEL_LENGTH,
+        ),
         "fduration": FDURATION,
         "psd_length": PSD_LENGTH,
         "waveform_prob": 1.0,
-        "left_pad": 0.0,
-        "right_pad": 0.0,
         "snr_sampler": torch.distributions.Uniform(8.0, 20.0),
         "valid_stride": VALID_STRIDE,
         "min_valid_duration": MIN_VALID_DURATION,

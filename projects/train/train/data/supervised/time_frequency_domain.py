@@ -17,7 +17,7 @@ class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
         self.qtransform = SingleQTransform(
-            duration=self.hparams.kernel_length,
+            duration=self.hparams.windowing.kernel_length,
             sample_rate=self.hparams.sample_rate,
             q=self.q,
             spectrogram_shape=self.spectrogram_shape,
@@ -63,7 +63,7 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
 
     @property
     def window_length(self):
-        return self.hparams.kernel_length + self.hparams.fduration
+        return self.hparams.windowing.kernel_length + self.hparams.fduration
 
     @property
     def window_size(self):
