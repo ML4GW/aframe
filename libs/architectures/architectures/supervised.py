@@ -302,13 +302,17 @@ class SupervisedHeterodyneTimeDomainResNet(SupervisedArchitecture):
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
+        top_k: int | None = None,
         stride_type: list[Literal["stride", "dilation"]] | None = None,
         norm_layer: NormLayer | None = None,
         **kwargs,
     ) -> None:
         super().__init__()
+
+        num_channels = top_k if top_k is not None else num_chirp_masses
+
         self.time_domain_resnet = ResNet1D(
-            in_channels=num_ifos * num_chirp_masses,
+            in_channels=num_ifos * num_channels,
             layers=layers,
             classes=1,
             kernel_size=kernel_size,

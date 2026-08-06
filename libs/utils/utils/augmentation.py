@@ -2,6 +2,7 @@ import math
 from typing import Literal
 
 import torch
+import torch.nn.functional as F
 from ml4gw.transforms import Heterodyne
 from torch import Tensor
 
@@ -26,6 +27,10 @@ class HeterodyneAugmentor(torch.nn.Module):
         keep_last_n_seconds (float):
             If provided, only the last `n` seconds of the kernel_length are
             returned. Otherwise, the full kernel_length is returned.
+        top_k (int):
+            If provided, only the top `k` chirp mass channels are chosen
+            for the heterodyned timeseries. Otherwise, all chirp mass
+            channels are returned.
     Shape:
         Input: (batch_size, channels, time)
         Output: (batch_size, channels * num_chirp_masses, time_out)
@@ -59,11 +64,13 @@ class HeterodyneAugmentor(torch.nn.Module):
         num_chirp_masses: int = 100,
         chirp_mass_spacing: Literal["linear", "log"] = "log",
         keep_last_n_seconds: float = None,
+        top_k: int = None,
     ):
         super().__init__()
         self.sample_rate = sample_rate
         self.kernel_length = kernel_length
         self.keep_last_n_seconds = keep_last_n_seconds
+        self.top_k = top_k
         self.num_chirp_masses = num_chirp_masses
         self.keep_last_n_seconds = keep_last_n_seconds
 
@@ -120,12 +127,38 @@ class HeterodyneAugmentor(torch.nn.Module):
                 or determined by `keep_last_n_seconds`.
         """
         _B, _C, _T = x.shape
-        x_heterodyned = torch.empty((_B, _C * self.num_chirp_masses, _T))
+        if self.top_k is not None:
+            x_heterodyned = torch.empty((_B, _C * self.top_k, _T))
+        else:
+            x_heterodyned = torch.empty((_B, _C * self.num_chirp_masses, _T))
         # Heterodyne the whitened timeseries
         x = self.heterodyne_transform(x)
-        # Reshaping x from (batch_size, channels, num_chirp_mass, kernel_size)
-        # to (batch_size, channels x num_chirp_mass, kernel_size)
-        x = x.reshape(_B, _C * self.num_chirp_masses, _T)
+        #
+        if self.top_k is not None:
+            avgpool = F.avg_pool1d(
+                torch.abs(x.reshape(_B, _C * self.num_chirp_masses, _T)),
+                31,
+                stride=1,
+                padding=15,
+            ).reshape(_B, _C, self.num_chirp_masses, _T)
+            if self.keep_last_n_seconds is not None:
+                avgpool_snr = torch.sqrt(
+                    (avgpool[..., -self.keep_last_n_samples :] ** 2).sum(dim=1)
+                )
+            else:
+                avgpool_snr = torch.sqrt((avgpool**2).sum(dim=1))
+            vals = torch.max(avgpool_snr, dim=-1).values
+            idx = torch.topk(vals, k=self.top_k, dim=-1).indices
+            idx_expand = idx[:, None, :, None].expand(-1, _C, -1, _T)
+            x = torch.gather(x, dim=2, index=idx_expand)
+            # Reshaping x from (batch_size, channels, top_k, kernel_size)
+            # to (batch_size, channels x top_k, kernel_size)
+            x = x.reshape(_B, _C * self.top_k, _T)
+        else:
+            # Reshaping x from
+            # (batch_size, channels, num_chirp_mass, kernel_size)
+            # to (batch_size, channels x num_chirp_mass, kernel_size)
+            x = x.reshape(_B, _C * self.num_chirp_masses, _T)
         x_heterodyned[:, :, :] = x
         # Returning the desired length of heterodyned strain in the
         # time dimension

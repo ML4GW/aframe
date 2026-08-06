@@ -16,6 +16,7 @@ from architectures import Architecture
 from ledger.events import EventSet
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
+from utils.augmentation import HeterodyneAugmentor
 from utils.preprocessing import BatchWhitener
 
 from online.dataloading import (
@@ -376,6 +377,10 @@ def main(
     kernel_length: float,
     online_inference_rate: float,
     offline_inference_rate: float,
+    chirp_mass_low: float,
+    chirp_mass_high: float,
+    num_chirp_masses: int,
+    chirp_mass_spacing: Literal["linear", "log"],
     psd_length: float,
     amplfi_psd_length: float,
     aframe_right_pad: float,
@@ -386,6 +391,8 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: Literal["frames", "arrakis"] = "frames",
+    keep_last_n_seconds: float = None,
+    top_k: int = None,
     state_channels: list[str] | None = None,
     fftlength: float | None = None,
     highpass: float | None = None,
@@ -450,6 +457,22 @@ def main(
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
+        chirp_mass_low:
+            Lower bound of chirp mass range (in solar masses).
+        chirp_mass_high:
+            Upper bound of chirp mass range (in solar masses).
+        num_chirp_masses:
+            Number of chirp mass samples to generate.
+        chirp_mass_spacing:
+            Spacing of chirp mass grid. Use "linear" for evenly spaced
+            values or "log" for logarithmic spacing.
+        keep_last_n_seconds:
+            If provided, only the last `n` seconds of the kernel_length are
+            returned. Otherwise, the full kernel_length is returned.
+        top_k:
+            If provided, only the top `k` chirp mass channels are chosen
+            for the heterodyned timeseries. Otherwise, all chirp mass
+            channels are returned.
         psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten aframe data
@@ -842,6 +865,16 @@ def main(
         batch_size=int(update_size * online_inference_rate),
         fduration=fduration,
         fftlength=fftlength,
+        augmentor=HeterodyneAugmentor(
+            sample_rate=sample_rate,
+            kernel_length=kernel_length,
+            chirp_mass_low=chirp_mass_low,
+            chirp_mass_high=chirp_mass_high,
+            num_chirp_masses=num_chirp_masses,
+            chirp_mass_spacing=chirp_mass_spacing,
+            keep_last_n_seconds=keep_last_n_seconds,
+            top_k=top_k,
+        ),
         highpass=highpass,
         lowpass=lowpass,
     ).to(device)
