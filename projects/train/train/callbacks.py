@@ -11,11 +11,12 @@ from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities import grad_norm
+from lightning.pytorch.cli import SaveConfigCallback
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
 
-class WandbSaveConfig(pl.cli.SaveConfigCallback):
+class WandbSaveConfig(SaveConfigCallback):
     """
     Override of `lightning.pytorch.cli.SaveConfigCallback` for use with WandB
     to ensure all the hyperparameters are logged to the WandB dashboard.
@@ -45,7 +46,9 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         device = pl_module.device
         # Handle the case of loading training waveforms from disk
         if trainer.datamodule.waveforms_from_disk:
-            [X], waveforms = next(iter(trainer.train_dataloader))
+            batch = next(iter(trainer.train_dataloader))
+            batch = trainer.datamodule.on_before_batch_transfer(batch, None)
+            [X], waveforms = batch
             X = X.to(device)
             waveforms = waveforms.to(device)
             X, y = trainer.datamodule.inject(X, waveforms)
@@ -108,7 +111,7 @@ class SaveAugmentedBatch(Callback):
             )
             background = background.to(device)
             signals = signals.to(device)
-            X_bg, X_inj, _ = trainer.datamodule.build_val_batches(
+            X_bg, X_inj, *_ = trainer.datamodule.build_val_batches(
                 background, signals
             )
             # Make background and injected validation data into

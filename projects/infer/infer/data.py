@@ -22,6 +22,7 @@ class Sequence:
         inference_sampling_rate: float,
         batch_size: int,
         rate: Optional[float] = None,
+        output_shapes: dict[str, tuple[int, ...]] = {"detection_statistic": ()}
     ):
         """
         Object used for iterating over a segment of data,
@@ -47,6 +48,9 @@ class Sequence:
                 Number of inference requests to send to the model at once
             rate:
                 Rate at which to send requests in Hz
+            output_shapes:
+                A dictionary of output shapes and keys. use () for a 1d timeseries and (int,) for other shapes.
+                Postprocessor assumes that one of the keys is "detection_statistic"
         """
         logging.info("Initializing sequence")
 
@@ -55,6 +59,7 @@ class Sequence:
         self.batch_size = batch_size
         self.rate = rate
         self.ifos = ifos
+        self.output_shapes = output_shapes
 
         if len(ifos) != len(shifts):
             raise ValueError(
@@ -110,14 +115,12 @@ class Sequence:
         self._started = {}
         self._done = {}
         self._sequences = {}
-        self._heatmap_sequences = {}
         size = len(self) * self.batch_size
         for i in range(2):
             seq_id = self.id + i
             self._started[seq_id] = False
             self._done[seq_id] = False
-            self._sequences[seq_id] = np.zeros(size)
-            self._heatmap_sequences[seq_id] = np.zeros((size, 192))
+            self._sequences[seq_id] = {key: np.zeros((size, *self.output_shapes[key])) for key in self.output_shapes.keys()}
 
         # if there are no injections, we can mark
         # the injection sequence as started and done
@@ -222,14 +225,18 @@ class Sequence:
                     yield x, x_inj
 
     def __call__(self, output, request_id, sequence_id):
-        h, y = output
-
         # insert the response at the appropriate
         # spot in the corresponding output array
         start = request_id * self.batch_size
         stop = (request_id + 1) * self.batch_size
-        self._sequences[sequence_id][start:stop] = y[:, 0]
-        self._heatmap_sequences[sequence_id][start:stop] = h
+        if len(self.output_shapes.keys()) == 1:
+            self._sequences[sequence_id][next(iter(self.output_shapes))][start:stop] = output[:, 0]
+        else:
+            for i, key in enumerate(self.output_shapes.keys()):
+                if len(self.output_shapes[key]) == 0:
+                    self._sequences[sequence_id][key][start:stop] = output[key][:, 0]
+                else:
+                    self._sequences[sequence_id][key][start:stop] = output[key]
 
         # indicate that the first response for
         # this sequence has returned, and possibly
@@ -242,20 +249,13 @@ class Sequence:
         # sequences have completed, return them both,
         # slicing off the dummy data from the last batch
         if self.done:
-            background = self._sequences[self.id][self.slice]
-            background_heatmaps = self._heatmap_sequences[self.id][self.slice]
-            foreground = None
-            foreground_heatmaps = None
+            background = {key: self._sequences[self.id][key][self.slice] for key in self.output_shapes.keys()}
+            foreground = {key: None for key in self.output_shapes.keys()}
             if self.injection_set is not None:
-                foreground = self._sequences[self.id + 1][self.slice]
-                foreground_heatmaps = self._heatmap_sequences[self.id + 1][
-                    self.slice
-                ]
+                foreground = {key: self._sequences[self.id + 1][key][self.slice] for key in self.output_shapes.keys()}
             return (
                 background,
-                background_heatmaps,
-                foreground,
-                foreground_heatmaps,
+                foreground
             )
 
     def recover(self, foreground: EventSet) -> RecoveredInjectionSet:

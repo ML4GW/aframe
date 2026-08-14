@@ -35,10 +35,10 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
-    num_outputs: Optional[int] = 1,
     aframe_instances: Optional[int] = None,
     preproc_instances: Optional[int] = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
+    output_names: list[str] = ["detection_statistic"],
     clean: bool = False,
     verbose: bool = False,
     **kwargs,
@@ -89,8 +89,6 @@ def export(
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
-        num_outputs:
-            The number of neural network outputs. Default is set to 1
         aframe_instances:
             The number of concurrent execution instances of the
             aframe architecture to host per GPU during inference
@@ -98,6 +96,8 @@ def export(
             The backend framework platform used to host the
             aframe architecture on the inference service. Right
             now only `"onnxruntime_onnx"` is supported.
+        output_names:
+            Names used to label outputs.
         clean:
             Whether to clear the repository directory before starting
             export
@@ -134,13 +134,13 @@ def export(
         scale_model(aframe, aframe_instances)
 
     # Infer the shape of each input from the batch file.
-    # Assumes the output is stored as "y"
+    # Assumes the output is stored as "input_{i}"
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
         input_shape_dict = {
             key: (batch_size,) + tuple(batch_file[key].shape[1:])
             for key in batch_file.keys()
-            if not key.startswith("output")
+            if key.startswith("input")
         }
 
     # the network will have some different keyword
@@ -160,13 +160,6 @@ def export(
 
     # determining the number of neural networks for
     # naming the outputs
-    if num_outputs < 1:
-        raise ValueError("num_outputs must be >= 1")
-    output_names = (
-        ["discriminator"]
-        if num_outputs == 1
-        else [f"discriminator_{i}" for i in range(num_outputs)]
-    )
 
     aframe.export_version(
         graph,
@@ -225,4 +218,8 @@ def export(
     snapshotter.config.sequence_batching.max_sequence_idle_microseconds = int(
         6e10
     )
+
+    # Limit the number of threads the snapshotter uses to avoid system limits
+    snapshotter.config.parameters["intra_op_thread_count"].string_value = "2"
+
     snapshotter.config.write()

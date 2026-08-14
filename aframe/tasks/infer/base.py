@@ -38,6 +38,8 @@ class InferParameters(law.Task):
     return_timeseries = luigi.BoolParameter(default="false")
     output_dir = PathParameter(default=paths().results_dir)
     train_task = luigi.TaskParameter()
+    output_shapes = luigi.OptionalDictParameter(default={"detection_statistic": []})
+    kernel_length = luigi.OptionalFloatParameter(default=1.5)
 
 
 @inherits(InferParameters)
@@ -206,6 +208,7 @@ class InferBase(
         from infer.data import Sequence
         from infer.main import infer
         from infer.postprocess import Postprocessor
+        #from infer.postprocess import Merger_Time_Postprocessor as Postprocessor
 
         ip = os.getenv("AFRAME_TRITON_IP")
         self.tmp_dir.mkdir(exist_ok=True, parents=True)
@@ -218,6 +221,7 @@ class InferBase(
             shifts=shifts,
             background_fname=fname,
             injection_set_fname=self.injection_set_fname,
+            output_shapes={key: tuple(val) for key, val in self.output_shapes.items()}
         )
 
         postprocessor = Postprocessor(
@@ -228,6 +232,7 @@ class InferBase(
             fduration=self.fduration,
             t0=sequence.t0,
             shifts=shifts,
+            kernel_length=self.kernel_length
         )
 
         client = InferenceClient(

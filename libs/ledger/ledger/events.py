@@ -44,12 +44,14 @@ class EventSet(Ledger):
         shift: List of time shifts defining the timeslide in which
                event was found.
         Tb: Total livetime analyzed in detecting these events, in seconds.
+        extra_params: Any additional parameters (eg. regression). The class still works when this is empty.
     """
 
     detection_statistic: np.ndarray = parameter()
     detection_time: np.ndarray = parameter()
     shift: np.ndarray = parameter()
     Tb: float = metadata(default=0)
+    extra_params: dict = parameter(default=dict)
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
@@ -289,9 +291,13 @@ class RecoveredInjectionSet(EventSet, InterferometerResponseSet):
             subobj = cls(
                 detection_statistic=evs.detection_statistic,
                 detection_time=evs.detection_time,
+                extra_params=evs.extra_params,
                 **kwargs,
             )
-            obj.append(subobj)
+            if len(obj) == 0:
+                obj = subobj
+            else:
+                obj.append(subobj)
 
         obj.Tb = events.Tb
         return obj
