@@ -2,8 +2,8 @@ import math
 from typing import Literal
 
 import torch
-import torch.nn.functional as F
 from ml4gw.transforms import Heterodyne
+from utils.augmentation import SelectTopK
 
 from train.data.supervised.supervised import SupervisedAframeDataset
 
@@ -48,9 +48,9 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
             If provided, only the last `n` seconds of the kernel_length are
             returned. Otherwise, the full kernel_length is returned.
         top_k (int):
-            If provided, only the top `k` chirp mass channels are chosen
-            for the heterodyned timeseries. Otherwise, all chirp mass
-            channels are returned.
+            If provided, the top `k` chirp mass channels are selected based on
+            their absolute amplitude, corresponding to the `k` matching chirp
+            masses with. If `None`, all chirp mass channels are returned.
     """
 
     def __init__(
@@ -78,6 +78,14 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         if self.keep_last_n_seconds is not None:
             self.keep_last_n_samples = int(
                 self.keep_last_n_seconds * self.hparams.sample_rate
+            )
+        else:
+            self.keep_last_n_samples = None
+
+        if self.top_k is not None:
+            self.select_top_k = SelectTopK(
+                keep_last_n_samples=self.keep_last_n_samples,
+                top_k=self.top_k,
             )
 
     def build_transforms(self, *args, **kwargs):
@@ -111,43 +119,19 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
                 f"Invalid chirp mass spacing: {chirp_mass_spacing}"
             )
 
-    def _select_top_k(self, X):
-        B, C, M, T = X.shape
-        # If no top-k requested, flatten the chirp-mass dimension
-        if self.top_k is None:
-            return X.reshape(B, C * M, T)
-        _X = []
-        for b in range(B):
-            x = X[b]
-            avgpool = F.avg_pool1d(
-                torch.abs(x.reshape(C * M, T)),
-                kernel_size=31,
-                stride=1,
-                padding=15,
-            ).reshape(C, M, T)
-            if self.keep_last_n_seconds is not None:
-                avgpool_snr = torch.sqrt(
-                    (avgpool[..., -self.keep_last_n_samples :] ** 2).sum(dim=0)
-                )
-            else:
-                avgpool_snr = torch.sqrt((avgpool**2).sum(dim=0))
-            vals = avgpool_snr.max(dim=-1).values
-            idx = torch.topk(vals, k=self.top_k).indices
-            idx = idx[None, :, None].expand(C, -1, T)
-            _X.append(torch.gather(x, dim=1, index=idx))
-        return torch.stack(_X).reshape(B, C * self.top_k, T)
-
     def build_val_batches(self, background, signals):
         X_bg, X_inj, psds = super().build_val_batches(background, signals)
         X_bg = self.whitener(X_bg, psds)
         X_bg = self.heterodyne_transform(X_bg)
-        X_bg = self._select_top_k(X_bg)
+        if self.top_k is not None:
+            X_bg = self.select_top_k(X_bg)
         # whiten each view of injections
         X_fg = []
         for inj in X_inj:
             inj = self.whitener(inj, psds)
             inj = self.heterodyne_transform(inj)
-            inj = self._select_top_k(inj)
+            if self.top_k is not None:
+                inj = self.select_top_k(inj)
             X_fg.append(inj)
         X_fg = torch.stack(X_fg)
 
@@ -162,7 +146,8 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X, y, psds = super().inject(X, waveforms)
         X = self.whitener(X, psds)
         X = self.heterodyne_transform(X)
-        X = self._select_top_k(X)
+        if self.top_k is not None:
+            X = self.select_top_k(X)
 
         if self.keep_last_n_seconds is not None:
             return X[..., -self.keep_last_n_samples :], y
