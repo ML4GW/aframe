@@ -3,7 +3,7 @@ from typing import Literal
 
 import torch
 from ml4gw.transforms import Heterodyne
-from utils.augmentation import SelectTopK
+from utils.augmentation import select_top_k
 
 from train.data.supervised.supervised import SupervisedAframeDataset
 
@@ -82,12 +82,6 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         else:
             self.keep_last_n_samples = None
 
-        if self.top_k is not None:
-            self.select_top_k = SelectTopK(
-                keep_last_n_samples=self.keep_last_n_samples,
-                top_k=self.top_k,
-            )
-
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
         self.heterodyne_transform = Heterodyne(
@@ -124,14 +118,20 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_bg = self.whitener(X_bg, psds)
         X_bg = self.heterodyne_transform(X_bg)
         if self.top_k is not None:
-            X_bg = self.select_top_k(X_bg)
+            X_bg = select_top_k(
+                X_bg, self.top_k, keep_last_n_samples=self.keep_last_n_samples
+            )
         # whiten each view of injections
         X_fg = []
         for inj in X_inj:
             inj = self.whitener(inj, psds)
             inj = self.heterodyne_transform(inj)
             if self.top_k is not None:
-                inj = self.select_top_k(inj)
+                inj = select_top_k(
+                    inj,
+                    self.top_k,
+                    keep_last_n_samples=self.keep_last_n_samples,
+                )
             X_fg.append(inj)
         X_fg = torch.stack(X_fg)
 
@@ -147,7 +147,9 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X = self.whitener(X, psds)
         X = self.heterodyne_transform(X)
         if self.top_k is not None:
-            X = self.select_top_k(X)
+            X = select_top_k(
+                X, self.top_k, keep_last_n_samples=self.keep_last_n_samples
+            )
 
         if self.keep_last_n_seconds is not None:
             return X[..., -self.keep_last_n_samples :], y
