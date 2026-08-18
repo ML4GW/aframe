@@ -8,6 +8,7 @@ from utils.preprocessing import (
 from utils.augmentation import HeterodyneAugmentor
 from ml4gw.transforms import Heterodyne
 import torch
+import torch.nn.functional as F
 import pytest
 
 
@@ -299,6 +300,84 @@ class TestBatchWhitener:
         kernels_heterodyned = heterodyne(whitener(x))
         _B, _C, _M, _T = kernels_heterodyned.shape
         kernels = kernels_heterodyned.reshape(_B, _C * _M, _T)
+        kernels_aug = whitener_aug(x)
+        assert torch.allclose(kernels_aug, kernels)
+
+    def test_with_heterodyne_augmentor_top_k(self):
+
+        heterodyne_augmentor = HeterodyneAugmentor(
+            sample_rate=self.sample_rate,
+            kernel_length=self.kernel_length,
+            chirp_mass_low=1.0,
+            chirp_mass_high=2.5,
+            num_chirp_masses=10,
+            chirp_mass_spacing="log",
+            keep_last_n_seconds=1.5,
+            top_k=5,
+        )
+
+        whitener = BatchWhitener(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+        )
+
+        whitener_aug = BatchWhitener(
+            kernel_length=self.kernel_length,
+            sample_rate=self.sample_rate,
+            inference_sampling_rate=self.inference_sampling_rate,
+            batch_size=self.batch_size,
+            fduration=self.fduration,
+            fftlength=self.fftlength,
+            augmentor=heterodyne_augmentor,
+        )
+
+        channels = 2
+        total_samples = int(
+            (
+                (self.batch_size - 1) * whitener_aug.stride_size
+                + whitener_aug.kernel_size
+            )
+            * 2
+        )
+
+        x = torch.randn(channels, total_samples)
+
+        heterodyne = Heterodyne(
+            sample_rate=self.sample_rate,
+            kernel_length=self.kernel_length,
+            chirp_mass=heterodyne_augmentor.chirp_mass_grid,
+            return_type="time",
+        )
+
+        kernels = whitener_aug(x)
+
+        kernels_heterodyned = heterodyne(whitener(x))
+        _B, _C, _M, _T = kernels_heterodyned.shape
+        avgpool = F.avg_pool1d(
+            torch.abs(kernels_heterodyned.reshape(_B, _C * _M, _T)),
+            31,
+            stride=1,
+            padding=15,
+        ).reshape(_B, _C, _M, _T)
+        avgpool_snr = torch.sqrt(
+            (avgpool[..., -int(1.5 * self.sample_rate) :] ** 2).sum(dim=1)
+        )
+        vals = torch.max(avgpool_snr, dim=-1).values
+        idx = torch.topk(vals, k=5, dim=-1).indices
+        idx_expand = idx[:, None, :, None].expand(-1, _C, -1, _T)
+        kernels_heterodyned = torch.gather(
+            kernels_heterodyned, dim=2, index=idx_expand
+        )
+        kernels_heterodyned = kernels_heterodyned.reshape(_B, _C * 5, _T)
+        kernels_heterodyned = kernels_heterodyned[
+            ..., -int(1.5 * self.sample_rate) :
+        ]
+        kernels = kernels_heterodyned
+
         kernels_aug = whitener_aug(x)
         assert torch.allclose(kernels_aug, kernels)
 

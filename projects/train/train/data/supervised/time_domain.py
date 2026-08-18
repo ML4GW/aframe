@@ -4,6 +4,7 @@ from typing import Literal
 
 from train.data.supervised.supervised import SupervisedAframeDataset
 from ml4gw.transforms import Heterodyne
+from utils.augmentation import select_top_k
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
@@ -45,6 +46,10 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         keep_last_n_seconds (float):
             If provided, only the last `n` seconds of the kernel_length are
             returned. Otherwise, the full kernel_length is returned.
+        top_k (int):
+            If provided, the top `k` chirp mass channels are selected based on
+            their absolute amplitude, corresponding to the `k` matching chirp
+            masses with. If `None`, all chirp mass channels are returned.
     """
 
     def __init__(
@@ -54,6 +59,7 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         num_chirp_masses: int = 100,
         chirp_mass_spacing: Literal["linear", "log"] = "log",
         keep_last_n_seconds: float = None,
+        top_k: int = None,
         *args,
         **kwargs,
     ):
@@ -67,11 +73,13 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         )
 
         self.keep_last_n_seconds = keep_last_n_seconds
-
+        self.top_k = top_k
         if self.keep_last_n_seconds is not None:
             self.keep_last_n_samples = int(
                 self.keep_last_n_seconds * self.hparams.sample_rate
             )
+        else:
+            self.keep_last_n_samples = None
 
     def build_transforms(self, *args, **kwargs):
         super().build_transforms(*args, **kwargs)
@@ -108,17 +116,23 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_bg, X_inj, psds = super().build_val_batches(background, signals)
         X_bg = self.whitener(X_bg, psds)
         X_bg = self.heterodyne_transform(X_bg)
-        _B_bg, _C_bg, _M_bg, _T_bg = X_bg.shape
-        X_bg = X_bg.view(_B_bg, _C_bg * _M_bg, _T_bg)
+        if self.top_k is not None:
+            X_bg = select_top_k(
+                X_bg, self.top_k, keep_last_n_samples=self.keep_last_n_samples
+            )
         # whiten each view of injections
         X_fg = []
         for inj in X_inj:
             inj = self.whitener(inj, psds)
             inj = self.heterodyne_transform(inj)
+            if self.top_k is not None:
+                inj = select_top_k(
+                    inj,
+                    self.top_k,
+                    keep_last_n_samples=self.keep_last_n_samples,
+                )
             X_fg.append(inj)
         X_fg = torch.stack(X_fg)
-        _V_fg, _B_fg, _C_fg, _M_fg, _T_fg = X_fg.shape
-        X_fg = X_fg.view(_V_fg, _B_fg, _C_fg * _M_fg, _T_fg)
 
         if self.keep_last_n_seconds is not None:
             return X_bg[..., -self.keep_last_n_samples :], X_fg[
@@ -131,8 +145,10 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X, y, psds = super().inject(X, waveforms)
         X = self.whitener(X, psds)
         X = self.heterodyne_transform(X)
-        _B, _C, _M, _T = X.shape
-        X = X.view(_B, _C * _M, _T)
+        if self.top_k is not None:
+            X = select_top_k(
+                X, self.top_k, keep_last_n_samples=self.keep_last_n_samples
+            )
 
         if self.keep_last_n_seconds is not None:
             return X[..., -self.keep_last_n_samples :], y

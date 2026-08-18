@@ -57,12 +57,21 @@ class AframeCLI(LightningCLI):
         except Exception:
             pass
 
-        # TODO: This is a workaround for linking num_chirp_masses between
-        # the model and the architecture for in_channels.
+        # TODO: This is a workaround for linking num_chirp_masses and
+        # top_k channel argument between the model and the architecture
+        # for in_channels.
         try:
             parser.link_arguments(
                 "data.init_args.num_chirp_masses",
                 "model.init_args.arch.init_args.num_chirp_masses",
+            )
+        except Exception:
+            pass
+
+        try:
+            parser.link_arguments(
+                "data.init_args.top_k",
+                "model.init_args.arch.init_args.top_k",
             )
         except Exception:
             pass

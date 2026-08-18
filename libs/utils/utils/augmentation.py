@@ -1,9 +1,75 @@
 import math
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from typing import Literal
 
 from ml4gw.transforms import Heterodyne
+
+
+def select_top_k(
+    X: torch.Tensor,
+    top_k: int,
+    kernel_size: int = 31,
+    stride: int = 1,
+    padding: int = 15,
+    keep_last_n_samples: int | None = None,
+) -> torch.Tensor:
+    """
+    Select top `k` chirp mass channels from `M` heterodyned timeseries.
+
+    Args:
+        X (Tensor):
+            Input tensor of shape (B, C, M, T) where B is the batch
+            size, C is the number of channels, M is the number of chirp
+            mass channels, and T is the number of time samples.
+        top_k (int):
+            Number of chirp mass channels to retain.
+        kernel_size (int):
+            Size of the running average (average pooling) window used to
+            smooth the absolute value of the input before computing the
+            selection statistic.
+        stride (int):
+            Stride of the average pooling operation.
+        padding (int):
+            Zero-padding applied to both sides of the timeseries before
+            the average pooling operation.
+        keep_last_n_samples (int, optional):
+            If provided, only the final `n` samples are used when
+            computing the statistic used to select the top k chirp mass
+            channels. If `None`, all samples are used.
+
+    Returns:
+        Tensor:
+            Output tensor of shape (B, C * top_k, T) containing the
+            selected top k chirp mass channels for each batch and channel.
+    """
+
+    B, C, M, T = X.shape
+
+    avgpool = torch.stack(
+        [
+            F.avg_pool1d(
+                torch.abs(x.reshape(C * M, T)),
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+            )
+            for x in X
+        ]
+    ).reshape(B, C, M, T)
+
+    if keep_last_n_samples is not None:
+        avgpool_snr = torch.sqrt(
+            (avgpool[..., -keep_last_n_samples:] ** 2).sum(dim=1)
+        )
+    else:
+        avgpool_snr = torch.sqrt((avgpool**2).sum(dim=1))
+
+    vals = avgpool_snr.max(dim=-1).values
+    idx = torch.topk(vals, k=top_k, dim=-1).indices
+    idx = idx[:, None, :, None].expand(B, C, top_k, T)
+    return torch.gather(X, dim=2, index=idx).reshape(B, C * top_k, T)
 
 
 class HeterodyneAugmentor(torch.nn.Module):
@@ -26,6 +92,10 @@ class HeterodyneAugmentor(torch.nn.Module):
         keep_last_n_seconds (float):
             If provided, only the last `n` seconds of the kernel_length are
             returned. Otherwise, the full kernel_length is returned.
+        top_k (int):
+            If provided, the top `k` chirp mass channels are selected based on
+            their absolute amplitude, corresponding to the `k` matching chirp
+            masses with. If `None`, all chirp mass channels are returned.
     Shape:
         Input: (batch_size, channels, time)
         Output: (batch_size, channels * num_chirp_masses, time_out)
@@ -58,12 +128,13 @@ class HeterodyneAugmentor(torch.nn.Module):
         chirp_mass_high: float = 2.5,
         num_chirp_masses: int = 100,
         chirp_mass_spacing: Literal["linear", "log"] = "log",
-        keep_last_n_seconds: float = None,
+        keep_last_n_seconds: float | None = None,
+        top_k: int | None = None,
     ):
         super().__init__()
         self.sample_rate = sample_rate
         self.kernel_length = kernel_length
-        self.keep_last_n_seconds = keep_last_n_seconds
+        self.top_k = top_k
         self.num_chirp_masses = num_chirp_masses
         self.keep_last_n_seconds = keep_last_n_seconds
 
@@ -78,6 +149,8 @@ class HeterodyneAugmentor(torch.nn.Module):
             self.keep_last_n_samples = int(
                 self.keep_last_n_seconds * sample_rate
             )
+        else:
+            self.keep_last_n_samples = None
 
         self.heterodyne_transform = Heterodyne(
             sample_rate=sample_rate,
@@ -120,12 +193,22 @@ class HeterodyneAugmentor(torch.nn.Module):
                 or determined by `keep_last_n_seconds`.
         """
         _B, _C, _T = x.shape
-        x_heterodyned = torch.empty((_B, _C * self.num_chirp_masses, _T))
+        if self.top_k is not None:
+            x_heterodyned = torch.empty((_B, _C * self.top_k, _T))
+        else:
+            x_heterodyned = torch.empty((_B, _C * self.num_chirp_masses, _T))
         # Heterodyne the whitened timeseries
         x = self.heterodyne_transform(x)
-        # Reshaping x from (batch_size, channels, num_chirp_mass, kernel_size)
-        # to (batch_size, channels x num_chirp_mass, kernel_size)
-        x = x.reshape(_B, _C * self.num_chirp_masses, _T)
+        if self.top_k is not None:
+            # Select the top k chirp mass channels
+            x = select_top_k(
+                x, self.top_k, keep_last_n_samples=self.keep_last_n_samples
+            )
+        else:
+            # Reshaping x from
+            # (batch_size, channels, num_chirp_mass, kernel_size)
+            # to (batch_size, channels x num_chirp_mass, kernel_size)
+            x = x.reshape(_B, _C * self.num_chirp_masses, _T)
         x_heterodyned[:, :, :] = x
         # Returning the desired length of heterodyned strain in the
         # time dimension

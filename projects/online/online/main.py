@@ -25,7 +25,8 @@ from online.dataloading import (
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
 from online.utils.snapshotter import OnlineSnapshotter
-from utils.preprocessing import TimeSpectrogramPreprocessor
+from utils.preprocessing import BatchWhitener
+from utils.augmentation import HeterodyneAugmentor
 from online.subprocesses import (
     amplfi_subprocess,
     pastro_subprocess,
@@ -147,7 +148,7 @@ def process_event(
 
 @torch.no_grad()
 def search(
-    whitener: TimeSpectrogramPreprocessor,
+    whitener: BatchWhitener,
     snapshotter: OnlineSnapshotter,
     searcher: Searcher,
     event_queue: Queue,
@@ -294,9 +295,9 @@ def search(
         # (significant performance speed up)
         if hl_ready:
             logging.debug("Performing inference")
-            y = aframe(*whitened)[0][:, 0]
+            y = aframe(whitened)[:, 0]
         else:
-            y = torch.ones(whitened[0].shape[0])
+            y = torch.ones(whitened.shape[0])
 
         # update our output buffer with the latest aframe output,
         # which will also automatically integrate the output
@@ -358,10 +359,10 @@ def main(
     kernel_length: float,
     online_inference_rate: float,
     offline_inference_rate: float,
-    schedule: list[list[int]],
-    split: bool,
-    q: float,
-    spectrogram_shape: list[int, int],
+    chirp_mass_low: float,
+    chirp_mass_high: float,
+    num_chirp_masses: int,
+    chirp_mass_spacing: Literal["linear", "log"],
     psd_length: float,
     amplfi_psd_length: float,
     aframe_right_pad: float,
@@ -372,6 +373,8 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: Literal["frames", "ngdd"] = "frames",
+    keep_last_n_seconds: float = None,
+    top_k: int = None,
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -435,21 +438,22 @@ def main(
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
-        schedule:
-            It specifies which segments of the input to keep and at
-            what sampling rate. Each row of the schedule has the
-            form: [start_time, end_time, target_sample_rate]
-        split:
-            If `True`, then return a list of decimated segments based on
-            the schedule input. If `False`, then return a concatenated
-            single continuous output tensor.
-        q:
-            The Q value to use for the Q transform.
-        spectrogram_shape:
-            The shape of the interpolated spectrogram, specified as
-            ``(num_f_bins, num_t_bins)``. Because the frequency spacing
-            of the Q-tiles is in log-space, the frequency interpolation
-            is log-spaced as well.
+        chirp_mass_low:
+            Lower bound of chirp mass range (in solar masses).
+        chirp_mass_high:
+            Upper bound of chirp mass range (in solar masses).
+        num_chirp_masses:
+            Number of chirp mass samples to generate.
+        chirp_mass_spacing:
+            Spacing of chirp mass grid. Use "linear" for evenly spaced
+            values or "log" for logarithmic spacing.
+        keep_last_n_seconds:
+            If provided, only the last `n` seconds of the kernel_length are
+            returned. Otherwise, the full kernel_length is returned.
+        top_k:
+            If provided, only the top `k` chirp mass channels are chosen
+            for the heterodyned timeseries. Otherwise, all chirp mass
+            channels are returned.
         psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten aframe data
@@ -819,17 +823,23 @@ def main(
         lowpass=lowpass,
     ).to(device)
 
-    whitener = TimeSpectrogramPreprocessor(
+    whitener = BatchWhitener(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=online_inference_rate,
         batch_size=update_size * online_inference_rate,
         fduration=fduration,
         fftlength=fftlength,
-        schedule=schedule,
-        split=split,
-        q=q,
-        spectrogram_shape=spectrogram_shape,
+        augmentor=HeterodyneAugmentor(
+            sample_rate=sample_rate,
+            kernel_length=kernel_length,
+            chirp_mass_low=chirp_mass_low,
+            chirp_mass_high=chirp_mass_high,
+            num_chirp_masses=num_chirp_masses,
+            chirp_mass_spacing=chirp_mass_spacing,
+            keep_last_n_seconds=keep_last_n_seconds,
+            top_k=top_k,
+        ),
         highpass=highpass,
         lowpass=lowpass,
     ).to(device)

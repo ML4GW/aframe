@@ -52,13 +52,15 @@ state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:D
 data_source: "frames"
 sample_rate: 2048
 astro_event_rate: 89
-kernel_length: 20
+kernel_length: 8
 online_inference_rate: 512
 offline_inference_rate: 16
-schedule: [[0, 16, 512], [16, 20, 2048]]
-split: True
-q: 45.6
-spectrogram: [64, 128]
+chirp_mass_low: 1.0
+chirp_mass_high: 2.5
+num_chirp_masses: 100
+chirp_mass_spacing: "log"
+keep_last_n_seconds: 1.5
+top_k: 10
 inference_params: ["chirp_mass", "mass_ratio", "luminosity_distance", "phic", "inclination", "dec", "psi", "phi"]
 psd_length: 64
 amplfi_psd_length: 10

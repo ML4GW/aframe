@@ -13,7 +13,7 @@ model:
       class_path: architectures.supervised.SupervisedHeterodyneTimeDomainResNet
       init_args:
         layers: [3, 4, 6, 3]
-        kernel_size: 25
+        kernel_size: 3
         norm_layer:
           class_path: ml4gw.nn.norm.GroupNorm1DGetter
           init_args:
@@ -37,12 +37,12 @@ data:
     waveforms_dir:
     ifos: [H1,L1]
     sample_rate: 2048
-    batches_per_epoch: 100
+    batches_per_epoch: 200
     num_files_per_batch: 10
-    chunk_size: 1000
+    chunk_size: 5000
     chunks_per_epoch: 20
     # preprocessing args
-    batch_size: 100
+    batch_size: 2000
     kernel_length: 8
     psd_length: 20
     fduration: 2
@@ -57,25 +57,26 @@ data:
     chirp_mass_high: 2.5
     num_chirp_masses: 100
     chirp_mass_spacing: "log"
-    keep_last_n_seconds: null
+    keep_last_n_seconds: 1.5
+    top_k: 10
     # highpass: 
     # lowpass: 
     fftlength: 2
-    snr_sampler:
-      class_path: ml4gw.distributions.PowerLaw
-      init_args: 
-        minimum: 8
-        maximum: 100
-        index: -3
-    # curriculum learning for snr sampler
     # snr_sampler:
-    #   class_path: train.augmentations.SnrSampler
-    #   init_args:
-    #     max_min_snr: 30
-    #     min_min_snr: 8
-    #     max_snr: 100
-    #     alpha: -3
-    #     decay_steps: 600
+    #   class_path: ml4gw.distributions.PowerLaw
+    #   init_args: 
+    #     minimum: 8
+    #     maximum: 100
+    #     index: -3
+    # curriculum learning for snr sampler
+    snr_sampler:
+      class_path: train.augmentations.SnrSampler
+      init_args:
+        max_min_snr: 30
+        min_min_snr: 8
+        max_snr: 100
+        alpha: -3
+        decay_steps: 600
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
