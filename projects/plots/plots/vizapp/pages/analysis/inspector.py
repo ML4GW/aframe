@@ -29,7 +29,7 @@ class InspectorPlot:
 
     def initialize_sources(self):
         strain_source = {ifo: [] for ifo in self.analyzer.ifos}
-        fft_source = strain_source.copy()
+        fft_source = {ifo: [] for ifo in self.analyzer.ifos}
         strain_source["t"] = []
         fft_source["f"] = []
 
@@ -168,7 +168,7 @@ class InspectorPlot:
             from matplotlib import ticker
 
             # TODO: account for half second somewhere
-            ax.set_epoch(0.5)
+            ax.set_epoch(self.analyzer.fduration / 2)
             ax.set_title(self.analyzer.ifos[i])
             ax.set_xlabel("Time [s]")
             ax.set_ylabel("Frequency [Hz]")
@@ -276,10 +276,16 @@ class InspectorPlot:
     def reset(self):
         # TODO: implement this
         for r in self.strain_renderers:
-            r.data_source.data = {"H1": [], "L1": [], "t": []}
+            r.data_source.data = {
+                **{ifo: [] for ifo in self.analyzer.ifos},
+                "t": [],
+            }
 
         for r in self.fft_renderers:
-            r.data_source.data = {"H1": [], "L1": [], "f": []}
+            r.data_source.data = {
+                **{ifo: [] for ifo in self.analyzer.ifos},
+                "f": [],
+            }
 
         for r in self.output_renderers:
             r.data_source.data = {"nn": [], "integrated": [], "t": []}

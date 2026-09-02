@@ -138,8 +138,8 @@ class SensitiveVolumePlot:
             f.create_dataset("fars", data=self.fars)
             for i, combo in enumerate(self.mass_combos):
                 g = f.create_group("-".join(map(str, combo)))
-                g.create_dataset("sv", data=self.y[i])
-                g.create_dataset("err", data=self.err[i])
+                g.create_dataset("sv", data=self.svs[i])
+                g.create_dataset("err", data=self.errs[i])
 
         # save grid plot as html
         save(self.grid, filename=output_dir / "sensitive_volume.html")

@@ -6,9 +6,14 @@ authors = [{ name = "Alec Gunny" }]
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "bokeh~=3.0",
+    "numpy>=2",
     "scipy~=1.7",
     "h5py~=3.5",
     "gwpy~=3.0.8",
+    "astropy>=6.0",
+    "bilby>=2.2.2,<3",
+    "gwosc",
+    "tqdm~=4.66",
     "ledger",
     "priors",
     "utils",
@@ -18,6 +23,10 @@ dependencies = [
     "jsonargparse>=4.27.4,<5",
     "omegaconf~=2.2",
     "urllib3>=2",
+    # vizapp only
+    "torch==2.10.0",
+    "matplotlib>=3.9.4",
+    "pillow>=11",
 ]
 
 [project.scripts]

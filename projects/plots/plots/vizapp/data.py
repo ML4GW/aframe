@@ -39,7 +39,7 @@ class DataManager:
         results_dir: Path,
         waveforms_dir: Path,
         ifos: list[str],
-        vetos: VETO_CATEGORIES | None = None,
+        vetos: list[VETO_CATEGORIES] | None = None,
     ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
@@ -64,7 +64,6 @@ class DataManager:
             logging.info(
                 f"Removed {num_unphysical} foreground events with SNR > 10,000"
             )
-        self.foreground = self.foreground[self.foreground.snr < 1e4]
         self.rejected_params = InjectionParameterSet.read(rejected)
         self.logger.info("Data loaded")
 

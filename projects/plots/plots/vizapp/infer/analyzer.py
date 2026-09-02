@@ -170,11 +170,12 @@ class EventAnalyzer:
         # pad X up to batch size
         remainder = X.shape[-1] % self.step_size
         num_slice = None
-        if remainder:
+        pad = 0
+        if remainder > 0:
             pad = self.step_size - remainder
             X = torch.nn.functional.pad(X, (0, pad))
             num_slice = pad // self.inference_stride
-        slc = slice(-num_slice)
+        slc = slice(-num_slice) if num_slice else slice(None)
 
         while start <= (X.shape[-1] - self.step_size):
             stop = start + self.step_size
@@ -188,7 +189,9 @@ class EventAnalyzer:
             ys.append(y_hat)
             start += self.step_size
 
-        whitened = np.concatenate(strain, axis=-1)[..., :-pad]
+        whitened = np.concatenate(strain, axis=-1)
+        if pad > 0:
+            whitened = whitened[..., :-pad]
         ys = np.concatenate(ys)[slc]
         return ys, whitened
 
