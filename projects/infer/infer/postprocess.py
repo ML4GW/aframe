@@ -40,6 +40,7 @@ class Postprocessor:
 
         self.inference_sampling_rate = inference_sampling_rate
         self.shifts = shifts
+        self.kernel_length = kernel_length
 
         # offset our initial time both by the psd data
         # that we're going to slough off as well as by
@@ -70,6 +71,21 @@ class Postprocessor:
         integrated = np.convolve(y, window, mode="full")
         return integrated[: -window_size + 1]
 
+    def merger_time(self, pred_times: np.ndarray, i: int) -> float:
+        """
+        Estimate the merger time of an event found at index `i`
+        of the integrated detection statistic.
+
+        Takes the median of the predicted merger times over the
+        trailing integration window. Note that this works only if:
+            (kernel_length - left_pad - right_pad) * sampling_rate >
+            integration_window_size / 2
+        Otherwise, the median will be biased towards times from outside
+        where the network was trained.
+        """
+        start = max(i - self.integration_window_size + 1, 0)
+        return np.median(pred_times[start : i + 1])
+
     def cluster(self, y, pred_times) -> EventSet:
         # initial our search index to be in the first
         # half window of the timeseries. Then all we
@@ -96,7 +112,7 @@ class Postprocessor:
                 # the value and reset the index to be the
                 # first value outside the current window
                 events.append(val)
-                times.append(pred_times[i])
+                times.append(self.merger_time(pred_times, i))
                 i += window_size + 1
 
         # record all this info and some
@@ -116,16 +132,14 @@ class Postprocessor:
         if y is None:
             return EventSet()
         y = y[self.offset :]
+        h = h[self.offset :]
 
-        duration = len(y) / self.inference_sampling_rate
-        times = np.arange(
-            self.t0, self.t0 + duration, 1 / self.inference_sampling_rate
+        times = self.t0 + np.arange(len(y)) / self.inference_sampling_rate
+        pred_times = (
+            np.argmax(h, axis=-1) / h.shape[-1] * self.kernel_length + times
         )
-        pred_times = np.argmax(h, axis=-1) / h.shape[-1] + times
-        pred_times = pred_times[self.offset :]
 
         y = self.integrate(y)
-        pred_times = self.integrate(pred_times)
 
         y = self.cluster(y, pred_times)
         return y

@@ -109,7 +109,7 @@ class SupervisedAframeRegression(SupervisedAframe):
         heatmap_bg = torch.zeros_like(
             heatmap_bg_hat, dtype=torch.float, device=heatmap_bg_hat.device
         )
-        mu = mu.view(num_views * batch)
+        mu = mu.view(num_views * batch) * heatmap_fg_hat.shape[-1]
         heatmap_fg = self.generate_heatmap(
             mu, self.sigma, heatmap_fg_hat.shape[-1]
         )
@@ -155,11 +155,13 @@ class SupervisedAframeRegression(SupervisedAframe):
         self._logger.info(f"Scaled lr by {world_size} to {lr}")
 
         backbone_params = self.model.backbone.parameters()
+        dilated_layer_params = self.model.dilated_layer.parameters()
         heatmap_params = self.model.heatmap_head.parameters()
 
         optimizer = torch.optim.AdamW(
             [
                 {"params": backbone_params, "lr": lr},
+                {"params": dilated_layer_params, "lr": lr},
                 {"params": heatmap_params, "lr": lr},
             ],
             weight_decay=self.hparams.weight_decay,

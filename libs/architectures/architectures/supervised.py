@@ -363,7 +363,7 @@ class SupervisedTimeDomainRegression(SupervisedArchitecture):
             norm_layer=norm_layer,
         )
         self.backbone.conv1 = CoordConv1d(
-            2, 64, kernel_size=7, stride=1, padding=3, bias=False
+            num_ifos, 64, kernel_size=7, stride=1, padding=3, bias=False
         )
         in_channels = self.backbone.residual_layers[-1][-1].conv2.out_channels
         self.dilated_layer = nn.Sequential(
