@@ -46,7 +46,7 @@ class SensitiveVolume(AframeSingularityTask):
         return reqs
 
     def output(self):
-        data = os.path.join(self.output_dir, "sensitive_volume.h5")
+        data = os.path.join(self.output_dir, "sensitive_volume.hdf5")
         plot = os.path.join(self.output_dir, "sensitive_volume.html")
         return [law.LocalFileTarget(data), law.LocalFileTarget(plot)]
 

@@ -43,7 +43,7 @@ class App:
         valid_frac: float,
         fftlength: float,
         device: str = "cpu",
-        vetos: VETO_CATEGORIES | None = None,
+        vetos: list[VETO_CATEGORIES] | None = None,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
