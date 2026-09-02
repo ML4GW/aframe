@@ -7,26 +7,17 @@ from bokeh.models import MultiChoice
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 
-from plots.vetos import VETO_CATEGORIES, VetoParser
+from plots.vetos import (
+    GATE_PATHS,
+    VETO_CATEGORIES,
+    VETO_DEFINER_FILE,
+    VetoParser,
+)
 
 
 def chirp_mass(m1, m2):
     """Calculate chirp mass from component masses"""
     return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
-
-
-def normalize_path(path):
-    path = Path(path)
-    if not path.is_absolute():
-        return Path(__file__).resolve().parent / path
-    return path
-
-
-VETO_DEFINER_FILE = normalize_path("../vetos/H1L1-HOFT_C01_O3_CBC.xml")
-GATE_PATHS = {
-    "H1": normalize_path("../vetos/H1-O3_GATES_1238166018-31197600.txt"),
-    "L1": normalize_path("../vetos/L1-O3_GATES_1238166018-31197600.txt"),
-}
 
 
 class DataManager:

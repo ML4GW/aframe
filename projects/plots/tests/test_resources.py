@@ -1,4 +1,4 @@
-from plots.legacy.main import GATE_PATHS, VETO_DEFINER_FILE
+from plots.vetos import GATE_PATHS, VETO_DEFINER_FILE
 
 EXPECTED_IFOS = ["H1", "L1"]
 

@@ -16,7 +16,13 @@ from utils.logging import configure_logging
 from plots.core import compute, style
 from plots.core.constants import SECONDS_PER_YEAR
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
-from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
+from plots.vetos import (
+    GATE_PATHS,
+    VETO_CATEGORIES,
+    VETO_DEFINER_FILE,
+    VetoParser,
+    get_catalog_vetos,
+)
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -24,20 +30,6 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 def get_prob(prior, ledger):
     sample = {"mass_1": ledger.mass_1, "mass_2": ledger.mass_2}
     return prior.prob(sample, axis=0)
-
-
-def normalize_path(path):
-    path = Path(path)
-    if not path.is_absolute():
-        return Path(__file__).resolve().parent / path
-    return path
-
-
-VETO_DEFINER_FILE = normalize_path("../vetos/H1L1-HOFT_C01_O3_CBC.xml")
-GATE_PATHS = {
-    "H1": normalize_path("../vetos/H1-O3_GATES_1238166018-31197600.txt"),
-    "L1": normalize_path("../vetos/L1-O3_GATES_1238166018-31197600.txt"),
-}
 
 
 def _apply_vetos(background, foreground, vetos, ifos, start, stop):
