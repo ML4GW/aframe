@@ -76,9 +76,9 @@ class Postprocessor:
         Estimate the merger time of an event found at index `i`
         of the integrated detection statistic.
 
-        Takes the median of the predicted merger times over the 
+        Takes the median of the predicted merger times over the
         trailing integration window. Note that this works only if:
-            (kernel_length - left_pad - right_pad) * sampling_rate > 
+            (kernel_length - left_pad - right_pad) * sampling_rate >
             integration_window_size / 2
         Otherwise, the median will be biased towards times from outside
         where the network was trained.
