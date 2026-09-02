@@ -16,8 +16,7 @@ from plots.core.constants import (
     SECONDS_PER_MONTH,
     SECONDS_PER_YEAR,
 )
-
-from .gwtc3 import catalog_results
+from plots.core.gwtc3 import catalog_results
 
 
 def get_prob(prior, ledger):

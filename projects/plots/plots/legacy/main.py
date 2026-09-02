@@ -15,7 +15,7 @@ from utils.logging import configure_logging
 
 from plots.core import compute, style
 from plots.core.constants import SECONDS_PER_YEAR
-from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
+from plots.core.gwtc3 import main as gwtc3_pipeline_sv
 from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -33,9 +33,6 @@ def normalize_path(path):
     return path
 
 
-INJECTION_FILE = normalize_path(
-    "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
-)
 VETO_DEFINER_FILE = normalize_path("../vetos/H1L1-HOFT_C01_O3_CBC.xml")
 GATE_PATHS = {
     "H1": normalize_path("../vetos/H1-O3_GATES_1238166018-31197600.txt"),
@@ -83,6 +80,7 @@ def main(
     sigma: float = 0.1,
     verbose: bool = False,
     vetos: list[VETO_CATEGORIES] | None = None,
+    injection_file: Path | None = None,
 ):
     """
     Compute and plot the sensitive volume of an aframe analysis
@@ -112,6 +110,10 @@ def main(
             The width of the log normal mass distribution to use
         verbose:
             If true, log at the debug level
+        injection_file:
+            Path to the LVK O3 sensitivity injection set used for the
+            GWTC-3 comparison curves. If not provided, it is downloaded
+            from Zenodo and cached under `~/.aframe/cache`.
     """
     configure_logging(log_file, verbose)
     logging.info("Reading in inference outputs")
@@ -223,7 +225,7 @@ def main(
     logging.info("Calculating SV vs FAR for GWTC-3 pipelines")
     gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
         mass_combos=mass_combos,
-        injection_file=INJECTION_FILE,
+        injection_file=injection_file,
         detection_criterion="far",
         detection_thresholds=fars,
         output_dir=output_dir,
