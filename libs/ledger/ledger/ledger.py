@@ -97,6 +97,18 @@ class Ledger:
                 continue
             value = getattr(self, key)
 
+            if type(value) == dict:
+                for subkey in value.keys():
+                    if _length is None:
+                        _length = len(value[subkey])
+                    elif len(value[subkey]) != _length:
+                        raise ValueError(
+                            "Field {} has {} entries, expected {}".format(
+                                subkey, len(value[subkey]), _length
+                            )
+                        )
+                continue
+
             if _length is None:
                 _length = len(value)
             elif len(value) != _length:
@@ -128,7 +140,9 @@ class Ledger:
         init_kwargs = {}
         for key, attr in self.__dataclass_fields__.items():
             value = getattr(self, key)
-            if attr.metadata["kind"] != "metadata":
+            if type(value) == dict:
+                value = {subkey: value[subkey].__getitem__(*args, **kwargs) for subkey in value.keys()}
+            elif attr.metadata["kind"] != "metadata":
                 value = value.__getitem__(*args, **kwargs)
                 try:
                     len(value)
@@ -141,8 +155,14 @@ class Ledger:
     def _get_group(self, f: h5py.File, name: str):
         return f.get(name) or f.create_group(name)
 
-    def is_sorted_by(self, attr: str):
+    def is_sorted_by(self, attr: str, subattr: str = None):
         value = getattr(self, attr)
+        if type(value) == dict:
+            if subattr == None:
+                raise ValueError(
+                    "Subbattr None when attr is a dict"
+                )
+            value = value[subattr]
         if len(value) != len(self) or len(value.shape) > 1:
             raise ValueError(
                 "Sorting key should be a 1D array with length equal "
@@ -151,12 +171,20 @@ class Ledger:
             )
         return (value[:-1] <= value[1:]).all()
 
-    def sort_by(self, attr: str):
-        if self.is_sorted_by(attr):
-            warnings.warn(
-                f"Already sorted by {attr}, object is unchanged", stacklevel=2
-            )
-        idx = np.argsort(getattr(self, attr))
+    def sort_by(self, attr: str, subattr: str = None):
+        if self.is_sorted_by(attr, subattr):
+            if subattr:
+                warnings.warn(
+                    f"Already sorted by {subattr}, object is unchanged", stacklevel=2
+                )
+            else:
+                warnings.warn(
+                    f"Already sorted by {attr}, object is unchanged", stacklevel=2
+                )
+        if subattr:
+            idx = np.argsort(getattr(self, attr)[subattr])
+        else:
+            idx = np.argsort(getattr(self, attr))
         return self[idx]
 
     def write(
@@ -185,8 +213,13 @@ class Ledger:
                     ) from exc
 
                 if kind == "parameter":
-                    params = self._get_group(f, "parameters")
-                    params.create_dataset(key, data=value)
+                    if type(value) == dict:
+                        for subkey in value.keys():
+                            params = self._get_group(f, "parameters")
+                            params.create_dataset(f"{key}/{subkey}", data=value[subkey])
+                    else:
+                        params = self._get_group(f, "parameters")
+                        params.create_dataset(key, data=value)
                 elif kind == "waveform":
                     waveforms = self._get_group(f, "waveforms")
                     waveforms.create_dataset(key, data=value, chunks=chunks)
@@ -201,7 +234,7 @@ class Ledger:
 
     @classmethod
     def _load_with_idx(cls, f: h5py.File, idx: np.ndarray | None = None):
-        def _try_get(group: str, field: str):
+        def _try_get(group: str, field: str, subfield: str = None):
             try:
                 group = f[group]
             except KeyError:
@@ -210,12 +243,14 @@ class Ledger:
                 ) from None
 
             try:
-                return group[field]
+                if subfield:
+                    return group[field][subfield]
+                else:
+                    return group[field]
             except KeyError:
                 raise ValueError(
-                    "{} group of archive {} has no dataset {}".format(
-                        group, f.filename, field
-                    )
+                    "{} group of archive {} has no dataset {}{}".format(
+                        group, f.filename, field, " (subfield: {})".format(subfield) if subfield else "")
                 ) from None
 
         kwargs = {}
@@ -239,13 +274,29 @@ class Ledger:
                     )
                 )
             else:
-                value = _try_get(kind + "s", key)
-                if idx is not None:
-                    unique_idx, inv_idx = np.unique(idx, return_inverse=True)
-                    value = value[unique_idx]
-                    value = value[inv_idx]
+                if attr.type == dict:
+                    extra_params = {}
+                    if key not in f[kind + "s"].keys():
+                        continue
+                    for subkey in f[kind + "s"][key].keys():
+                        value = _try_get(kind + "s", key, subkey)
+                        if idx is not None:
+                            unique_idx, inv_idx = np.unique(idx, return_inverse=True)
+                            value = value[unique_idx]
+                            value = value[inv_idx]
+                        else:
+                            value = value[:]
+
+                        extra_params[subkey] = value
+                    value = extra_params
                 else:
-                    value = value[:]
+                    value = _try_get(kind + "s", key)
+                    if idx is not None:
+                        unique_idx, inv_idx = np.unique(idx, return_inverse=True)
+                        value = value[unique_idx]
+                        value = value[inv_idx]
+                    else:
+                        value = value[:]
 
             kwargs[key] = value
         return cls(**kwargs)
@@ -322,13 +373,33 @@ class Ledger:
         for key, attr in self.__dataclass_fields__.items():
             ours = getattr(self, key)
             theirs = getattr(other, key)
-            if attr.metadata["kind"] == "metadata":
-                new = self.compare_metadata(key, ours, theirs)
-                new_dict[key] = new
-            elif len(ours) == 0:
-                new_dict[key] = theirs
+            if type(ours) == dict:
+                if type(theirs) != dict:
+                    raise TypeError(
+                        "Difference in types for '{}': '{}' and '{}'".format(
+                            key, type(self), type(other)
+                        ))
+
+                if len(set(ours.keys()).difference(theirs.keys())) != 0 :
+                    raise ValueError("Subkeys in ours but not theirs: '{}'".format(
+                        set(ours.keys()).difference(theirs.keys())))
+
+                extra_params = {subkey: None for subkey in ours.keys()}
+                for subkey in ours.keys():
+                    if len(ours[subkey]) == 0:
+                        extra_params[subkey] = theirs[subkey]
+                    else:
+                        extra_params[subkey] = np.concatenate([ours[subkey], theirs[subkey]])
+
+                new_dict[key] = extra_params
             else:
-                new_dict[key] = np.concatenate([ours, theirs])
+                if attr.metadata["kind"] == "metadata":
+                    new = self.compare_metadata(key, ours, theirs)
+                    new_dict[key] = new
+                elif len(ours) == 0:
+                    new_dict[key] = theirs
+                else:
+                    new_dict[key] = np.concatenate([ours, theirs])
 
         self.__dict__.update(new_dict)
         self.__post_init__()
@@ -423,17 +494,43 @@ class Ledger:
                         # grab the source ledger's data, and use its shape
                         # to initialize the dataset in the target if it
                         # does not already exist
-                        theirs = source[group_name][key][:]
-                        if key not in group:
-                            if theirs.ndim > 1:
-                                shape += theirs.shape[1:]
-                            dataset = group.create_dataset(
-                                key, shape=shape, dtype=dtype, chunks=_chunks
-                            )
+                        if attr.type == dict:
+                            if not key in source[group_name]:
+                                continue
+
+                            if key not in group:
+                                group = group.create_group(key)
+                            else:
+                                group = group[key]
+
+                            for subkey in source[group_name][key].keys():
+                                theirs = source[group_name][key][subkey][:]
+                                if subkey not in group:
+                                    if theirs.ndim > 1:
+                                        shape += theirs.shape[1:]
+                                    dataset = group.create_dataset(
+                                        subkey, shape=shape, dtype=dtype, chunks=_chunks
+                                    )
+                                else:
+                                    # otherwise grab the target dataset
+                                    # (but _not_ its presumably large data)
+                                    dataset = group[subkey]
+
+                                sel = np.s_[idx : idx + source_length]
+                                dataset.write_direct(theirs, dest_sel=sel)
+                            continue
                         else:
-                            # otherwise grab the target dataset
-                            # (but _not_ its presumably large data)
-                            dataset = group[key]
+                            theirs = source[group_name][key][:]
+                            if key not in group:
+                                if theirs.ndim > 1:
+                                    shape += theirs.shape[1:]
+                                dataset = group.create_dataset(
+                                    key, shape=shape, dtype=dtype, chunks=_chunks
+                                )
+                            else:
+                                # otherwise grab the target dataset
+                                # (but _not_ its presumably large data)
+                                dataset = group[key]
 
                         # now write the source data directly to
                         # the corresponding rows in the target

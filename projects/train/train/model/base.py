@@ -146,15 +146,26 @@ class AframeBase(pl.LightningModule):
         # if our train step returned a dictionary of losses,
         # log them all separately then combine them into a
         # single loss via `compute_loss_fn`
-        loss["loss"] = self.compute_loss_fn(**loss).mean()
-        self.log_dict(
+        if isinstance(loss, dict):
+            for name, value in loss.items():
+                self.log(
+                    name,
+                    value.mean(),
+                    on_step=True,
+                    on_epoch=True,
+                    prog_bar=False,
+                    logger=True,
+                )
+            loss = self.compute_loss_fn(**loss)
+
+        loss = loss.mean()
+        self.log(
+            "train_loss",
             loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
             logger=True,
-            sync_dist=True,
-            batch_size=batch[0].shape[0],
         )
         return loss
 
