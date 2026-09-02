@@ -15,7 +15,7 @@ from bokeh.plotting import figure
 from gwpy.plot import Plot
 from PIL import Image
 
-from plots.vizapp import palette
+from plots.core.style import analysis_palette as palette
 
 if TYPE_CHECKING:
     import gwpy

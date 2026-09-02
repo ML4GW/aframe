@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from plots.legacy import compute
+from plots.core import compute
 
 MASS_COMBOS = [(35, 35), (35, 20), (20, 20), (20, 10)]
 

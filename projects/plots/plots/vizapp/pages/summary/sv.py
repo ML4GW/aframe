@@ -11,11 +11,13 @@ from ledger.injections import InjectionParameterSet
 from priors.priors import log_normal_masses
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
-from . import compute, utils
-from .gwtc3 import catalog_results
+from plots.core import compute, style
+from plots.core.constants import (
+    SECONDS_PER_MONTH,
+    SECONDS_PER_YEAR,
+)
 
-SECONDS_PER_MONTH = 3600 * 24 * 30
-SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
+from .gwtc3 import catalog_results
 
 
 def get_prob(prior, ledger):
@@ -145,13 +147,13 @@ class SensitiveVolumePlot:
         save(self.grid, filename=output_dir / "sensitive_volume.html")
 
     def make_plot(self):
-        plots = utils.make_grid(self.mass_combos)
+        plots = style.make_grid(self.mass_combos)
         for i, (p, color) in enumerate(
-            zip(plots, utils.palette, strict=False)
+            zip(plots, style.palette, strict=False)
         ):
             fars = self.fars * SECONDS_PER_YEAR
             p.line(fars, self.svs[i], line_width=1.5, line_color=color)
-            utils.plot_err_bands(
+            style.plot_err_bands(
                 p,
                 fars,
                 self.svs[i],

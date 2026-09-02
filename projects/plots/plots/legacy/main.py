@@ -13,7 +13,8 @@ from priors.priors import log_normal_masses
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 from utils.logging import configure_logging
 
-from plots.legacy import compute, tools
+from plots.core import compute, style
+from plots.core.constants import SECONDS_PER_YEAR
 from plots.legacy.gwtc3 import main as gwtc3_pipeline_sv
 from plots.vetos import VETO_CATEGORIES, VetoParser, get_catalog_vetos
 
@@ -170,7 +171,7 @@ def main(
     v0 = get_astrophysical_volume(zmin, zmax, DEFAULT_COSMOLOGY, decrange)
     v0 /= 10**9
 
-    Tb = background.Tb / tools.SECONDS_PER_YEAR
+    Tb = background.Tb / SECONDS_PER_YEAR
     max_events = min(int(max_far * Tb), len(background))
     fars = np.arange(1, max_events + 1) / Tb if max_events else np.array([])
     thresholds = np.sort(background.detection_statistic)[::-1][:max_events]
@@ -228,15 +229,15 @@ def main(
         output_dir=output_dir,
     )
 
-    plots = tools.make_grid(mass_combos)
+    plots = style.make_grid(mass_combos)
     for i, p in enumerate(plots):
-        color = tools.palette[0]
+        color = style.palette[0]
         # only include a legend on the top left
         kwargs = {}
         if i == 0:
             kwargs["legend_label"] = "aframe"
         p.line(fars, aframe_sv[i], line_width=1.5, line_color=color, **kwargs)
-        tools.plot_err_bands(
+        style.plot_err_bands(
             p,
             fars,
             aframe_sv[i],
@@ -248,7 +249,7 @@ def main(
         )
 
         for pipeline, color in zip(
-            gwtc3_sv.keys(), tools.palette[1:], strict=False
+            gwtc3_sv.keys(), style.palette[1:], strict=False
         ):
             m1, m2 = mass_combos[i]
             mass_key = f"{m1}-{m2}"
@@ -258,7 +259,7 @@ def main(
             if i == 0:
                 kwargs["legend_label"] = pipeline
             p.line(fars, sv, line_width=1.5, line_color=color, **kwargs)
-            tools.plot_err_bands(
+            style.plot_err_bands(
                 p,
                 fars,
                 sv,
