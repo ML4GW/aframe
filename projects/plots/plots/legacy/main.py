@@ -3,15 +3,16 @@ from collections.abc import Callable
 from pathlib import Path
 
 import jsonargparse
-from bokeh.io import save
-from bokeh.layouts import gridplot
 from utils.cosmology import DEFAULT_COSMOLOGY
 from utils.logging import configure_logging
 
-from plots.core import style
 from plots.core.data import AnalysisData
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
-from plots.core.sv import compute_sensitive_volume
+from plots.core.sv import (
+    SensitiveVolumePlot,
+    comparisons_from_gwtc3_curves,
+    compute_sensitive_volume,
+)
 from plots.vetos import (
     GATE_PATHS,
     VETO_CATEGORIES,
@@ -128,75 +129,19 @@ def main(
         max_far=max_far,
         sigma=sigma,
     )
-    result.write(output_dir / "sensitive_volume.hdf5")
-    aframe_sv, aframe_err = result.sv, result.err
-    fars = result.fars
 
     logging.info("Calculating SV vs FAR for GWTC-3 pipelines")
     gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
         mass_combos=mass_combos,
         injection_file=injection_file,
         detection_criterion="far",
-        detection_thresholds=fars,
+        detection_thresholds=result.fars,
         output_dir=output_dir,
     )
-
-    plots = style.make_grid(mass_combos)
-    for i, p in enumerate(plots):
-        color = style.palette[0]
-        # only include a legend on the top left
-        kwargs = {}
-        if i == 0:
-            kwargs["legend_label"] = "aframe"
-        p.line(fars, aframe_sv[i], line_width=1.5, line_color=color, **kwargs)
-        style.plot_err_bands(
-            p,
-            fars,
-            aframe_sv[i],
-            aframe_err[i],
-            line_color=color,
-            line_width=0.8,
-            fill_color=color,
-            fill_alpha=0.4,
-        )
-
-        for pipeline, color in zip(
-            gwtc3_sv.keys(), style.palette[1:], strict=False
-        ):
-            m1, m2 = mass_combos[i]
-            mass_key = f"{m1}-{m2}"
-            sv = gwtc3_sv[pipeline][mass_key]
-            err = gwtc3_err[pipeline][mass_key]
-
-            if i == 0:
-                kwargs["legend_label"] = pipeline
-            p.line(fars, sv, line_width=1.5, line_color=color, **kwargs)
-            style.plot_err_bands(
-                p,
-                fars,
-                sv,
-                err,
-                line_color=color,
-                line_width=0.8,
-                fill_color=color,
-                fill_alpha=0.4,
-            )
-
-    # style the legend on the top left plot
-    legend = plots[0].legend
-    legend.ncols = 2
-    # style legend position
-    legend.location = "top_left"
-    legend.margin = 4
-    legend.padding = 2
-
-    # style individual glyphs
-    legend.glyph_height = 6
-    legend.label_text_font_size = "8pt"
-    legend.label_height = 8
-
-    grid = gridplot(plots, toolbar_location="right", ncols=2)
-    save(grid, filename=output_dir / "sensitive_volume.html")
+    comparisons = comparisons_from_gwtc3_curves(
+        gwtc3_sv, gwtc3_err, mass_combos
+    )
+    SensitiveVolumePlot(result, comparisons).save(output_dir)
 
 
 if __name__ == "__main__":

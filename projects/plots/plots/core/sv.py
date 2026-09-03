@@ -1,14 +1,18 @@
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
+from bokeh import io
+from bokeh.layouts import gridplot
+from bokeh.models import ColumnDataSource
 from priors.priors import log_normal_masses
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
-from plots.core import compute
+from plots.core import compute, style
 from plots.core.constants import SECONDS_PER_YEAR
 from plots.core.data import AnalysisData
 
@@ -183,3 +187,135 @@ def compute_sensitive_volume(
         sv=sv * v0,
         err=err * v0,
     )
+
+
+@dataclass
+class Comparison:
+    """One pipeline's SV-vs-FAR for every mass combo."""
+
+    label: str
+    sv: np.ndarray
+    err: np.ndarray | None = None
+    dash: str | tuple = "solid"
+
+
+def comparisons_from_gwtc3_curves(
+    gwtc3_sv: dict, gwtc3_err: dict, mass_combos: list[tuple]
+) -> list[Comparison]:
+    """Build `Comparison`s for the GWTC-3 pipelines."""
+    keys = [_combo_key(c) for c in mass_combos]
+    return [
+        Comparison(
+            label=pipeline,
+            sv=np.stack([gwtc3_sv[pipeline][k] for k in keys]),
+            err=np.stack([gwtc3_err[pipeline][k] for k in keys]),
+        )
+        for pipeline in gwtc3_sv
+    ]
+
+
+def _err_band_data(x: np.ndarray, y: np.ndarray, err: np.ndarray) -> dict:
+    """Coordinates for the shaded error band `p.patch` draws."""
+    return {
+        "x": np.concatenate([x, x[::-1]]),
+        "y": np.concatenate([y - err, (y + err)[::-1]]),
+    }
+
+
+class SensitiveVolumePlot:
+    def __init__(
+        self,
+        result: SensitiveVolumeResult,
+        comparisons: Sequence[Comparison] = (),
+    ):
+        self.comparisons = list(comparisons)
+        self._sources: list[dict] = []
+        self.result = result
+        self.grid = self._build(result)
+
+    def _build(self, result: SensitiveVolumeResult):
+        figures = style.make_grid(result.mass_combos)
+        self._sources = []
+        for i, (p, color) in enumerate(
+            zip(figures, style.palette, strict=False)
+        ):
+            line_source = ColumnDataSource(
+                {"far": result.fars, "sv": result.sv[i]}
+            )
+            band_source = ColumnDataSource(
+                _err_band_data(result.fars, result.sv[i], result.err[i])
+            )
+            kwargs = {"legend_label": "aframe"} if i == 0 else {}
+            p.line(
+                x="far",
+                y="sv",
+                source=line_source,
+                line_width=1.5,
+                line_color=color,
+                **kwargs,
+            )
+            p.patch(
+                x="x",
+                y="y",
+                source=band_source,
+                line_color=color,
+                line_width=0.8,
+                fill_color=color,
+                fill_alpha=0.4,
+            )
+            self._sources.append({"line": line_source, "band": band_source})
+            self._add_comparisons(p, i, result.fars, first_panel=(i == 0))
+
+        # panel 0 always has at least the "aframe" legend entry
+        legend = figures[0].legend
+        legend.ncols = 2
+        legend.location = "top_left"
+        legend.margin = 4
+        legend.padding = 2
+        legend.glyph_height = 6
+        legend.label_text_font_size = "8pt"
+        legend.label_height = 8
+
+        return gridplot(figures, toolbar_location="right", ncols=2)
+
+    def _add_comparisons(self, p, i, fars, first_panel: bool):
+        for j, comp in enumerate(self.comparisons):
+            # `style.palette[0]` is reserved for aframe
+            color = style.palette[1 + j]
+
+            kwargs = {"legend_label": comp.label} if first_panel else {}
+            p.line(
+                fars,
+                comp.sv[i],
+                line_width=1.5,
+                line_color=color,
+                line_dash=comp.dash,
+                **kwargs,
+            )
+            if comp.err is not None:
+                style.plot_err_bands(
+                    p,
+                    fars,
+                    comp.sv[i],
+                    comp.err[i],
+                    line_color=color,
+                    line_width=0.8,
+                    fill_color=color,
+                    fill_alpha=0.4,
+                )
+
+    def update(self, result: SensitiveVolumeResult) -> None:
+        """Push a new result's curves into the existing figures."""
+        self.result = result
+        for i, sources in enumerate(self._sources):
+            sources["line"].data = {"far": result.fars, "sv": result.sv[i]}
+            sources["band"].data = _err_band_data(
+                result.fars, result.sv[i], result.err[i]
+            )
+
+    def layout(self):
+        return self.grid
+
+    def save(self, output_dir: Path) -> None:
+        self.result.write(output_dir / "sensitive_volume.hdf5")
+        io.save(self.grid, filename=output_dir / "sensitive_volume.html")
