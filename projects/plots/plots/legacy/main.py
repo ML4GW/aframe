@@ -2,19 +2,16 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-import h5py
 import jsonargparse
-import numpy as np
 from bokeh.io import save
 from bokeh.layouts import gridplot
-from priors.priors import log_normal_masses
-from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
+from utils.cosmology import DEFAULT_COSMOLOGY
 from utils.logging import configure_logging
 
-from plots.core import compute, style
-from plots.core.constants import SECONDS_PER_YEAR
+from plots.core import style
 from plots.core.data import AnalysisData
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
+from plots.core.sv import compute_sensitive_volume
 from plots.vetos import (
     GATE_PATHS,
     VETO_CATEGORIES,
@@ -24,11 +21,6 @@ from plots.vetos import (
 )
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-
-def get_prob(prior, ledger):
-    sample = {"mass_1": ledger.mass_1, "mass_2": ledger.mass_2}
-    return prior.prob(sample, axis=0)
 
 
 def _apply_vetos(background, foreground, vetos, ifos, start, stop):
@@ -110,13 +102,6 @@ def main(
     data = AnalysisData.load(background, foreground, rejected_params)
     background = data.background
     foreground = data.foreground
-    rejected_params = data.rejected
-
-    for i in range(2):
-        mass = f"mass_{i + 1}"
-        for ledger in [foreground, rejected_params]:
-            val = getattr(ledger, mass)
-            setattr(ledger, mass, val / (1 + ledger.redshift))
 
     if len(background):
         start, stop = (
@@ -132,73 +117,20 @@ def main(
         background, foreground = _apply_vetos(
             background, foreground, vetos, ifos, start, stop
         )
+        data = AnalysisData(background, foreground, data.rejected)
 
-    logging.info("Computing data likelihood under source prior")
     source, _ = source_prior(DEFAULT_COSMOLOGY)
-    source_probs = get_prob(source, foreground)
-    source_rejected_probs = get_prob(source, rejected_params)
-
-    logging.info("Computing maximum astrophysical volume")
-    zprior = source["redshift"]
-    zmin, zmax = zprior.minimum, zprior.maximum
-
-    try:
-        decprior = source["dec"]
-    except KeyError:
-        decrange = None
-    else:
-        decrange = (decprior.minimum, decprior.maximum)
-    v0 = get_astrophysical_volume(zmin, zmax, DEFAULT_COSMOLOGY, decrange)
-    v0 /= 10**9
-
-    Tb = background.Tb / SECONDS_PER_YEAR
-    max_events = min(int(max_far * Tb), len(background))
-    fars = np.arange(1, max_events + 1) / Tb if max_events else np.array([])
-    thresholds = np.sort(background.detection_statistic)[::-1][:max_events]
-
-    weights = np.zeros((len(mass_combos), len(source_probs)))
-    for i, combo in enumerate(mass_combos):
-        logging.info(f"Computing likelihoods under {combo} log normal")
-        prior, _ = log_normal_masses(
-            *combo, sigma=sigma, cosmology=DEFAULT_COSMOLOGY
-        )
-        prob = get_prob(prior, foreground)
-        rejected_prob = get_prob(prior, rejected_params)
-
-        weight = prob / source_probs
-
-        rejected_weights = rejected_prob / source_rejected_probs
-        norm = weight.sum() + rejected_weights.sum()
-        if norm > 0:
-            weight /= norm
-
-        # finally, enforce recovery time delta by setting weights to 0
-        # for events outside of the delta t
-        if dt is not None:
-            logging.info(f"Enforcing recovery time delta of {dt} seconds")
-            mask = (
-                np.abs(foreground.detection_time - foreground.injection_time)
-                <= dt
-            )
-            weight[~mask] = 0
-
-        weights[i] = weight
-
-    logging.info("Computing sensitive volume at thresholds")
-    aframe_sv, aframe_err = compute.sensitive_volume(
-        foreground.detection_statistic, weights, thresholds
+    result = compute_sensitive_volume(
+        data,
+        mass_combos=mass_combos,
+        source_prior=source,
+        dt=dt,
+        max_far=max_far,
+        sigma=sigma,
     )
-    aframe_sv *= v0
-    aframe_err *= v0
-
-    output_dir.mkdir(exist_ok=True, parents=True)
-    with h5py.File(output_dir / "sensitive_volume.hdf5", "w") as f:
-        f.create_dataset("thresholds", data=thresholds)
-        f.create_dataset("fars", data=fars)
-        for i, combo in enumerate(mass_combos):
-            g = f.create_group("-".join(map(str, combo)))
-            g.create_dataset("sv", data=aframe_sv[i])
-            g.create_dataset("err", data=aframe_err[i])
+    result.write(output_dir / "sensitive_volume.hdf5")
+    aframe_sv, aframe_err = result.sv, result.err
+    fars = result.fars
 
     logging.info("Calculating SV vs FAR for GWTC-3 pipelines")
     gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
