@@ -21,6 +21,7 @@ def event_creation_subprocess(
     outdir: Path,
     amplfi_queue: Queue,
     pastro_queue: Queue,
+    gracedb_kafka_bootstrap_server: str,
 ):
     logger.info("event creation subprocess initialized")
 
@@ -29,7 +30,7 @@ def event_creation_subprocess(
 
     # Need to create the producer within the subprocess that uses it
     gdb.kafka_producer = GraceDbKafkaProducer(
-        bootstrap_servers="kafka-dev.ligo.org:9092",
+        bootstrap_servers=gracedb_kafka_bootstrap_server,
         service_url=gdb.server.service_url,
         ca_cert_path=certifi.where(),
     )

@@ -376,6 +376,7 @@ def main(
     refractory_period: float = 8,
     far_threshold: float = 1,
     server: "GdbServer" = "local",
+    gracedb_kafka_bootstrap_server: str = "kafkagracedb1.igwn.org:9092",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
@@ -469,6 +470,8 @@ def main(
         server:
             GraceDB server to use:
             "local", "playground", "test" or "production"
+        gracedb_kafka_bootstrap_server:
+            Kafka bootstrap server address for GraceDB event submission.
         ifo_suffix:
             Optional suffix for accessing data from /dev/shm.
             Useful when analyzing alternative streams like
@@ -638,6 +641,7 @@ def main(
         outdir / "events",
         amplfi_queue,
         pastro_queue,
+        gracedb_kafka_bootstrap_server,
     )
     event_process = Process(
         target=event_creation_subprocess,
