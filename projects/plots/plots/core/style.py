@@ -1,9 +1,7 @@
 import numpy as np
 from bokeh.palettes import Bright7 as palette  # noqa
+from bokeh.palettes import Dark2_8 as analysis_palette  # noqa
 from bokeh.plotting import figure
-
-SECONDS_PER_YEAR = 60 * 60 * 24 * 365.25
-
 
 subscripts = {}
 for i in range(10):

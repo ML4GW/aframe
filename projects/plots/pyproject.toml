@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-sensitive-volume = "plots.legacy.cli:main"
+sensitive-volume = "plots.cli:main"
 vizapp = "plots.vizapp.main:cli"
 
 [dependency-groups]

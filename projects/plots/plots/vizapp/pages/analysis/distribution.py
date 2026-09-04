@@ -18,7 +18,7 @@ from bokeh.models import (
 )
 from bokeh.plotting import figure
 
-from plots.vizapp import palette
+from plots.core.style import analysis_palette as palette
 
 FORE_ATTRS = [
     "shift",

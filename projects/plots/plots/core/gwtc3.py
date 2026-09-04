@@ -1,12 +1,12 @@
 import logging
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import astropy.cosmology as cosmo
 import astropy.units as u
 import h5py
 import numpy as np
 import scipy.stats as stats
+from astropy.utils.data import download_file
 from tqdm import tqdm
 from utils.cosmology import DEFAULT_COSMOLOGY
 
@@ -61,20 +61,30 @@ catalog_results = {
 # https://git.ligo.org/tri.nguyen/o3b-catalog-vt/-/blob/master/o3b-vt-dr.ipynb
 
 
+INJECTION_URL = (
+    "https://zenodo.org/records/7890437/files/"
+    "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+)
+
+
 def get_injection_data(
-    injection_file: Path,
     pipelines: list[str],
     detection_criterion: str,
+    injection_file: Path | None = None,
 ):
     injection_params = {}
 
-    if not injection_file.exists():
-        url = (
-            "https://zenodo.org/records/7890437/files/"
-            "endo3_mixture-LIGO-T2100113-v12-1256655642-12905976.hdf5"
+    if injection_file is None:
+        logging.info(
+            "Downloading injection file from Zenodo, "
+            "or reading from cache if exists"
         )
-        logging.info("Downloading injection file from Zenodo")
-        urlretrieve(url, filename=injection_file)
+        # will download to ~/.aframe/cache/ if not already downloaded
+        injection_file = download_file(
+            INJECTION_URL, cache=True, pkgname="aframe"
+        )
+    else:
+        logging.info(f"Reading injection file from {injection_file}")
 
     with h5py.File(injection_file, "r") as f:
         T_obs = f.attrs["analysis_time_s"] / (365.25 * 24 * 3600)  # years
@@ -262,15 +272,15 @@ def get_logdNs(
 
 def main(
     mass_combos: list[float],
-    injection_file: Path,
     detection_criterion: str,
     detection_thresholds: list[float],
     output_dir: Path,
+    injection_file: Path | None = None,
     pipelines: list[str] = None,
     sig_lognorm: float = 0.1,
     smax_ns: float = 0.4,
     smax_bh: float = 0.998,
-    # Note: original code is cosmo.FlatwCDM(H0=67.9, Om0=0.3065, w0=-1)
+    # Note: original used cosmo.FlatwCDM(H0=67.9, Om0=0.3065, w0=-1),
     cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
 ):
     known_pipelines = ["cwb", "gstlal", "mbta", "pycbc_bbh", "pycbc_hyperbank"]
@@ -296,7 +306,7 @@ def main(
         injection_params,
         p_draw,
         det_stat,
-    ) = get_injection_data(injection_file, pipelines, detection_criterion)
+    ) = get_injection_data(pipelines, detection_criterion, injection_file)
     logging.info("Calculating log dNs for all mass combinations")
     log_dNs = get_logdNs(
         mass_combos, injection_params, sig_lognorm, smax_ns, smax_bh, cosmology
