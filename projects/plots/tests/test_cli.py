@@ -1,8 +1,8 @@
 import h5py
 import numpy as np
 import pytest
-from plots.legacy import cli
-from plots.legacy import main as sv_main
+from plots import cli
+from plots import main as sv_main
 
 MASS_COMBOS = [(35, 35), (35, 20), (20, 20), (20, 10)]
 PIPELINES = ["cwb", "gstlal", "mbta", "pycbc_bbh", "pycbc_hyperbank"]

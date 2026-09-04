@@ -2,7 +2,6 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-import jsonargparse
 from utils.cosmology import DEFAULT_COSMOLOGY
 from utils.logging import configure_logging
 
@@ -50,7 +49,7 @@ def _apply_vetos(background, foreground, vetos, ifos, start, stop):
     return background, foreground
 
 
-def main(
+def sensitive_volume(
     background: Path,
     foreground: Path,
     rejected_params: Path,
@@ -142,10 +141,3 @@ def main(
         gwtc3_sv, gwtc3_err, mass_combos
     )
     SensitiveVolumePlot(result, comparisons).save(output_dir)
-
-
-if __name__ == "__main__":
-    parser = jsonargparse.ArgumentParser()
-    parser.add_function_arguments(main)
-    args = parser.parse_args()
-    main(**vars(args))
