@@ -18,11 +18,10 @@ class Summary(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        data_manager = self.app.data_manager
         data = AnalysisData(
-            data_manager.background,
-            data_manager.foreground,
-            data_manager.rejected_params,
+            self.app.background,
+            self.app.foreground,
+            self.app.data_manager.rejected_params,
         )
         result = compute_sensitive_volume(
             data,

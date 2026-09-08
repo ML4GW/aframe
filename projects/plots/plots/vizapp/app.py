@@ -85,6 +85,10 @@ class App:
             results_dir, waveforms_dir, ifos, vetos
         )
 
+        self.background, self.foreground = self.data_manager.update_vetos(
+            None, None, []
+        )
+
         # initialize all our pages and their constituent plots
         self.pages: list[Page] = []
         tabs = []
@@ -99,7 +103,6 @@ class App:
 
         self.veto_selecter = self.data_manager.get_veto_selecter()
         self.veto_selecter.on_change("value", self.update)
-        self.update(None, None, [])
 
         # set up a header with a title and the selecter
         title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)
@@ -125,11 +128,13 @@ class App:
 
     def update(self, attr, old, new):
         # update the vetos
-        background, foreground = self.data_manager.update_vetos(attr, old, new)
+        self.background, self.foreground = self.data_manager.update_vetos(
+            attr, old, new
+        )
 
         # update pages with latest background and foreground
         for page in self.pages:
-            page.update(background, foreground)
+            page.update(self.background, self.foreground)
 
     def __call__(self, doc):
         doc.add_root(self.layout)
