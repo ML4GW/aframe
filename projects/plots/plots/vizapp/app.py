@@ -109,8 +109,16 @@ class App:
 
     def load_model(self):
         with open_file(self.weights, "rb") as f:
-            exported_program = torch.export.load(f)
-        return exported_program.module().to(self.device)
+            try:
+                exported_program = torch.export.load(f)
+                return exported_program.module().to(self.device)
+            except Exception:
+                self.logger.info(
+                    f"{self.weights} is not a torch.export archive, "
+                    "falling back to torch.jit.load"
+                )
+        with open_file(self.weights, "rb") as f:
+            return torch.jit.load(f, map_location=self.device)
 
     def update(self, attr, old, new):
         # update the vetos
