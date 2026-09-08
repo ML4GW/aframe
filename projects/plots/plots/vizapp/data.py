@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 from pathlib import Path
 
 from bokeh.models import MultiChoice
@@ -41,24 +40,19 @@ class DataManager:
         self.rejected_params = data.rejected
         self.logger.info("Data loaded")
 
-        # create copies of the background and foreground
-        # for applying vetos
-        self._background = deepcopy(self.background)
-        self._foreground = deepcopy(self.foreground)
-
         self.background_masks = None
         self.foreground_masks = None
         if self.categories:
-            start = self._background.detection_time.min()
-            stop = self._background.detection_time.max()
+            start = self.background.detection_time.min()
+            stop = self.background.detection_time.max()
             segments = load_or_fetch_segments(
                 self.categories, self.ifos, start, stop
             )
             self.background_masks = compute_veto_masks(
-                self._background, self.categories, self.ifos, segments
+                self.background, self.categories, self.ifos, segments
             )
             self.foreground_masks = compute_veto_masks(
-                self._foreground, self.categories, self.ifos, segments
+                self.foreground, self.categories, self.ifos, segments
             )
 
     def get_veto_selecter(self):
@@ -67,10 +61,10 @@ class DataManager:
 
     def update_vetos(self, attr, old, new):
         if not self.categories:
-            return self._background, self._foreground
+            return self.background, self.foreground
 
         back_mask = combine_masks(self.background_masks, new)
         fore_mask = combine_masks(self.foreground_masks, new)
-        background = self._background[~back_mask]
-        foreground = self._foreground[~fore_mask]
+        background = self.background[~back_mask]
+        foreground = self.foreground[~fore_mask]
         return background, foreground
