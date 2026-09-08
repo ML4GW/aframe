@@ -1,43 +1,38 @@
-from concurrent.futures import ProcessPoolExecutor
-
 import numpy as np
-from tqdm import trange
-
-
-def init_fn(det_stats, w):
-    global detection_statistics, weights
-    detection_statistics = det_stats
-    weights = w
-
-
-def compute_sv(threshold):
-    mask = detection_statistics >= threshold
-    mus = (weights * mask).sum(-1, keepdims=True)
-    var_summands = weights * (mask - mus)
-    stds = (var_summands**2).sum(-1) ** 0.5
-    return mus[:, 0], stds
 
 
 def sensitive_volume(detection_statistics, weights, thresholds):
-    y = np.empty((len(weights), len(thresholds)))
-    err = np.empty((len(weights), len(thresholds)))
-    ex = ProcessPoolExecutor(
-        8, initializer=init_fn, initargs=(detection_statistics, weights)
-    )
-    with ex:
-        fs = {ex.submit(compute_sv, t): i for i, t in enumerate(thresholds)}
-        for _ in trange(len(thresholds)):
-            while True:
-                for future in fs:
-                    if future.done():
-                        future.exception()
-                        break
-                else:
-                    continue
-                break
+    """Mean and standard error of sensitive volume at each threshold.
 
-            i = fs.pop(future)
-            mu, std = future.result()
-            y[:, i] = mu
-            err[:, i] = std
-    return y, err
+    Args:
+        detection_statistics: `(N,)` array of injection detection stats.
+        weights: `(C, N)` array of per-injection weights, one row per
+            mass combo.
+        thresholds: `(T,)` array of detection statistic thresholds.
+
+    Returns:
+        `(y, err)`, each `(C, T)`.
+    """
+    order = np.argsort(detection_statistics)
+    ds_sorted = detection_statistics[order]
+    weights_sorted = weights[:, order]
+
+    # Compute the reverse cumulative sums of the weights and the
+    # weights squared. Because the weights are sorted by the
+    # detection statistics, this avoids needing to compute a mask
+    # for each threshold.
+    n = len(ds_sorted)
+    rev_sum_w = np.zeros((weights.shape[0], n + 1))
+    rev_sum_w2 = np.zeros_like(rev_sum_w)
+    rev_sum_w[:, :-1] = np.cumsum(weights_sorted[:, ::-1], axis=-1)[:, ::-1]
+    rev_sum_w2[:, :-1] = np.cumsum(weights_sorted[:, ::-1] ** 2, axis=-1)[
+        :, ::-1
+    ]
+
+    # idxs is the indices of the first detection statistic greater than
+    # each threshold.
+    idxs = np.searchsorted(ds_sorted, thresholds)
+    mu = rev_sum_w[:, idxs]
+    var = (1 - 2 * mu) * rev_sum_w2[:, idxs] + mu**2 * rev_sum_w2[:, :1]
+    err = np.sqrt(np.maximum(var, 0))
+    return mu, err
