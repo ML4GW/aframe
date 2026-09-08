@@ -9,6 +9,7 @@ from bokeh.models import Div, TabPanel, Tabs
 from utils.logging import configure_logging
 from utils.s3 import open_file
 
+from plots.core.constants import DEFAULT_NUM_FAR_POINTS
 from plots.vetos import VETO_CATEGORIES
 from plots.vizapp.data import DataManager
 from plots.vizapp.pages import Analysis, Summary
@@ -44,6 +45,7 @@ class App:
         fftlength: float,
         device: str = "cpu",
         vetos: list[VETO_CATEGORIES] | None = None,
+        num_far_points: int = DEFAULT_NUM_FAR_POINTS,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
@@ -68,6 +70,7 @@ class App:
         self.fduration = fduration
         self.valid_frac = valid_frac
         self.device = device
+        self.num_far_points = num_far_points
         self.verbose = verbose
         self.weights = weights
         self.device = device

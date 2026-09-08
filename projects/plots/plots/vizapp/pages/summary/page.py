@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from plots.core.constants import SECONDS_PER_MONTH, SECONDS_PER_YEAR
+from plots.core.constants import DEFAULT_VIZAPP_MAX_FAR
 from plots.core.data import AnalysisData
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
 from plots.core.sv import (
@@ -12,8 +12,6 @@ from plots.vizapp.pages.page import Page
 
 if TYPE_CHECKING:
     from ledger.events import EventSet, RecoveredInjectionSet
-
-VIZAPP_MAX_FAR = 100 * SECONDS_PER_YEAR / SECONDS_PER_MONTH
 
 
 class Summary(Page):
@@ -30,7 +28,8 @@ class Summary(Page):
             data,
             mass_combos=self.app.mass_combos,
             source_prior=self.app.source_prior,
-            max_far=VIZAPP_MAX_FAR,
+            max_far=DEFAULT_VIZAPP_MAX_FAR,
+            num_far_points=self.app.num_far_points,
         )
 
         gwtc3_sv, gwtc3_err = gwtc3_pipeline_sv(
@@ -59,6 +58,7 @@ class Summary(Page):
             data,
             mass_combos=self.app.mass_combos,
             source_prior=self.app.source_prior,
-            max_far=VIZAPP_MAX_FAR,
+            max_far=DEFAULT_VIZAPP_MAX_FAR,
+            num_far_points=self.app.num_far_points,
         )
         self.sv.update(result)
