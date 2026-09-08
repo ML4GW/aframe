@@ -8,7 +8,7 @@ import numpy as np
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
 
-SECONDS_IN_YEAR = 31556952
+SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
 F = TypeVar("F", np.ndarray, float)
 
 
@@ -121,7 +121,7 @@ class EventSet(Ledger):
         Returns:
             Minimum FAR in yr^-1.
         """
-        return (1 / self.Tb) * SECONDS_IN_YEAR
+        return (1 / self.Tb) * SECONDS_PER_YEAR
 
     def far(self, threshold: F) -> F:
         """Calculate false alarm rate (FAR) for a given detection threshold.
@@ -137,7 +137,7 @@ class EventSet(Ledger):
             FAR in yr^-1. Returns min_far if threshold exceeds all events.
         """
         nb = self.nb(threshold)
-        far = SECONDS_IN_YEAR * nb / self.Tb
+        far = SECONDS_PER_YEAR * nb / self.Tb
         return np.maximum(far, self.min_far)
 
     def significance(self, threshold: F, T: float) -> F:
