@@ -131,6 +131,46 @@ class TestEventSet:
         assert result.Tb == expected.Tb
 
 
+class TestVetoMask:
+    def test_boundary_is_half_open(self):
+        # [start, end): landing exactly on `start` is vetoed,
+        # landing exactly on `end` is not
+        times = np.array([0.5, 1.5])
+        mask = events.veto_mask(times, np.array([[0.5, 1.5]]))
+        assert (mask == [True, False]).all()
+
+    def test_unsorted_segments(self):
+        times = np.arange(5, dtype=float)
+        sorted_mask = events.veto_mask(
+            times, np.array([[0.5, 1.5], [3.5, 4.5]])
+        )
+        unsorted_mask = events.veto_mask(
+            times, np.array([[3.5, 4.5], [0.5, 1.5]])
+        )
+        assert (sorted_mask == unsorted_mask).all()
+        assert (sorted_mask == [False, True, False, False, True]).all()
+
+    def test_overlapping_segments_merge(self):
+        times = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        mask = events.veto_mask(times, np.array([[0.5, 2.5], [1.5, 3.5]]))
+        assert (mask == [False, True, True, True, False]).all()
+
+    def test_degenerate_segment_raises(self):
+        times = np.array([1.0, 2.0, 3.0])
+        with pytest.raises(ValueError):
+            events.veto_mask(times, np.array([[2.0, 2.0]]))
+
+    def test_reversed_segment_raises(self):
+        times = np.array([1.0, 2.0, 3.0])
+        with pytest.raises(ValueError):
+            events.veto_mask(times, np.array([[2.0, 1.0]]))
+
+    def test_empty_vetos(self):
+        times = np.arange(5, dtype=float)
+        mask = events.veto_mask(times, np.zeros((0, 2)))
+        assert not mask.any()
+
+
 class TestRecoveredInjectionSet:
     @pytest.fixture
     def event_set(self):
