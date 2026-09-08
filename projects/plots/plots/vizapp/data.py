@@ -2,21 +2,15 @@ import logging
 from copy import deepcopy
 from pathlib import Path
 
-import numpy as np
 from bokeh.models import MultiChoice
 
 from plots.core.data import AnalysisData
-from plots.vetos import (
-    GATE_PATHS,
-    VETO_CATEGORIES,
-    VETO_DEFINER_FILE,
-    VetoParser,
+from plots.vetos import VETO_CATEGORIES
+from plots.vetos.masks import (
+    combine_masks,
+    compute_veto_masks,
+    load_or_fetch_segments,
 )
-
-
-def chirp_mass(m1, m2):
-    """Calculate chirp mass from component masses"""
-    return ((m1 * m2) ** 3 / (m1 + m2)) ** (1 / 5)
 
 
 class DataManager:
@@ -33,7 +27,7 @@ class DataManager:
     ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
-        self.vetos = vetos
+        self.categories = vetos
         # load results and data from the run we're visualizing
         self.response_set = waveforms_dir / "waveforms.hdf5"
 
@@ -47,78 +41,36 @@ class DataManager:
         self.rejected_params = data.rejected
         self.logger.info("Data loaded")
 
-        # add single ifo snrs
-        for i, ifo in enumerate(self.foreground.ifos):
-            attr = f"{ifo}_snr"
-            snrs = self.foreground.ifo_snrs[:, i]
-            setattr(self.foreground, attr, snrs)
-
-        # add snr ratio
-
         # create copies of the background and foreground
         # for applying vetos
         self._background = deepcopy(self.background)
         self._foreground = deepcopy(self.foreground)
 
-        if vetos:
-            self.veto_parser = VetoParser(
-                VETO_DEFINER_FILE,
-                GATE_PATHS,
-                self._background.detection_time.min(),
-                self._background.detection_time.max(),
-                self.ifos,
+        self.background_masks = None
+        self.foreground_masks = None
+        if self.categories:
+            start = self._background.detection_time.min()
+            stop = self._background.detection_time.max()
+            segments = load_or_fetch_segments(
+                self.categories, self.ifos, start, stop
             )
-            self.calculate_veto_masks()
+            self.background_masks = compute_veto_masks(
+                self._background, self.categories, self.ifos, segments
+            )
+            self.foreground_masks = compute_veto_masks(
+                self._foreground, self.categories, self.ifos, segments
+            )
 
     def get_veto_selecter(self):
-        if self.vetos is None:
-            vetos = ["N/A"]
-        else:
-            vetos = self.vetos
-        return MultiChoice(title="Applied Vetos", value=[], options=vetos)
-
-    def calculate_veto_masks(self):
-        self.vetos = {}
-        for label in self.veto_options:
-            self.logger.info(f"Calculating veto mask for {label}")
-            vetos = self.veto_parser.get_vetos(label)
-            veto_mask = False
-            for i, ifo in enumerate(self.ifos):
-                segments = vetos[ifo]
-                # apply vetos to background
-                _, mask = self.background.apply_vetos(
-                    segments, i, inplace=False, return_mask=True
-                )
-
-                # mark a background event as vetoed
-                # if it is vetoed in any ifo
-                veto_mask |= mask
-
-            self.vetos[label] = veto_mask
-
-        self.logger.info("Veto masks calculated")
-
-        self.veto_mask = np.zeros_like(mask, dtype=bool)
+        options = self.categories if self.categories else ["N/A"]
+        return MultiChoice(title="Applied Vetos", value=[], options=options)
 
     def update_vetos(self, attr, old, new):
-        if not self.vetos:
+        if not self.categories:
             return self._background, self._foreground
 
-        if not new:
-            # no vetos selected, so mark all background
-            # events as not-vetoed
-            self.veto_mask = np.zeros_like(self.veto_mask, dtype=bool)
-        else:
-            # mark a background event as vetoed if any
-            # of the currently selected labels veto it
-            mask = False
-            for label in new:
-                mask |= self.vetos[label]
-            self.veto_mask = mask
-
-        # update vetos in our data object
-        background = self._background[~self.veto_mask]
-
-        # TODO: apply foreground vetos
-        foreground = self._foreground
+        back_mask = combine_masks(self.background_masks, new)
+        fore_mask = combine_masks(self.foreground_masks, new)
+        background = self._background[~back_mask]
+        foreground = self._foreground[~fore_mask]
         return background, foreground
