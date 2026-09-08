@@ -41,13 +41,6 @@ jobs:
           # and exclude projects, whose tests are run in 
           # a different CI script
           - library: 'workflow'
-    permissions:
-      packages: read
-    container:
-      # container with python and git
-      image: cicirello/pyaction:4.32
-      volumes:
-        - ${{ github.workspace }}:/github/workspace
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,20 +53,17 @@ jobs:
       -
         name: build environment
         env:
-          test_dir: /github/workspace/libs/${{ matrix.library }}
+          test_dir: ${{ github.workspace }}/libs/${{ matrix.library }}
         run: |
-            apt-get update
-            apt-get install -y build-essential
-            apt-get clean
             cd $test_dir
             uv sync --all-extras
         shell: bash
 
       # run its unit tests inside that environment
-      - 
-        name: run tests 
+      -
+        name: run tests
         env:
-          test_dir: /github/workspace/libs/${{ matrix.library }}
+          test_dir: ${{ github.workspace }}/libs/${{ matrix.library }}
         run: |
             cd $test_dir
             uv run pytest
