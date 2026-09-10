@@ -177,7 +177,7 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    virgo_ready = [False] * (input_buffer.buffer_length // update_size)
+    virgo_ready = [False] * int(input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -585,7 +585,8 @@ def main(
     logging.info(f"{', '.join(ifos)} interferometer configuration set")
 
     # auth once up front before initializing gracedb client
-    authenticate()
+    use_arrakis = data_source == "arrakis"
+    authenticate(arrakis=use_arrakis)
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
@@ -621,6 +622,7 @@ def main(
         auth_refresh,
         minsecs,
         verbose,
+        use_arrakis,
     )
     auth_process = Process(
         target=authenticate_subprocess,
@@ -808,7 +810,7 @@ def main(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=online_inference_rate,
-        batch_size=update_size * online_inference_rate,
+        batch_size=int(update_size * online_inference_rate),
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
