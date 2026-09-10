@@ -20,7 +20,7 @@ from online.utils.buffer import InputBuffer, OutputBuffer
 from online.dataloading import (
     data_iterator,
     offline_data_iterator,
-    ngdd_data_iterator,
+    arrakis_data_iterator,
 )
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
@@ -367,7 +367,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
-    data_source: Literal["frames", "ngdd"] = "frames",
+    data_source: Literal["frames", "arrakis"] = "frames",
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -708,9 +708,9 @@ def main(
     # when the main process exits
     atexit.register(cleanup_subprocesses, subprocesses)
 
-    if data_source == "ngdd":
+    if data_source == "arrakis":
         update_size = 1 / 16
-        data_it = ngdd_data_iterator(
+        data_it = arrakis_data_iterator(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
@@ -740,7 +740,7 @@ def main(
 
     else:
         raise ValueError(
-            f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
+            f"Invalid data source {data_source}. Must be 'arrakis' or 'frames'"
         )
 
     # initialize a buffer for storing recent strain data,
