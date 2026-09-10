@@ -819,7 +819,6 @@ def main(
 
     # Hard-coding number of channels until Aframe is generalized
     snapshotter = OnlineSnapshotter(
-        update_size=update_size,
         num_channels=2,
         psd_length=psd_length,
         kernel_length=kernel_length,

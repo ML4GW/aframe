@@ -13,7 +13,6 @@ class OnlineSnapshotter(BackgroundSnapshotter):
 
     def __init__(self, *args, num_channels: int, update_size: int, **kwargs):
         super().__init__(*args, **kwargs)
-        self.update_size = update_size
         self.num_channels = num_channels
         self.contiguous_update_size = 0
         self.register_buffer(
@@ -23,9 +22,7 @@ class OnlineSnapshotter(BackgroundSnapshotter):
 
     @property
     def full_psd_present(self):
-        return (
-            self.contiguous_update_size >= self.state_size - self.update_size
-        )
+        return self.contiguous_update_size >= self.state_size
 
     def reset(self):
         self.contiguous_update_size = 0
