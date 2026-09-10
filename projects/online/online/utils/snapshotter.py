@@ -11,7 +11,7 @@ class OnlineSnapshotter(BackgroundSnapshotter):
     if there is enough data to calculate a PSD
     """
 
-    def __init__(self, *args, num_channels: int, update_size: int, **kwargs):
+    def __init__(self, *args, num_channels: int, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_channels = num_channels
         self.contiguous_update_size = 0

@@ -588,7 +588,7 @@ def main(
 
     # auth once up front before initializing gracedb client
     use_arrakis = data_source == "arrakis"
-    authenticate(arrakis=use_arrakis)
+    authenticate(use_arrakis=use_arrakis)
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
