@@ -28,11 +28,12 @@ FORE_ATTRS = [
     "mass_2_source",
     "snr",
     "detection_statistic",
-    "shift",
     "injection_time",
     "chirp_mass",
 ]
 BACK_ATTRS = ["detection_statistic", "detection_time"]
+
+SLIDER_ATTRS = ["mass_1_source", "mass_2_source", "snr"]
 
 
 class DistributionPlot:
@@ -45,9 +46,11 @@ class DistributionPlot:
     def asdict(self, background, foreground):
         background = {attr: getattr(background, attr) for attr in BACK_ATTRS}
         _foreground = {attr: getattr(foreground, attr) for attr in FORE_ATTRS}
-        for ifo in foreground.ifos:
-            attr = f"{ifo}_snr"
-            _foreground[attr] = getattr(foreground, attr)
+
+        for i, ifo in enumerate(foreground.ifos):
+            _foreground[f"{ifo}_snr"] = foreground.ifo_snrs[:, i]
+        sorted_snrs = np.sort(foreground.ifo_snrs, axis=-1)
+        _foreground["snr_ratio"] = sorted_snrs[:, -1] / sorted_snrs[:, -2]
         return background, _foreground
 
     def initialize_sources(self):
@@ -108,14 +111,13 @@ class DistributionPlot:
         self.background_plot.add_tools(PanTool(), WheelZoomTool())
 
         self.sliders = {}
-        for attr in ["mass_1_source", "mass_2_source", "snr"]:
-            # dummy values for now
-            min_val = 0
-            max_val = 100
+        for attr in SLIDER_ATTRS:
+            # Placeholder ranges that will be set in `update()` once
+            # the foreground data is loaded
             slider = RangeSlider(
-                start=min_val,
-                end=max_val,
-                value=(min_val, max_val),
+                start=0,
+                end=1,
+                value=(0, 1),
                 step=1,
                 title=attr,
             )
@@ -181,6 +183,7 @@ class DistributionPlot:
             ("Mass 1 source", "@{mass_1_source}"),
             ("Mass 2 source", "@{mass_2_source}"),
             ("Chirp Mass", "@{chirp_mass}"),
+            ("SNR ratio", "@{snr_ratio}"),
         ]
 
         for ifo in self.page.app.ifos:
@@ -338,6 +341,16 @@ class DistributionPlot:
 
         self.background_source.data = background_dict
         self.foreground_source.data = foreground_dict
+
+        for attr, slider in self.sliders.items():
+            values = foreground_dict[attr]
+            if not len(values) > 0:
+                continue
+            low, high = float(np.min(values)), float(np.max(values))
+            slider.start = low
+            slider.end = high
+            slider.value = (low, high)
+            slider.step = (high - low) / 100 or 1
 
         self.distribution_plot.title.text = title
 

@@ -12,12 +12,11 @@ from plots.core.sv import (
     comparisons_from_gwtc3_curves,
     compute_sensitive_volume,
 )
-from plots.vetos import (
-    GATE_PATHS,
-    VETO_CATEGORIES,
-    VETO_DEFINER_FILE,
-    VetoParser,
-    get_catalog_vetos,
+from plots.vetos import VETO_CATEGORIES
+from plots.vetos.masks import (
+    combine_masks,
+    compute_veto_masks,
+    load_or_fetch_segments,
 )
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -25,27 +24,15 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 def _apply_vetos(background, foreground, vetos, ifos, start, stop):
     """Filter background and foreground events through veto categories."""
-    veto_parser = VetoParser(VETO_DEFINER_FILE, GATE_PATHS, start, stop, ifos)
-    catalog_vetos = get_catalog_vetos(start, stop)
-    for cat in vetos:
-        for i, ifo in enumerate(ifos):
-            if cat == "CATALOG":
-                cat_vetos = catalog_vetos
-            else:
-                cat_vetos = veto_parser.get_vetos(cat)[ifo]
-            back_count = len(background)
-            fore_count = len(foreground)
-            if len(cat_vetos) > 0:
-                background = background.apply_vetos(cat_vetos, i)
-                foreground = foreground.apply_vetos(cat_vetos, i)
-            logging.info(
-                f"\t{back_count - len(background)} {cat} "
-                f"background events removed for ifo {ifo}"
-            )
-            logging.info(
-                f"\t{fore_count - len(foreground)} {cat} "
-                f"foreground events removed for ifo {ifo}"
-            )
+    segments = load_or_fetch_segments(vetos, ifos, start, stop)
+
+    logging.info("Computing background veto masks")
+    back_masks = compute_veto_masks(background, vetos, ifos, segments)
+    logging.info("Computing foreground veto masks")
+    fore_masks = compute_veto_masks(foreground, vetos, ifos, segments)
+
+    background = background[~combine_masks(back_masks, vetos)]
+    foreground = foreground[~combine_masks(fore_masks, vetos)]
     return background, foreground
 
 

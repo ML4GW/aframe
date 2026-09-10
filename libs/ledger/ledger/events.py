@@ -1,11 +1,9 @@
-import copy
 import warnings
 from dataclasses import dataclass
-from multiprocessing import Pool, cpu_count
 from typing import TypeVar
 
+import ligo.segments
 import numpy as np
-from tqdm import tqdm
 
 from ledger.injections import InterferometerResponseSet
 from ledger.ledger import Ledger, metadata, parameter
@@ -14,24 +12,35 @@ SECONDS_IN_YEAR = 31556952
 F = TypeVar("F", np.ndarray, float)
 
 
-def process_chunk(args):
-    """Process a chunk of events to apply veto masks.
+def veto_mask(times: np.ndarray, vetos: np.ndarray) -> np.ndarray:
+    """Boolean mask of `times` falling inside any `[start, end)` segment.
 
     Args:
-        args: Tuple of (chunk_times, vetos, chunk_index) where:
-              - chunk_times: Time values to check against vetoes
-              - vetos: Array of (start, end) time pairs
-              - chunk_index: Index of the current chunk
+        times: GPS times to test.
+        vetos: `(N, 2)` array of `(start, end)` segment bounds.
 
-    Returns:
-        Tuple of (chunk_index, veto_mask) with boolean mask
-        indicating which events are vetoed.
+    Raises:
+        ValueError: if any segment has `start >= end`.
     """
-    chunk_times, vetos, i = args
-    mask = np.logical_and(
-        vetos[:, :1] < chunk_times, vetos[:, 1:] > chunk_times
+    if len(vetos) == 0:
+        return np.zeros(len(times), dtype=bool)
+
+    segs = np.asarray(vetos, dtype=float)
+    bad = segs[:, 1] <= segs[:, 0]
+    if bad.any():
+        raise ValueError(
+            f"Veto segments must have start < end, got {segs[bad].tolist()}"
+        )
+
+    merged = ligo.segments.segmentlist(
+        ligo.segments.segment(start, end) for start, end in segs
     )
-    return i, mask.any(axis=0)
+    merged.coalesce()
+    edges = np.array(merged).ravel()
+
+    # A time being placed at an odd index means that it falls
+    # between the start and end time of a veto
+    return np.searchsorted(edges, times, side="right") % 2 == 1
 
 
 @dataclass
@@ -177,22 +186,13 @@ class EventSet(Ledger):
         self,
         vetos: list[tuple[float, float]],
         idx: int,
-        chunk_size: int = 500000,
-        inplace: bool = False,
         return_mask: bool = False,
     ):
         """Apply time-based vetoes to remove events.
 
-        Removes events that fall within specified time intervals using
-        multiprocessing for efficiency on large datasets.
-
         Args:
             vetos: List of (start_time, end_time) tuples defining veto periods.
             idx: Index of the shift/interferometer to apply vetoes for.
-            chunk_size: Number of events to process per chunk.
-                Defaults to 500000.
-            inplace: If True, modify this object. If False, return copy.
-                    Defaults to False.
             return_mask: If True, return both filtered events and veto mask.
                     Defaults to False.
 
@@ -200,39 +200,12 @@ class EventSet(Ledger):
             If return_mask is False: Vetoed EventSet.
             If return_mask is True: Tuple of (vetoed_events, veto_mask).
         """
-        # idx corresponds to the index of the shift
-        # (i.e., which ifo to apply vetoes for)
-        shifts = self.shift[:, idx]
-        times = self.detection_time + shifts
-
-        # array of False, no vetoes applied yet
-        veto_mask = np.zeros(len(times), dtype=bool)
-
-        # split times into chunks;
-        # keep track of the index of the chunk
-        # for mp purposes so we can unpack the results later
-        chunks = [
-            (times[idx : idx + chunk_size], vetos, i)
-            for i, idx in enumerate(range(0, len(times), chunk_size))
-        ]
-
-        num_cpus = min(cpu_count(), len(chunks))
-        with Pool(num_cpus) as pool:
-            results = pool.imap_unordered(process_chunk, chunks)
-
-            # combine results
-            with tqdm(total=len(chunks)) as pbar:
-                for i, result in results:
-                    veto_mask[i * chunk_size : (i + 1) * chunk_size] = result
-                    pbar.update()
-
-        if inplace:
-            result = self[~veto_mask]
-        else:
-            result = copy.deepcopy(self)[~veto_mask]
-
+        shift = self.shift[:, idx]
+        times = self.detection_time + shift
+        mask = veto_mask(times, vetos)
+        result = self[~mask]
         if return_mask:
-            return result, veto_mask
+            return result, mask
         return result
 
 
