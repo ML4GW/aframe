@@ -21,6 +21,8 @@ from online.dataloading import (
     data_iterator,
     offline_data_iterator,
     arrakis_data_iterator,
+    get_block_duration,
+    stream_channels,
 )
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
@@ -711,7 +713,9 @@ def main(
     atexit.register(cleanup_subprocesses, subprocesses)
 
     if data_source == "arrakis":
-        update_size = 1 / 16
+        update_size = get_block_duration(
+            stream_channels(channels, ifos, state_channels)
+        )
         data_it = arrakis_data_iterator(
             strain_channels=channels,
             ifos=ifos,
