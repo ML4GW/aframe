@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: mambaorg/micromamba:2.9.0
+From: mambaorg/micromamba:1.5
 Stage: build
 
 %files
@@ -9,6 +9,9 @@ Stage: build
 ../../libs/ledger /opt/aframe/libs/ledger
 ../../libs/p_astro /opt/aframe/libs/p_astro
 ../../pyproject.toml /opt/aframe/pyproject.toml
+
+%environment
+export LD_LIBRARY_PATH=/opt/env/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
