@@ -173,7 +173,7 @@ def create_online_runfile(path: Path):
     export ONLINE_DATADIR=/kafka/
 
     # Used when data_source="arrakis"
-    export ARRAKIS_SERVER=arrakis.ligo.org
+    export ARRAKIS_SERVER=grpc://arrakis:31206
 
     # where results and deployment logs will be writen
     export AFRAME_ONLINE_OUTDIR=$RUN_DIR/output

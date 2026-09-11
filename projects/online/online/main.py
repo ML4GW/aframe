@@ -714,6 +714,7 @@ def main(
         update_size = get_block_duration(
             stream_channels(channels, ifos, state_channels)
         )
+        logging.info(f"Arrakis update size: {update_size} s")
         data_it = arrakis_data_iterator(
             strain_channels=channels,
             ifos=ifos,

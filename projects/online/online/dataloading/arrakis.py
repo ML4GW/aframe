@@ -1,10 +1,9 @@
 import logging
-from fractions import Fraction
-from math import gcd, lcm
+from math import lcm
 
 import numpy as np
 import torch
-from arrakis import Client
+from arrakis import Client, Time
 from online.dataloading.utils import (
     resample,
     build_resample_filter,
@@ -35,10 +34,8 @@ def get_block_duration(
     if not metadata:
         metadata = Client().describe(channels)
     strides = [metadata[channel].stride for channel in channels]
-    fractions = [Fraction(s).limit_denominator() for s in strides.values()]
-    numerator = lcm(*[f.numerator for f in fractions])
-    denominator = gcd(*[f.denominator for f in fractions])
-    return float(Fraction(numerator, denominator))
+    # Strides are returned in nanoseconds
+    return lcm(*strides) / Time.SECONDS
 
 
 def get_strain_sample_rate(strain_channels: list[str], metadata: dict) -> int:
