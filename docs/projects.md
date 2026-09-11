@@ -29,7 +29,7 @@ echo export AFRAME_CONTAINER_ROOT=~/aframe/images/ >> ~/.bash_profile
 mkdir -p $AFRAME_CONTAINER_ROOT
 ```
 
-This is the location where `aframe` images will be stored. `luigi`/`law` tasks will look for images in this location.
+This is the location where `aframe` images will be stored. Snakemake rules look for images in this location.
 
 The root `aframe` environment ships with a command line utility for building all of the project containers in parallel
 
@@ -78,7 +78,7 @@ apptainer build $AFRAME_CONTAINER_ROOT/data.sif apptainer.def
 ```{eval-rst}
 
 .. note: 
-    It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default expecatation of the `luigi`/`law` tasks
+    It is highly recommended that you name containers after the corresponding project. Although not strictly necessary, this is the default expectation of the Snakemake rules
 ```
 
 Each projects `README` has instructions for building its container/environment.

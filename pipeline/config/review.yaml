@@ -1,0 +1,29 @@
+# =============================================================================
+# Review run: short end-to-end validation of the full pipeline
+# =============================================================================
+#
+#     snakemake --configfile pipeline/config/review.yaml \
+#         --config run_dir=/path/to/run \
+#         --profile pipeline/profiles/ldg
+#
+# =============================================================================
+
+# --- GPS time ranges ---------------------------------------------------------
+# ~9k seconds of training data, ~200k seconds of test data
+train_start: 1250900000
+train_end: 1250909263
+test_start: 1250909263
+test_end: 1251109263
+
+# --- Testing waveforms -------------------------------------------------------
+# a fifth of the production count, to keep the run short
+num_testing_signals: 100000
+
+# --- Inference ---------------------------------------------------------------
+# one month of background livetime rather than a year
+Tb: 2592000.0
+
+# analyze the unshifted data as well, so the review covers the zero-lag path
+zero_lag: true
+
+integration_window_length: 1.0

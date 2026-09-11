@@ -15,7 +15,6 @@ dependencies = [
     "torch==2.10.0",
     "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "ml4gw-hermes[torch]",
-    "aframe",
     "utils",
     "ledger",
     "urllib3>=2",
@@ -36,7 +35,6 @@ dev = [
 [tool.uv]
 
 [tool.uv.sources]
-aframe = { path = "../../", editable = true }
 utils = { path = "../../libs/utils", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
 # TODO: point at released version once available

@@ -1,5 +1,15 @@
 Remote Training
 ===============
+
+```{eval-rst}
+.. admonition:: Deprecated
+    :class: warning
+
+    This page describes remote training as it worked under the :code:`luigi`/:code:`law` task framework, which has been removed. The :code:`aframe-init offline --mode sandbox` command, its :code:`--s3-bucket` argument, the :code:`AFRAME_*` environment variables and the :code:`Train` task that launched the Kubernetes job no longer exist, and remote training has no Snakemake equivalent yet, so **the commands below will not run as written**.
+
+    It is kept as a design reference for porting remote training to Snakemake. See also the to-dos in `pipeline/README.md <https://github.com/ML4GW/aframe/blob/main/pipeline/README.md>`_.
+```
+
 ```{eval-rst}
 .. note::
     It is recommended you are familiar with running a :doc:`local pipeline <first_pipeline>` before proceeding
