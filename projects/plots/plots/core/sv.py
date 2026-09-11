@@ -13,7 +13,7 @@ from priors.priors import log_normal_masses
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from plots.core import compute, style
-from plots.core.constants import SECONDS_PER_YEAR
+from plots.core.constants import DEFAULT_NUM_FAR_POINTS, SECONDS_PER_YEAR
 from plots.core.data import AnalysisData
 
 if TYPE_CHECKING:
@@ -81,14 +81,17 @@ class SensitiveVolumeResult:
             )
 
 
-def _far_grid(background, max_far: float):
+def _far_grid(background, max_far: float, num_far_points: int):
     """Build the FAR grid and the thresholds that produce it."""
     Tb = background.Tb / SECONDS_PER_YEAR
     max_events = min(int(max_far * Tb), len(background))
     if not max_events:
         return np.array([]), np.array([])
-    fars = np.arange(1, max_events + 1) / Tb
-    thresholds = np.sort(background.detection_statistic)[::-1][:max_events]
+    counts = np.unique(np.round(np.geomspace(1, max_events, num_far_points)))
+    counts = np.clip(counts, 1, max_events)
+    fars = counts / Tb
+    stats = background.detection_statistic
+    thresholds = stats[len(stats) - counts.astype(int)]
     return fars, thresholds
 
 
@@ -158,6 +161,7 @@ def compute_sensitive_volume(
     source_prior: "PriorDict",
     dt: float | None = None,
     max_far: float = 365,
+    num_far_points: int = DEFAULT_NUM_FAR_POINTS,
     sigma: float = 0.1,
 ) -> SensitiveVolumeResult:
     """Compute sensitive volume vs. false alarm rate.
@@ -170,10 +174,11 @@ def compute_sensitive_volume(
         dt: if given, discard injections recovered more than `dt`
             seconds from their injection time
         max_far: largest false alarm rate to compute out to, per year
+        num_far_points: number of points in the FAR grid
         sigma: width of the log normal mass distributions
     """
     v0 = _astrophysical_volume(source_prior)
-    fars, thresholds = _far_grid(data.background, max_far)
+    fars, thresholds = _far_grid(data.background, max_far, num_far_points)
     weights = _weights(data, mass_combos, source_prior, dt, sigma)
 
     logging.info("Computing sensitive volume at thresholds")

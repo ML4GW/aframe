@@ -5,10 +5,10 @@ from typing import TypeVar
 import ligo.segments
 import numpy as np
 
-from ledger.injections import InterferometerResponseSet
+from ledger.injections import InterferometerResponseSet, shift_mask
 from ledger.ledger import Ledger, metadata, parameter
 
-SECONDS_IN_YEAR = 31556952
+SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
 F = TypeVar("F", np.ndarray, float)
 
 
@@ -77,10 +77,7 @@ class EventSet(Ledger):
             EventSet containing only events from the specified shift.
         """
         # downselect to all events from a given shift
-        mask = self.shift == shift
-        if self.shift.ndim == 2:
-            mask = mask.all(axis=-1)
-        return self[mask]
+        return self[shift_mask(self.shift, shift)]
 
     def nb(self, threshold: F) -> F:
         """Calculate number of events above detection threshold.
@@ -121,7 +118,7 @@ class EventSet(Ledger):
         Returns:
             Minimum FAR in yr^-1.
         """
-        return (1 / self.Tb) * SECONDS_IN_YEAR
+        return (1 / self.Tb) * SECONDS_PER_YEAR
 
     def far(self, threshold: F) -> F:
         """Calculate false alarm rate (FAR) for a given detection threshold.
@@ -137,7 +134,7 @@ class EventSet(Ledger):
             FAR in yr^-1. Returns min_far if threshold exceeds all events.
         """
         nb = self.nb(threshold)
-        far = SECONDS_IN_YEAR * nb / self.Tb
+        far = SECONDS_PER_YEAR * nb / self.Tb
         return np.maximum(far, self.min_far)
 
     def significance(self, threshold: F, T: float) -> F:

@@ -259,6 +259,20 @@ class Ledger:
             return cls._load_with_idx(f, None)
 
     @classmethod
+    def read_idx(cls, fname: PATH, idx: np.ndarray):
+        """Read only the rows at `idx` from `fname`.
+
+        Args:
+            fname: Path to HDF5 file to read.
+            idx: Row indices to load.
+
+        Returns:
+            Instance of the ledger class populated with just those rows.
+        """
+        with h5py.File(fname, "r") as f:
+            return cls._load_with_idx(f, idx)
+
+    @classmethod
     def sample_from_file(cls, fname: PATH, N: int, replace: bool = False):
         """Sample data from HDF5 file for out-of-memory operations.
 

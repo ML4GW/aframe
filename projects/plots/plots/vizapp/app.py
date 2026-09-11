@@ -9,6 +9,7 @@ from bokeh.models import Div, TabPanel, Tabs
 from utils.logging import configure_logging
 from utils.s3 import open_file
 
+from plots.core.constants import DEFAULT_NUM_FAR_POINTS
 from plots.vetos import VETO_CATEGORIES
 from plots.vizapp.data import DataManager
 from plots.vizapp.pages import Analysis, Summary
@@ -44,6 +45,7 @@ class App:
         fftlength: float,
         device: str = "cpu",
         vetos: list[VETO_CATEGORIES] | None = None,
+        num_far_points: int = DEFAULT_NUM_FAR_POINTS,
         verbose: bool = False,
     ) -> None:
         configure_logging(verbose=verbose)
@@ -68,6 +70,7 @@ class App:
         self.fduration = fduration
         self.valid_frac = valid_frac
         self.device = device
+        self.num_far_points = num_far_points
         self.verbose = verbose
         self.weights = weights
         self.device = device
@@ -80,6 +83,10 @@ class App:
         # data loading and application of vetos
         self.data_manager = DataManager(
             results_dir, waveforms_dir, ifos, vetos
+        )
+
+        self.background, self.foreground = self.data_manager.update_vetos(
+            None, None, []
         )
 
         # initialize all our pages and their constituent plots
@@ -96,7 +103,6 @@ class App:
 
         self.veto_selecter = self.data_manager.get_veto_selecter()
         self.veto_selecter.on_change("value", self.update)
-        self.update(None, None, [])
 
         # set up a header with a title and the selecter
         title = Div(text="<h1>aframe Performance Dashboard</h1>", width=500)
@@ -122,11 +128,13 @@ class App:
 
     def update(self, attr, old, new):
         # update the vetos
-        background, foreground = self.data_manager.update_vetos(attr, old, new)
+        self.background, self.foreground = self.data_manager.update_vetos(
+            attr, old, new
+        )
 
         # update pages with latest background and foreground
         for page in self.pages:
-            page.update(background, foreground)
+            page.update(self.background, self.foreground)
 
     def __call__(self, doc):
         doc.add_root(self.layout)

@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 from plots.core import compute
+from plots.core.constants import SECONDS_PER_YEAR
+from plots.core.sv import _far_grid
 
 MASS_COMBOS = [(35, 35), (35, 20), (20, 20), (20, 10)]
 
@@ -40,3 +42,17 @@ def test_compute_threshold_extremes(det_stats_and_weights):
     np.testing.assert_allclose(sv[:, 0], 0)
     # everything clears a threshold below the quietest
     np.testing.assert_allclose(sv[:, 1], weights.sum(axis=-1))
+
+
+def test_far_grid(make_background):
+    background = make_background(n=2000, Tb=0.25 * SECONDS_PER_YEAR)
+    background = background.sort_by("detection_statistic")
+
+    fars, thresholds = _far_grid(background, max_far=365, num_far_points=50)
+
+    assert 0 < len(fars) <= 50
+    assert len(fars) == len(thresholds)
+    assert np.all(np.diff(fars) > 0)  # ascending
+    assert np.all(np.diff(thresholds) <= 0)  # non-increasing
+    assert thresholds[0] == background.detection_statistic[-1]
+    assert fars[0] == pytest.approx(SECONDS_PER_YEAR / background.Tb)

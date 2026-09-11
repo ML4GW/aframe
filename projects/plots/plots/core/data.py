@@ -44,7 +44,8 @@ class AnalysisData:
         """Read the ledgers and drop unphysical foreground events.
 
         Args:
-            background: HDF5 file readable by `EventSet.read`
+            background: HDF5 file readable by `EventSet.read`. Gets sorted by
+                detection statistic if it isn't already.
             foreground: HDF5 file readable by `RecoveredInjectionSet.read`
             rejected: HDF5 file readable by `InjectionParameterSet.read`
         """
@@ -54,6 +55,11 @@ class AnalysisData:
             foreground=drop_unphysical(RecoveredInjectionSet.read(foreground)),
             rejected=InjectionParameterSet.read(rejected),
         )
+
+        # Background should be sorted by infer already, but just in case
+        if not data.background.is_sorted_by("detection_statistic"):
+            data.background = data.background.sort_by("detection_statistic")
+
         logging.info("Read in:")
         logging.info(f"\t{len(data.background)} background events")
         logging.info(f"\t{len(data.foreground)} foreground events")

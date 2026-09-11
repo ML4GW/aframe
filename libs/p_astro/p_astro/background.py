@@ -1,5 +1,5 @@
 import numpy as np
-from ledger.events import SECONDS_IN_YEAR, EventSet
+from ledger.events import SECONDS_PER_YEAR, EventSet
 from numpy.polynomial import Polynomial
 from scipy.stats import gaussian_kde
 
@@ -56,7 +56,7 @@ class KdeAndPolynomialBackground(BackgroundModel):
     @property
     def scale_factor(self):
         """Scale factor to convert from rate density to count rate"""
-        return len(self.background) * SECONDS_IN_YEAR / self.background.Tb
+        return len(self.background) * SECONDS_PER_YEAR / self.background.Tb
 
     def fit(self):
         """

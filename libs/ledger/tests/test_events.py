@@ -69,7 +69,7 @@ class TestEventSet:
         det_stats = np.arange(10)
         times = np.arange(10)
         shifts = np.array([0] * 4 + [1] * 5 + [2])
-        Tb = 2 * events.SECONDS_IN_YEAR
+        Tb = 2 * events.SECONDS_PER_YEAR
         obj = events.EventSet(det_stats, times, shifts, Tb)
 
         assert obj.far(5) == 2.5
