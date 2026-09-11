@@ -587,8 +587,7 @@ def main(
     logging.info(f"{', '.join(ifos)} interferometer configuration set")
 
     # auth once up front before initializing gracedb client
-    use_arrakis = data_source == "arrakis"
-    authenticate(use_arrakis=use_arrakis)
+    authenticate()
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
@@ -624,7 +623,6 @@ def main(
         auth_refresh,
         minsecs,
         verbose,
-        use_arrakis,
     )
     auth_process = Process(
         target=authenticate_subprocess,

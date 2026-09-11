@@ -14,13 +14,8 @@ AFRAME_CREDKEY = os.getenv(
     "AFRAME_CREDKEY", "aframe-online/robot/aframe.ldas.cit"
 )
 
-GRACEDB_SCOPE = "gracedb.read"
-ARRAKIS_SCOPE = "arrakis.read:/"
 
-
-def authenticate(
-    minsecs: float = 1000, debug: bool = False, use_arrakis: bool = False
-):
+def authenticate(minsecs: float = 1000, debug: bool = False):
     """
     Refresh the credentials necessary for online deployment
 
@@ -30,8 +25,6 @@ def authenticate(
             it to be used
         debug:
             Run `htgettoken` in debug mode
-        use_arrakis:
-            Request the scope necessary to stream data from arrakis
     """
     args = [
         "kinit",
@@ -44,10 +37,6 @@ def authenticate(
         args, logger=logger, log_stderr_on_success=False
     )
 
-    scopes = [GRACEDB_SCOPE]
-    if use_arrakis:
-        scopes.append(ARRAKIS_SCOPE)
-
     args = [
         "htgettoken",
         "-v",
@@ -57,7 +46,7 @@ def authenticate(
         "igwn",
         "-r",
         AFRAME_CREDKEY.split("/")[0],
-        f"--scopes={','.join(scopes)}",
+        "--scopes=gracedb.read",
         f"--credkey={AFRAME_CREDKEY}",
         f"--minsecs={minsecs}",
         "--nooidc",
@@ -76,12 +65,10 @@ def authenticate_subprocess(
     refresh: int,
     minsecs: float = 1000,
     debug: bool = False,
-    use_arrakis: bool = False,
 ):
     """
     Authentication subprocess loop that will re-authenticate
     every `refresh` seconds
-
     """
     logger.info("authenticate subprocess initialized")
     last_auth = time.time()
@@ -89,6 +76,6 @@ def authenticate_subprocess(
         time.sleep(1e-1)
         if time.time() - last_auth > refresh:
             logger.info("Authenticating...")
-            authenticate(minsecs, debug, use_arrakis)
+            authenticate(minsecs, debug)
             last_auth = time.time()
             logger.info("Authentication complete")
