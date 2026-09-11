@@ -37,20 +37,13 @@ def _get_files_block(project_name: str) -> str:
             # git source
             continue
 
-        normalized = path.rstrip("/")
-
-        if normalized == "../..":
-            entry = "../../aframe /opt/aframe/aframe"
-        else:
-            lib_name = normalized.removeprefix("../../libs/")
-            entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
+        lib_name = path.rstrip("/").removeprefix("../../libs/")
+        entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
 
         if entry not in seen:
             seen.add(entry)
             lines.append(entry)
 
-    lines.append("../../aframe /opt/aframe/aframe")
-    lines.append("../../pyproject.toml /opt/aframe/pyproject.toml")
     return "\n".join(lines)
 
 

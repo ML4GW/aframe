@@ -13,7 +13,6 @@ dependencies = [
     "ledger",
     "priors",
     "ml4gw>=0.7.2",
-    "aframe",
     "gwpy>=3.0.8,<4",
     "gwosc",
     "lalsuite",
@@ -39,7 +38,6 @@ dev = ["pytest>=8.2.1,<9"]
 utils = { path = "../../libs/utils", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
 priors = { path = "../../libs/priors", editable = true }
-aframe = { path = "../..", editable = true }
 
 [build-system]
 requires = ["hatchling"]

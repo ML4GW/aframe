@@ -20,7 +20,6 @@ meaningful metrics
    :caption: Code Structure
    :maxdepth: 1
 
-   Tasks <tasks>
    Projects <projects>
    Libraries <libraries>
 
@@ -28,8 +27,8 @@ meaningful metrics
    :caption: Advanced
    :maxdepth: 1
 
-   Remote Training <remote>
-   Tuning <tuning>
+   Remote Training (deprecated) <remote>
+   Tuning (deprecated) <tuning>
 ```
 
 For algorithm details and performance estimates on the LVK O3 observing run, please see ["A machine-learning pipeline for real-time detection of gravitational waves from compact binary coalescences"](https://arxiv.org/abs/2403.18661). Please also cite this paper if you use `Aframe` software in your work.

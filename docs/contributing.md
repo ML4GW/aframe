@@ -39,10 +39,10 @@ If the code you're writing is some general-purpose function that gets used in ma
 ### Projects
 Code that produces _artifacts_ of some specific experiment (training data, optimized models, analysis plots, etc.) should be implemented as a project in the `projects` directory. Projects should be kept modular and specific to the artifact they are designed to generate, with light-weight environments.
 
-### Tasks and Pipelines
-The `aframe` sub-directory utilizes [`luigi`](https://luigi.readthedocs.io/en/stable/) and a higher level wrapper [`law`](https://github.com/riga/law) to construct complex, automated, end-to-end pipelines from different projects. `law` introduces environment sandboxing, which allows different tasks to be run in individual environments. These environments are typically Apptainer images, but can also be simple python virtual environments. 
+### Pipelines
+End-to-end pipelines are constructed with [Snakemake](https://snakemake.readthedocs.io/). Each project contributes a `projects/<project>/<project>.smk` rule file, which the top-level `Snakefile` includes; `pipeline/` holds the shared config and the execution profiles (`local`, `ldg`, `delta`). Rules that need a project's environment declare its Apptainer image, so each step runs in its own container. See [pipeline/README.md](https://github.com/ML4GW/aframe/blob/main/pipeline/README.md) for running and configuring the pipeline.
 
-`law` also has abstractions for running tasks via [Condor](https://htcondor.readthedocs.io/en/latest/) which makes distributing tasks on HPC clusters trivial. If you think your contribution would benefit from being included in a broader pipeline, consider implementing a `law.Task` wrapper around it. It is recommended that you read the `law` and `luigi` docs linked above to get familiar with these concepts.
+If you think your contribution would benefit from being included in a broader pipeline, add a rule to the relevant project's `.smk` file.
 
 ### Testing
 For any code that you contribute, make sure to add unit tests which explicitly state and validate expectations about the behavior of your code. Tests should be placed in a `tests` subdirectory of each library and project, and should be structured similarly to the library code itself but with `test_` prepended to all the names.
