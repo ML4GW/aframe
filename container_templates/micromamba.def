@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: mambaorg/micromamba:1.5
+From: mambaorg/micromamba:2.9.0
 Stage: build
 
 %files
