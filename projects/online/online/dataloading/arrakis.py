@@ -1,32 +1,14 @@
 import logging
-import os
 from fractions import Fraction
 from math import gcd, lcm
 
 import numpy as np
 import torch
 from arrakis import Client
-from igwn_auth_utils import IgwnAuthError
 from online.dataloading.utils import (
     resample,
     build_resample_filter,
 )
-
-
-def build_client() -> Client:
-    """
-    Connect to the arrakis server defined by `ARRAKIS_SERVER`.
-
-    Passing `token=True` requires a valid scitoken to exist
-    from the start.
-    """
-    try:
-        return Client(token=True)
-    except IgwnAuthError as exc:
-        server = os.getenv("ARRAKIS_SERVER")
-        raise RuntimeError(
-            f"No valid scitoken found for the arrakis server at {server}"
-        ) from exc
 
 
 def stream_channels(
@@ -51,7 +33,7 @@ def get_block_duration(
     of the individual stride of each channel.
     """
     if not metadata:
-        metadata = build_client().describe(channels)
+        metadata = Client().describe(channels)
     strides = [metadata[channel].stride for channel in channels]
     fractions = [Fraction(s).limit_denominator() for s in strides.values()]
     numerator = lcm(*[f.numerator for f in fractions])
@@ -83,7 +65,7 @@ def data_iterator(
 ) -> torch.Tensor:
     channels = stream_channels(strain_channels, ifos, state_channels)
 
-    client = build_client()
+    client = Client()
     metadata = client.describe(channels)
     strain_sample_rate = get_strain_sample_rate(strain_channels, metadata)
     block_duration = get_block_duration(channels, metadata)
