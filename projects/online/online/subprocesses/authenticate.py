@@ -16,6 +16,16 @@ AFRAME_CREDKEY = os.getenv(
 
 
 def authenticate(minsecs: float = 1000, debug: bool = False):
+    """
+    Refresh the credentials necessary for online deployment
+
+    Args:
+        minsecs:
+            Minimum remaining lifetime, in seconds, that a token must have for
+            it to be used
+        debug:
+            Run `htgettoken` in debug mode
+    """
     args = [
         "kinit",
         AFRAME_CREDKEY + "@LIGO.ORG",
@@ -52,12 +62,13 @@ def authenticate(minsecs: float = 1000, debug: bool = False):
 
 @subprocess_wrapper
 def authenticate_subprocess(
-    refresh: int, minsecs: float = 1000, debug: bool = False
+    refresh: int,
+    minsecs: float = 1000,
+    debug: bool = False,
 ):
     """
     Authentication subprocess loop that will re-authenticate
     every `refresh` seconds
-
     """
     logger.info("authenticate subprocess initialized")
     last_auth = time.time()

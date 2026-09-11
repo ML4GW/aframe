@@ -108,20 +108,21 @@ def write_content(content: str, path: Path):
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
     # bind /local/aframe for finding scitokens
-    cmd += "--bind /local/aframe.online,$ONLINE_DATADIR"
+    cmd += "--bind /local/aframe.online,$ONLINE_DATADIR "
     cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
     cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
+    cmd += "--env ARRAKIS_SERVER=$ARRAKIS_SERVER "
     cmd += "--env AFRAME_WEIGHTS=$AFRAME_WEIGHTS "
     cmd += "--env AMPLFI_WEIGHTS=$AMPLFI_WEIGHTS "
     cmd += "--env BEARER_TOKEN_FILE=$BEARER_TOKEN_FILE "
     cmd += "--env SCITOKEN_FILE=$SCITOKEN_FILE "
-    cmd += "$AFRAME_CONTAINER/online.sif /opt/env/bin/online "
+    cmd += "$AFRAME_CONTAINER /opt/env/bin/online "
     cmd += "--config $config 2>> monitoring.log"
 
     monitor_cmd = "apptainer run "
     monitor_cmd += f" --bind {path} "
-    monitor_cmd += "$AFRAME_CONTAINER/online.sif /opt/env/bin/monitor "
+    monitor_cmd += "$AFRAME_CONTAINER /opt/env/bin/monitor "
     monitor_cmd += f"--run_dir {path} --out_dir $MONITOR_OUTDIR "
     monitor_cmd += ">> summary_pages.log 2>&1 &"
 
@@ -168,7 +169,11 @@ def create_online_runfile(path: Path):
 
     # location where low latency data
     # is streamed, typically /kafka
+    # Used when data_source="frames"
     export ONLINE_DATADIR=/kafka/
+
+    # Used when data_source="arrakis"
+    export ARRAKIS_SERVER=grpc://arrakis:31206
 
     # where results and deployment logs will be writen
     export AFRAME_ONLINE_OUTDIR=$RUN_DIR/output
