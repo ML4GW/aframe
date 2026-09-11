@@ -618,7 +618,7 @@ dependencies = [
     { name = "gwpy" },
     { name = "jsonargparse" },
     { name = "lalsuite" },
-    { name = "ledger" },
+    { name = "ledger", extra = ["waveforms"] },
     { name = "ml4gw" },
     { name = "priors" },
     { name = "python-ligo-lw" },
@@ -639,7 +639,7 @@ requires-dist = [
     { name = "gwpy", specifier = ">=3.0.8,<4" },
     { name = "jsonargparse", specifier = ">=4.18.0" },
     { name = "lalsuite" },
-    { name = "ledger", editable = "../../libs/ledger" },
+    { name = "ledger", extras = ["waveforms"], editable = "../../libs/ledger" },
     { name = "ml4gw", specifier = ">=0.7.2" },
     { name = "priors", editable = "../../libs/priors" },
     { name = "python-ligo-lw", specifier = ">=1.8.3,<2" },
@@ -1245,17 +1245,22 @@ source = { editable = "../../libs/ledger" }
 dependencies = [
     { name = "h5py" },
     { name = "numpy" },
-    { name = "pycbc" },
     { name = "utils" },
+]
+
+[package.optional-dependencies]
+waveforms = [
+    { name = "pycbc" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "h5py", specifier = ">=3.10.0,<4" },
     { name = "numpy", specifier = ">=2" },
-    { name = "pycbc", specifier = ">=2.5.1,<3" },
+    { name = "pycbc", marker = "extra == 'waveforms'", specifier = ">=2.5.1,<3" },
     { name = "utils", editable = "../../libs/utils" },
 ]
+provides-extras = ["waveforms"]
 
 [package.metadata.requires-dev]
 dev = [

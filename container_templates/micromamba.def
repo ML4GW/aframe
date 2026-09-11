@@ -10,6 +10,7 @@ Stage: build
 # uses `apptainer exec`, which ignores %runscript; prepending
 # to PATH here makes the project commands findable.
 export PATH=/opt/env/bin:$PATH
+export LD_LIBRARY_PATH=/opt/env/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop

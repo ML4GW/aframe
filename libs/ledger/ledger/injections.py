@@ -9,7 +9,6 @@ from lalsimulation import (
     SimInspiralTransformPrecessingNewInitialConditions,
     SimInspiralTransformPrecessingWvf2PE,
 )
-from pycbc.waveform import get_td_waveform
 from utils.cosmology import DEFAULT_COSMOLOGY
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
@@ -526,6 +525,8 @@ class _WaveformGenerator:
         Returns:
             Dictionary with 'plus' and 'cross' polarization arrays.
         """
+        from pycbc.waveform import get_td_waveform
+
         # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/transforms/detection/waveform.py?ref_type=heads#L112 # noqa
         freq_limit = 1899.0 / (params["mass1"] + params["mass2"])
         if self.minimum_frequency > freq_limit:
