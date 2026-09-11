@@ -16,7 +16,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        if swap_prob is not None and 0 < swap_prob < 1:
+        if swap_prob is not None and 0 <= swap_prob <= 1:
             self.swapper = aug.ChannelSwapper(swap_prob)
             self.swap_prob = swap_prob
         elif swap_prob is not None:
@@ -27,7 +27,7 @@ class SupervisedAframeDataset(BaseAframeDataset):
             self.swapper = None
             self.swap_prob = 0
 
-        if mute_prob is not None and 0 < mute_prob < 1:
+        if mute_prob is not None and 0 <= mute_prob <= 1:
             self.muter = aug.ChannelMuter(mute_prob)
             self.mute_prob = mute_prob
         elif mute_prob is not None:
@@ -43,11 +43,14 @@ class SupervisedAframeDataset(BaseAframeDataset):
         return self.hparams.waveform_prob + self.swap_prob + self.mute_prob
 
     @torch.no_grad()
-    def inject(self, X, waveforms=None):
-        if self.waveforms_from_disk and waveforms is None:
+    def inject(
+        self, X, waveforms, params
+    ) -> tuple[
+        torch.Tensor, torch.Tensor, torch.Tensor, dict[str, torch.Tensor]
+    ]:
+        if waveforms is None:
             raise ValueError(
-                "Waveforms should be passed to the `inject` method "
-                "if waveforms are being loaded from disk, got None"
+                "Waveforms should be passed to the `inject` method, got None"
             )
 
         X, psds = self.psd_estimator(X)
@@ -60,25 +63,22 @@ class SupervisedAframeDataset(BaseAframeDataset):
         mask = rvs < self.sample_prob
 
         dec, psi, phi = self.sample_extrinsic(X[mask])
-        # If we're loading waveforms from disk, we can
-        # slice out the ones we want.
-        # If not, we're generating them on the fly.
-        if self.waveforms_from_disk:
-            # TODO: Can we just use `mask` to slice out the
-            # waveforms we want here? Copying this from the
-            # old `WaveformSampler` in case it handles edge
-            # cases I'm not thinking of
-            N = mask.sum().item()
-            idx = torch.randperm(waveforms.shape[0])[:N]
-            waveforms = waveforms[idx].to(X.device).float()
-            hc, hp = waveforms[:, 0], waveforms[:, 1]
-        else:
-            hc, hp = self.waveform_sampler.sample(X[mask])
+        N = mask.sum().item()
+        idx = torch.randperm(waveforms.shape[0])[:N]
+        waveforms = waveforms[idx].to(X.device).float()
+        params = {k: v[idx].to(X.device).float() for k, v in params.items()}
+        hc, hp = waveforms[:, 0], waveforms[:, 1]
 
         snrs = self.snr_sampler.sample((mask.sum().item(),)).to(X.device)
         responses = self.projector(
             dec, psi, phi, snrs, psds[mask], cross=hc, plus=hp
         )
+
+        params["dec"] = dec
+        params["psi"] = psi
+        params["phi"] = phi
+        params["snr"] = snrs
+
         # If we're loading waveforms from disk, we'll have sliced
         # the waveforms already in `on_before_batch_transfer`
         if not self.waveforms_from_disk:
@@ -106,4 +106,14 @@ class SupervisedAframeDataset(BaseAframeDataset):
         y = torch.zeros((X.size(0), 1), device=X.device)
         y[mask] += 1
 
-        return X, y, psds
+        # return NaN for params that weren't injected
+        still_injected = mask[idx]
+        params_out = {}
+        for key, vals in params.items():
+            out = torch.full((X.size(0),), float("nan"), device=X.device)
+            out[idx[still_injected]] = vals[still_injected]
+            params_out[key] = out
+
+        params_out = self.apply_param_transforms(params_out)
+
+        return X, y, psds, params_out

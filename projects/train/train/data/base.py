@@ -32,6 +32,17 @@ TransformedDist = torch.distributions.TransformedDistribution
 SECONDS_PER_DAY = 86400
 
 
+class _SignalDataset(torch.utils.data.Dataset):
+    def __init__(self, waveforms, params):
+        self.waveforms, self.params = waveforms, params
+
+    def __len__(self):
+        return len(self.waveforms)
+
+    def __getitem__(self, i):
+        return self.waveforms[i], {k: v[i] for k, v in self.params.items()}
+
+
 # TODO: using this right now because
 # lightning.pytorch.utilities.CombinedLoader
 # is not supported when calling `.fit`. Once
@@ -186,6 +197,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         chunks_per_epoch: int = 1,
         chunk_size: int = 10000,
         verbose: bool = False,
+        param_transforms: Optional[list[Callable]] = None,
     ) -> None:
         super().__init__()
         self.init_logging(verbose)
@@ -207,6 +219,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         self._on_device = False
 
         self.dec, self.psi, self.phi = dec, psi, phi
+        self.param_transforms = param_transforms or []
         self.waveform_sampler = waveform_sampler
         # If we're using a `WaveformLoader`, we're loading
         # training waveforms from disk, so have a flag tp
@@ -246,14 +259,13 @@ class BaseAframeDataset(pl.LightningDataModule):
         fs_utils.download_training_data(bucket, self.background_dir)
 
         bucket, _ = fs_utils.split_data_dir(self.hparams.waveforms_dir)
-        if bucket is None:
-            return
-        logger.info(
-            "Downloading waveform data from S3 bucket {} to {}".format(
-                bucket, self.waveforms_dir
+        if bucket is not None:
+            logger.info(
+                "Downloading waveform data from S3 bucket {} to {}".format(
+                    bucket, self.waveforms_dir
+                )
             )
-        )
-        fs_utils.download_training_data(bucket, self.waveforms_dir)
+            fs_utils.download_training_data(bucket, self.waveforms_dir)
 
     # ================================================ #
     # Distribution utilities
@@ -374,9 +386,11 @@ class BaseAframeDataset(pl.LightningDataModule):
     @property
     def num_workers(self):
         local_world_size = len(self.trainer.device_ids)
-        return min(
+        num_workers = min(
             self.max_num_workers, int(os.cpu_count() / local_world_size)
         )
+        self._logger.info(f"Using {num_workers} workers for data loading")
+        return num_workers
 
     # ================================================== #
     # Utilities for initial data loading and preparation #
@@ -513,8 +527,8 @@ class BaseAframeDataset(pl.LightningDataModule):
             self.val_batch_size,
         )
 
-        self.val_waveforms = self.waveform_sampler.get_val_waveforms(
-            world_size, rank
+        self.val_waveforms, self.val_params = (
+            self.waveform_sampler.get_val_waveforms(world_size, rank)
         )
         if self.waveforms_from_disk:
             self.waveform_sampler.get_train_waveforms(
@@ -537,9 +551,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # waveform loader to reduce quantity of data
         # we need to load
         if self.trainer.training and self.waveforms_from_disk:
-            X, waveforms = batch
+            X, [waveforms, params] = batch
             waveforms = self.slice_waveforms(waveforms)
-            batch = X, waveforms
+            batch = X, (waveforms, params)
         return batch
 
     # ============================================== #
@@ -558,17 +572,18 @@ class BaseAframeDataset(pl.LightningDataModule):
             # if we're training, perform random augmentations
             # on input data and use it to impact labels
             if self.waveforms_from_disk:
-                [batch], waveforms = batch
-                batch = self.inject(batch, waveforms)
+                [X], (waveforms, params) = batch
+                batch = self.inject(X=X, waveforms=waveforms, params=params)
             else:
-                [batch] = batch
-                batch = self.inject(batch)
+                [X] = batch
+                waveforms, params = self.waveform_sampler.sample(X)
+                batch = self.inject(X=X, waveforms=waveforms, params=params)
         elif self.trainer.validating or self.trainer.sanity_checking:
             # If we're in validation mode but we're not validating
             # on the local device, the relevant tensors will be
             # empty, so just pass them through with a 0 shift to
             # indicate that this should be ignored
-            [background, _, timeslide_idx], [signals] = batch
+            [background, _, timeslide_idx], [signals, params] = batch
 
             # If we're validating, unfold the background
             # data into a batch of overlapping kernels now that
@@ -576,12 +591,24 @@ class BaseAframeDataset(pl.LightningDataModule):
             # much data from CPU to GPU. Once everything is
             # on-device, pre-inject signals into background.
             shift = self.timeslides[timeslide_idx].shift_size
-            X_bg, X_fg = self.build_val_batches(background, signals)
-            batch = (shift, X_bg, X_fg)
+            X_bg, X_fg, params = self.build_val_batches(
+                background=background,
+                signals=signals,
+                params=params,
+            )
+            params = self.apply_param_transforms(params)
+            batch = (shift, X_bg, X_fg, params)
         return batch
 
+    def apply_param_transforms(
+        self, params: dict[str, Tensor]
+    ) -> dict[str, Tensor]:
+        for transform in self.param_transforms:
+            params = transform(params)
+        return params
+
     @torch.no_grad()
-    def inject(self, X):
+    def inject(self, X: Tensor, waveforms: Tensor, params: dict[str, Tensor]):
         """
         Override this in child classes to define
         application-specific augmentations
@@ -596,7 +623,8 @@ class BaseAframeDataset(pl.LightningDataModule):
         self,
         background: Tensor,
         signals: Tensor,
-    ) -> tuple[Tensor, Tensor, Tensor]:
+        params: dict[str, Tensor],
+    ) -> tuple[Tensor, Tensor, Tensor, dict[str, Tensor]]:
         """
         Unfold a timeseries of background data
         into a batch of kernels, then inject
@@ -606,9 +634,11 @@ class BaseAframeDataset(pl.LightningDataModule):
         Args:
             background: A tensor of background data
             signals: A tensor of signals to inject
+            params: A dictionary of parameter tensors to be passed to the model
 
         Returns:
-            raw strain background kernels, injected kernels, and psds
+            raw strain background kernels, injected kernels, psds,
+            and (potentially truncated) params tensor
         """
 
         # unfold the background data into kernels
@@ -625,6 +655,7 @@ class BaseAframeDataset(pl.LightningDataModule):
         step = int(len(X) / len(signals))
         if not step:
             signals = signals[: len(X)]
+            params = {k: v[: len(X)] for k, v in params.items()}
         else:
             X = X[::step][: len(signals)]
             psd = psd[::step][: len(signals)]
@@ -658,7 +689,7 @@ class BaseAframeDataset(pl.LightningDataModule):
             X_inj.append(injected)
         X_inj = torch.stack(X_inj)
 
-        return X, X_inj, psd
+        return X, X_inj, psd, params
 
     def val_dataloader(self) -> ZippedDataset:
         """
@@ -676,7 +707,9 @@ class BaseAframeDataset(pl.LightningDataModule):
         # throughout all those batches.
         num_waveforms = len(self.val_waveforms)
         signal_batch_size = (num_waveforms - 1) // self.valid_loader_length + 1
-        signal_dataset = torch.utils.data.TensorDataset(self.val_waveforms)
+
+        # Signal dataset to return tuples of (waveform, params)
+        signal_dataset = _SignalDataset(self.val_waveforms, self.val_params)
         signal_loader = torch.utils.data.DataLoader(
             signal_dataset,
             batch_size=signal_batch_size,
