@@ -182,15 +182,6 @@ wheels = [
 ]
 
 [[package]]
-name = "appdirs"
-version = "1.4.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d7/d8/05696357e0311f5b5c316d7b95f46c669dd9c15aaeecbb48c7d0aeb88c40/appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41", size = 13470, upload-time = "2020-05-11T07:59:51.037Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128", size = 9566, upload-time = "2020-05-11T07:59:49.499Z" },
-]
-
-[[package]]
 name = "appnope"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -256,17 +247,34 @@ wheels = [
 
 [[package]]
 name = "arrakis"
-version = "0.2.0"
+version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "arrakis-schema" },
+    { name = "confluent-kafka" },
     { name = "gpstime" },
+    { name = "igwn-auth-utils" },
+    { name = "jsonschema" },
     { name = "numpy" },
     { name = "pyarrow" },
+    { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/63/f5a38c69ace7a42a905df2ee18c1771ddca985c2f2d86659dd795199280c/arrakis-0.2.0.tar.gz", hash = "sha256:ca2338f289975cde0785040f6ae69c940262fae1c86d42d0e14fa9521a4a66e9", size = 23889, upload-time = "2025-03-11T20:31:53.099Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/ca/5088a7c0834fd2685592ede0ea5c793c9ff08f2436c28cf212aeb388e570/arrakis-0.19.0.tar.gz", hash = "sha256:05cc52cf8e730e52192e78687b4536228b05bcb5aec2a71239cf445ed2fbbe7d", size = 160112, upload-time = "2026-09-04T00:16:42.008Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/d2/e14248940f1174b80b83d06a36ed8d605976fad4975e36218e7399679002/arrakis-0.2.0-py3-none-any.whl", hash = "sha256:4c1235afb90f132f6ddc383962914463cf461b0a8b12964e9cbc3bc6d28bf1ee", size = 28799, upload-time = "2025-03-11T20:31:54.503Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/6b/1901d5800935344a03bdaa455ab8283f790c0afe00ae8d942f2249f32a0f/arrakis-0.19.0-py3-none-any.whl", hash = "sha256:2f90db7f2cb069f2b72198e6e0759ec2e2dacc4be8c25e29352a209c91ec9789", size = 148688, upload-time = "2026-09-04T00:16:43.134Z" },
+]
+
+[[package]]
+name = "arrakis-schema"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-resources", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/81/2ad9f27ba2bf3dd933c21b0e80c86003d9894b0f2b436345426fd2ee60fa/arrakis_schema-0.5.0.tar.gz", hash = "sha256:a8170aa4becf964c10c5f75e9f3fdeb492ed18be3892f3bda62b3dbe7c1140be", size = 82472, upload-time = "2026-07-27T19:15:17.391Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/73/dfc894155c87609d1cf04ecc3594f0e947629a2132ba15b1f36701a27e30/arrakis_schema-0.5.0-py3-none-any.whl", hash = "sha256:e30660ecae40b049d896831187c48c0fcea98bc8ad4bf5042d8a24681c19245e", size = 13157, upload-time = "2026-07-27T19:15:18.48Z" },
 ]
 
 [[package]]
@@ -1232,16 +1240,16 @@ wheels = [
 
 [[package]]
 name = "gpstime"
-version = "0.8.2"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appdirs" },
+    { name = "platformdirs" },
     { name = "python-dateutil" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/59/3e212ec6bb6a16e2ba8207a9776edfd9d7df81aabb928e97316e4d79fb57/gpstime-0.8.2.tar.gz", hash = "sha256:d5912ac85452d5b02593149f9d0bdc551a477514a9442536ff52c3d160984afe", size = 22617, upload-time = "2024-07-17T18:24:29.374Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/f6/9210f6491a000c0f5809e4b0b1c31c368657fc403ebc6464764f34da074a/gpstime-0.10.0.tar.gz", hash = "sha256:242d45f1a7ed6f293a82b13880f25fcf3c994650770825121d8f5b3f2ccae026", size = 25593, upload-time = "2026-02-05T23:16:27.099Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/a9/b2e11455da11bd6064fb2887317bbbe7278a6e818874aa95b52f1473756f/gpstime-0.8.2-py3-none-any.whl", hash = "sha256:166238eb04530b7d25220961c76a0f371c406bda59797ffb01c11cd5ca11d271", size = 23555, upload-time = "2024-07-17T18:24:27.94Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/63/2cd46930494a3dec63769ca8b00244ba7944d738ef4afb6331f5b2f51973/gpstime-0.10.0-py3-none-any.whl", hash = "sha256:279b9fffdf64c1fb152c87de6119d0ee76d8dcb3de483106e87da181176169af", size = 26747, upload-time = "2026-02-05T23:16:25.716Z" },
 ]
 
 [[package]]
@@ -2221,6 +2229,18 @@ wheels = [
 ]
 
 [[package]]
+name = "markdown-it-py"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mdurl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/ff/7841249c247aa650a76b9ee4bbaeae59370dc8bfd2f6c01f3630c35eb134/markdown_it_py-4.2.0.tar.gz", hash = "sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49", size = 82454, upload-time = "2026-05-07T12:08:28.36Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl", hash = "sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a", size = 91687, upload-time = "2026-05-07T12:08:27.182Z" },
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2289,6 +2309,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/5b/a36a337438a14116b16480db471ad061c36c3694df7c2084a0da7ba538b7/matplotlib_inline-0.1.7.tar.gz", hash = "sha256:8423b23ec666be3d16e16b60bdd8ac4e86e840ebd1dd11a30b9f117f2fa0ab90", size = 8159, upload-time = "2024-04-15T13:44:44.803Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl", hash = "sha256:df192d39a4ff8f21b1895d72e6a13f5fcc5099f00fa84384e0ea28c2cc0653ca", size = 9899, upload-time = "2024-04-15T13:44:43.265Z" },
+]
+
+[[package]]
+name = "mdurl"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
 ]
 
 [[package]]
@@ -2809,7 +2838,7 @@ dev = [
 requires-dist = [
     { name = "amplfi", specifier = ">=0.5.5" },
     { name = "architectures", editable = "../../libs/architectures" },
-    { name = "arrakis", specifier = ">=0.2.0,<0.3" },
+    { name = "arrakis", specifier = ">=0.19.0,<0.20.0" },
     { name = "ledger", editable = "../../libs/ledger" },
     { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.15.4" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
@@ -3851,6 +3880,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/da/88/f270de456dd7d11dcc808abfa291ecdd3f45ff44e3b549ffa01b126464d0/rfc3986_validator-0.1.1.tar.gz", hash = "sha256:3d44bde7921b3b9ec3ae4e3adca370438eccebc676456449b145d533b240d055", size = 6760, upload-time = "2019-10-28T16:00:19.144Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/51/17023c0f8f1869d8806b979a2bffa3f861f26a3f1a66b094288323fba52f/rfc3986_validator-0.1.1-py2.py3-none-any.whl", hash = "sha256:2f235c432ef459970b4306369336b9d5dbdda31b510ca1e327636e01f528bfa9", size = 4242, upload-time = "2019-10-28T16:00:13.976Z" },
+]
+
+[[package]]
+name = "rich"
+version = "15.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/8f/0722ca900cc807c13a6a0c696dacf35430f72e0ec571c4275d2371fca3e9/rich-15.0.0.tar.gz", hash = "sha256:edd07a4824c6b40189fb7ac9bc4c52536e9780fbbfbddf6f1e2502c31b068c36", size = 230680, upload-time = "2026-04-12T08:24:00.75Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl", hash = "sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb", size = 310654, upload-time = "2026-04-12T08:24:02.83Z" },
 ]
 
 [[package]]

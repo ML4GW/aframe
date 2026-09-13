@@ -10,6 +10,9 @@ Stage: build
 ../../libs/p_astro /opt/aframe/libs/p_astro
 ../../pyproject.toml /opt/aframe/pyproject.toml
 
+%environment
+export LD_LIBRARY_PATH=/opt/env/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+
 %post
 mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
 

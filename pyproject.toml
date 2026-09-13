@@ -47,6 +47,9 @@ default-groups = [
     "dev",
     "docs",
 ]
+override-dependencies = [
+    "geventhttpclient>=2.3.3"
+]
 
 [tool.uv.sources]
 utils = { path = "./libs/utils", editable = true }

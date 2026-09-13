@@ -20,7 +20,9 @@ from online.utils.buffer import InputBuffer, OutputBuffer
 from online.dataloading import (
     data_iterator,
     offline_data_iterator,
-    ngdd_data_iterator,
+    arrakis_data_iterator,
+    get_block_duration,
+    stream_channels,
 )
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
@@ -177,7 +179,7 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    virgo_ready = [False] * (input_buffer.buffer_length // update_size)
+    virgo_ready = [False] * int(input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -367,7 +369,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
-    data_source: Literal["frames", "ngdd"] = "frames",
+    data_source: Literal["frames", "arrakis"] = "frames",
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -708,9 +710,12 @@ def main(
     # when the main process exits
     atexit.register(cleanup_subprocesses, subprocesses)
 
-    if data_source == "ngdd":
-        update_size = 1 / 16
-        data_it = ngdd_data_iterator(
+    if data_source == "arrakis":
+        update_size = get_block_duration(
+            stream_channels(channels, ifos, state_channels)
+        )
+        logging.info(f"Arrakis update size: {update_size} s")
+        data_it = arrakis_data_iterator(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
@@ -740,7 +745,7 @@ def main(
 
     else:
         raise ValueError(
-            f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
+            f"Invalid data source {data_source}. Must be 'arrakis' or 'frames'"
         )
 
     # initialize a buffer for storing recent strain data,
@@ -808,7 +813,7 @@ def main(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=online_inference_rate,
-        batch_size=update_size * online_inference_rate,
+        batch_size=int(update_size * online_inference_rate),
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
@@ -817,7 +822,6 @@ def main(
 
     # Hard-coding number of channels until Aframe is generalized
     snapshotter = OnlineSnapshotter(
-        update_size=update_size,
         num_channels=2,
         psd_length=psd_length,
         kernel_length=kernel_length,

@@ -7,15 +7,15 @@ aframe_weights: ${oc.env:AFRAME_WEIGHTS}
 amplfi_hl_architecture: 
   class_path: amplfi.train.architectures.flows.NSF
   init_args:
-    hidden_features: [512, 512, 512]
-    transforms: 20
+    hidden_features: [1024, 1024, 1024, 1024]
+    transforms: 15
     randperm: true
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
         num_ifos: 2
-        time_context_dim: 12
-        freq_context_dim: 32
+        time_context_dim: 48
+        freq_context_dim: 48
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
@@ -25,14 +25,14 @@ amplfi_hl_architecture:
 amplfi_hlv_architecture: 
   class_path: amplfi.train.architectures.flows.NSF
   init_args:
-    hidden_features: [512, 512, 512, 512, 512]
-    transforms: 20
+    hidden_features: [1024, 1024, 1024, 1024, 1024]
+    transforms: 15
     randperm: true
     embedding_net: 
       class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
         num_ifos: 3
-        time_context_dim: 20
+        time_context_dim: 48
         freq_context_dim: 48
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
@@ -43,7 +43,7 @@ amplfi_hlv_architecture:
 amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 amplfi_parameter_sampler: ./prior.yaml
-channels: ["H1:GDS-CALIB_STRAIN", "L1:GDS-CALIB_STRAIN", "V1:Hrec_hoft_16384Hz"]
+channels: ["H1:GDS-CALIB_STRAIN_CLEAN_INJ1_O4Replay", "L1:GDS-CALIB_STRAIN_CLEAN_INJ1_O4Replay", "V1:Hrec_hoft_16384Hz_INJ1_O4Replay"]
 state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
 sample_rate: 2048
@@ -53,27 +53,28 @@ online_inference_rate: 512
 offline_inference_rate: 4
 inference_params: ["chirp_mass", "mass_ratio", "luminosity_distance", "phic", "inclination", "dec", "psi", "phi"]
 psd_length: 64
-amplfi_psd_length: 10
+nside: 64
+min_samples_per_pix: 5
+amplfi_psd_length: 64
 aframe_right_pad: 0.0
 fduration: 1
 amplfi_fduration: 2
 integration_window_length: 1.5
-amplfi_kernel_length: 3
-event_position: 2.5
+amplfi_kernel_length: 4
+event_position: 3.65
 fftlength: null
 highpass: 32
-amplfi_highpass: 25
+amplfi_highpass: 15
 lowpass: null
 refractory_period: 8
-far_threshold: 1 # per day
+far_threshold: 12 # per day
 email_far_threshold: 0.00000001 # Hz
-emails: null
-nside: 64
-min_samples_per_pix: 5
+emails: ["william.benoit@ligo.org"]
 server: "local"
-auth_refresh: 300
-ifo_suffix: 
+auth_refresh: 1200
+ifo_suffix: "O4LLPIC"
 input_buffer_length: 75
 output_buffer_length: 8
 device: "cuda"
 verbose: true
+matmul_precision: "high"
