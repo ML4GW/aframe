@@ -7,11 +7,7 @@ from online.utils.timing import gps_now
 CURRENT_FILE = "current.json"
 SEGMENTS_FILE = "segments.txt"
 
-# `start` and `stop` refer to the GPS time as reported by the data,
-# while `wall_start` and `wall_stop` are the times when the search
-# actually handled the data. In online mode these are the same, but in
-# offline mode they would differ.
-COLUMNS = ["state", "start", "stop", "wall_start", "wall_stop", "ifos_ready"]
+COLUMNS = ["state", "start", "stop", "ifos_ready"]
 HEADER = ",".join(COLUMNS) + "\n"
 
 
@@ -90,8 +86,6 @@ class SegmentWriter:
         self.state = None
         self.start = None
         self.stop = None
-        self.wall_start = None
-        self.wall_stop = None
         self.ifos_ready = ""
         self.last_heartbeat = 0.0
 
@@ -100,8 +94,6 @@ class SegmentWriter:
         )
         self._append(
             PipelineState.STARTUP,
-            self.process_start,
-            self.process_start,
             self.process_start,
             self.process_start,
             "",
@@ -114,8 +106,6 @@ class SegmentWriter:
             current_data["state"],
             current_data["start"],
             current_data["stop"],
-            current_data["wall_start"],
-            current_data["wall_stop"],
             current_data["ifos_ready"],
         )
         self.current_file.unlink()
@@ -125,15 +115,10 @@ class SegmentWriter:
         state: PipelineState,
         start: float,
         stop: float,
-        wall_start: float,
-        wall_stop: float,
         ifos_ready: str,
     ) -> None:
         with open(self.segments_file, "a") as f:
-            f.write(
-                f"{state},{start:.5f},{stop:.5f},"
-                f"{wall_start:.5f},{wall_stop:.5f},{ifos_ready}\n"
-            )
+            f.write(f"{state},{start:.5f},{stop:.5f},{ifos_ready}\n")
 
     def _write_heartbeat(self, now: float) -> None:
         with open(self.current_file, "w") as f:
@@ -142,9 +127,8 @@ class SegmentWriter:
                     "state": self.state,
                     "start": self.start,
                     "stop": self.stop,
-                    "wall_start": self.wall_start,
-                    "wall_stop": self.wall_stop,
                     "ifos_ready": self.ifos_ready,
+                    "heartbeat": now,
                 },
                 f,
             )
@@ -177,7 +161,6 @@ class SegmentWriter:
         same_segment = (self.state == state) and ifos_ready == self.ifos_ready
         if contiguous and same_segment:
             self.stop = t0 + self.block_duration
-            self.wall_stop = now
             if now - self.last_heartbeat > self.heartbeat_cadence:
                 self._write_heartbeat(now)
         else:
@@ -186,15 +169,11 @@ class SegmentWriter:
                     self.state,
                     self.start,
                     self.stop,
-                    self.wall_start,
-                    self.wall_stop,
                     self.ifos_ready,
                 )
             self.state = state
             self.start = t0
             self.stop = t0 + self.block_duration
-            self.wall_start = now
-            self.wall_stop = now
             self.ifos_ready = ifos_ready
             self._write_heartbeat(now)
 
@@ -207,8 +186,6 @@ class SegmentWriter:
                 self.state,
                 self.start,
                 self.stop,
-                self.wall_start,
-                self.wall_stop,
                 self.ifos_ready,
             )
         if self.current_file.exists():
