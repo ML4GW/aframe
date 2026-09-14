@@ -173,7 +173,7 @@ def compute_duty_cycle(
         return {
             "elapsed": 0.0,
             "livetime": 0.0,
-            "unknown": 0.0,
+            "search_downtime": 0.0,
             "duty_cycle": None,
             "uptime": None,
         }
