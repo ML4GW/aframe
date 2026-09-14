@@ -1,6 +1,12 @@
 import base64
 import logging
+import os
 from pathlib import Path
+
+# where the pages are served from when running as the production
+# user on the LDAS cluster
+PUBLIC_HTML = Path("/home/aframe.online/public_html")
+PUBLIC_URL = "https://ldas-jobs.ligo.caltech.edu/~aframe.online"
 
 
 class MonitorPage:
@@ -22,13 +28,19 @@ class MonitorPage:
     @property
     def root_url(self):
         """
-        The root url for the output of the monitoring process,
-        assuming that files are being written somewhere in
-        /home/aframe.online/public_html
+        The root url for the output of the monitoring process, which
+        is served from under PUBLIC_HTML.
         """
-        base_dir = Path("/home/aframe.online/public_html")
-        sub_path = self.out_dir.relative_to(base_dir)
-        return f"https://ldas-jobs.ligo.caltech.edu/~aframe.online/{sub_path}"
+        return f"{PUBLIC_URL}/{self.out_dir.relative_to(PUBLIC_HTML)}"
+
+    def write_atomic(self, path: Path, content: str) -> None:
+        """
+        Write a file so that a consumer never seems a partially written file.
+        """
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        with open(tmp, "w") as f:
+            f.write(content)
+        os.replace(tmp, path)
 
     @property
     def summary_page_url(self):

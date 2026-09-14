@@ -110,10 +110,12 @@ class SummaryPage(MonitorPage):
         event_rate_plots(self.plots_dir, df)
 
     def write_html(self) -> None:
-        with open(self.html_file, "w") as f:
-            f.write(self.html_header("Aframe Online Status Summary"))
-            f.write(self.html_body())
-            f.write(self.html_footer())
+        self.write_atomic(
+            self.html_file,
+            self.html_header("Aframe Online Status Summary")
+            + self.html_body()
+            + self.html_footer(),
+        )
 
     def create(self, tb: float) -> None:
         """
