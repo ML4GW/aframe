@@ -1,6 +1,7 @@
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+from gwpy.time import tconvert
 from gwpy.timeseries import TimeSeries
 from pathlib import Path
 import pandas as pd
@@ -10,8 +11,40 @@ import logging
 
 from datetime import datetime, timedelta, timezone
 
+from online.monitor.utils.segments import compute_duty_cycle
+from online.utils.segments import PipelineState
+from online.utils.timing import gps_now
+
 IFOS = ["H1", "L1", "V1"]
-SECONDS_PER_YEAR = 365 * 86400
+SECONDS_PER_DAY = 86400
+SECONDS_PER_YEAR = 365 * SECONDS_PER_DAY
+
+STATE_LABELS = {
+    PipelineState.ANALYZING: "Analyzing",
+    PipelineState.WARMUP: "Filter warm-up",
+    PipelineState.STARTUP: "Starting up",
+    PipelineState.SEARCH_DOWN: "Search down",
+    PipelineState.NOT_READY: "Detectors not ready",
+    PipelineState.MISSING_DATA: "Missing data",
+}
+
+_CYCLE = plt.style.library["tableau-colorblind10"]["axes.prop_cycle"]
+CB_COLORS = _CYCLE.by_key()["color"]
+STATE_COLORS = {
+    PipelineState.ANALYZING: CB_COLORS[0],
+    PipelineState.WARMUP: CB_COLORS[1],
+    PipelineState.STARTUP: CB_COLORS[8],
+    PipelineState.SEARCH_DOWN: CB_COLORS[5],
+    PipelineState.NOT_READY: CB_COLORS[2],
+    PipelineState.MISSING_DATA: CB_COLORS[3],
+}
+
+for _table, _name in ((STATE_LABELS, "label"), (STATE_COLORS, "color")):
+    _missing = [state for state in PipelineState if state not in _table]
+    if _missing:
+        raise RuntimeError(
+            f"No {_name} defined for pipeline state(s): " + ", ".join(_missing)
+        )
 
 logger = logging.getLogger("monitor-plotting")
 
@@ -188,6 +221,81 @@ def ifar_plot(plotsdir: Path, df: pd.DataFrame, tb: float) -> None:
     plt.grid(True, which="both", ls="--", alpha=0.4)
     plt.legend(frameon=True)
     plt.savefig(plotsdir / "ifar_plot.png", dpi=150)
+    plt.close()
+
+
+def duty_cycle_plots(plotsdir: Path, segments: pd.DataFrame) -> None:
+    """
+    Create plots of how the search spent its time.
+
+    Args:
+        plotsdir: Directory to save the plots.
+        segments: Segment DataFrame from `load_segments`.
+    """
+    _duty_cycle_timeline(plotsdir, segments)
+    _duty_cycle_trend(plotsdir, segments)
+
+
+def _duty_cycle_timeline(plotsdir: Path, segments: pd.DataFrame) -> None:
+    plt.figure(figsize=(10, 6))
+    ax = plt.gca()
+
+    origin = segments["start"].min()
+    starts = (segments["start"] - origin) / 3600
+    stops = (segments["stop"] - origin) / 3600
+    for row, state in enumerate(PipelineState):
+        in_state = segments["state"] == state
+        spans = [
+            (start, stop - start)
+            for start, stop in zip(
+                starts[in_state], stops[in_state], strict=True
+            )
+        ]
+        ax.broken_barh(
+            spans, (row - 0.4, 0.8), facecolors=STATE_COLORS[state], zorder=2
+        )
+
+    ax.set_yticks(range(len(PipelineState)))
+    ax.set_yticklabels([STATE_LABELS[s] for s in PipelineState])
+    ax.set_xlabel(f"Hours since {tconvert(origin).strftime('%Y-%m-%d %H:%M')}")
+    ax.set_xlim(0, max(stops.max(), 1 / 60))
+    ax.grid(True, axis="x", ls="--", alpha=0.4)
+    plt.savefig(
+        plotsdir / "duty_cycle_timeline.png", dpi=150, bbox_inches="tight"
+    )
+    plt.close()
+
+
+def _duty_cycle_trend(plotsdir: Path, segments: pd.DataFrame) -> None:
+    """
+    Hourly duty cycle over the past week. Hours where the detectors
+    gave us nothing to analyze are left as gaps in the line.
+    """
+    now = gps_now()
+    start = max(now - 7 * SECONDS_PER_DAY, segments["start"].min())
+    edges = np.arange(start, now, 3600)
+
+    plt.figure(figsize=(10, 6))
+    if len(edges) > 1:
+        fractions = [
+            compute_duty_cycle(segments, start=low, end=high)["duty_cycle"]
+            for low, high in zip(edges[:-1], edges[1:], strict=True)
+        ]
+        plt.plot(
+            (edges[:-1] - now) / 3600,
+            [np.nan if f is None else 100 * f for f in fractions],
+            marker="o",
+            ms=3,
+            color=STATE_COLORS[PipelineState.ANALYZING],
+        )
+
+    plt.xlabel("Hours ago")
+    plt.ylabel("Search duty cycle [%]")
+    plt.ylim(-2, 102)
+    plt.grid(True, ls="--", alpha=0.4)
+    plt.savefig(
+        plotsdir / "duty_cycle_trend.png", dpi=150, bbox_inches="tight"
+    )
     plt.close()
 
 

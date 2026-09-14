@@ -83,21 +83,17 @@ class SegmentWriter:
         if self.current_file.exists():
             self._flush_current_file()
 
-        self.state = None
-        self.start = None
-        self.stop = None
         self.ifos_ready = ""
         self.last_heartbeat = 0.0
 
         self.process_start = (
             gps_now() if process_start is None else process_start
         )
-        self._append(
-            PipelineState.STARTUP,
-            self.process_start,
-            self.process_start,
-            "",
-        )
+        # open a segment for the time spent loading models and filling
+        # buffers, which the first call to `update` closes out
+        self.state = PipelineState.STARTUP
+        self.start = self.process_start
+        self.stop = self.process_start
 
     def _flush_current_file(self) -> None:
         with open(self.current_file, "r") as f:
@@ -165,6 +161,9 @@ class SegmentWriter:
                 self._write_heartbeat(now)
         else:
             if self.state is not None:
+                if self.state is PipelineState.STARTUP:
+                    # startup runs right up until the first block
+                    self.stop = t0
                 self._append(
                     self.state,
                     self.start,
