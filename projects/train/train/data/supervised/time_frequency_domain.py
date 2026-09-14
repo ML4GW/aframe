@@ -23,16 +23,20 @@ class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             spectrogram_shape=self.spectrogram_shape,
         )
 
-    def inject(self, X, waveforms=None):
-        X, y, psds = super().inject(X, waveforms)
+    def inject(self, X, waveforms, params):
+        X, y, psds, params_out = super().inject(
+            X=X, waveforms=waveforms, params=params
+        )
         X = self.whitener(X, psds)
         X = self.qtransform(X)
-        return X, y
+        return X, y, params_out
 
     def build_val_batches(
-        self, background: Tensor, signals: Tensor
+        self, background: Tensor, signals: Tensor, params: dict[str, Tensor]
     ) -> tuple[Tensor, Tensor]:
-        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+        X_bg, X_inj, psds, params_out = super().build_val_batches(
+            background=background, signals=signals, params=params
+        )
 
         # whiten and q transform background
         X_bg = self.whitener(X_bg, psds)
@@ -45,7 +49,7 @@ class SpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             X_fg.append(self.qtransform(inj))
 
         X_fg = torch.stack(X_fg)
-        return X_bg, X_fg
+        return X_bg, X_fg, params_out
 
 
 class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
@@ -106,7 +110,9 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         return X
 
     def build_val_batches(self, *args, **kwargs):
-        X_bg, X_inj, psds = super().build_val_batches(*args, **kwargs)
+        X_bg, X_inj, psds, params_out = super().build_val_batches(
+            *args, **kwargs
+        )
 
         # fft whiten and bandpass in frequency domain
         X_bg = self.whiten(X_bg, psds)
@@ -115,17 +121,19 @@ class FrequencyDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_bg = torch.cat([X_bg.real, X_bg.imag], dim=-2)
         X_inj = torch.cat([X_inj.real, X_inj.imag], dim=-2)
 
-        return X_bg, X_inj
+        return X_bg, X_inj, params_out
 
-    def inject(self, X, waveforms=None):
-        X, y, psds = super().inject(X, waveforms)
+    def inject(self, X, waveforms, params):
+        X, y, psds, params_out = super().inject(
+            X=X, waveforms=waveforms, params=params
+        )
 
         # fft whiten and bandpass in frequency domain
         X = self.whiten(X, psds)
 
         # split into real and imaginary parts
         X = torch.cat([X.real, X.imag], dim=1)
-        return X, y
+        return X, y, params_out
 
 
 class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
@@ -190,8 +198,10 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
             spectrogram_shape=self.spectrogram_shape,
         )
 
-    def build_val_batches(self, background, signals):
-        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+    def build_val_batches(self, background, signals, params):
+        X_bg, X_inj, psds, params_out = super().build_val_batches(
+            background=background, signals=signals, params=params
+        )
 
         # whiten each view of backgrounds and injections
         X_bg = self.whitener(X_bg, psds)
@@ -215,10 +225,12 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_fg_spec = torch.stack(X_fg_spec)
 
         # first input is timeseries and second input is spectrogram
-        return (X_bg[1], X_bg_spec), (X_fg[1], X_fg_spec)
+        return (X_bg[1], X_bg_spec), (X_fg[1], X_fg_spec), params_out
 
-    def inject(self, X, waveforms=None):
-        X, y, psds = super().inject(X, waveforms)
+    def inject(self, X, waveforms, params):
+        X, y, psds, params_out = super().inject(
+            X=X, waveforms=waveforms, params=params
+        )
         X = self.whitener(X, psds)
         if self.decimator is not None:
             X = self.decimator(X)
@@ -227,4 +239,4 @@ class TimeSpectrogramDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_spec = self.qtransform(X[0])
 
         # first input is timeseries and second input is spectrogram
-        return (X[1], X_spec), y
+        return (X[1], X_spec), y, params_out
