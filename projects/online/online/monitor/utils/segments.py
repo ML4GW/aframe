@@ -151,14 +151,16 @@ def compute_duty_cycle(
         end: GPS time to end the window at, defaulting to the last
 
     Returns:
-        Seconds `elapsed`, `livetime` analyzed and `unknown` spent
-        down, plus the `duty_cycle` and `uptime` fractions, which are
-        None if there was no analyzable time.
+        Seconds `elapsed`, `analyzable`, `livetime` analyzed and
+        `search_downtime` spent down, plus the `duty_cycle` and
+        `uptime` fractions, which are None if there was no analyzable
+        time.
     """
     df = _window(df, start, end)
     if not len(df):
         return {
             "elapsed": 0.0,
+            "analyzable": 0.0,
             "livetime": 0.0,
             "search_downtime": 0.0,
             "duty_cycle": None,
@@ -176,6 +178,7 @@ def compute_duty_cycle(
 
     return {
         "elapsed": elapsed,
+        "analyzable": analyzable,
         "livetime": livetime,
         "search_downtime": search_downtime,
         "duty_cycle": livetime / analyzable if analyzable > 0 else None,
@@ -183,15 +186,24 @@ def compute_duty_cycle(
     }
 
 
-def longest_downtimes(
-    df: pd.DataFrame, n: int = 10, min_duration: float = 60.0
+def downtime_breakdown(
+    df: pd.DataFrame, analyzable: float | None
 ) -> pd.DataFrame:
     """
-    The `n` longest stretches of time we were responsible for losing,
-    longest first. Stretches shorter than `min_duration` are left out.
+    What each search-side fault cost us, worst first. `cost` is the
+    fraction of analyzable time lost to that state, so the costs sum
+    to one minus the duty cycle.
+
+    Args:
+        df: Segments from `load_segments`
+        analyzable: Seconds of analyzable time to report costs against
     """
-    downtime = df[df["state"].isin(SEARCH_FAULT_STATES)].copy()
-    downtime["duration"] = (downtime["stop"] - downtime["start"]).clip(lower=0)
-    downtime = downtime[downtime["duration"] >= min_duration]
-    downtime = downtime.sort_values("duration", ascending=False)
-    return downtime.head(n).reset_index(drop=True)
+    faults = df[df["state"].isin(SEARCH_FAULT_STATES)]
+    durations = (faults["stop"] - faults["start"]).clip(lower=0)
+    breakdown = durations.groupby(faults["state"]).agg(["sum", "count", "max"])
+    breakdown.columns = ["total", "occurrences", "longest"]
+    if analyzable:
+        breakdown["cost"] = breakdown["total"] / analyzable
+    else:
+        breakdown["cost"] = None
+    return breakdown.sort_values("total", ascending=False).reset_index()

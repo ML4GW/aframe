@@ -15,7 +15,7 @@ from online.monitor.utils.segments import (
     DETECTOR_FAULT_STATES,
     compute_duty_cycle,
     current_status,
-    longest_downtimes,
+    downtime_breakdown,
 )
 from online.utils.timing import gps_now
 
@@ -125,20 +125,22 @@ class SummaryPage(MonitorPage):
             </p>
         """
 
-        downtimes = longest_downtimes(self.segments, n=10)
-        if len(downtimes):
-            date_format = "%Y-%m-%d %H:%M:%S"
+        analyzable = self.stats["analyzable"]
+        breakdown = downtime_breakdown(self.segments, analyzable)
+        if len(breakdown):
             html += self.html_table(
-                ["Start (UTC)", "Duration", "Cause"],
+                ["Cause", "Total", "Count", "Longest", "Duty cycle cost"],
                 [
                     [
-                        tconvert(row.start).strftime(date_format),
-                        format_duration(row.duration),
                         STATE_LABELS.get(row.state, row.state),
+                        format_duration(row.total),
+                        str(row.occurrences),
+                        format_duration(row.longest),
+                        format_percent(row.cost),
                     ]
-                    for row in downtimes.itertuples()
+                    for row in breakdown.itertuples()
                 ],
-                "Longest stretches of search downtime",
+                "Where the search lost time",
             )
         return html
 
