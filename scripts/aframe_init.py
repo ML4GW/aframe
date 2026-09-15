@@ -136,8 +136,9 @@ def create_online_runfile(path: Path):
     content = f"""
     #!/bin/bash
 
+    # kill the whole process group so both the search and the monitor are killed
     control_c() {{
-        kill $$
+        kill 0
         exit
     }}
     trap control_c SIGINT
