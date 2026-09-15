@@ -124,7 +124,14 @@ def create_online_runfile(path: Path):
     monitor_cmd += f" --bind {path} "
     monitor_cmd += "$AFRAME_CONTAINER /opt/env/bin/monitor "
     monitor_cmd += f"--run_dir {path} --out_dir $MONITOR_OUTDIR "
-    monitor_cmd += ">> summary_pages.log 2>&1 &"
+    monitor_cmd += ">> summary_pages.log 2>&1"
+    # restart the monitor if it dies, the same way the search is restarted
+    monitor_cmd = (
+        "(until "
+        + monitor_cmd
+        + '; do echo "Monitor crashed on $(date), restarting"'
+        " >> summary_pages.log; sleep 1; done) &"
+    )
 
     content = f"""
     #!/bin/bash
