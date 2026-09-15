@@ -107,8 +107,8 @@ def write_content(content: str, path: Path):
 
 def create_online_runfile(path: Path):
     cmd = "apptainer run --nv "
-    # bind /local/aframe for finding scitokens
-    cmd += "--bind /local/aframe.online,$ONLINE_DATADIR "
+    # bind TOKEN_DIR for finding scitokens
+    cmd += "--bind $TOKEN_DIR,$ONLINE_DATADIR "
     cmd += "--env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES "
     cmd += "--env AFRAME_ONLINE_OUTDIR=$AFRAME_ONLINE_OUTDIR "
     cmd += "--env ONLINE_DATADIR=$ONLINE_DATADIR "
@@ -148,11 +148,12 @@ def create_online_runfile(path: Path):
     export OMP_NUM_THREADS=1
 
     # scitoken auth
-    # it is recommended not to store token
-    # on /home/ filesystem: should be in
-    # /local/$USER somewhere
-    export BEARER_TOKEN_FILE=/local/aframe.online/scitoken
-    export SCITOKEN_FILE=/local/aframe.online/scitoken
+    # it is recommended not to store token in /home;
+    # use the expected $XDG_RUNTIME_DIR if the variable
+    # is set, falling back to /tmp
+    export TOKEN_DIR=${{XDG_RUNTIME_DIR:-/tmp}}
+    export BEARER_TOKEN_FILE=$TOKEN_DIR/bt_u$(id -u)
+    export SCITOKEN_FILE=$BEARER_TOKEN_FILE
 
     export AFRAME_KEYTAB=/home/aframe.online/robot/aframe-online_robot_aframe.ldas.cit.keytab
     export AFRAME_CREDKEY=aframe-online/robot/aframe.ldas.cit
@@ -161,7 +162,7 @@ def create_online_runfile(path: Path):
 
     # trained model weights
     export AMPLFI_HL_WEIGHTS=$RUN_DIR/models/amplfi-hl.ckpt
-    export AMPLFI_HLV_WEIGHTS=$RUN_DIR/models/amplfi-hl.ckpt
+    export AMPLFI_HLV_WEIGHTS=$RUN_DIR/models/amplfi-hlv.ckpt
     export AFRAME_WEIGHTS=$RUN_DIR/models/aframe.pt
 
     # file containing timeslide events detected
