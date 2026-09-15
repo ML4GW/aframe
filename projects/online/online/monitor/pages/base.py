@@ -98,6 +98,28 @@ class MonitorPage:
                     font-weight: bold;
                     color: #333;
                 }}
+                .table-container {{
+                    background: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    margin: 20px auto;
+                    max-width: 820px;
+                    overflow-x: auto;
+                }}
+                table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                }}
+                th, td {{
+                    border-bottom: 1px solid #ddd;
+                    padding: 6px 10px;
+                    text-align: left;
+                    white-space: nowrap;
+                }}
+                th {{
+                    color: #333;
+                }}
             </style>
         </head>
         """
@@ -113,6 +135,32 @@ class MonitorPage:
         </html>
         """
         return html_footer
+
+    def html_table(
+        self, headers: list[str], rows: list[list[str]], caption: str
+    ) -> str:
+        """
+        Render a table.
+
+        Args:
+            headers: Column headers.
+            rows: Row values formatted for display.
+            caption: Caption displayed above the table.
+        """
+        header_html = "".join(f"<th>{header}</th>" for header in headers)
+        rows_html = "".join(
+            "<tr>" + "".join(f"<td>{value}</td>" for value in row) + "</tr>"
+            for row in rows
+        )
+        return f"""
+            <div class="table-container">
+                <div class="caption">{caption}</div>
+                <table>
+                    <thead><tr>{header_html}</tr></thead>
+                    <tbody>{rows_html}</tbody>
+                </table>
+            </div>
+        """
 
     def embed_image(self, image_path: Path, caption: str) -> str:
         """

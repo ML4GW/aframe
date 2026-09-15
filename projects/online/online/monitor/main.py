@@ -2,8 +2,43 @@ import logging
 import time
 from pathlib import Path
 
-from .utils.parse_logs import estimate_tb, pipeline_online
+from .utils.segments import load_segments
 from .pages import EventPage, SummaryPage
+
+
+def find_events(event_dir: Path, start_time: float) -> list[Path]:
+    """
+    Find the event directories written since `start_time`. The
+    directory doesn't exist until the search detects something.
+    """
+    if not event_dir.exists():
+        return []
+
+    events = [
+        event
+        for event in event_dir.iterdir()
+        if float(event.name.split("_")[1]) > start_time
+    ]
+    return sorted(events)
+
+
+def update(
+    run_dir: Path,
+    out_dir: Path,
+    online_args: dict,
+    start_time: float | None,
+    summary_page: SummaryPage,
+    logger: logging.Logger,
+) -> None:
+    """Bring the event pages and the summary page up to date"""
+    for event in find_events(
+        run_dir / "output" / "events", summary_page.start_time
+    ):
+        EventPage(event, online_args, run_dir, out_dir, logger).create()
+
+    segments = load_segments(run_dir, start_time)
+    logger.info("Updating summary page")
+    summary_page.create(segments)
 
 
 def main(
@@ -33,47 +68,7 @@ def main(
     if logger is None:
         logger = logging.getLogger()
 
-    detected_event_dir = run_dir / "output" / "events"
-
-    summary_page = SummaryPage(start_time, run_dir, out_dir, logger)
-
-    # Estimate analysis live time since the given start time
-    tb = estimate_tb(run_dir, summary_page.start_time)
-    logger.info(f"Estimated analysis live time: {tb:.2f} seconds")
-
-    previous_update_time = time.time()
-
     summary_page = SummaryPage(start_time, run_dir, out_dir, logger)
     while True:
-        detected_events = [
-            event
-            for event in detected_event_dir.iterdir()
-            if float(event.name.split("_")[1]) > summary_page.start_time
-        ]
-
-        # The event page will be created/updated only if the event directory
-        # is missing expected plots. Otherwise it will be skipped.
-        for event in sorted(detected_events):
-            event_page = EventPage(
-                event, online_args, run_dir, out_dir, logger
-            )
-            event_page.create()
-
-        # The dataframe file will not exist until the first event is processed
-        if summary_page.dataframe_file.exists():
-            logger.info("Updating summary page")
-            update_time = time.time()
-            # If the pipeline is running, update `tb` with the time
-            # since the last update. If not, set the previous update time
-            # to the current time so that inactive time is not counted
-            # down the line. This isn't super precise, but it shouldn't be
-            # off by more than `update_cadence` seconds.
-            if pipeline_online():
-                tb += update_time - previous_update_time
-            previous_update_time = update_time
-            summary_page.create(tb)
-        else:
-            logger.info("Skipping summary page update")
-
-        # Sleep for a minute before checking for new events again
+        update(run_dir, out_dir, online_args, start_time, summary_page, logger)
         time.sleep(update_cadence)

@@ -1,7 +1,5 @@
 import json
-import logging
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -23,48 +21,37 @@ SEARCH_FAULT_STATES = (
 # How long the heartbeat can go unwritten before calling the search dead.
 STALE_SECONDS = 30.0
 
-logger = logging.getLogger("monitor-segments")
-
 
 def segment_dir(run_dir: Path) -> Path:
     return run_dir / "output" / "segments"
 
 
-def read_heartbeat(run_dir: Path) -> Optional[dict]:
+def read_heartbeat(run_dir: Path) -> dict | None:
     """
-    Read the search's heartbeat file, or None if it isn't there. The
-    search rewrites it in place, so a read can land on a half-written
-    one; that clears up by the next monitor cycle.
+    Read the search's heartbeat file, or None if there isn't one.
     """
-    current_file = segment_dir(run_dir) / CURRENT_FILE
-    if not current_file.exists():
-        return None
     try:
-        with open(current_file, "r") as f:
+        with open(segment_dir(run_dir) / CURRENT_FILE, "r") as f:
             return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        logger.warning(f"Could not read heartbeat file {current_file}")
+    except FileNotFoundError:
         return None
 
 
-def current_status(run_dir: Path) -> dict:
+def current_status(run_dir: Path) -> str | None:
     """
-    The current state of the search. None if the search is stale
-    or not running.
+    The state the search is currently in, or None if its heartbeat
+    has gone stale.
     """
     heartbeat = read_heartbeat(run_dir)
-    running = (
-        heartbeat is not None
-        and gps_now() - heartbeat["heartbeat"] <= STALE_SECONDS
-    )
-    return {
-        "running": running,
-        "state": heartbeat["state"] if running else None,
-    }
+    if heartbeat is None:
+        return None
+    if gps_now() - heartbeat["heartbeat"] > STALE_SECONDS:
+        return None
+    return heartbeat["state"]
 
 
 def load_segments(
-    run_dir: Path, start_time: Optional[float] = None
+    run_dir: Path, start_time: float | None = None
 ) -> pd.DataFrame:
     """
     Load the search's segment record, filling in the stretches it
@@ -90,7 +77,7 @@ def load_segments(
 
     df = _fill_gaps(df)
 
-    if len(df) > 0 and not current_status(run_dir)["running"]:
+    if len(df) > 0 and current_status(run_dir) is None:
         last_stop = df["stop"].iloc[-1]
         gap = pd.DataFrame(
             [
