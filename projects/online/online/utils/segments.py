@@ -1,4 +1,5 @@
 import json
+import os
 from enum import StrEnum
 from pathlib import Path
 
@@ -117,7 +118,10 @@ class SegmentWriter:
             f.write(f"{state},{start:.5f},{stop:.5f},{ifos_ready}\n")
 
     def _write_heartbeat(self, now: float) -> None:
-        with open(self.current_file, "w") as f:
+        # write and rename, so the monitoring process reading this
+        # never catches it in a half written state
+        tmp = self.current_file.with_suffix(".json.tmp")
+        with open(tmp, "w") as f:
             json.dump(
                 {
                     "state": self.state,
@@ -128,6 +132,7 @@ class SegmentWriter:
                 },
                 f,
             )
+        os.replace(tmp, self.current_file)
         self.last_heartbeat = now
 
     def update(
