@@ -17,7 +17,6 @@ dependencies = [
     "ledger",
     "priors",
     "utils",
-    "aframe",
     "python-ligo-lw>=1.8.3,<2",
     "lalsuite~=7.19",
     "jsonargparse>=4.27.4,<5",
@@ -45,7 +44,6 @@ dev = [
 ledger = { path = "../../libs/ledger", editable = true }
 priors = { path = "../../libs/priors", editable = true }
 utils = { path = "../../libs/utils", editable = true }
-aframe = { path = "../../", editable = true }
 
 [build-system]
 requires = ["hatchling"]

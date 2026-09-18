@@ -24,7 +24,6 @@ dependencies = [
     "urllib3>=2",
     "utils",
     "ml4gw>=0.8.0",
-    "aframe",
     "ledger",
     "priors",
     "architectures",
@@ -49,7 +48,6 @@ dev = [
 
 [tool.uv.sources]
 utils = { path = "../../libs/utils", editable = true }
-aframe = { path = "../..", editable = true }
 ledger = { path = "../../libs/ledger", editable = true }
 priors = { path = "../../libs/priors", editable = true }
 architectures = { path = "../../libs/architectures", editable = true }
