@@ -7,7 +7,6 @@ import h5py
 import numpy as np
 import scipy.stats as stats
 from astropy.utils.data import download_file
-from tqdm import tqdm
 from utils.cosmology import DEFAULT_COSMOLOGY
 
 catalog_results = {
@@ -212,31 +211,70 @@ def logdiffexp(x, y):
     return x + np.log1p(-np.exp(y - x))
 
 
-# Changed this function to take log_dN as an argument so that
-# all of them can be calculated up front
-def get_logVT(log_dN, selection, T_obs, N_draw, p_draw):
-    """Convienient function that returns log_VT, log_sigma_VT, and N_eff"""
+def _cumulative_logsumexp(x: np.ndarray, reverse: bool) -> np.ndarray:
+    """`log(sum(exp(x)))` accumulated forward or in reverse."""
+    n = len(x)
+    out = np.full(n + 1, -np.inf)
+    if n == 0:
+        return out
+    with np.errstate(divide="ignore"):
+        if not reverse:
+            out[1:] = np.log(np.cumsum(np.exp(x)))
+        else:
+            out[:n] = np.log(np.cumsum(np.exp(x)[::-1]))[::-1]
+    return out
 
-    # Calculate VT
-    log_dN = log_dN[selection]
-    p_draw = p_draw[selection]
-    log_VT = (
-        np.log(T_obs)
-        - np.log(N_draw)
-        + np.logaddexp.reduce(log_dN - np.log(p_draw))
-    )
 
-    # Calculate uncertainty of VT and effective number
-    log_s2 = (
-        2 * np.log(T_obs)
-        - 2 * np.log(N_draw)
-        + np.logaddexp.reduce(2 * (log_dN - np.log(p_draw)))
-    )
-    log_sig2 = logdiffexp(log_s2, 2.0 * log_VT - np.log(N_draw))
-    log_sig = log_sig2 / 2
-    N_eff = np.exp(2 * log_VT - log_sig2)
+def _vectorized_pipeline_sv(
+    det_stat_p: np.ndarray,
+    log_dNs: list[np.ndarray],
+    mass_combos: list[tuple],
+    p_draw: np.ndarray,
+    T_obs: float,
+    N_draw: float,
+    thresholds: np.ndarray,
+    criterion: str,
+) -> tuple[dict, dict]:
+    """Vectorized SV/err for every mass combo of one pipeline.
 
-    return log_VT, log_sig, N_eff
+    `far` selects a growing forward sum (`det_stat < thresh`, ascending
+    sort); `pastro` selects a shrinking reverse sum (`det_stat >
+    thresh`), so it needs `side="right"` and `reverse=True`.
+    """
+    order = np.argsort(det_stat_p)
+    ds_sorted = det_stat_p[order]
+    n = len(ds_sorted)
+    reverse = criterion == "pastro"
+
+    if criterion == "far":
+        idxs = np.searchsorted(ds_sorted, thresholds, side="left")
+        k = idxs
+    else:
+        idxs = np.searchsorted(ds_sorted, thresholds, side="right")
+        k = n - idxs
+
+    log_T = np.log(T_obs)
+    log_N = np.log(N_draw)
+    log_p_draw_sorted = np.log(p_draw[order])
+
+    sv, err = {}, {}
+    for (m1, m2), log_dN in zip(mass_combos, log_dNs, strict=True):
+        key = f"{m1}-{m2}"
+        x = log_dN[order] - log_p_draw_sorted
+        csum_x = _cumulative_logsumexp(x, reverse=reverse)
+        csum_2x = _cumulative_logsumexp(2 * x, reverse=reverse)
+
+        log_VT = log_T - log_N + csum_x[idxs]
+        log_s2 = 2 * log_T - 2 * log_N + csum_2x[idxs]
+
+        with np.errstate(invalid="ignore"):
+            log_sig2 = logdiffexp(log_s2, 2 * log_VT - log_N)
+        log_sig2 = np.where(k == 0, -np.inf, log_sig2)
+
+        sv[key] = np.exp(log_VT) / T_obs
+        err[key] = np.exp(log_sig2 / 2) / T_obs
+
+    return sv, err
 
 
 def get_logdNs(
@@ -268,6 +306,28 @@ def get_logdNs(
             )
         )
     return log_dNs
+
+
+def _write_result_file(
+    output_dir: Path,
+    detection_criterion: str,
+    detection_thresholds: np.ndarray,
+    pipelines: list[str],
+    mass_combos: list[tuple],
+    sv: dict,
+    err: dict,
+) -> None:
+    """Write the `gwtc-3_pipeline_sv.hdf5` data file."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    outfile = output_dir / "gwtc-3_pipeline_sv.hdf5"
+    with h5py.File(outfile, "w") as f:
+        f.create_dataset(f"{detection_criterion}", data=detection_thresholds)
+        for p in pipelines:
+            g = f.create_group(p)
+            for m1, m2 in mass_combos:
+                h = g.create_group(f"{m1}-{m2}")
+                h.create_dataset("sv", data=np.array(sv[p][f"{m1}-{m2}"]))
+                h.create_dataset("err", data=np.array(err[p][f"{m1}-{m2}"]))
 
 
 def main(
@@ -315,33 +375,24 @@ def main(
     sv, err = {}, {}
     for p in pipelines:
         logging.info(f"Calculating SV for {p}")
-        sv[p], err[p] = {}, {}
-        for (m1, m2), log_dN in zip((mass_combos), log_dNs, strict=True):
-            sv[p][f"{m1}-{m2}"] = np.zeros_like(detection_thresholds)
-            err[p][f"{m1}-{m2}"] = np.zeros_like(detection_thresholds)
-            for i, thresh in enumerate(tqdm(detection_thresholds)):
-                if detection_criterion == "far":
-                    selection = det_stat[p] < thresh
-                else:
-                    selection = det_stat[p] > thresh
+        sv[p], err[p] = _vectorized_pipeline_sv(
+            det_stat[p],
+            log_dNs,
+            mass_combos,
+            p_draw,
+            T_obs,
+            N_draw,
+            detection_thresholds,
+            detection_criterion,
+        )
 
-                log_vt, log_sigma_vt, _ = get_logVT(
-                    log_dN, selection, T_obs, N_draw, p_draw
-                )
-                vt = np.exp(log_vt)
-                sigma_vt = np.exp(log_sigma_vt)
-
-                sv[p][f"{m1}-{m2}"][i] = vt / T_obs
-                err[p][f"{m1}-{m2}"][i] = sigma_vt / T_obs
-
-    outfile = output_dir / "gwtc-3_pipeline_sv.hdf5"
-    with h5py.File(outfile, "w") as f:
-        f.create_dataset(f"{detection_criterion}", data=detection_thresholds)
-        for p in pipelines:
-            g = f.create_group(p)
-            for m1, m2 in mass_combos:
-                h = g.create_group(f"{m1}-{m2}")
-                h.create_dataset("sv", data=np.array(sv[p][f"{m1}-{m2}"]))
-                h.create_dataset("err", data=np.array(err[p][f"{m1}-{m2}"]))
-
+    _write_result_file(
+        output_dir,
+        detection_criterion,
+        detection_thresholds,
+        pipelines,
+        mass_combos,
+        sv,
+        err,
+    )
     return sv, err

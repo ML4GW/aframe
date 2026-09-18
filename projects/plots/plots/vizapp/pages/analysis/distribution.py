@@ -31,9 +31,11 @@ FORE_ATTRS = [
     "injection_time",
     "chirp_mass",
 ]
-BACK_ATTRS = ["detection_statistic", "detection_time"]
 
 SLIDER_ATTRS = ["mass_1_source", "mass_2_source", "snr"]
+
+MAX_SCATTER_POINTS = 5_000
+MAX_FOREGROUND_POINTS = 20_000
 
 
 class DistributionPlot:
@@ -43,15 +45,16 @@ class DistributionPlot:
         self.bckgd_color = palette[4]
         self.frgd_color = palette[2]
 
-    def asdict(self, background, foreground):
-        background = {attr: getattr(background, attr) for attr in BACK_ATTRS}
-        _foreground = {attr: getattr(foreground, attr) for attr in FORE_ATTRS}
-
+    def asdict(self, foreground, idx=slice(None)):
+        _foreground = {
+            attr: getattr(foreground, attr)[idx] for attr in FORE_ATTRS
+        }
+        ifo_snrs = foreground.ifo_snrs[idx]
         for i, ifo in enumerate(foreground.ifos):
-            _foreground[f"{ifo}_snr"] = foreground.ifo_snrs[:, i]
-        sorted_snrs = np.sort(foreground.ifo_snrs, axis=-1)
+            _foreground[f"{ifo}_snr"] = ifo_snrs[:, i]
+        sorted_snrs = np.sort(ifo_snrs, axis=-1)
         _foreground["snr_ratio"] = sorted_snrs[:, -1] / sorted_snrs[:, -2]
-        return background, _foreground
+        return _foreground
 
     def initialize_sources(self):
         self.bar_source = ColumnDataSource(
@@ -295,55 +298,86 @@ class DistributionPlot:
         stats = np.array(self.bar_source.data["center"])
         min_ = min([stats[i] for i in new])
         max_ = max([stats[i] for i in new])
-        mask = self.background.detection_statistic >= min_
-        mask &= self.background.detection_statistic <= max_
 
-        self.background_plot.title.text = (
-            f"{mask.sum()} events with detection statistic in the range"
-            f"({min_:0.1f}, {max_:0.1f})"
-        )
-        events = self.background.detection_statistic[mask]
-        times = self.background.detection_time[mask]
-        shifts = self.background.shift[mask]
+        ds = self.background.detection_statistic
+        low = np.searchsorted(ds, min_, side="left")
+        high = np.searchsorted(ds, max_, side="right")
+        n_selected = high - low
+
+        if n_selected == 0:
+            self.background_plot.title.text = (
+                f"0 events with detection statistic in "
+                f"({min_:0.1f}, {max_:0.1f})"
+            )
+            self.background_source.data = {
+                "x": [],
+                "detection_time": [],
+                "detection_statistic": [],
+                "shifts": [],
+                "size": [],
+            }
+            self.background_source.selected.indices = []
+            return
+
+        if n_selected > MAX_SCATTER_POINTS:
+            rng = np.random.default_rng()
+            sample = np.sort(
+                rng.choice(n_selected, size=MAX_SCATTER_POINTS, replace=False)
+            )
+            idx = low + sample
+            self.background_plot.title.text = (
+                f"showing {MAX_SCATTER_POINTS:,} of {n_selected:,} events "
+                f"with detection statistic in ({min_:0.1f}, {max_:0.1f})"
+            )
+        else:
+            idx = np.arange(low, high)
+            self.background_plot.title.text = (
+                f"{n_selected} events with detection statistic in "
+                f"({min_:0.1f}, {max_:0.1f})"
+            )
+
+        events = ds[idx]
+        times = self.background.detection_time[idx]
+        shifts = self.background.shift[idx]
 
         t0 = times.min()
         self.background_plot.xaxis.axis_label = f"Time from {t0:0.3f} [hours]"
 
-        x = times - t0
-        x /= 3600
+        x = (times - t0) / 3600
 
-        self.background_source.data.update(
-            {
-                "x": x
-                + shifts.sum(
-                    axis=-1
-                ),  # give unique time to events at same H1 time
-                "detection_time": times,
-                "detection_statistic": events,
-                "shifts": shifts,
-                "size": np.ones(len(events)) * 8,
-            }
-        )
+        self.background_source.data = {
+            "x": x + shifts.sum(axis=-1) / 3600,
+            "detection_time": times,
+            "detection_statistic": events,
+            "shifts": shifts,
+            "size": np.full(len(events), 8),
+        }
         self.background_source.selected.indices = []
 
     def update(self, background, foreground):
         self.background = background
         self.foreground = foreground
 
+        n_fg = len(foreground)
+        if n_fg > MAX_FOREGROUND_POINTS:
+            rng = np.random.default_rng()
+            idx = np.sort(
+                rng.choice(n_fg, size=MAX_FOREGROUND_POINTS, replace=False)
+            )
+            fg_note = f" (showing {MAX_FOREGROUND_POINTS:,} of {n_fg:,})"
+        else:
+            idx = slice(None)
+            fg_note = ""
+
         title = (
             f"{len(self.background)} background events from "
             f"{self.background.Tb / 3600 / 24:0.2f} days worth "
-            f"of data; {len(self.foreground)} injections overlayed"
+            f"of data; {n_fg} injections overlayed{fg_note}"
         )
-        background_dict, foreground_dict = self.asdict(
-            self.background, self.foreground
-        )
-
-        self.background_source.data = background_dict
-        self.foreground_source.data = foreground_dict
+        self.foreground_source.data = self.asdict(self.foreground, idx)
 
         for attr, slider in self.sliders.items():
-            values = foreground_dict[attr]
+            values = getattr(self.foreground, attr)
             if not len(values) > 0:
                 continue
             low, high = float(np.min(values)), float(np.max(values))
@@ -354,18 +388,16 @@ class DistributionPlot:
 
         self.distribution_plot.title.text = title
 
-        # update bar plot
-        hist, bins = np.histogram(
-            self.background.detection_statistic, bins=100
-        )
-        hist = np.cumsum(hist[::-1])[::-1]
+        ds = self.background.detection_statistic
+        edges = np.histogram_bin_edges(ds, bins=100)
+        top = len(ds) - np.searchsorted(ds, edges[:-1], side="left")
         self.distribution_plot.y_range.start = 0.1
-        self.distribution_plot.y_range.end = 2 * hist.max()
+        self.distribution_plot.y_range.end = 2 * top.max() if len(top) else 1
 
         self.bar_source.data.update(
-            center=(bins[:-1] + bins[1:]) / 2,
-            top=hist,
-            width=0.95 * (bins[1:] - bins[:-1]),
+            center=(edges[:-1] + edges[1:]) / 2,
+            top=top,
+            width=0.95 * (edges[1:] - edges[:-1]),
         )
 
         # update snr axis of plot
@@ -379,15 +411,13 @@ class DistributionPlot:
 
         # clear the background plot until we select another
         # range of detection characteristics to plot
-        self.background_source.data.update(
-            {
-                "x": [],
-                "detection_time": [],
-                "detection_statistic": [],
-                "shifts": [],
-                "size": [],
-            }
-        )
+        self.background_source.data = {
+            "x": [],
+            "detection_time": [],
+            "detection_statistic": [],
+            "shifts": [],
+            "size": [],
+        }
         self.bar_source.selected.indices = []
         self.foreground_source.selected.indices = []
         self.background_source.selected.indices = []

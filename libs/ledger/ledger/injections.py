@@ -18,6 +18,14 @@ from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
 MSUN = 1.988409902147041637325262574352366540e30
 
 
+def shift_mask(shifts: np.ndarray, target) -> np.ndarray:
+    """Boolean mask of rows in `shifts` equal to `target`."""
+    mask = shifts == np.asarray(target)
+    if shifts.ndim == 2:
+        mask = mask.all(axis=-1)
+    return mask
+
+
 def chirp_mass(
     m1: float | np.ndarray, m2: float | np.ndarray
 ) -> float | np.ndarray:
@@ -764,10 +772,7 @@ class InterferometerResponseSet(WaveformSet):
         Returns:
             InjectionParameterSet with injections with the specified shift.
         """
-        mask = self.shift == shift
-        if self.shift.ndim == 2:
-            mask = mask.all(axis=-1)
-        return self[mask]
+        return self[shift_mask(self.shift, shift)]
 
     def get_times(self, start: float | None = None, end: float | None = None):
         """

@@ -5,6 +5,7 @@ from pathlib import Path
 from utils.cosmology import DEFAULT_COSMOLOGY
 from utils.logging import configure_logging
 
+from plots.core.constants import DEFAULT_NUM_FAR_POINTS
 from plots.core.data import AnalysisData
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
 from plots.core.sv import (
@@ -47,6 +48,7 @@ def sensitive_volume(
     log_file: Path | None = None,
     dt: float | None = None,
     max_far: float = 365,
+    num_far_points: int = DEFAULT_NUM_FAR_POINTS,
     sigma: float = 0.1,
     verbose: bool = False,
     vetos: list[VETO_CATEGORIES] | None = None,
@@ -76,6 +78,9 @@ def sensitive_volume(
         max_far:
             The maximum FAR to compute the sensitive volume out to in
             units of years^-1
+        num_far_points:
+            Number of points in the FAR grid to compute the sensitive
+            volume at
         sigma:
             The width of the log normal mass distribution to use
         verbose:
@@ -113,6 +118,7 @@ def sensitive_volume(
         source_prior=source,
         dt=dt,
         max_far=max_far,
+        num_far_points=num_far_points,
         sigma=sigma,
     )
 

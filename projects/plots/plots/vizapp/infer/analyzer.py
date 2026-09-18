@@ -1,11 +1,16 @@
 from collections.abc import Sequence
+from functools import cached_property
 from pathlib import Path
 
 import h5py
 import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
-from ledger.injections import InterferometerResponseSet, waveform_class_factory
+from ledger.injections import (
+    InterferometerResponseSet,
+    shift_mask,
+    waveform_class_factory,
+)
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 from plots.vizapp.infer.utils import get_indices, get_strain_fname
@@ -149,15 +154,30 @@ class EventAnalyzer:
 
         return torch.stack(strain, axis=0), time + self.times[0]
 
+    @cached_property
+    def _injection_index(self):
+        """`(injection_time, shift, left_pad)` of the waveform file.
+
+        Read once and reused.
+        """
+        with h5py.File(self.response_set, "r") as f:
+            times = f["parameters"]["injection_time"][:]
+            shifts = f["parameters"]["shift"][:]
+            left_pad = f.attrs["duration"] - f.attrs["right_pad"]
+        return times, shifts, left_pad
+
     def find_waveform(self, time: float, shifts: np.ndarray):
         """
-        find the closest injection that corresponds to event
+        Find the closest injection that corresponds to event
         time and shifts from waveform dataset
         """
-        waveform = self.waveform_class.read(
-            self.response_set, time - 0.1, time + 0.1, shifts
-        )
-        return waveform
+        times, all_shifts, left_pad = self._injection_index
+        mask = (times + left_pad) >= (time - 0.1)
+        mask &= (times - left_pad) <= (time + 0.1)
+        mask &= shift_mask(all_shifts, shifts)
+
+        idx = np.where(mask)[0]
+        return self.waveform_class.read_idx(self.response_set, idx)
 
     def integrate(self, y):
         integrated = np.convolve(y, self.window, mode="full")

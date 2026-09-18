@@ -49,6 +49,9 @@ class Analysis(Page):
         distribution = self.distribution_plot.get_layout(
             height=400, width=1500
         )
+        # Need to update the distribution plot here, or the
+        # tab would be blank until a veto was toggled.
+        self.distribution_plot.update(self.app.background, self.app.foreground)
         return column(
             distribution, event_inspector, sizing_mode="stretch_both"
         )
