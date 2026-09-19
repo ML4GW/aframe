@@ -26,7 +26,13 @@ from online.dataloading import (
 )
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
+from online.utils.segments import (
+    PipelineState,
+    SegmentWriter,
+    pipeline_state,
+)
 from online.utils.snapshotter import OnlineSnapshotter
+from online.utils.timing import gps_now
 from utils.preprocessing import BatchWhitener
 from online.subprocesses import (
     amplfi_subprocess,
@@ -171,6 +177,7 @@ def search(
     time_offset: float,
     device: str,
     outdir: Path,
+    segment_writer: SegmentWriter,
     emails: Optional[list[str]] = None,
 ):
     significance_outputs, timing_outputs = None, None
@@ -261,6 +268,8 @@ def search(
                 input_buffer.reset()
                 output_buffer.reset()
 
+                segment_writer.update(PipelineState.MISSING_DATA, t0, ready)
+
                 # nothing left to do, so move on to next frame
                 continue
 
@@ -316,6 +325,11 @@ def search(
             event = searcher.search(
                 significance_outputs, timing_outputs, t0 + time_offset
             )
+
+        # record what we were able to do with this block
+        segment_writer.update(
+            pipeline_state(hl_ready, snapshotter.full_psd_present), t0, ready
+        )
 
         # if we found an event, process it!
         if event is not None:
@@ -519,6 +533,11 @@ def main(
             Setting precision to 'high' or 'medium' can significantly
             reduce sampling times. Default is 'highest'.
     """  # noqa: E501
+
+    # note when this process came up so that the time spent loading
+    # models and warming up before the first block of data arrives is
+    # accounted for
+    search_start = gps_now()
 
     # create various queues for message
     # passing between subprocesses
@@ -748,6 +767,12 @@ def main(
             f"Invalid data source {data_source}. Must be 'arrakis' or 'frames'"
         )
 
+    # record which state we're in over each block of data so that the
+    # monitor can report the search's duty cycle
+    segment_writer = SegmentWriter(
+        outdir, update_size, process_start=search_start
+    )
+
     # initialize a buffer for storing recent strain data,
     # and for storing integrated aframe outputs
     input_buffer = InputBuffer(
@@ -905,6 +930,7 @@ def main(
             device=device,
             emails=emails,
             outdir=outdir,
+            segment_writer=segment_writer,
         )
     except Exception as e:
         # if error is from a subprocess,
@@ -913,6 +939,8 @@ def main(
             tb = traceback.format_exc()
             send_error_email("main", str(e), tb, emails)
         raise e
+    finally:
+        segment_writer.close()
 
     if mode == "offline":
         logging.info("Offline analysis complete")

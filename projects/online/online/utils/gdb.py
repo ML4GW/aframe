@@ -1,17 +1,16 @@
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 import bilby
 import certifi
 import h5py
-from gwpy.time import tconvert
 from ligo.gracedb.kafka import GraceDbKafkaProducer
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
+from online.utils.timing import gps_now
 import matplotlib.pyplot as plt
 from ligo.skymap.tool.ligo_skymap_from_samples import (
     main as ligo_skymap_from_samples,
@@ -141,7 +140,7 @@ class GraceDb(_GraceDb):
         # TODO: determine underlying issue here
         # Handle issue where sometimes the pipeline lags,
         # and the frame file has already left the buffer
-        submission_time = float(tconvert(datetime.now(tz=timezone.utc)))
+        submission_time = gps_now()
         try:
             t_write = event.get_frame_write_time()
         except FileNotFoundError:
