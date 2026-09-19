@@ -57,6 +57,21 @@ def load_segments(
     Load the search's segment record, filling in the stretches it
     couldn't write itself.
 
+    The search appends a row to `segments.txt` whenever its state
+    changes, with GPS start and stop times and one digit per
+    interferometer for whether it was analysis-ready (blank during
+    startup):
+
+        state,start,stop,ifos_ready
+        startup,1473875405.00000,1473875465.00000,
+        warmup,1473875465.00000,1473875525.00000,111
+        analyzing,1473875525.00000,1473879900.00000,111
+        startup,1473880000.00000,1473880075.00000,
+        not_ready,1473880075.00000,1473890075.00000,011
+
+    The segment it's currently in lives in `current.json` until it
+    ends.
+
     Args:
         run_dir: Root directory of the online search
         start_time:
@@ -145,7 +160,18 @@ def compute_duty_cycle(
     while our own downtime and filter warm-up count against us.
 
     Args:
-        df: Segments from `load_segments`
+        df:
+            Segments from `load_segments`, where the gap in the
+            example there, from a crash, gets filled in:
+
+                         state            start             stop ifos_ready
+                0      startup 1473875405.00000 1473875465.00000
+                1       warmup 1473875465.00000 1473875525.00000        111
+                2    analyzing 1473875525.00000 1473879900.00000        111
+                3  search_down 1473879900.00000 1473880000.00000
+                4      startup 1473880000.00000 1473880075.00000
+                5    not_ready 1473880075.00000 1473890075.00000        011
+
         start: GPS time to start the window at, defaulting to the
             first segment
         end: GPS time to end the window at, defaulting to the last

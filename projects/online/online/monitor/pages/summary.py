@@ -119,9 +119,12 @@ class SummaryPage(MonitorPage):
         )
         html += """
             <p style="max-width: 820px; margin: 0 auto; color: #555;">
-            Fraction of analyzable time Aframe was running. Excludes
-            detector downtime. Any coincident Aframe/detector downtime
-            is counted as Aframe downtime.
+            Duty cycle = pipeline livetime / analyzable time, where
+            analyzable time excludes detector downtime.
+            Uptime = 1 &minus; unattributed downtime / wall time elapsed.
+            Unattributed downtime is any time Aframe wasn't running, and
+            counts against us in full because the detector state then
+            is unknown.
             </p>
         """
 
