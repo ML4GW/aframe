@@ -38,6 +38,8 @@ default-groups = [
     "docs",
 ]
 
+required-version = ">=0.9.30"
+
 # Pin torchaudio to 2.10.0 because 2.11.0 is built for CUDA 13, which
 # is incompatible with Volta-series GPUs.
 constraint-dependencies = ["torchaudio==2.10.0"]

@@ -158,7 +158,7 @@ zero_lag: false                  # also analyze unshifted (zero-lag) data
 # Triton server.
 model_name: aframe-stream
 model_version: -1
-triton_image: /home/william.benoit/images/aframe/tritonserver_26.05.sif
+triton_image: /home/william.benoit/images/aframe/tritonserver_25.06.sif
 # Comma-separated GPU IDs for export and inference server only.
 # Pin training GPUs via trainer.devices in the train_config.
 gpus: "0"

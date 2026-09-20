@@ -1,5 +1,10 @@
-# CUDA dev toolkit for AOTInductor codegen. 
+# CUDA dev toolkit for AOTInductor codegen.
 # Matches torch 2.10's bundled CUDA 12.8
+#
+# The debian12 repo below has to match the base image in
+# container_templates/uv.def, which is Debian 12 (bookworm). NVIDIA's
+# debian13 repo doesn't have CUDA 12.x, so we need to stay on Debian 12
+# to maintain V100 support.
 apt-get update
 apt-get install -y --no-install-recommends wget ca-certificates
 wget -q https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb

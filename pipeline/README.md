@@ -153,6 +153,29 @@ hermes to `ML4GW/hermes` branch `dev`, and `online` pins amplfi to
 should move to releases once possible, though note that a hermes
 release will also drop support for Volta-era GPUs. 
 
+**Blocked on moving to CUDA 13.** Two conditions have to
+be met before we can move to CUDA 13:
+
+1. **Dropping Volta (V100) support.** CUDA 13 drops Volta (`sm_70`)
+   and Pascal (`sm_60`), so these are held at CUDA 12 to keep V100
+   nodes on the LDG usable.
+2. **Driver >= 580 everywhere we run.** CUDA 13.x requires NVIDIA
+   driver >= 580. Delta is on 570, so it cannot run CUDA 13 binaries,
+   regardless of GPU architecture.
+
+If these conditions are met, then we can implement various upgrades:
+
+- `constraint-dependencies = ["torchaudio==2.10.0"]` in the root
+  `pyproject.toml`. torchaudio 2.11 is a CUDA 13 build.
+- `torch==2.10.0` in `train`, `export`, `infer` and `online`.
+- `cuda-minimal-build-12-8` and NVIDIA's `debian12` apt repo in
+  `projects/infer/apptainer.post`.
+- The uv base image in `container_templates/uv.def`, pinned to
+  `0.9.30-python3.12-bookworm-slim`.
+- Moving hermes from the `dev` branch to a release, per the note above.
+- `nvidia-cudnn-cu12` and `tensorrt-cu12==10.11.0.33` in
+  `projects/export`, plus the Triton image in `config.yaml`.
+
 **Hermes Triton image discovery.** `triton_image` in `config.yaml`
 must currently be an explicit absolute path because the more modern
 Triton containers have not been added to CVMFS. We could instead

@@ -1,5 +1,8 @@
 Bootstrap: docker
-From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# Important: 0.9.30 is the last uv image built on Debian 12 (bookworm).
+# Every tag afterwards is Debian 13 (trixie), and NVIDIA's Debian 13 repo
+# doesn't have CUDA 12 support, which precludes running on V100s.
+From: ghcr.io/astral-sh/uv:0.9.30-python3.12-bookworm-slim
 
 %files
 @@FILES_BLOCK@@

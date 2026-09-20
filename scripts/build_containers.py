@@ -83,6 +83,10 @@ def _get_uv_command(project_name: str, subcommand: str) -> str:
         f"uv {subcommand} --frozen --no-default-groups --group test"
         f" --package {project_name}"
     )
+    if subcommand == "export":
+        # Need to use the pylock format here rather than requirements.txt
+        # so that the index each package was locked from gets recorded.
+        cmd += " --format pylock.toml"
     for extra in EXTRAS.get(project_name, []):
         cmd += f" --extra {extra}"
     return cmd
