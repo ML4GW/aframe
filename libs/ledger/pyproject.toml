@@ -27,7 +27,7 @@ dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 [tool.uv]
 
 [tool.uv.sources]
-utils = { path = "../utils", editable = true }
+utils = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

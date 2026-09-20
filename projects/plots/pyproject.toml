@@ -7,25 +7,36 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "bokeh~=3.0",
     "numpy>=2",
-    "scipy~=1.7",
-    "h5py~=3.5",
+    "scipy>=1.9",
+    "h5py>=3.10,<4",
     "gwpy~=3.0.8",
     "astropy>=6.0",
-    "bilby>=2.2.2,<3",
     "gwosc",
     "tqdm~=4.66",
     "ledger",
     "priors",
     "utils",
     "python-ligo-lw>=1.8.3,<2",
-    "lalsuite~=7.19",
     "jsonargparse>=4.27.4,<5",
-    "omegaconf~=2.2",
-    "urllib3>=2",
-    # vizapp only
-    "torch==2.10.0",
+]
+
+# Make the vizapp dependencies fully optional.
+[project.optional-dependencies]
+vizapp = [
+    "torch",
+    "utils[torch]",
     "matplotlib>=3.9.4",
     "pillow>=11",
+    "omegaconf~=2.2",
+]
+# Same as `vizapp`, but with the CUDA torch build, for running the app with
+# `device: cuda`.
+vizapp-cuda = [
+    "torch",
+    "utils[torch]",
+    "matplotlib>=3.9.4",
+    "pillow>=11",
+    "omegaconf~=2.2",
 ]
 
 [project.scripts]
@@ -33,17 +44,22 @@ sensitive-volume = "plots.cli:main"
 vizapp = "plots.vizapp.main:cli"
 
 [dependency-groups]
-dev = [
-    "jupyter>=1.0.0,<2",
-    "pytest>=8.3.0,<9",
-]
+test = ["pytest>=8.3.0,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
-ledger = { path = "../../libs/ledger", editable = true }
-priors = { path = "../../libs/priors", editable = true }
-utils = { path = "../../libs/utils", editable = true }
+torch = [{ index = "pytorch-cpu", extra = "vizapp" }]
+ledger = { workspace = true }
+priors = { workspace = true }
+utils = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

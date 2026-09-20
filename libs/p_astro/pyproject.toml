@@ -20,8 +20,8 @@ dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 [tool.uv]
 
 [tool.uv.sources]
-ledger = { path = "../ledger", editable = true }
-utils = { path = "../utils", editable = true }
+ledger = { workspace = true }
+utils = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

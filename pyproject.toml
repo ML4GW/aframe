@@ -38,6 +38,32 @@ default-groups = [
     "docs",
 ]
 
+# Pin torchaudio to 2.10.0 because 2.11.0 is built for CUDA 13, which
+# is incompatible with Volta-series GPUs.
+constraint-dependencies = ["torchaudio==2.10.0"]
+
+# The `data` and `plots` projects declare `cpu` and `cuda` extras so that we
+# can define them as conflicting here. This forces `uv` to resolve both torch
+# twice, once for each path. Not doing so would either add extra, heavy
+# dependencies to the `data` and `plots` containers, or would preclude those
+# projects from being a part of this workspace.
+#
+# The `data` project is always CPU, but the `cuda` group exists so that this
+# split can happen. The `plots` project has an actual CUDA variant so that
+# the vizapp can run the model on GPU if desired.
+#
+# Note that `uv sync --all-extras` cannot work with conflicting extras.
+conflicts = [
+    [{ package = "data", extra = "cpu" }, { package = "data", extra = "cuda" }],
+    [
+        { package = "plots", extra = "vizapp" },
+        { package = "plots", extra = "vizapp-cuda" },
+    ],
+]
+
+[tool.uv.workspace]
+members = ["libs/*", "projects/*"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

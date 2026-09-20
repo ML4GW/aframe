@@ -16,7 +16,7 @@ dependencies = [
 
 [dependency-groups]
 test = ["pytest>=8.2.1,<9"]
-dev = [{ include-group = "test" }]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [build-system]
 requires = ["hatchling"]
