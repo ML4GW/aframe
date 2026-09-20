@@ -16,8 +16,9 @@ cd /opt/aframe/projects/@@PROJECT@@
 # when binding the repo into the container
 export UV_PROJECT_ENVIRONMENT=/opt/env
 
-uv export --frozen --all-extras -o requirements.txt
-uv pip sync requirements.txt --system
+@@UV_CMD@@ --no-cache
+
+@@PURGE_BUILD_TOOLS@@
 
 %environment
 # Append venv dir to PATH so the

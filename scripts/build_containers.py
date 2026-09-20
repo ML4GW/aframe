@@ -8,43 +8,84 @@ from jsonargparse import ArgumentParser
 from spython.main import Client
 
 # Define the directory where the projects are located
-BASE_DIR: Path = Path(__file__).resolve().parent.parent / "projects"
-TEMPLATES_DIR: Path = (
-    Path(__file__).resolve().parent.parent / "container_templates"
-)
+ROOT_DIR: Path = Path(__file__).resolve().parent.parent
+BASE_DIR: Path = ROOT_DIR / "projects"
+LIBS_DIR: Path = ROOT_DIR / "libs"
+TEMPLATES_DIR: Path = ROOT_DIR / "container_templates"
 
 # List of all available project names
 PROJECTS: list[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
 
+# Extras to install into each project's container.
+# Currently only needed for `data`, which uses extras to keep CUDA-torch
+# out of its container.
+EXTRAS: dict[str, list[str]] = {"data": ["cpu"]}
+
+# Clear out the tools used to build the environment once complete to shrink
+# container size. A project that needs a compiler at run time should install
+# it from its apptainer.post, which marks it manually installed and so
+# exempts it from the autoremove. See projects/infer for an example.
+PURGE_BUILD_TOOLS = """# the toolchain was only needed to build the \
+dependencies above
+apt-get purge -y build-essential
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*"""
+
+
+def _local_libs(project_name: str) -> list[str]:
+    """
+    Collect a list of the `libs/` that a project depends on, including
+    those that enter via a library's own dependencies.
+    """
+    seen: set[str] = set()
+    pyproject_files: list[Path] = [BASE_DIR / project_name / "pyproject.toml"]
+
+    while len(pyproject_files) > 0:
+        with open(pyproject_files.pop(), "rb") as f:
+            data = tomllib.load(f)
+
+        sources = data.get("tool", {}).get("uv", {}).get("sources", {})
+        for name, source in sources.items():
+            # index pins like torch are lists, not dicts.
+            # git sources are dicts but don't have a `workspace` key
+            if not isinstance(source, dict) or not source.get("workspace"):
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            pyproject_files.append(LIBS_DIR / name / "pyproject.toml")
+
+    return sorted(seen)
+
 
 def _get_files_block(project_name: str) -> str:
     """
-    Build the %files block for an apptainer definition by reading the
-    project's [tool.uv.sources] and resolving which local paths to copy.
+    Build the %files block for an apptainer definition: the project itself,
+    the `libs/` packages it depends on, and the root pyproject and lockfile
+    that uv resolves the workspace against.
     """
-    pyproject_path = BASE_DIR / project_name / "pyproject.toml"
-    with open(pyproject_path, "rb") as f:
-        data = tomllib.load(f)
-
-    sources = data["tool"]["uv"]["sources"]
-
     lines = [f". /opt/aframe/projects/{project_name}/"]
-    seen: set[str] = set()
+    for lib in _local_libs(project_name):
+        lines.append(f"../../libs/{lib} /opt/aframe/libs/{lib}")
 
-    for source in sources.values():
-        path = source.get("path", "")
-        if not path:
-            # git source
-            continue
-
-        lib_name = path.rstrip("/").removeprefix("../../libs/")
-        entry = f"../../libs/{lib_name} /opt/aframe/libs/{lib_name}"
-
-        if entry not in seen:
-            seen.add(entry)
-            lines.append(entry)
+    lines.append("../../pyproject.toml /opt/aframe/pyproject.toml")
+    lines.append("../../uv.lock /opt/aframe/uv.lock")
 
     return "\n".join(lines)
+
+
+def _get_uv_command(project_name: str, subcommand: str) -> str:
+    """
+    Build a `uv sync`/`uv export` command for a project. The `test`
+    group is installed so that CI can run tests inside the container.
+    """
+    cmd = (
+        f"uv {subcommand} --frozen --no-default-groups --group test"
+        f" --package {project_name}"
+    )
+    for extra in EXTRAS.get(project_name, []):
+        cmd += f" --extra {extra}"
+    return cmd
 
 
 def create_definition_file(project_name: str) -> Path:
@@ -67,11 +108,17 @@ def create_definition_file(project_name: str) -> Path:
     env_file = project_dir / "apptainer.env"
     extra_env = env_file.read_text() if env_file.exists() else ""
 
+    # the micromamba image installs into an existing conda env, so it exports
+    # a requirements file and pip-installs it. The uv image syncs directly.
+    subcommand = "export" if is_micromamba else "sync"
+
     definition_text = (
         template_text.replace("@@PROJECT@@", project_name)
         .replace("@@FILES_BLOCK@@", files_block)
+        .replace("@@UV_CMD@@", _get_uv_command(project_name, subcommand))
         .replace("@@EXTRA_POST@@", extra_post)
         .replace("@@EXTRA_ENV@@", extra_env)
+        .replace("@@PURGE_BUILD_TOOLS@@", PURGE_BUILD_TOOLS)
     )
 
     output_path = project_dir / "apptainer.def"
