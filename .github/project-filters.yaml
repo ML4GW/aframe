@@ -1,7 +1,10 @@
 workflow: &workflow
-  - '.github/lib-filters.yaml'
-  - '.github/workflows/lib-tests.yaml'
+  - '.github/project-filters.yaml'
+  - '.github/workflows/project-build-test.yaml'
   - 'container_templates/**'
+  - 'scripts/build_containers.py'
+  - 'pyproject.toml'
+  - 'uv.lock'
 
 data:
   - *workflow
@@ -34,7 +37,7 @@ plots:
   - *workflow
   - 'projects/plots/**'
   - 'libs/ledger/**'
-  - 'libs/prior/**'
+  - 'libs/priors/**'
   - 'libs/utils/**'
     
 train:
@@ -42,3 +45,4 @@ train:
   - 'projects/train/**'
   - 'libs/ledger/**'
   - 'libs/architectures/**'
+  - 'libs/utils/**'

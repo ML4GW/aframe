@@ -30,7 +30,7 @@ pipeline/
   config/config.yaml          all pipeline parameters (loaded by default)
   config/review.yaml          short end-to-end validation preset
   profiles/local/             dev/testing: everything runs as subprocesses
-  profiles/condor/            LDG HTCondor execution
+  profiles/ldg/               LDG HTCondor execution
   envs/snakemake.yaml         orchestrator env
   envs/dev.yaml               local dev env
   .env.example                required environment variables
@@ -115,6 +115,29 @@ at the command line with `--config key=value`.
 `background_dir` and `waveforms_dir` default to living under
 `run_dir` but can be pointed at shared locations.
 
+## Containers
+
+Each project is built into its own apptainer image by
+`uv run build-containers`, which fills the templates in
+`container_templates/` from the project's `pyproject.toml` and the
+root `uv.lock`. Two notes:
+
+**`vizapp` is not containerized.** `plots.sif` covers only the
+`sensitive-volume` rule, so it carries no torch at all, which
+keeps the container small. The vizapp dependencies are instead 
+in an extra, and the Bokeh app can be run locally with 
+`uv sync --package plots --extra vizapp`, or `--extra vizapp-cuda` 
+to run the model on a GPU, matching `device` in the vizapp config.
+
+**Torch is put behind an extra in `data` and `plots`.** Both install it
+from the PyTorch CPU index, which keeps CUDA dependencies out of the image. 
+uv resolves each package once, so the CPU and CUDA builds can only 
+coexist in the root `uv.lock` because each project declares its two 
+variants as conflicting extras (`cpu`/`cuda`,`vizapp`/`vizapp-cuda`), 
+which uv then resolves separately. As a result, one extra must always
+be installed for these projects. For `data`, this should be the `cpu`
+extra, as the `cuda` extra doesn't do anything.
+
 ## To-dos
 
 **Remote training.** The `remote_train: true` path submits a training
@@ -124,10 +147,11 @@ job to Nautilus. This hasn't been tested at all within Snakemake.
 `.snakemake/htcondor/{clusterid}.{log,out,err}` with no rule
 association.
 
-**Hermes release and Volta deprecation.** The export and infer
-packages pin hermes to `branch = "dev"` rather than a released
-version. Cutting a hermes release will also drop support for Volta-era
-GPUs.
+**Dependencies tracked from branches.** `export` and `infer` pin
+hermes to `ML4GW/hermes` branch `dev`, and `online` pins amplfi to
+`ML4GW/amplfi` branch `main`, rather than released versions. Both
+should move to releases once possible, though note that a hermes
+release will also drop support for Volta-era GPUs. 
 
 **Hermes Triton image discovery.** `triton_image` in `config.yaml`
 must currently be an explicit absolute path because the more modern
