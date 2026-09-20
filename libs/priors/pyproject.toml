@@ -6,14 +6,15 @@ authors = [{ name = "Ethan Jacob Marx", email = "ethan.marx@ligo.org" }]
 requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
-    "astropy>=5.0",
+    "astropy>=6.0",
     "bilby>=2.2.2,<3",
     "numpy>=2",
     "utils",
 ]
 
 [dependency-groups]
-dev = ["pytest~=7.3"]
+test = ["pytest>=8.2,<9"]
+dev = [{ include-group = "test" }]
 
 [tool.uv]
 
