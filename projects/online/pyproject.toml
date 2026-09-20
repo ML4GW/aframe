@@ -54,7 +54,7 @@ ledger = { workspace = true }
 p_astro = { workspace = true }
 architectures = { workspace = true }
 # TODO: point at released version once available
-amplfi = { git = "https://github.com/wbenoit26/amplfi", branch = "dev" }
+amplfi = { git = "https://github.com/ML4GW/amplfi", branch = "main" }
 
 [build-system]
 requires = ["hatchling"]
