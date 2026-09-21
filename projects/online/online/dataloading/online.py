@@ -54,7 +54,9 @@ def reset_t0(datadir, last_t0):
         matches = [fname_re.search(i.name) for i in datadir.iterdir()]
         t0s = np.array([int(i.group("start")) for i in matches if is_gwf(i)])
         if t0s.size > 0:
-            t0 = max(t0s)
+            # max of an array gives back a numpy int, which isn't
+            # JSON serializable when it reaches the heartbeat file
+            t0 = int(max(t0s))
             logging.info(f"Resetting timestamp to {t0}")
             return t0
 
