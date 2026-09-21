@@ -33,6 +33,14 @@ micromamba run -p /opt/env python -m \
 # env instead of managing its own. Export to pylock.toml rather than
 # requirements.txt so that the index each package was locked from is
 # recorded. This allows torch to be installed from the PyTorch CPU index. 
+# `--no-cache` makes uv unpack wheels into a temporary directory under
+# TMPDIR. Apptainer bind-mounts the host's /tmp into %post, so the default
+# would use the host's /tmp rather than the build filesystem, which
+# can easily run out of space. Keep it inside the image instead, where it
+# follows APPTAINER_TMPDIR, and remove it before the image is finalized.
+export TMPDIR=/opt/build-tmp
+mkdir -p $TMPDIR
+
 cd /opt/aframe
 micromamba run -p /opt/env \
     @@UV_CMD@@ --no-cache -o pylock.toml
@@ -41,6 +49,7 @@ micromamba run -p /opt/env \
     uv pip install --no-cache -r pylock.toml
 
 rm pylock.toml
+rm -rf /opt/build-tmp
 micromamba clean -ay
 
 @@PURGE_BUILD_TOOLS@@
