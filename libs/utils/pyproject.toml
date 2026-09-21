@@ -7,7 +7,7 @@ requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "numpy>=2",
-    "s3fs>=2024,<2025",
+    "s3fs>=2024",
     "astropy>=6.0.1",
     "scipy>=1.9",
 ]

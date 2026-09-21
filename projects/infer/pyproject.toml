@@ -9,14 +9,14 @@ authors = [
 ]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "jsonargparse~=4.24",
+    "jsonargparse[signatures]>=4.29,<5",
     "tqdm~=4.66",
     "psutil>=5.9",
     "torch==2.10.0",
     "ml4gw-hermes[torch]",
     "utils[torch]",
     "ledger",
-    "gwpy>=3.0",
+    "gwpy>=4.0,<5",
     "h5py>=3.10,<4",
     "numpy>=2",
 ]

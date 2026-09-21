@@ -13,8 +13,8 @@ dependencies = [
     "ledger[generation]",
     "priors",
     "numpy>=2",
-    "gwpy>=3.0.8,<4",
-    "jsonargparse>=4.18.0",
+    "gwpy>=4.0,<5",
+    "jsonargparse[signatures]>=4.29,<5",
 ]
 
 # Create two dependency groups to allow the splitting
