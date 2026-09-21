@@ -76,10 +76,12 @@ def data_iterator(
         )
     factor = int(factor)
     b, a = build_resample_filter(factor, numtaps)
-    # Need to crop off at least half the filter size from
-    # both sides of the resampled data. Stick with powers of
-    # 2 to avoid issues coverting between time and samples.
-    crop_size = 2 ** np.ceil(np.log2((numtaps / 2) / factor))
+    # filtfilt runs the filter forwards and then backwards, so its
+    # effective kernel is `numtaps` samples wide on either side of
+    # each output. Crop that much from both sides of the resampled
+    # data. Stick with powers of 2 to avoid issues converting
+    # between time and samples.
+    crop_size = 2 ** np.ceil(np.log2(numtaps / factor))
     crop_length = crop_size / sample_rate
 
     # slicing will take out 1 second of data from a buffer,
