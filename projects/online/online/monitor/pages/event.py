@@ -66,38 +66,57 @@ class EventPage(MonitorPage):
             """
 
         for png in sorted(self.plots_dir.glob("*.png")):
-            caption = self.plot_name_dict[png.stem]
+            caption = self.plot_name_dict.get(png.stem, png.stem)
             html_body += self.embed_image(png, caption)
 
         return html_body
 
-    def missing_plots(self):
-        source_plots = {png.name for png in self.source_event.glob("*.png")}
-        existing_plots = {png.name for png in self.plots_dir.glob("*.png")}
-        missing_plots = source_plots - existing_plots
-        if missing_plots:
-            return True
-        return False
-
-    def get_plots(self):
-        # Copy existing PNG files to the plots directory
+    def copy_source_plots(self) -> bool:
+        """
+        Copy over any plots the search has written that we don't
+        already have, reporting whether there were any.
+        """
+        copied = False
         for png in self.source_event.glob("*.png"):
-            shutil.copy(png, self.plots_dir / png.name)
+            if not (self.plots_dir / png.name).exists():
+                shutil.copy(png, self.plots_dir / png.name)
+                copied = True
+        return copied
 
-        # Generate specific plots
-        aframe_response_plot(
-            self.source_event,
-            self.plots_dir,
-            self.event_data["gpstime"],
+    def make_plot(self, pattern: str, plot, *args) -> bool:
+        """
+        Draw a plot unless we already have it, reporting whether we
+        have one now.
+        """
+        if list(self.plots_dir.glob(pattern)):
+            return False
+        try:
+            plot(self.source_event, self.plots_dir, *args)
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to make {pattern} for {self.source_event.name}: {e}"
+            )
+            return False
+
+        return bool(list(self.plots_dir.glob(pattern)))
+
+    def generate_plots(self) -> bool:
+        """Make any plots we're not copying over"""
+        gpstime = self.event_data["gpstime"]
+        made = self.make_plot(
+            "aframe_response.png",
+            aframe_response_plot,
+            gpstime,
             self.event_data["far"],
         )
-        asd_plot(self.source_event, self.plots_dir)
-        q_plots(
-            self.source_event,
-            self.plots_dir,
-            self.event_data["gpstime"],
-            self.online_args,
+        made |= self.make_plot("asds.png", asd_plot)
+
+        # q_plots writes one plot per IFO and skips any it can't make,
+        # so this is based off whether any got made.
+        made |= self.make_plot(
+            "*_qtransform.png", q_plots, gpstime, self.online_args
         )
+        return made
 
     def get_event_data(self, event: Path) -> pd.DataFrame:
         event_dict = {
@@ -165,48 +184,58 @@ class EventPage(MonitorPage):
                     event_dict["distance_mean"] = np.mean(distance)
                     event_dict["distance_median"] = np.median(distance)
         except Exception as e:
-            self.logger.info(
-                f"Raised exception {e} while trying to build event dict"
+            self.logger.warning(
+                f"Raised exception {e} while trying to build event dict "
+                f"for {event.name}"
             )
 
         return event_dict
 
     def update_dataframe(self) -> None:
-        # Append to the existing DataFrame or create a new one
-        if self.dataframe_file.exists():
-            prev_df = pd.read_hdf(self.dataframe_file)
-            if self.event_data["event"] in prev_df["event"].values:
-                # If the event already exists, update it
-                idx = np.argwhere(
-                    prev_df["event"] == self.event_data["event"]
-                )[0, 0]
-                prev_df.loc[idx] = self.event_data
-                df = prev_df
-            else:
-                # If the event is new, append it
-                df = pd.concat(
-                    [prev_df, pd.DataFrame([self.event_data])],
-                    ignore_index=True,
-                )
+        row = pd.DataFrame([self.event_data])
+        if not self.dataframe_file.exists():
+            row.to_hdf(self.dataframe_file, key="event_data", index=False)
+            return
+
+        prev_df = pd.read_hdf(self.dataframe_file)
+        matches = prev_df.index[
+            prev_df["gpstime"] == self.event_data["gpstime"]
+        ]
+        if not len(matches):
+            df = pd.concat([prev_df, row], ignore_index=True)
         else:
-            df = pd.DataFrame([self.event_data])
+            idx = matches[0]
+            if prev_df.loc[idx].equals(row.iloc[0]):
+                return
+            df = prev_df.copy()
+            df.loc[idx] = self.event_data
 
         df.to_hdf(self.dataframe_file, key="event_data", index=False)
 
     def write_html(self) -> None:
-        with open(self.html_file, "w") as f:
-            f.write(self.html_header(self.source_event.name))
-            f.write(self.html_body())
-            f.write(self.html_footer())
+        self.write_atomic(
+            self.html_file,
+            self.html_header(self.source_event.name)
+            + self.html_body()
+            + self.html_footer(),
+        )
 
     def create(self) -> None:
         """
-        Create or update the event page
+        Create or update the event page. Only work that hasn't been
+        done yet is redone.
         """
-        self.event_dir.mkdir(exist_ok=True, parents=True)
+        if self.event_data["gpstime"] is None:
+            self.logger.info(
+                f"{self.source_event.name} is not fully written yet, "
+                "will revisit it"
+            )
+            return
 
-        if self.missing_plots():
+        self.event_dir.mkdir(exist_ok=True, parents=True)
+        copied = self.copy_source_plots()
+        generated = self.generate_plots()
+        if copied or generated or not self.html_file.exists():
             self.logger.info(f"Processing {self.source_event.name}")
-            self.get_plots()
             self.write_html()
-            self.update_dataframe()
+        self.update_dataframe()

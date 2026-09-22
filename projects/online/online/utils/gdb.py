@@ -1,13 +1,13 @@
 import json
 import logging
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import bilby
+import certifi
 import h5py
 import matplotlib.pyplot as plt
-from gwpy.time import tconvert
+from ligo.gracedb.kafka import GraceDbKafkaProducer
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.skymap.io.fits import write_sky_map
 from ligo.skymap.tool.ligo_skymap_from_samples import (
@@ -15,6 +15,7 @@ from ligo.skymap.tool.ligo_skymap_from_samples import (
 )
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from online.utils.searcher import Event
+from online.utils.timing import gps_now
 
 if TYPE_CHECKING:
     from amplfi.utils.result import AmplfiResult
@@ -84,7 +85,7 @@ class GraceDb(_GraceDb):
             api_version="v2",
         )
 
-        # The kafka producer will be set in the subprocess that uses it
+        # Set by setup_kafka_producer in the subprocess that uses it
         self.kafka_producer = None
 
         self.server = server
@@ -93,6 +94,19 @@ class GraceDb(_GraceDb):
             self.logger = logging.getLogger()
         else:
             self.logger = logger
+
+    def setup_kafka_producer(self, bootstrap_server: str):
+        """
+        Create the kafka producer used to submit events
+
+        Must be called from the subprocess that uses it because
+        the producer can't be passed between processes.
+        """
+        self.kafka_producer = GraceDbKafkaProducer(
+            bootstrap_servers=bootstrap_server,
+            service_url=self.server.service_url,
+            ca_cert_path=certifi.where(),
+        )
 
     def submit(self, event: Event):
         self.logger.info(f"Submitting trigger to file {event.filename}")
@@ -127,7 +141,7 @@ class GraceDb(_GraceDb):
         # TODO: determine underlying issue here
         # Handle issue where sometimes the pipeline lags,
         # and the frame file has already left the buffer
-        submission_time = float(tconvert(datetime.now(tz=UTC)))
+        submission_time = gps_now()
         try:
             t_write = event.get_frame_write_time()
         except FileNotFoundError:
@@ -357,6 +371,9 @@ class LocalGraceDb(GraceDb):
     """
     Mock GraceDB client that just writes events locally
     """
+
+    def setup_kafka_producer(self, bootstrap_server: str):
+        pass
 
     def create_event(self, filename: str, **_):
         return filename

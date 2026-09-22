@@ -52,7 +52,9 @@ def reset_t0(datadir, last_t0):
         matches = [fname_re.search(i.name) for i in datadir.iterdir()]
         t0s = np.array([int(i.group("start")) for i in matches if is_gwf(i)])
         if t0s.size > 0:
-            t0 = max(t0s)
+            # max of an array gives back a numpy int, which isn't
+            # JSON serializable when it reaches the heartbeat file
+            t0 = int(max(t0s))
             logging.info(f"Resetting timestamp to {t0}")
             return t0
 
@@ -91,10 +93,12 @@ def data_iterator(
         )
     factor = int(factor)
     b, a = build_resample_filter(factor, numtaps)
-    # Need to crop off at least half the filter size from
-    # both sides of the resampled data. Stick with powers of
-    # 2 to avoid issues coverting between time and samples.
-    crop_size = 2 ** np.ceil(np.log2((numtaps / 2) / factor))
+    # filtfilt runs the filter forwards and then backwards, so its
+    # effective kernel is `numtaps` samples wide on either side of
+    # each output. Crop that much from both sides of the resampled
+    # data. Stick with powers of 2 to avoid issues converting
+    # between time and samples.
+    crop_size = 2 ** np.ceil(np.log2(numtaps / factor))
     crop_length = crop_size / sample_rate
 
     frame_buffer = np.zeros((len(ifos), 0))

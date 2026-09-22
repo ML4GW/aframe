@@ -37,6 +37,9 @@ default-groups = [
     "dev",
     "docs",
 ]
+override-dependencies = [
+    "geventhttpclient>=2.3.3"
+]
 
 required-version = ">=0.9.30"
 

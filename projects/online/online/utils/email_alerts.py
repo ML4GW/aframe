@@ -4,6 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from lal import gpstime
+from online.utils.timing import gps_now
 
 SENDER_EMAIL = "aframe-online"
 
@@ -23,8 +24,7 @@ def send_email(message: MIMEMultipart, recipients: list[str]):
 def send_error_email(
     name: str, error: str, traceback: str, recipients: list[str]
 ):
-    now = gpstime.gps_time_now()
-    date = gpstime.gps_to_utc(now)
+    date = gpstime.gps_to_utc(int(gps_now()))
 
     # Create message
     message = MIMEMultipart()
@@ -82,8 +82,7 @@ def send_init_email(recipients: list[str], outdir):
     message["Subject"] = "Aframe Online Initialized"
     message["From"] = SENDER_EMAIL
     message["To"] = ", ".join(recipients)
-    now = gpstime.gps_time_now()
-    date = gpstime.gps_to_utc(now)
+    date = gpstime.gps_to_utc(int(gps_now()))
 
     # Email body
     body = f"""

@@ -150,6 +150,7 @@ members = [
     "utils",
 ]
 constraints = [{ name = "torchaudio", specifier = "==2.10.0" }]
+overrides = [{ name = "geventhttpclient", specifier = ">=2.3.3" }]
 
 [[package]]
 name = "aframe"

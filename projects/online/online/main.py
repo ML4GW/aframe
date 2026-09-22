@@ -19,9 +19,11 @@ from torch.multiprocessing import Array, Process, Queue
 from utils.preprocessing import BatchWhitener
 
 from online.dataloading import (
+    arrakis_data_iterator,
     data_iterator,
-    ngdd_data_iterator,
+    get_block_duration,
     offline_data_iterator,
+    stream_channels,
 )
 from online.subprocesses import (
     amplfi_subprocess,
@@ -38,7 +40,13 @@ from online.utils.email_alerts import send_error_email, send_init_email
 from online.utils.gdb import GdbServer
 from online.utils.pe import run_amplfi, warmup_amplfi
 from online.utils.searcher import Searcher
+from online.utils.segments import (
+    PipelineState,
+    SegmentWriter,
+    pipeline_state,
+)
 from online.utils.snapshotter import OnlineSnapshotter
+from online.utils.timing import gps_now
 
 SECONDS_PER_DAY = 86400
 # igwn_auth_utils finds tokens only if they have at least 10 minutes left
@@ -171,6 +179,7 @@ def search(
     time_offset: float,
     device: str,
     outdir: Path,
+    segment_writer: SegmentWriter,
     emails: list[str] | None = None,
 ):
     significance_outputs, timing_outputs = None, None
@@ -179,7 +188,7 @@ def search(
     # was analysis ready or not
     in_spec = False
 
-    virgo_ready = [False] * (input_buffer.buffer_length // update_size)
+    virgo_ready = [False] * int(input_buffer.buffer_length // update_size)
 
     state = snapshotter.initial_state
     for X, t0, ready in data_it:
@@ -261,6 +270,8 @@ def search(
                 input_buffer.reset()
                 output_buffer.reset()
 
+                segment_writer.update(PipelineState.MISSING_DATA, t0, ready)
+
                 # nothing left to do, so move on to next frame
                 continue
 
@@ -317,6 +328,11 @@ def search(
                 significance_outputs, timing_outputs, t0 + time_offset
             )
 
+        # record what we were able to do with this block
+        segment_writer.update(
+            pipeline_state(hl_ready, snapshotter.full_psd_present), t0, ready
+        )
+
         # if we found an event, process it!
         if event is not None:
             if all(virgo_ready) and len(ready) == 3:
@@ -369,7 +385,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
-    data_source: Literal["frames", "ngdd"] = "frames",
+    data_source: Literal["frames", "arrakis"] = "frames",
     state_channels: list[str] | None = None,
     fftlength: float | None = None,
     highpass: float | None = None,
@@ -378,6 +394,7 @@ def main(
     refractory_period: float = 8,
     far_threshold: float = 1,
     server: "GdbServer" = "local",
+    gracedb_kafka_bootstrap_server: str = "kafkagracedb1.igwn.org:9092",
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
@@ -471,6 +488,8 @@ def main(
         server:
             GraceDB server to use:
             "local", "playground", "test" or "production"
+        gracedb_kafka_bootstrap_server:
+            Kafka bootstrap server address for GraceDB event submission.
         ifo_suffix:
             Optional suffix for accessing data from /dev/shm.
             Useful when analyzing alternative streams like
@@ -516,6 +535,11 @@ def main(
             Setting precision to 'high' or 'medium' can significantly
             reduce sampling times. Default is 'highest'.
     """  # noqa: E501
+
+    # note when this process came up so that the time spent loading
+    # models and warming up before the first block of data arrives is
+    # accounted for
+    search_start = gps_now()
 
     # create various queues for message
     # passing between subprocesses
@@ -640,6 +664,7 @@ def main(
         outdir / "events",
         amplfi_queue,
         pastro_queue,
+        gracedb_kafka_bootstrap_server,
     )
     event_process = Process(
         target=event_creation_subprocess,
@@ -706,9 +731,12 @@ def main(
     # when the main process exits
     atexit.register(cleanup_subprocesses, subprocesses)
 
-    if data_source == "ngdd":
-        update_size = 1 / 16
-        data_it = ngdd_data_iterator(
+    if data_source == "arrakis":
+        update_size = get_block_duration(
+            stream_channels(channels, ifos, state_channels)
+        )
+        logging.info(f"Arrakis update size: {update_size} s")
+        data_it = arrakis_data_iterator(
             strain_channels=channels,
             ifos=ifos,
             sample_rate=sample_rate,
@@ -738,8 +766,14 @@ def main(
 
     else:
         raise ValueError(
-            f"Invalid data source {data_source}. Must be 'ngdd' or 'frames'"
+            f"Invalid data source {data_source}. Must be 'arrakis' or 'frames'"
         )
+
+    # record which state we're in over each block of data so that the
+    # monitor can report the search's duty cycle
+    segment_writer = SegmentWriter(
+        outdir, update_size, process_start=search_start
+    )
 
     # initialize a buffer for storing recent strain data,
     # and for storing integrated aframe outputs
@@ -805,7 +839,7 @@ def main(
         kernel_length=kernel_length,
         sample_rate=sample_rate,
         inference_sampling_rate=online_inference_rate,
-        batch_size=update_size * online_inference_rate,
+        batch_size=int(update_size * online_inference_rate),
         fduration=fduration,
         fftlength=fftlength,
         highpass=highpass,
@@ -814,7 +848,6 @@ def main(
 
     # Hard-coding number of channels until Aframe is generalized
     snapshotter = OnlineSnapshotter(
-        update_size=update_size,
         num_channels=2,
         psd_length=psd_length,
         kernel_length=kernel_length,
@@ -898,6 +931,7 @@ def main(
             device=device,
             emails=emails,
             outdir=outdir,
+            segment_writer=segment_writer,
         )
     except Exception as e:
         # if error is from a subprocess,
@@ -906,6 +940,8 @@ def main(
             tb = traceback.format_exc()
             send_error_email("main", str(e), tb, emails)
         raise e
+    finally:
+        segment_writer.close()
 
     if mode == "offline":
         logging.info("Offline analysis complete")
