@@ -188,3 +188,9 @@ mass_combos:
 
 source_prior: *prior
 dt: null  # recovery time delta in seconds (null to disable)
+
+# Data-quality veto categories to apply before computing sensitive volume.
+# Empty or null to apply none.
+# The O3 definitions have CAT1/CAT2/CAT3 plus GATES, while the O4 ones are
+# CAT1 only. CATALOG vetoes known events from GWOSC.
+vetos: []

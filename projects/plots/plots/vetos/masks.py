@@ -10,11 +10,10 @@ from astropy.config.paths import get_cache_dir
 from ledger.events import veto_mask
 
 from plots.vetos import (
-    GATE_PATHS,
     VETO_CATEGORIES,
-    VETO_DEFINER_FILE,
     VetoParser,
     get_catalog_vetos,
+    get_epoch,
 )
 
 if TYPE_CHECKING:
@@ -39,11 +38,16 @@ def combine_masks(
 
 
 def _segments_key(
-    categories: Sequence[str], ifos: Sequence[str], start: float, stop: float
+    categories: Sequence[str],
+    ifos: Sequence[str],
+    start: float,
+    stop: float,
+    veto_definer_file: Path,
+    gate_paths: dict[str, Path],
 ) -> str:
     """Cache key covering both the query and the source files it reads."""
     h = hashlib.sha256()
-    for path in [VETO_DEFINER_FILE, *GATE_PATHS.values()]:
+    for path in [veto_definer_file, *gate_paths.values()]:
         if path.exists():
             h.update(path.read_bytes())
     query = {
@@ -62,13 +66,29 @@ def load_or_fetch_segments(
     start: float,
     stop: float,
     cache: Path = DEFAULT_SEGMENTS_CACHE,
+    veto_definer_file: Path | None = None,
+    gate_paths: dict[str, Path] | None = None,
 ) -> dict[str, dict[str, np.ndarray]]:
     """Segment lookup for `categories`, cached to `cache` on disk.
+
+    Args:
+        veto_definer_file: the LIGO_LW veto definer to read. Defaults to the
+            shipped definitions for the observing run containing
+            `[start, stop)`, which raises if no shipped epoch covers it.
+        gate_paths: per-IFO gate files, needed only for the `GATES`
+            category. Defaults alongside `veto_definer_file`.
 
     Returns:
         `{category: {ifo: (N, 2) array of [start, end) segment bounds}}`.
     """
-    key = _segments_key(categories, ifos, start, stop)
+    if veto_definer_file is None or gate_paths is None:
+        epoch = get_epoch(start, stop)
+        veto_definer_file = veto_definer_file or epoch.veto_definer_file
+        gate_paths = epoch.gate_paths if gate_paths is None else gate_paths
+
+    key = _segments_key(
+        categories, ifos, start, stop, veto_definer_file, gate_paths
+    )
     if cache.exists():
         with open(cache) as f:
             cached = json.load(f)
@@ -83,7 +103,7 @@ def load_or_fetch_segments(
     parser_categories = [c for c in categories if c != "CATALOG"]
     if parser_categories:
         veto_parser = VetoParser(
-            VETO_DEFINER_FILE, GATE_PATHS, start, stop, ifos
+            veto_definer_file, gate_paths, start, stop, ifos
         )
         for cat in parser_categories:
             segments[cat] = veto_parser.get_vetos(cat)
