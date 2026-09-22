@@ -31,6 +31,13 @@ apt-get purge -y build-essential
 apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*"""
 
+COPY_EXCLUDE: set[str] = {
+    ".venv",
+    ".pytest_cache",
+    "__pycache__",
+    "apptainer.def",
+}
+
 
 def _local_libs(project_name: str) -> list[str]:
     """
@@ -58,15 +65,39 @@ def _local_libs(project_name: str) -> list[str]:
     return sorted(seen)
 
 
+def _copy_entries(
+    source_prefix: str, directory: Path, destination: str
+) -> list[str]:
+    """
+    Build %files lines that copy a directory's contents entry by entry.
+    """
+    names = sorted(
+        path.name
+        for path in directory.iterdir()
+        if path.name not in COPY_EXCLUDE
+    )
+    return [f"{source_prefix}{name} {destination}/{name}" for name in names]
+
+
 def _get_files_block(project_name: str) -> str:
     """
     Build the %files block for an apptainer definition: the project itself,
     the `libs/` packages it depends on, and the root pyproject and lockfile
     that uv resolves the workspace against.
     """
-    lines = [f". /opt/aframe/projects/{project_name}/"]
+    lines = _copy_entries(
+        "",
+        BASE_DIR / project_name,
+        f"/opt/aframe/projects/{project_name}",
+    )
     for lib in _local_libs(project_name):
-        lines.append(f"../../libs/{lib} /opt/aframe/libs/{lib}")
+        lines.extend(
+            _copy_entries(
+                f"../../libs/{lib}/",
+                LIBS_DIR / lib,
+                f"/opt/aframe/libs/{lib}",
+            )
+        )
 
     lines.append("../../pyproject.toml /opt/aframe/pyproject.toml")
     lines.append("../../uv.lock /opt/aframe/uv.lock")

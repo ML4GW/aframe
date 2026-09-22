@@ -19,7 +19,17 @@ cd /opt/aframe/projects/@@PROJECT@@
 # when binding the repo into the container
 export UV_PROJECT_ENVIRONMENT=/opt/env
 
+# `--no-cache` makes uv unpack wheels into a temporary directory under
+# TMPDIR. Apptainer bind-mounts the host's /tmp into %post, so the default
+# would use the host's /tmp rather than the build filesystem, which
+# can easily run out of space. Keep it inside the image instead, where it
+# follows APPTAINER_TMPDIR, and remove it before the image is finalized.
+export TMPDIR=/opt/build-tmp
+mkdir -p $TMPDIR
+
 @@UV_CMD@@ --no-cache
+
+rm -rf /opt/build-tmp
 
 @@PURGE_BUILD_TOOLS@@
 

@@ -494,17 +494,34 @@ wheels = [
 
 [[package]]
 name = "arrakis"
-version = "0.2.0"
+version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "arrakis-schema" },
+    { name = "confluent-kafka" },
     { name = "gpstime" },
+    { name = "igwn-auth-utils" },
+    { name = "jsonschema" },
     { name = "numpy" },
     { name = "pyarrow" },
+    { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/63/f5a38c69ace7a42a905df2ee18c1771ddca985c2f2d86659dd795199280c/arrakis-0.2.0.tar.gz", hash = "sha256:ca2338f289975cde0785040f6ae69c940262fae1c86d42d0e14fa9521a4a66e9", size = 23889, upload-time = "2025-03-11T20:31:53.099Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/e8/e1c3300fb5ba313da80e901a8e6e76a1ca674cbc89937927eebc0d7eae67/arrakis-0.20.0.tar.gz", hash = "sha256:3234269de8a12d086de7962a08ea091934b7d0fa0c851e79be3b65b5bb55f33a", size = 176725, upload-time = "2026-09-15T01:49:22.652Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/d2/e14248940f1174b80b83d06a36ed8d605976fad4975e36218e7399679002/arrakis-0.2.0-py3-none-any.whl", hash = "sha256:4c1235afb90f132f6ddc383962914463cf461b0a8b12964e9cbc3bc6d28bf1ee", size = 28799, upload-time = "2025-03-11T20:31:54.503Z" },
+    { url = "https://files.pythonhosted.org/packages/84/c3/662063c8f2efc2b59cb3a6ba574107708beaf58002dd5e14613b731418ff/arrakis-0.20.0-py3-none-any.whl", hash = "sha256:3a4ba7f48865372e1ffe695a261cdff3beb042f195f228036610e09de51e2d27", size = 164842, upload-time = "2026-09-15T01:49:21.18Z" },
+]
+
+[[package]]
+name = "arrakis-schema"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-resources", marker = "python_full_version < '3.12' or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/81/2ad9f27ba2bf3dd933c21b0e80c86003d9894b0f2b436345426fd2ee60fa/arrakis_schema-0.5.0.tar.gz", hash = "sha256:a8170aa4becf964c10c5f75e9f3fdeb492ed18be3892f3bda62b3dbe7c1140be", size = 82472, upload-time = "2026-07-27T19:15:17.391Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/73/dfc894155c87609d1cf04ecc3594f0e947629a2132ba15b1f36701a27e30/arrakis_schema-0.5.0-py3-none-any.whl", hash = "sha256:e30660ecae40b049d896831187c48c0fcea98bc8ad4bf5042d8a24681c19245e", size = 13157, upload-time = "2026-07-27T19:15:18.48Z" },
 ]
 
 [[package]]
@@ -1444,7 +1461,7 @@ version = "0.0.1"
 source = { editable = "projects/data" }
 dependencies = [
     { name = "gwpy" },
-    { name = "jsonargparse" },
+    { name = "jsonargparse", extra = ["signatures"] },
     { name = "ledger", extra = ["generation"] },
     { name = "numpy" },
     { name = "priors" },
@@ -1475,8 +1492,8 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gwpy", specifier = ">=3.0.8,<4" },
-    { name = "jsonargparse", specifier = ">=4.18.0" },
+    { name = "gwpy", specifier = ">=4.0,<5" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "ledger", extras = ["generation"], editable = "libs/ledger" },
     { name = "ml4gw", marker = "extra == 'cpu'", specifier = ">=0.7.2" },
     { name = "ml4gw", marker = "extra == 'cuda'", specifier = ">=0.7.2" },
@@ -1734,7 +1751,7 @@ dependencies = [
     { name = "boto3" },
     { name = "fsspec", extra = ["s3"] },
     { name = "h5py" },
-    { name = "jsonargparse" },
+    { name = "jsonargparse", extra = ["signatures"] },
     { name = "ml4gw" },
     { name = "ml4gw-hermes", extra = ["torch"] },
     { name = "nvidia-cudnn-cu12" },
@@ -1764,13 +1781,13 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = "~=1.30" },
-    { name = "fsspec", extras = ["s3"], specifier = ">=2024,<2025" },
+    { name = "fsspec", extras = ["s3"], specifier = ">=2024" },
     { name = "h5py", specifier = ">=3.10,<4" },
-    { name = "jsonargparse", specifier = ">=4.27.1,<5" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "ml4gw", specifier = ">=0.8.0" },
     { name = "ml4gw-hermes", extras = ["torch"], git = "https://github.com/ML4GW/hermes?branch=dev" },
     { name = "nvidia-cudnn-cu12" },
-    { name = "s3fs", specifier = ">=2024,<2025" },
+    { name = "s3fs", specifier = ">=2024" },
     { name = "tensorrt-cu12", specifier = "==10.11.0.33" },
     { name = "torch", specifier = "==2.10.0" },
     { name = "utils", extras = ["torch"], editable = "libs/utils" },
@@ -1802,11 +1819,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.17.0"
+version = "3.32.7"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dc/9c/0b15fb47b464e1b663b1acd1253a062aa5feecb07d4e597daea542ebd2b5/filelock-3.17.0.tar.gz", hash = "sha256:ee4e77401ef576ebb38cd7f13b9b28893194acc20a8e68e18730ba9c0e54660e", size = 18027, upload-time = "2025-01-21T20:04:49.099Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/59/e19834834cb01a32febfbb0f8a23a9088088f5d45991824ff2bc3b5e8acb/filelock-3.32.7.tar.gz", hash = "sha256:37b8a3d9811b0f9aef7e5ec5c71bb320de52df51e6ca9bcd6f5ad81187660da7", size = 225154, upload-time = "2026-09-16T00:24:20.907Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/ec/00d68c4ddfedfe64159999e5f8a98fb8442729a63e2077eb9dcd89623d27/filelock-3.17.0-py3-none-any.whl", hash = "sha256:533dc2f7ba78dc2f0f531fc6c4940addf7b70a481e269a5a3b93be94ffbe8338", size = 16164, upload-time = "2025-01-21T20:04:47.734Z" },
+    { url = "https://files.pythonhosted.org/packages/15/df/31098c5aeb4d966b553641472bd55fcf5fdfac953549894b8a765ba44e91/filelock-3.32.7-py3-none-any.whl", hash = "sha256:65ff0d0190ea42038b32bda4b77834fb05be2cad4c5b9b01aa4dfb3614536e52", size = 100157, upload-time = "2026-09-16T00:24:19.543Z" },
 ]
 
 [[package]]
@@ -2089,7 +2106,7 @@ wheels = [
 
 [[package]]
 name = "gwpy"
-version = "3.0.14"
+version = "4.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astropy" },
@@ -2108,9 +2125,9 @@ dependencies = [
     { name = "scipy" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/cd/bb165e47b18cd255c1ee1fcd59802544d8de57566b449cfdaf848b69108f/gwpy-3.0.14.tar.gz", hash = "sha256:bf25d19763c9128f515144349d3f70925a8334bbd22950c01d35bb954f323f52", size = 1543294, upload-time = "2026-01-16T13:02:28.432Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/73/7b/78bf0a0ada615d3ae5121a1ba8ec7874b8878c9c0f060d12b36b2d5d8518/gwpy-4.0.2.tar.gz", hash = "sha256:4bc2babaaf2cb33a68ec472cc224c7d60e65a1d55b1b2f92ef05755a16d919bd", size = 1618769, upload-time = "2026-08-14T16:51:45.607Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/46/c893a66bd97f08ddf4a7cfde52cc58fb8e2c83acfa915f3c02c00f0aa721/gwpy-3.0.14-py3-none-any.whl", hash = "sha256:f61ed9d4b3eba7f9f534f72f03956f158ed7f9101726b5387c29fe57ce45c77e", size = 1395825, upload-time = "2026-01-16T13:02:26.55Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/43/34270f2bc754e8da1b3e8acc125eb05daadb98d12f5bd7fb1f5d62f03b6a/gwpy-4.0.2-py3-none-any.whl", hash = "sha256:e394587c00c40d3c168bf3d98e983611a2b638c4bc893bacfcfc1d71eef5f7c3", size = 1559028, upload-time = "2026-08-14T16:51:43.621Z" },
 ]
 
 [[package]]
@@ -2378,13 +2395,22 @@ wheels = [
 ]
 
 [[package]]
+name = "importlib-resources"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/06/b56dfa750b44e86157093bc8fca0ab81dccbf5260510de4eaf1cb69b5b99/importlib_resources-7.1.0.tar.gz", hash = "sha256:0722d4c6212489c530f2a145a34c0a7a3b4721bc96a15fada5930e2a0b760708", size = 44985, upload-time = "2026-04-12T16:36:09.232Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl", hash = "sha256:1bd7b48b4088eddb2cd16382150bb515af0bd2c70128194392725f82ad2c96a1", size = 37232, upload-time = "2026-04-12T16:36:08.219Z" },
+]
+
+[[package]]
 name = "infer"
 version = "0.0.1"
 source = { editable = "projects/infer" }
 dependencies = [
     { name = "gwpy" },
     { name = "h5py" },
-    { name = "jsonargparse" },
+    { name = "jsonargparse", extra = ["signatures"] },
     { name = "ledger" },
     { name = "ml4gw-hermes", extra = ["torch"] },
     { name = "numpy" },
@@ -2407,9 +2433,9 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gwpy", specifier = ">=3.0" },
+    { name = "gwpy", specifier = ">=4.0,<5" },
     { name = "h5py", specifier = ">=3.10,<4" },
-    { name = "jsonargparse", specifier = "~=4.24" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "ledger", editable = "libs/ledger" },
     { name = "ml4gw-hermes", extras = ["torch"], git = "https://github.com/ML4GW/hermes?branch=dev" },
     { name = "numpy", specifier = ">=2" },
@@ -3018,7 +3044,7 @@ source = { editable = "libs/ledger" }
 dependencies = [
     { name = "astropy" },
     { name = "h5py" },
-    { name = "ligo-segments" },
+    { name = "igwn-segments" },
     { name = "numpy" },
     { name = "tqdm" },
     { name = "utils" },
@@ -3047,8 +3073,8 @@ test = [
 requires-dist = [
     { name = "astropy", specifier = ">=6.0" },
     { name = "h5py", specifier = ">=3.10.0,<4" },
+    { name = "igwn-segments", specifier = ">=2.1,<3" },
     { name = "lalsuite", marker = "extra == 'generation'" },
-    { name = "ligo-segments", specifier = ">=1.4.0,<2" },
     { name = "numpy", specifier = ">=2" },
     { name = "pycbc", marker = "extra == 'generation'", specifier = ">=2.5.1,<3" },
     { name = "tqdm", specifier = ">=4.66" },
@@ -3140,19 +3166,6 @@ wheels = [
 kafka = [
     { name = "certifi" },
     { name = "confluent-kafka" },
-]
-
-[[package]]
-name = "ligo-segments"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/81/60/8de5c89e4e5fc760649cee0c773418ecc920c3dae21ac5656fd3e5e21a9d/ligo-segments-1.4.0.tar.gz", hash = "sha256:e072a844713c5b02efdcaf5bfe4c3a8cd9ef225b08cfd3202a4e185e0f71f5dc", size = 51015, upload-time = "2021-10-18T14:47:39.224Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/db/b2de07a032a766d34480e93e6d4ecda5a4d651bb6a5e3286c2624d6c181d/ligo_segments-1.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:da82ae2b839bad0027e0a492b3673344e62360747d41194a265563e6c2903c7d", size = 50007, upload-time = "2022-11-02T16:54:29.221Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/37/c962f26408ce45271a5a3aaa918f7beae74a8e8a6f00bbe5fdf77fd778ca/ligo_segments-1.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:601be6d92e52bdebbb5a82b608ed1ceb781a0ea86b3e5333d61af77575b32664", size = 50555, upload-time = "2023-10-09T11:39:10.788Z" },
 ]
 
 [[package]]
@@ -4053,7 +4066,7 @@ dependencies = [
     { name = "certifi" },
     { name = "gwpy" },
     { name = "h5py" },
-    { name = "jsonargparse" },
+    { name = "jsonargparse", extra = ["signatures"] },
     { name = "lalsuite" },
     { name = "ledger" },
     { name = "ligo-gracedb", extra = ["kafka"] },
@@ -4088,13 +4101,13 @@ test = [
 requires-dist = [
     { name = "amplfi", git = "https://github.com/ML4GW/amplfi?branch=main" },
     { name = "architectures", editable = "libs/architectures" },
-    { name = "arrakis", specifier = ">=0.2.0,<0.3" },
+    { name = "arrakis", specifier = ">=0.20,<0.21" },
     { name = "astropy", specifier = ">=6.0" },
     { name = "bilby", specifier = ">=2.2.2,<3" },
     { name = "certifi" },
-    { name = "gwpy", specifier = ">=3.0.12" },
+    { name = "gwpy", specifier = ">=4.0,<5" },
     { name = "h5py", specifier = ">=3.10,<4" },
-    { name = "jsonargparse", specifier = ">=4.18.0" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "lalsuite" },
     { name = "ledger", editable = "libs/ledger" },
     { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.15.4" },
@@ -4520,11 +4533,12 @@ dependencies = [
     { name = "gwosc" },
     { name = "gwpy" },
     { name = "h5py" },
-    { name = "jsonargparse" },
+    { name = "igwn-ligolw" },
+    { name = "jsonargparse", extra = ["signatures"] },
+    { name = "lalsuite" },
     { name = "ledger" },
     { name = "numpy" },
     { name = "priors" },
-    { name = "python-ligo-lw" },
     { name = "scipy" },
     { name = "tqdm" },
     { name = "utils" },
@@ -4563,9 +4577,11 @@ requires-dist = [
     { name = "astropy", specifier = ">=6.0" },
     { name = "bokeh", specifier = "~=3.0" },
     { name = "gwosc" },
-    { name = "gwpy", specifier = "~=3.0.8" },
+    { name = "gwpy", specifier = ">=4.0,<5" },
     { name = "h5py", specifier = ">=3.10,<4" },
-    { name = "jsonargparse", specifier = ">=4.27.4,<5" },
+    { name = "igwn-ligolw", specifier = ">=2.1,<3" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
+    { name = "lalsuite" },
     { name = "ledger", editable = "libs/ledger" },
     { name = "matplotlib", marker = "extra == 'vizapp'", specifier = ">=3.9.4" },
     { name = "matplotlib", marker = "extra == 'vizapp-cuda'", specifier = ">=3.9.4" },
@@ -4575,7 +4591,6 @@ requires-dist = [
     { name = "pillow", marker = "extra == 'vizapp'", specifier = ">=11" },
     { name = "pillow", marker = "extra == 'vizapp-cuda'", specifier = ">=11" },
     { name = "priors", editable = "libs/priors" },
-    { name = "python-ligo-lw", specifier = ">=1.8.3,<2" },
     { name = "scipy", specifier = ">=1.9" },
     { name = "torch", marker = "extra == 'vizapp'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "plots", extra = "vizapp" } },
     { name = "torch", marker = "extra == 'vizapp-cuda'" },
@@ -5122,21 +5137,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/86/45/0ae98e958fc53cfdc
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b9/9d/5eed195961588f930db3008199b8023063ebd0253b9de9f0f13f3763b819/python_jsonpath-1.3.0-py3-none-any.whl", hash = "sha256:ce586ec5bd934ce97bc2f06600b00437d9684138b77273ced5b70694a8ef3a76", size = 54354, upload-time = "2025-02-04T08:40:26.979Z" },
 ]
-
-[[package]]
-name = "python-ligo-lw"
-version = "1.8.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ligo-segments" },
-    { name = "lscsoft-glue" },
-    { name = "numpy" },
-    { name = "python-dateutil" },
-    { name = "pyyaml" },
-    { name = "six" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/13/b9/bc552b9b2cd0b0bddffae90aa7f1b95229d323dadb742a48576c7a67ab3f/python_ligo_lw-1.8.4.tar.gz", hash = "sha256:1ccaefeeda2a1cddca22b021ec88f550e24f87293a6f9753b3912e41cf0c95d1", size = 2428804, upload-time = "2025-06-30T14:37:58.437Z" }
 
 [[package]]
 name = "python-rapidjson"
@@ -6626,18 +6626,19 @@ wheels = [
 
 [[package]]
 name = "torchmetrics"
-version = "0.11.4"
+version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "lightning-utilities" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra != 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/ed/9f76e2d65d2e6d67a0ba097f34f4b618fb7466d731476d3d3440dfe2cb8e/torchmetrics-0.11.4.tar.gz", hash = "sha256:1fe45a14b44dd65d90199017dd5a4b5a128d56a8a311da7916c402c18c671494", size = 307144, upload-time = "2023-03-10T22:02:20.455Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/34/39b8b749333db56c0585d7a11fa62a283c087bb1dfc897d69fb8cedbefb1/torchmetrics-1.9.0.tar.gz", hash = "sha256:a488609948600df52d3db4fcdab02e62aab2a85ef34da67037dc3e65b8512faa", size = 581765, upload-time = "2026-03-09T17:41:22.443Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/47/6e9f9b41c48750a45ad07cc6d43a2979bfc09e6989656aece97cc59cbef1/torchmetrics-0.11.4-py3-none-any.whl", hash = "sha256:45f892f3534e91f3ad9e2488d1b05a93b7cb76b7d037969435a41a1f24750d9a", size = 519162, upload-time = "2023-03-10T22:02:18.818Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/a2/c7f6ebf546f8f644edf0f999aa98ece106986a77a7b922316bf6414ff825/torchmetrics-1.9.0-py3-none-any.whl", hash = "sha256:bfdcbff3dd1d96b3374bb2496eb39f23c4b28b8a845b6a18c313688e0d2d9ca1", size = 983384, upload-time = "2026-03-09T17:41:19.756Z" },
 ]
 
 [[package]]
@@ -6714,10 +6715,10 @@ requires-dist = [
     { name = "architectures", editable = "libs/architectures" },
     { name = "boto3", specifier = "~=1.30" },
     { name = "botocore" },
-    { name = "filelock", specifier = ">=3.13.1,<4" },
-    { name = "fsspec", extras = ["s3"], specifier = ">=2024,<2025" },
+    { name = "filelock", specifier = ">=3.13.1,<5" },
+    { name = "fsspec", extras = ["s3"], specifier = ">=2024" },
     { name = "h5py", specifier = ">=3.10,<4" },
-    { name = "jsonargparse", extras = ["signatures"], specifier = "~=4.29" },
+    { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "kr8s", specifier = ">=0.20.0" },
     { name = "ledger", editable = "libs/ledger" },
     { name = "lightning", specifier = ">=2.2.1" },
@@ -6725,9 +6726,9 @@ requires-dist = [
     { name = "ml4gw", specifier = ">=0.8.0" },
     { name = "numpy", specifier = ">=2" },
     { name = "ray", extras = ["default", "tune"], specifier = ">=2.8.0,<3" },
-    { name = "s3fs", specifier = ">=2024,<2025" },
+    { name = "s3fs", specifier = ">=2024" },
     { name = "torch", specifier = "==2.10.0" },
-    { name = "torchmetrics", specifier = ">=0.11,<0.12" },
+    { name = "torchmetrics", specifier = ">=1.0,<2" },
     { name = "utils", extras = ["torch"], editable = "libs/utils" },
     { name = "wandb", specifier = ">=0.15" },
 ]
@@ -6919,7 +6920,7 @@ requires-dist = [
     { name = "h5py", marker = "extra == 'torch'", specifier = ">=3.10,<4" },
     { name = "ml4gw", marker = "extra == 'torch'", specifier = ">=0.8.0" },
     { name = "numpy", specifier = ">=2" },
-    { name = "s3fs", specifier = ">=2024,<2025" },
+    { name = "s3fs", specifier = ">=2024" },
     { name = "scipy", specifier = ">=1.9" },
     { name = "torch", marker = "extra == 'torch'" },
 ]

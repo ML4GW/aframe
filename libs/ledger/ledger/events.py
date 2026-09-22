@@ -2,7 +2,7 @@ import warnings
 from dataclasses import dataclass
 from typing import TypeVar
 
-import ligo.segments
+import igwn_segments
 import numpy as np
 
 from ledger.injections import InterferometerResponseSet, shift_mask
@@ -32,8 +32,8 @@ def veto_mask(times: np.ndarray, vetos: np.ndarray) -> np.ndarray:
             f"Veto segments must have start < end, got {segs[bad].tolist()}"
         )
 
-    merged = ligo.segments.segmentlist(
-        ligo.segments.segment(start, end) for start, end in segs
+    merged = igwn_segments.segmentlist(
+        igwn_segments.segment(start, end) for start, end in segs
     )
     merged.coalesce()
     edges = np.array(merged).ravel()
