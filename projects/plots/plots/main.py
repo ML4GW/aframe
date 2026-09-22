@@ -23,17 +23,43 @@ from plots.vetos.masks import (
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
-def _apply_vetos(background, foreground, vetos, ifos, start, stop):
-    """Filter background and foreground events through veto categories."""
-    segments = load_or_fetch_segments(vetos, ifos, start, stop)
+def _apply_vetos(
+    background,
+    foreground,
+    vetos,
+    ifos,
+    start,
+    stop,
+    veto_definer_file=None,
+):
+    """Filter background and foreground events through veto categories.
+
+    The background's livetime is reduced by the fraction of injections the
+    same vetoes remove. Vetoing a time in one IFO removes a different set of
+    coincidences in every timeslide, so that fraction, and not the fraction
+    of background events removed, estimates the livetime lost.
+    """
+    segments = load_or_fetch_segments(
+        vetos, ifos, start, stop, veto_definer_file=veto_definer_file
+    )
 
     logging.info("Computing background veto masks")
     back_masks = compute_veto_masks(background, vetos, ifos, segments)
     logging.info("Computing foreground veto masks")
     fore_masks = compute_veto_masks(foreground, vetos, ifos, segments)
 
+    fore_vetoed = combine_masks(fore_masks, vetos)
+    deadtime = fore_vetoed.mean() if len(fore_vetoed) else 0.0
+
     background = background[~combine_masks(back_masks, vetos)]
-    foreground = foreground[~combine_masks(fore_masks, vetos)]
+    foreground = foreground[~fore_vetoed]
+
+    logging.info(
+        f"Vetoes removed {100 * deadtime:.2f}% of injections; "
+        f"scaling Tb from {background.Tb:.0f}s to "
+        f"{background.Tb * (1 - deadtime):.0f}s"
+    )
+    background.Tb *= 1 - deadtime
     return background, foreground
 
 
@@ -52,6 +78,7 @@ def sensitive_volume(
     sigma: float = 0.1,
     verbose: bool = False,
     vetos: list[VETO_CATEGORIES] | None = None,
+    veto_definer_file: Path | None = None,
     injection_file: Path | None = None,
 ):
     """
@@ -85,6 +112,13 @@ def sensitive_volume(
             The width of the log normal mass distribution to use
         verbose:
             If true, log at the debug level
+        vetos:
+            Veto categories to apply before computing the sensitive volume.
+            Note that not every observing run defines every category: the
+            O4 CBC definitions are CAT1 only.
+        veto_definer_file:
+            Path to a LIGO_LW veto definer to use instead of the definitions
+            shipped for the observing run the data falls in.
         injection_file:
             Path to the LVK O3 sensitivity injection set used for the
             GWTC-3 comparison curves. If not provided, it is downloaded
@@ -96,9 +130,10 @@ def sensitive_volume(
     foreground = data.foreground
 
     if len(background):
+        shifts = background.shift
         start, stop = (
-            background.detection_time.min(),
-            background.detection_time.max(),
+            background.detection_time.min() + min(shifts.min(), 0),
+            background.detection_time.max() + max(shifts.max(), 0),
         )
     else:
         start = stop = 0.0
@@ -107,7 +142,13 @@ def sensitive_volume(
     # optionally apply vetos if the user passed a list of veto categories
     if vetos is not None:
         background, foreground = _apply_vetos(
-            background, foreground, vetos, ifos, start, stop
+            background,
+            foreground,
+            vetos,
+            ifos,
+            start,
+            stop,
+            veto_definer_file=veto_definer_file,
         )
         data = AnalysisData(background, foreground, data.rejected)
 

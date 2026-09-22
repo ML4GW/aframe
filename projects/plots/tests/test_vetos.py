@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from plots.vetos import EPOCHS
 from plots.vetos import masks as masks_module
 from plots.vetos.masks import (
     combine_masks,
@@ -8,6 +9,8 @@ from plots.vetos.masks import (
 )
 
 IFOS = ["H1", "L1"]
+
+O3_START = EPOCHS["O3"].start
 
 SEGMENTS = {
     "CAT1": {"H1": np.array([[1.5, 3.5]]), "L1": np.zeros((0, 2))},
@@ -72,11 +75,15 @@ def test_load_or_fetch_segments_caches(tmp_path, monkeypatch):
     monkeypatch.setattr(masks_module, "VetoParser", _FakeVetoParser)
     cache = tmp_path / "veto_segments.json"
 
-    first = load_or_fetch_segments(["CAT1"], IFOS, 0, 10, cache=cache)
+    first = load_or_fetch_segments(
+        ["CAT1"], IFOS, O3_START, O3_START + 10, cache=cache
+    )
     assert _FakeVetoParser.calls == 1
     assert cache.exists()
 
-    second = load_or_fetch_segments(["CAT1"], IFOS, 0, 10, cache=cache)
+    second = load_or_fetch_segments(
+        ["CAT1"], IFOS, O3_START, O3_START + 10, cache=cache
+    )
     assert _FakeVetoParser.calls == 1, "should reuse the cache, not re-fetch"
     assert (second["CAT1"]["H1"] == first["CAT1"]["H1"]).all()
 
@@ -88,6 +95,10 @@ def test_load_or_fetch_segments_invalidates_on_new_query(
     monkeypatch.setattr(masks_module, "VetoParser", _FakeVetoParser)
     cache = tmp_path / "veto_segments.json"
 
-    load_or_fetch_segments(["CAT1"], IFOS, 0, 10, cache=cache)
-    load_or_fetch_segments(["CAT1"], IFOS, 0, 20, cache=cache)
+    load_or_fetch_segments(
+        ["CAT1"], IFOS, O3_START, O3_START + 10, cache=cache
+    )
+    load_or_fetch_segments(
+        ["CAT1"], IFOS, O3_START, O3_START + 20, cache=cache
+    )
     assert _FakeVetoParser.calls == 2, "different query should re-fetch"

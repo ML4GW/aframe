@@ -32,6 +32,13 @@ rule sensitive_volume:
         source_prior=config["source_prior"],
         output_dir=str(plots_dir),
         dt=config.get("dt") or "null",
+        # Omitted entirely when unset. If we pass an empty list,
+        # we still do a query.
+        vetos=(
+            " --vetos '" + _fmt_list(config["vetos"]) + "'"
+            if config.get("vetos")
+            else ""
+        ),
     shell:
         "sensitive-volume"
         " --background {input.background}"
@@ -42,4 +49,5 @@ rule sensitive_volume:
         " --source_prior {params.source_prior}"
         " --output_dir {params.output_dir}"
         " --dt {params.dt}"
+        "{params.vetos}"
         " &> {log}"
