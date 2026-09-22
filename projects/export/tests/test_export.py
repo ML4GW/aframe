@@ -415,6 +415,14 @@ def clean(request):
     return request.param
 
 
+# The scaling parameters don't interact with the
+# tensor shapes, so we can pin the latter to fixed
+# values here to cut down on CI. The `test_export_for_shapes`
+# above covers the tensor shapes.
+@pytest.mark.parameterize("kernel_length", [2])
+@pytest.mark.parameterize("psd_length", [8])
+@pytest.mark.parameterize("inference_sampling_rate", [4])
+@pytest.mark.parameterize("batch_size", [2])
 def test_export_for_scaling(
     output_dir,
     repo_dir,
