@@ -8,21 +8,20 @@ license = "MIT"
 dependencies = [
     "astropy>=6.0",
     "numpy>=2",
+    "scipy>=1.9",
     "ledger",
     "utils",
 ]
 
 [dependency-groups]
-dev = [
-    "jupyter>=1.0.0,<2",
-    "pytest>=8.2.0,<9",
-]
+test = ["pytest>=8.2.0,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
 [tool.uv.sources]
-ledger = { path = "../ledger", editable = true }
-utils = { path = "../utils", editable = true }
+ledger = { workspace = true }
+utils = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

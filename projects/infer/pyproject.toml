@@ -7,18 +7,18 @@ authors = [
     { name = "Ethan Marx" },
     { name = "Will Benoit" },
 ]
-requires-python = ">=3.11,<3.13" # Capped for lalsuite
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "jsonargparse~=4.24",
     "tqdm~=4.66",
     "psutil>=5.9",
     "torch==2.10.0",
-    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "ml4gw-hermes[torch]",
-    "utils",
+    "utils[torch]",
     "ledger",
-    "urllib3>=2",
     "gwpy>=3.0",
+    "h5py>=3.10,<4",
+    "numpy>=2",
 ]
 
 [project.scripts]
@@ -27,16 +27,14 @@ infer-local = "infer.cli:main_local"
 start-server = "infer.server:main"
 
 [dependency-groups]
-dev = [
-    "jupyter>=1.0.0,<2",
-    "pytest>=8,<9",
-]
+test = ["pytest>=8,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
 [tool.uv.sources]
-utils = { path = "../../libs/utils", editable = true }
-ledger = { path = "../../libs/ledger", editable = true }
+utils = { workspace = true }
+ledger = { workspace = true }
 # TODO: point at released version once available
 ml4gw-hermes = { git = "https://github.com/ML4GW/hermes", branch = "dev" }
 

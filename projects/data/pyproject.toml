@@ -10,17 +10,18 @@ requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "utils",
-    "ledger",
+    "ledger[generation]",
     "priors",
-    "ml4gw>=0.7.2",
+    "numpy>=2",
     "gwpy>=3.0.8,<4",
-    "gwosc",
-    "lalsuite",
     "jsonargparse>=4.18.0",
-    "ciecplib",
-    "requests-gssapi",
-    "python-ligo-lw>=1.8.3,<2",
 ]
+
+# Create two dependency groups to allow the splitting
+# described in the root-level pyproject.toml
+[project.optional-dependencies]
+cpu = ["torch", "ml4gw>=0.7.2"]
+cuda = ["torch", "ml4gw>=0.7.2"]
 
 [project.scripts]
 fetch-data = "data.fetch.cli:main"
@@ -30,14 +31,22 @@ generate-testing-waveforms = "data.waveforms.cli:testing"
 generate-validation-waveforms = "data.waveforms.cli:validation"
 
 [dependency-groups]
-dev = ["pytest>=8.2.1,<9"]
+test = ["pytest>=8.2.1,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
-utils = { path = "../../libs/utils", editable = true }
-ledger = { path = "../../libs/ledger", editable = true }
-priors = { path = "../../libs/priors", editable = true }
+torch = [{ index = "pytorch-cpu", extra = "cpu" }]
+utils = { workspace = true }
+ledger = { workspace = true }
+priors = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

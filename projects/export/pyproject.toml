@@ -8,18 +8,18 @@ license = "MIT"
 dependencies = [
     "ml4gw>=0.8.0",
     "torch==2.10.0",
-    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "boto3~=1.30",
     "fsspec[s3]>=2024,<2025",
+    "s3fs>=2024,<2025",
     "ml4gw-hermes[torch]",
-    "utils",
+    "utils[torch]",
     "jsonargparse>=4.27.1,<5",
+    "h5py>=3.10,<4",
     "nvidia-cudnn-cu12",
-    # CUDA-12 TensorRT build. The default `tensorrt` now resolves to CUDA-13, 
-    # which needs driver >= 580. Delta runs driver 570 (CUDA 12.8). 
+    # CUDA-12 TensorRT build. The default `tensorrt` now resolves to CUDA-13,
+    # which needs driver >= 580. Delta runs driver 570 (CUDA 12.8).
     # Pin the cu12 build, and use the CUDA-12 Triton image, 25.06
     "tensorrt-cu12==10.11.0.33",
-    "urllib3>=2",
 ]
 
 [project.scripts]
@@ -28,12 +28,18 @@ export-model = "export.main:export"
 export-and-launch-triton = "export.remote:main"
 
 [dependency-groups]
-dev = ["pytest>=8.3.0,<9"]
+test = [
+    "pytest>=8.3.0,<9",
+    "numpy>=2",
+    "protobuf",
+    "tritonclient",
+]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
 [tool.uv.sources]
-utils = { path = "../../libs/utils", editable = true }
+utils = { workspace = true }
 # TODO: point at released version once available
 ml4gw-hermes = { git = "https://github.com/ML4GW/hermes", branch = "dev" }
 

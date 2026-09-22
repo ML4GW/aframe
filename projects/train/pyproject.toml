@@ -13,25 +13,24 @@ license = "MIT"
 dependencies = [
     "torchmetrics>=0.11,<0.12",
     "torch==2.10.0",
-    "torchaudio==2.10.0",  # 2.11 is built for CUDA 13
     "lightning>=2.2.1",
     "jsonargparse[signatures]~=4.29",
     "wandb>=0.15",
-    "bokeh~=3.0",
     "ray[default, tune]>=2.8.0,<3",
+    "lightray>=0.2.3",
     "boto3~=1.30",
+    "botocore",
     "fsspec[s3]>=2024,<2025",
-    "urllib3>=2",
-    "utils",
+    "s3fs>=2024,<2025",
+    "utils[torch]",
     "ml4gw>=0.8.0",
     "ledger",
-    "priors",
     "architectures",
-    "bayesian-optimization>=1.4.3,<2",
     "filelock>=3.13.1,<4",
-    "s3fs>=2024,<2025",
-    "lightray>=0.2.3",
+    "h5py>=3.10,<4",
+    "numpy>=2",
     "kr8s>=0.20.0",
+    "anyio",
 ]
 
 [project.scripts]
@@ -39,18 +38,15 @@ train = "train.cli:main"
 train-remote = "train.remote:main"
 
 [dependency-groups]
-dev = [
-    "pytest~=7.3",
-    "jupyter>=1.0.0",    
-]
+test = ["pytest>=8.2,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [tool.uv]
 
 [tool.uv.sources]
-utils = { path = "../../libs/utils", editable = true }
-ledger = { path = "../../libs/ledger", editable = true }
-priors = { path = "../../libs/priors", editable = true }
-architectures = { path = "../../libs/architectures", editable = true }
+utils = { workspace = true }
+ledger = { workspace = true }
+architectures = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

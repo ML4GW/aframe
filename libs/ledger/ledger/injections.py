@@ -5,11 +5,6 @@ import h5py
 import numpy as np
 from astropy.cosmology import Cosmology, z_at_value
 from astropy.units import Mpc
-from lalsimulation import (
-    SimInspiralTransformPrecessingNewInitialConditions,
-    SimInspiralTransformPrecessingWvf2PE,
-)
-from pycbc.waveform import get_td_waveform
 from utils.cosmology import DEFAULT_COSMOLOGY
 
 from ledger.ledger import PATH, Ledger, metadata, parameter, waveform
@@ -187,7 +182,13 @@ class BilbyParameterSet(ExtrinsicParameterSet, IntrinsicParameterSet):
 
         Returns:
             LALParameterSet with converted parameters.
+
+        Requires the `generation` extra (``ledger[generation]``).
         """
+        from lalsimulation import (
+            SimInspiralTransformPrecessingNewInitialConditions,
+        )
+
         mass_1_si = self.mass_1 * MSUN
         mass_2_si = self.mass_2 * MSUN
         inclination = np.zeros(len(self))
@@ -322,7 +323,11 @@ class LALParameterSet(Ledger):
 
         Returns:
             BilbyParameterSet with converted parameters.
+
+        Requires the `generation` extra (``ledger[generation]``).
         """
+        from lalsimulation import SimInspiralTransformPrecessingWvf2PE
+
         theta_jn = np.zeros(len(self))
         phi_jl = np.zeros(len(self))
         tilt_1 = np.zeros(len(self))
@@ -533,7 +538,11 @@ class _WaveformGenerator:
 
         Returns:
             Dictionary with 'plus' and 'cross' polarization arrays.
+
+        Requires the `generation` extra (``ledger[generation]``).
         """
+        from pycbc.waveform import get_td_waveform
+
         # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/transforms/detection/waveform.py?ref_type=heads#L112 # noqa
         freq_limit = 1899.0 / (params["mass1"] + params["mass2"])
         if self.minimum_frequency > freq_limit:

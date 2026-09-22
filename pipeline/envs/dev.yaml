@@ -8,6 +8,9 @@
 #     conda env create -f pipeline/envs/dev.yaml
 #     conda activate aframe-dev
 #     uv sync --all-packages
+#     uv sync --package data --extra cpu
+#     uv sync --package plots --extra vizapp  # use vizapp-cuda for GPU use
+#
 name: aframe-dev
 channels:
   - conda-forge

@@ -7,20 +7,16 @@ requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "einops>=0.8,<0.9",
+    "jaxtyping>=0.2",
     "ml4gw>=0.7.2",
-    "h5py>=3.9.0,<4",
+    "h5py>=3.10,<4",
     "numpy>=2",
+    "torch",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.2.1,<9"]
-
-[tool.uv]
-
-[[tool.uv.index]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cu118"
-explicit = true
+test = ["pytest>=8.2.1,<9"]
+dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 
 [build-system]
 requires = ["hatchling"]
