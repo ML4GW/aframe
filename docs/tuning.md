@@ -1,5 +1,15 @@
 Tuning
 ======
+
+```{eval-rst}
+.. admonition:: Deprecated
+    :class: warning
+
+    This page describes the tuning pipeline as it worked under the :code:`luigi`/:code:`law` task framework, which has been removed. The :code:`aframe-init offline --mode tune` command and the :code:`TuneTask` it drove no longer exist, and tuning has no Snakemake equivalent yet, so **the commands below will not run as written**.
+
+    It is kept as a design reference for porting tuning to Snakemake. The Ray cluster sizing that :code:`TuneTask` passed to Helm is recorded in the to-dos in `pipeline/README.md <https://github.com/ML4GW/aframe/blob/main/pipeline/README.md>`_. Note also that the Helm chart referenced here is no longer in this repository; :code:`RayCluster` in :code:`projects/train/train/helm.py` now pulls it from lightray's GitHub releases.
+```
+
 Hyperparameter tuning is powered by [Ray Tune](https://docs.ray.io/en/latest/tune/index.html). We utilize a wrapper library, [lightray](https://github.com/ethanmarx/lightray), that simplifies the use of Ray Tune with the PyTorch Lightning's `LightningCLI` which is used by `Aframe`.
 
 

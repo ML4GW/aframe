@@ -27,7 +27,8 @@ bash /path/to/my-run/run.sh
 ```
 Snakefile                     entry point: config + includes + rule all
 pipeline/
-  config/config.yaml          all pipeline parameters
+  config/config.yaml          all pipeline parameters (loaded by default)
+  config/review.yaml          short end-to-end validation preset
   profiles/local/             dev/testing: everything runs as subprocesses
   profiles/condor/            LDG HTCondor execution
   envs/snakemake.yaml         orchestrator env
@@ -57,8 +58,7 @@ process itself.
 Most of the DAG cannot be determined up front: the number of
 strain-fetching jobs depends on what segments DQSegDB returns, and the
 number of waveform/inference branches depends on which segments are
-long enough to analyze. In the law framework this was handled by
-`create_branch_map()` computed at runtime. Snakemake's equivalent is
+long enough to analyze. Snakemake's equivalent is
 the [checkpoint](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution)
 mechanism, and the pipeline uses it in three places:
 
@@ -113,8 +113,7 @@ at the command line with `--config key=value`.
 ```
 
 `background_dir` and `waveforms_dir` default to living under
-`run_dir` but can be pointed at shared locations. This differs
-from the layout used by the law pipeline.
+`run_dir` but can be pointed at shared locations.
 
 ## To-dos
 
@@ -125,8 +124,8 @@ job to Nautilus. This hasn't been tested at all within Snakemake.
 `.snakemake/htcondor/{clusterid}.{log,out,err}` with no rule
 association.
 
-**Hermes release and Volta deprecation.** The root, export, and infer
-packages all pin hermes to `branch = "dev"` rather than a released
+**Hermes release and Volta deprecation.** The export and infer
+packages pin hermes to `branch = "dev"` rather than a released
 version. Cutting a hermes release will also drop support for Volta-era
 GPUs.
 
@@ -135,7 +134,20 @@ must currently be an explicit absolute path because the more modern
 Triton containers have not been added to CVMFS. We could instead
 have a shared cache directory to auto-pull from `ghcr.io/ml4gw/hermes`.
 
-**law/luigi removal.** Once all core components of the Snakemake
-pipeline have been validated, the old task framework (`aframe/tasks/`,
-`aframe/pipelines/`, law and luigi dependencies in `pyproject.toml`)
-can be removed.
+**Hyperparameter tuning currently has no Snakemake equivalent.** The law
+pipeline had a `TuneTask` that stood up a Ray cluster on Kubernetes via
+Helm and ran a distributed search. Nothing does that now; however,
+`projects/train/configs/tune.yaml` and the `RayCluster` helm wrapper in
+`projects/train/train/helm.py` are both preserved. The cluster sizing lived 
+in the deleted `aframe/config.py` and was passed as Helm values by
+`aframe/tasks/train/tune.py`. Recorded here so it is not lost:
+
+```
+head.cpu               32
+head.memory            32G
+worker.replicas        1
+worker.gpu             2      (gpus_per_replica)
+worker.cpu             12     per gpu, so 24 per replica
+worker.memory          70G    per gpu, so 140G per replica
+worker.min_gpu_memory  15000  MB
+```
