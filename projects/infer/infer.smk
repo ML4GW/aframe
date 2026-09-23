@@ -47,6 +47,10 @@ if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
 
 INFER_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "infer.sif")
 
+TRITON_IMAGE = os.path.join(
+    os.getenv("AFRAME_CONTAINER_ROOT", ""), config["triton_image"]
+)
+
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
 BRANCHES_PER_JOB = config.get("branches_per_job", 1)
