@@ -149,11 +149,11 @@ def get_waveform_branch_files(wildcards):
     with open(bmap_file) as f:
         branch_map = json.load(f)
     waveforms = expand(
-        str(test_waveforms / "tmp" / "{wbranch_id}" / "waveforms.hdf5"),
+        str(test_waveforms / "branches" / "{wbranch_id}" / "waveforms.hdf5"),
         wbranch_id=branch_map.keys(),
     )
     rejected = expand(
-        str(test_waveforms / "tmp" / "{wbranch_id}" / "rejected_parameters.hdf5"),
+        str(test_waveforms / "branches" / "{wbranch_id}" / "rejected_parameters.hdf5"),
         wbranch_id=branch_map.keys(),
     )
     return {"waveforms": waveforms, "rejected": rejected}
@@ -336,9 +336,9 @@ the rejected parameters for this branch.
         branch_map=str(test_waveforms / "waveform_branch_map.json"),
         psd_file=_test_psd_file,
     output:
-        waveforms=str(test_waveforms / "tmp" / "{wbranch_id}" / "waveforms.hdf5"),
+        waveforms=str(test_waveforms / "branches" / "{wbranch_id}" / "waveforms.hdf5"),
         rejected=str(
-            test_waveforms / "tmp" / "{wbranch_id}" / "rejected_parameters.hdf5"
+            test_waveforms / "branches" / "{wbranch_id}" / "rejected_parameters.hdf5"
         ),
     log:
         str(data_log_dir / "testing_waveforms_branch-{wbranch_id}.log"),

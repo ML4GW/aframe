@@ -25,10 +25,12 @@ cls = waveform_class_factory(
     "ResponseSet",
 )
 
+# Keep the per-branch waveform files so that they can be
+# used as infer inputs.
 cls.aggregate(
     [Path(i) for i in snakemake.input.waveforms],
     snakemake.output.waveforms,
-    clean=True,
+    clean=False,
 )
 InjectionParameterSet.aggregate(
     [Path(i) for i in snakemake.input.rejected],
