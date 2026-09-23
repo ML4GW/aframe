@@ -5,10 +5,10 @@ Executed via the snakemake `script:` directive.
 The `snakemake` object is injected by snakemake.
 """
 
-import shutil
 import sys
 from pathlib import Path
 
+from data.cleanup import remove_empty_dirs
 from ledger.injections import (
     InjectionParameterSet,
     InterferometerResponseSet,
@@ -35,5 +35,7 @@ InjectionParameterSet.aggregate(
     snakemake.output.rejected,
     clean=True,
 )
-
-shutil.rmtree(snakemake.params.tmp_dir, ignore_errors=True)
+remove_empty_dirs(
+    [*snakemake.input.waveforms, *snakemake.input.rejected],
+    Path(snakemake.output.waveforms).parent,
+)

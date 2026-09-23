@@ -1,20 +1,15 @@
 import logging
-import os
+from pathlib import Path
 
 from data.fetch.fetch import fetch
 
 
 def main(args):
     args_dict = {k: v for k, v in args.as_dict().items() if k != "config"}
-    output_directory = args_dict.pop("output_directory")
-    prefix = args_dict.pop("prefix")
+    output_file = Path(args_dict.pop("output_file"))
+
     X = fetch(**args_dict)
 
-    duration = args_dict["end"] - args_dict["start"]
-    fname = "{}-{}-{}.hdf5".format(
-        prefix, int(args_dict["start"]), int(duration)
-    )
-    fname = os.path.join(output_directory, fname)
-
-    logging.info(f"Writing downloaded data to {fname}")
-    X.write(fname, format="hdf5")
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Writing downloaded data to {output_file}")
+    X.write(output_file, format="hdf5")

@@ -5,10 +5,10 @@ Executed via the snakemake `script:` directive.
 The `snakemake` object is injected by snakemake.
 """
 
-import shutil
 import sys
 from pathlib import Path
 
+from data.cleanup import remove_empty_dirs
 from ledger.injections import WaveformSet, waveform_class_factory
 
 # `script:` directives are not auto-redirected to the rule's log, so
@@ -26,5 +26,4 @@ cls.aggregate(
     snakemake.output[0],
     clean=True,
 )
-
-shutil.rmtree(snakemake.params.tmp_dir, ignore_errors=True)
+remove_empty_dirs(snakemake.input, Path(snakemake.output[0]).parent)

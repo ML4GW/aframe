@@ -17,6 +17,10 @@ executor: htcondor
 # On LDG, use GPUs on the submit node for train/export/infer
 config:
   gpu_rules_local: true
+  # Merge per-branch waveform files on the submit node.
+  # On an execute point the merge would only see transferred copies, so
+  # the per-branch files would never be cleaned up.
+  aggregate_rules_local: true
 
 # Maximum number of simultaneously submitted jobs. (placeholder)
 jobs: 500
@@ -60,7 +64,7 @@ apptainer-args: >-
 default-resources:
   # Forward environment variables from the submit node. 
   # HOME is not accessible on the execute node, and the bearer
-  # token is delivered by condor.=
+  # token is delivered by condor.
   getenv: AFRAME_*, PATH, KRB5*
 
   # Pass through authentication and account info as raw job ad attributes
