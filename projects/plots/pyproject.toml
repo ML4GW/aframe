@@ -27,8 +27,11 @@ dependencies = [
 
 # Make the vizapp dependencies fully optional.
 [project.optional-dependencies]
+# torchaudio comes in through ml4gw, but is listed so that it can be pinned to
+# the same index as torch below
 vizapp = [
     "torch",
+    "torchaudio",
     "utils[torch]",
     "matplotlib>=3.9.4",
     "pillow>=11",
@@ -38,6 +41,7 @@ vizapp = [
 # `device: cuda`.
 vizapp-cuda = [
     "torch",
+    "torchaudio",
     "utils[torch]",
     "matplotlib>=3.9.4",
     "pillow>=11",
@@ -62,6 +66,7 @@ explicit = true
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", extra = "vizapp" }]
+torchaudio = [{ index = "pytorch-cpu", extra = "vizapp" }]
 ledger = { workspace = true }
 priors = { workspace = true }
 utils = { workspace = true }
