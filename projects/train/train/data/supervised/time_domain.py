@@ -7,8 +7,10 @@ from ml4gw.transforms import Heterodyne
 
 
 class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
-    def build_val_batches(self, background, signals):
-        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+    def build_val_batches(self, background, signals, params):
+        X_bg, X_inj, psds, params_out = super().build_val_batches(
+            background=background, signals=signals, params=params
+        )
         X_bg = self.whitener(X_bg, psds)
         # whiten each view of injections
         X_fg = []
@@ -17,12 +19,14 @@ class TimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
             X_fg.append(inj)
 
         X_fg = torch.stack(X_fg)
-        return X_bg, X_fg
+        return X_bg, X_fg, params_out
 
-    def inject(self, X, waveforms=None):
-        X, y, psds = super().inject(X, waveforms)
+    def inject(self, X, waveforms, params):
+        X, y, psds, params_out = super().inject(
+            X=X, waveforms=waveforms, params=params
+        )
         X = self.whitener(X, psds)
-        return X, y
+        return X, y, params_out
 
 
 class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
@@ -104,8 +108,11 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
                 f"Invalid chirp mass spacing: {chirp_mass_spacing}"
             )
 
-    def build_val_batches(self, background, signals):
-        X_bg, X_inj, psds = super().build_val_batches(background, signals)
+    def build_val_batches(self, background, signals, params):
+        X_bg, X_inj, psds, params_out = super().build_val_batches(
+            background=background, signals=signals, params=params
+        )
+
         X_bg = self.whitener(X_bg, psds)
         X_bg = self.heterodyne_transform(X_bg)
         _B_bg, _C_bg, _M_bg, _T_bg = X_bg.shape
@@ -121,20 +128,24 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         X_fg = X_fg.view(_V_fg, _B_fg, _C_fg * _M_fg, _T_fg)
 
         if self.keep_last_n_seconds is not None:
-            return X_bg[..., -self.keep_last_n_samples :], X_fg[
-                ..., -self.keep_last_n_samples :
-            ]
+            return (
+                X_bg[..., -self.keep_last_n_samples :],
+                X_fg[..., -self.keep_last_n_samples :],
+                params_out,
+            )
         else:
-            return X_bg, X_fg
+            return X_bg, X_fg, params_out
 
-    def inject(self, X, waveforms=None):
-        X, y, psds = super().inject(X, waveforms)
+    def inject(self, X, waveforms, params):
+        X, y, psds, params_out = super().inject(
+            X=X, waveforms=waveforms, params=params
+        )
         X = self.whitener(X, psds)
         X = self.heterodyne_transform(X)
         _B, _C, _M, _T = X.shape
         X = X.view(_B, _C * _M, _T)
 
         if self.keep_last_n_seconds is not None:
-            return X[..., -self.keep_last_n_samples :], y
+            return X[..., -self.keep_last_n_samples :], y, params_out
         else:
-            return X, y
+            return X, y, params_out

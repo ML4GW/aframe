@@ -55,6 +55,4 @@ class CBCGenerator(WaveformGenerator):
 
     def forward(self, **parameters) -> torch.Tensor:
         hc, hp = self.waveform_generator(**parameters)
-        waveforms = torch.stack([hc, hp], dim=1)
-        hc, hp = waveforms.transpose(1, 0)
-        return hc.float(), hp.float()
+        return torch.stack([hc, hp], dim=1).float()

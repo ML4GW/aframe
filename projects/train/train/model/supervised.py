@@ -1,21 +1,21 @@
 import torch
 from architectures.supervised import SupervisedArchitecture
 
-from train.model.base import AframeBase
+from train.model.classification import AframeClassification
 from train.metrics import TimeSlideAUROC
 
 Tensor = torch.Tensor
 
 
-class SupervisedAframe(AframeBase):
+class SupervisedAframe(AframeClassification):
     def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
         super().__init__(arch, *args, **kwargs)
 
     def forward(self, X):
         return self.model(X)
 
-    def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
-        X, y = batch
+    def train_step(self, batch: tuple[Tensor, Tensor, dict]) -> Tensor:
+        X, y, params = batch
         y_hat = self(X)
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
@@ -33,13 +33,13 @@ class SupervisedMultiModalAframe(SupervisedAframe):
     def score(self, X, X_fft):
         return self(X, X_fft)
 
-    def train_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
-        (X, X_fft), y = batch
+    def train_step(self, batch: tuple[Tensor, Tensor, dict]) -> Tensor:
+        (X, X_fft), y, params = batch
         y_hat = self(X, X_fft)
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def validation_step(self, batch, _) -> None:
-        shift, (X_bg, X_bg_fft), (X_inj, X_inj_fft) = batch
+        shift, (X_bg, X_bg_fft), (X_inj, X_inj_fft), params = batch
 
         y_bg = self.score(X_bg, X_bg_fft)
 
@@ -102,9 +102,9 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         return self(X, X_spec)
 
     def train_step(
-        self, batch: tuple[tuple[Tensor, Tensor], Tensor]
+        self, batch: tuple[tuple[Tensor, Tensor], Tensor, dict]
     ) -> Tensor | dict[str, Tensor]:
-        (X, X_spec), y = batch
+        (X, X_spec), y, params = batch
         y_hat_X, y_hat_X_spec = self(X, X_spec)
         loss_X = torch.nn.functional.binary_cross_entropy_with_logits(
             y_hat_X, y
@@ -124,7 +124,7 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         )
 
     def validation_step(self, batch, _) -> None:
-        shift, (X_bg, X_bg_spec), (X_fg, X_fg_spec) = batch
+        shift, (X_bg, X_bg_spec), (X_fg, X_fg_spec), params = batch
 
         y_bg_X, y_bg_spec = self.score(X_bg, X_bg_spec)
         y_bg = (self.val_X_coeff * y_bg_X) + (
