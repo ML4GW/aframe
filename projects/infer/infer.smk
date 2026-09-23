@@ -225,19 +225,19 @@ if INFERENCE_MODE == "triton":
         input:
             model_repo=str(export_out / "model_repo"),
         output:
-            str(triton_dir / "triton.started"),
+            started=str(triton_dir / "triton.started"),
+            ip_file=str(triton_dir / "triton.ip"),
         log:
             str(infer_log_dir / "start_triton.log"),
         params:
             output_dir=str(triton_dir),
-            ip_file=str(triton_dir / "triton.ip"),
             stop_sentinel=str(triton_dir / "triton.stop"),
             logfile=str(triton_dir / "server.log"),
             model_name=config["model_name"],
             model_version=config["model_version"],
             gpus=config["gpus"],
             batch_size=config["inference_batch_size"],
-            triton_image=config["triton_image"],
+            triton_image=TRITON_IMAGE,
             idle_timeout=config.get("triton_idle_timeout", 3600),
         script:
             "scripts/start_triton.py"
@@ -248,6 +248,7 @@ if INFERENCE_MODE == "triton":
             branch_map=str(infer_dir / "branch_map.json"),
             waveforms=str(test_waveforms / "waveforms.hdf5"),
             triton_started=str(triton_dir / "triton.started"),
+            ip_file=str(triton_dir / "triton.ip"),
         output:
             touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
         log:
@@ -258,13 +259,12 @@ if INFERENCE_MODE == "triton":
             triton_streams=2,
         params:
             **_group_common_params,
-            ip_file=str(triton_dir / "triton.ip"),
             model_name=config["model_name"],
             model_version=config["model_version"],
             rate=infer_rate,
         shell:
             "infer-triton"
-            " --address $(cat {params.ip_file}):8001"
+            " --address $(cat {input.ip_file}):8001"
             " --model_name {params.model_name}"
             " --model_version {params.model_version}"
             " --rate {params.rate}" + _GROUP_SHELL_SUFFIX
@@ -298,7 +298,8 @@ else:
                 INFER_CONTAINER
             resources:
                 slurm_partition=config.get("inference_partition", "gpuA40x4"),
-                gpu=1,
+                gpu=1,  # slurm
+                request_gpus=1,  # condor
                 mem_mb=config.get("compile_mem_mb", 32000),
                 runtime=10,
             params:
