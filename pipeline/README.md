@@ -177,7 +177,8 @@ If these conditions are met, then we can implement various upgrades:
   `projects/export`, plus the Triton image in `config.yaml`.
 
 **Hermes Triton image discovery.** `triton_image` in `config.yaml`
-must currently be an explicit absolute path because the more modern
+must currently name a local image (a bare filename resolved against
+`$AFRAME_CONTAINER_ROOT`, or an absolute path) because the more modern
 Triton containers have not been added to CVMFS. We could instead
 have a shared cache directory to auto-pull from `ghcr.io/ml4gw/hermes`.
 

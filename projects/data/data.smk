@@ -51,6 +51,9 @@ training_branch_ids = [str(i) for i in range(num_train_waveform_jobs)]
 
 localrules:
     compute_waveform_branches,
+    # DQSegDB seems to be unreachable from execute points
+    generate_train_segments,
+    generate_test_segments,
 
 
 wildcard_constraints:
@@ -216,15 +219,13 @@ rule fetch_train_background:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
         end=lambda wc: int(wc.start) + int(wc.duration),
-        output_directory=train_bg,
     shell:
         "fetch-data"
         " --start {wildcards.start}"
         " --end {params.end}"
         " --channels '{params.channels}'"
         " --sample_rate {params.sample_rate}"
-        " --output_directory {params.output_directory}"
-        " --prefix background"
+        " --output_file {output}"
         " &> {log}"
 
 
@@ -242,15 +243,13 @@ rule fetch_test_background:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
         end=lambda wc: int(wc.start) + int(wc.duration),
-        output_directory=test_bg,
     shell:
         "fetch-data"
         " --start {wildcards.start}"
         " --end {params.end}"
         " --channels '{params.channels}'"
         " --sample_rate {params.sample_rate}"
-        " --output_directory {params.output_directory}"
-        " --prefix background"
+        " --output_file {output}"
         " &> {log}"
 
 
@@ -348,7 +347,7 @@ the rejected parameters for this branch.
     params:
         branch=_branch_params,
         ifos=_fmt_list(config["ifos"]),
-        output_dir=str(test_waveforms / "tmp" / "{wbranch_id}"),
+        output_dir=lambda wc, output: str(Path(output.waveforms).parent),
         prior=config["prior"],
         minimum_frequency=config["minimum_frequency"],
         reference_frequency=config["reference_frequency"],
@@ -397,11 +396,11 @@ rule aggregate_testing_waveforms:
         rejected=str(test_waveforms / "rejected_parameters.hdf5"),
     log:
         str(data_log_dir / "aggregate_testing_waveforms.log"),
+    localrule: config.get("aggregate_rules_local", False)
     container:
         DATA_CONTAINER
     params:
         ifos=config["ifos"],
-        tmp_dir=str(test_waveforms / "tmp"),
     script:
         "scripts/aggregate_testing_waveforms.py"
 
@@ -465,11 +464,11 @@ rule aggregate_val_waveforms:
         str(train_waveforms / "val_waveforms.hdf5"),
     log:
         str(data_log_dir / "aggregate_val_waveforms.log"),
+    localrule: config.get("aggregate_rules_local", False)
     container:
         DATA_CONTAINER
     params:
         ifos=config["ifos"],
-        tmp_dir=str(train_waveforms / "validation_tmp"),
     script:
         "scripts/aggregate_val_waveforms.py"
 
@@ -522,9 +521,8 @@ if config.get("pregenerate_training_waveforms", False):
             str(train_waveforms / "training_waveforms.hdf5"),
         log:
             str(data_log_dir / "aggregate_training_waveforms.log"),
+        localrule: config.get("aggregate_rules_local", False)
         container:
             DATA_CONTAINER
-        params:
-            tmp_dir=str(train_waveforms / "training_tmp"),
         script:
             "scripts/aggregate_training_waveforms.py"

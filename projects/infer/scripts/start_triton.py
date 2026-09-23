@@ -27,8 +27,8 @@ logging.basicConfig(
 sys.stderr = log
 
 params = snakemake.params
-ip_file = Path(params.ip_file)
-started = Path(snakemake.output[0])
+ip_file = Path(snakemake.output.ip_file)
+started = Path(snakemake.output.started)
 
 
 Path(params.output_dir).mkdir(parents=True, exist_ok=True)

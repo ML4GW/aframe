@@ -17,6 +17,10 @@ executor: htcondor
 # On LDG, use GPUs on the submit node for train/export/infer
 config:
   gpu_rules_local: true
+  # Merge per-branch waveform files on the submit node.
+  # On an execute point the merge would only see transferred copies, so
+  # the per-branch files would never be cleaned up.
+  aggregate_rules_local: true
 
 # Maximum number of simultaneously submitted jobs. (placeholder)
 jobs: 500
@@ -58,13 +62,20 @@ apptainer-args: >-
   --home $HOME
 
 default-resources:
-  # Forward environment variables from the submit node.
-  getenv: AFRAME_*, PATH, HOME, BEARER_TOKEN_FILE, KRB5*
+  # Forward environment variables from the submit node. 
+  # HOME is not accessible on the execute node, and the bearer
+  # token is delivered by condor.
+  getenv: AFRAME_*, PATH, KRB5*
 
   # Pass through authentication and account info as raw job ad attributes
   # using the classad_ prefix. The plugin supports passing attributes
   # via the htcondor_submit_ prefix, but it wraps string values in
   # double-quotes which breaks submit commands.
+  #
+  # Condor writes the token to $_CONDOR_CREDS/scitokens.use on the execute
+  # point, which IGWN scitoken clients discover on their own. Tools that
+  # don't can be pointed at it explicitly with:
+  #   environment: BEARER_TOKEN_FILE="$$(CondorScratchDir)/.condor_creds/scitokens.use"
   classad_OAuthServicesNeeded: scitokens
   classad_AcctGroup: $ENV(LIGO_GROUP)
   classad_AcctGroupUser: $ENV(LIGO_USERNAME)
