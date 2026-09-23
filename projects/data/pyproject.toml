@@ -20,8 +20,10 @@ dependencies = [
 # Create two dependency groups to allow the splitting
 # described in the root-level pyproject.toml
 [project.optional-dependencies]
-cpu = ["torch", "ml4gw>=0.7.2"]
-cuda = ["torch", "ml4gw>=0.7.2"]
+# torchaudio comes in through ml4gw, but is listed so that it can be pinned to
+# the same index as torch below
+cpu = ["torch", "torchaudio", "ml4gw>=0.7.2"]
+cuda = ["torch", "torchaudio", "ml4gw>=0.7.2"]
 
 [project.scripts]
 fetch-data = "data.fetch.cli:main"
@@ -44,6 +46,7 @@ explicit = true
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", extra = "cpu" }]
+torchaudio = [{ index = "pytorch-cpu", extra = "cpu" }]
 utils = { workspace = true }
 ledger = { workspace = true }
 priors = { workspace = true }

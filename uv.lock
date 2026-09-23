@@ -1474,12 +1474,17 @@ cpu = [
     { name = "ml4gw" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
 cuda = [
     { name = "ml4gw" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (sys_platform == 'darwin' and extra == 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cuda' and extra != 'extra-5-plots-vizapp') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (sys_platform == 'darwin' and extra == 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cuda' and extra != 'extra-5-plots-vizapp') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
 
 [package.dev-dependencies]
@@ -1502,6 +1507,8 @@ requires-dist = [
     { name = "priors", editable = "libs/priors" },
     { name = "torch", marker = "extra == 'cpu'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "data", extra = "cpu" } },
     { name = "torch", marker = "extra == 'cuda'" },
+    { name = "torchaudio", marker = "extra == 'cpu'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "data", extra = "cpu" } },
+    { name = "torchaudio", marker = "extra == 'cuda'" },
     { name = "utils", editable = "libs/utils" },
 ]
 provides-extras = ["cpu", "cuda"]
@@ -3444,7 +3451,9 @@ dependencies = [
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra != 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
-    { name = "torchaudio" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra != 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2a/56/abb490d353f989802f918ee92cf6c9a37336483aa20c7f17df7730d81744/ml4gw-0.8.0.tar.gz", hash = "sha256:43a2411ae348f8f911fdc0e2defd4fa54370414fa8b51c63518de3cb805754ba", size = 121709, upload-time = "2026-04-17T13:15:20.347Z" }
 wheels = [
@@ -4552,6 +4561,8 @@ vizapp = [
     { name = "pillow" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform == 'darwin' and extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform != 'darwin' and extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform == 'darwin' and extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda')" },
+    { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (sys_platform != 'darwin' and extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "utils", extra = ["torch"], marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp')" },
 ]
 vizapp-cuda = [
@@ -4561,6 +4572,9 @@ vizapp-cuda = [
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+    { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "utils", extra = ["torch"], marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
 
@@ -4595,6 +4609,8 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.9" },
     { name = "torch", marker = "extra == 'vizapp'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "plots", extra = "vizapp" } },
     { name = "torch", marker = "extra == 'vizapp-cuda'" },
+    { name = "torchaudio", marker = "extra == 'vizapp'", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "plots", extra = "vizapp" } },
+    { name = "torchaudio", marker = "extra == 'vizapp-cuda'" },
     { name = "tqdm", specifier = "~=4.66" },
     { name = "utils", editable = "libs/utils" },
     { name = "utils", extras = ["torch"], marker = "extra == 'vizapp'", editable = "libs/utils" },
@@ -6600,11 +6616,46 @@ wheels = [
 [[package]]
 name = "torchaudio"
 version = "2.10.0"
-source = { registry = "https://pypi.org/simple" }
+source = { registry = "https://download.pytorch.org/whl/cpu" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.12' and sys_platform == 'darwin'",
+]
 dependencies = [
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform == 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:28813664c4c86557921f0ae0ef0f624e065132b02c525bff599e7656e19ef727", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:d35900f4689cb0164195b31263a769987c8953412197a6b4b758218d2e2dbc86", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:085f1b72339e4321005b9aacd7d06b1c64e5f3a2e3ff9fc6ad598bfb6fdecec4", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:4a511f5d55ee0348052670e5834800774e426ce1685d87b482ac9e2324074bb7", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:bd2a7607860798e584747d7356b3f11b43ada695b264215ce5a7b6f68fe0f355", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:dd8ed1b729b4694f01776ae95e7db432b1a808db4377f99596fe74c24ccba2be", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:6d7a796de0b2e1246a468aed0cd7aef136bb7a8d6171c07e97b478b1b2a41e5f", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:8bec0eb0762379d6eb38878ea0a4c7fd8f73dbc6e249b67e1e706c1287a87ef0", upload-time = "2026-01-21T15:05:38Z" },
+]
+
+[[package]]
+name = "torchaudio"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.13' and sys_platform == 'linux'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux'",
+    "python_full_version >= '3.13' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'emscripten'",
+    "python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+]
+dependencies = [
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra != 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/e7/401fe1d024bf9352371d854be6f339ad9928669e6bc8a5ba08e9dbce81cf/torchaudio-2.10.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:bcab0e39eb18da84cba1a0c87f600abb6ce97c882200cb46e841caea106f037f", size = 736373, upload-time = "2026-01-21T16:28:41.589Z" },
@@ -6623,6 +6674,42 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/43/8c/653e7f67855424bf3b7cbb48335f8316f7fb02bb01a6cab38f6bf9555676/torchaudio-2.10.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:b41b254d958632dc00dc7768431cadda516c91641d798775cbb19bcd4f0d2be4", size = 393430, upload-time = "2026-01-21T16:28:34.855Z" },
     { url = "https://files.pythonhosted.org/packages/8e/1f/f91fcb9dd47a19b720fb48042a2f6f023651948e73726e98fff60d5ed5c7/torchaudio-2.10.0-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:da1081d1018a1e95f5a13947402aeb037cf5ac8861219a6164df004898a96bb1", size = 1897271, upload-time = "2026-01-21T16:28:23.519Z" },
     { url = "https://files.pythonhosted.org/packages/57/27/270c26890f43838e8faa5d3e52f079bd9d9d09f9a535a11cf6b94e20ed21/torchaudio-2.10.0-cp313-cp313t-win_amd64.whl", hash = "sha256:f1afa53146a5655258d3a86e689c6879dfe78581d9bee9ef611ace98722f86bb", size = 478966, upload-time = "2026-01-21T16:28:32.491Z" },
+]
+
+[[package]]
+name = "torchaudio"
+version = "2.10.0+cpu"
+source = { registry = "https://download.pytorch.org/whl/cpu" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.13' and sys_platform == 'linux'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux'",
+    "python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'emscripten'",
+    "python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+]
+dependencies = [
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:08981b656c71bcb990165f45b2421136df286de46ced976dba372fba5a627d2e", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:d578c9bc636623c83103054d797c3a889d7f733c1375fedf48d0be4dd9ff0031", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp311-cp311-win_amd64.whl", hash = "sha256:2a78b81a7a21d39a309e5df6e7473c814f5e2de68ef054788a633e618fe5baa8", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:2ef1f8d0f0feba5a9364620925c864890b90abc98a65f35895256dd6aa1710be", upload-time = "2026-01-21T15:05:38Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:502b19a5bd0ef8fc97adf06c24146c5e2b94bc3c43b768174407c031cd21c3a5", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl", hash = "sha256:32707736ef079a673433ca36c227c135375602b74d41ee21ff18d1e75caee0b0", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:5a7ab98c247753ee09fb9193cd6acef7884643134c3b1ef31fe30acde10344d1", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:9b07ad143c5d7727a48aa6923991b8d7a06a6b3c78dedee6a1aa46ff16ad3db2", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313-win_amd64.whl", hash = "sha256:ef9a3bc9c0dcbb766775f60bb4e1f5dc02801db0367bc45a6c76e98e041968af", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:6b95eb81b3960961c419b48b321d5dd837f696067ae4adc2bbb431c8b3737366", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:eeb02bee18b0a98a5f6ea2bceebb3bf3176fbadfe9fcb9fa062d9387d8fecc17", upload-time = "2026-01-21T15:05:37Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchaudio-2.10.0%2Bcpu-cp313-cp313t-win_amd64.whl", hash = "sha256:35763804fc32eb5d108ba49b75dd8cc09ae0892070dc528ef6beed6a3d923c7f", upload-time = "2026-01-21T15:05:38Z" },
 ]
 
 [[package]]
