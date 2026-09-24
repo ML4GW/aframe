@@ -93,11 +93,7 @@ def get_infer_group_inputs(wildcards):
     branches = _group_branches(_load_branch_map(), int(wildcards.group_id))
     inputs = {"background": sorted({b["fname"] for b in branches})}
     if ANALYSIS_TYPE == "hdf5":
-        inputs["waveforms"] = [
-            str(test_waveforms / "branches" / b["waveform_branch"] / "waveforms.hdf5")
-            for b in branches
-            if b["waveform_branch"] is not None
-        ]
+        inputs["waveforms"] = [b["waveforms"] for b in branches if b["waveforms"]]
     return inputs
 
 
@@ -136,9 +132,9 @@ else:
         The number of shift multiples is the minimum needed to accumulate
         Tb seconds of background livetime. Branches that are too short to
         analyze after shifting and PSD burn-in are dropped. Optionally
-        includes zero-lag branches. Each branch records the testing waveform
-        branch with the same file and shifts, which holds all of its
-        injections, or null if there is none (e.g. zero-lag).
+        includes zero-lag branches. Each branch records the waveform file of
+        the testing waveform branch with the same file and shifts, which
+        holds all of its injections, or null if there is none (e.g. zero-lag).
         """
         input:
             background=get_test_background_files,
@@ -186,22 +182,27 @@ else:
             ]
             if zero_lag:
                 branch_shifts.insert(0, [0] * len(shifts))
-            branch_map, i = {}, 0
+            branch_map, i, matched = {}, 0, set()
             for fname, (start, stop) in zip(input.background, segments):
                 for shift in branch_shifts:
                     if _is_analyzeable_segment(start, stop, shift, psd_length):
                         branch_map[str(i)] = {
                             "fname": str(fname),
                             "shifts": shift,
-                            "waveform_branch": wbranch_ids.get(
-                                (str(fname), tuple(shift))
-                            ),
+                            "waveforms": None,
                         }
+                        wbranch_id = wbranch_ids.get((str(fname), tuple(shift)))
+                        if wbranch_id is not None:
+                            branch_map[str(i)]["waveforms"] = str(
+                                test_waveforms
+                                / "branches"
+                                / wbranch_id
+                                / "waveforms.hdf5"
+                            )
+                            matched.add(wbranch_id)
                         i += 1
             # every testing waveform must be analyzed by some branch
-            unmatched = set(wbmap) - {
-                b["waveform_branch"] for b in branch_map.values()
-            }
+            unmatched = set(wbmap) - matched
             if unmatched:
                 raise WorkflowError(
                     f"Testing waveform branches {sorted(unmatched, key=int)} "
@@ -223,18 +224,13 @@ _group_common_params = dict(
     integration_window_length=config["integration_window_length"],
     cluster_window_length=config["cluster_window_length"],
 )
-if ANALYSIS_TYPE == "hdf5":
-    _group_common_params["waveforms"] = lambda wc, input: (
-        "[" + ",".join(input.waveforms) + "]"
-    )
 
 _GROUP_SHELL_SUFFIX = (
     " --branch_map {input.branch_map}"
     " --group_id {wildcards.group_id}"
     " --branches_per_job {params.branches_per_job}"
     " --analysis_type {params.analysis_type}"
-    + ("" if ANALYSIS_TYPE == "rnp" else " '--waveforms={params.waveforms}'")
-    + " --background_out {output.background}"
+    " --background_out {output.background}"
     " --foreground_out {output.foreground}"
     " --metadata_out {output.metadata}"
     + (" --zero_lag_out {output.zero_lag}" if zero_lag else "")

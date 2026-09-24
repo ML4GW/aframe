@@ -58,7 +58,7 @@ def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
     else:
         seq = Hdf5Sequence(
             branch["fname"],
-            cfg.waveforms,
+            branch["waveforms"],
             cfg.ifos,
             shifts,
             cfg.inference_sampling_rate,
@@ -163,7 +163,6 @@ def _shared_args(p):
     p.add_argument("--group_id", type=int)
     p.add_argument("--branches_per_job", type=int)
     p.add_argument("--analysis_type", type=str, default="hdf5")
-    p.add_argument("--waveforms", type=list[str], default=[])
     p.add_argument("--background_out", type=str)
     p.add_argument("--foreground_out", type=str)
     p.add_argument("--metadata_out", type=str)
