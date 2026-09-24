@@ -45,7 +45,6 @@ def create_snakemake_runfile(path: Path, profile: str):
     cmd = f"snakemake --configfile {config} --profile {profile}"
     content = f"""
     #!/bin/bash
-    # Set AFRAME_DEV=1 to bind the working tree into containers.
     cd {root}
     source pipeline/.env
     {cmd}
