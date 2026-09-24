@@ -172,12 +172,14 @@ checkpoint generate_train_segments:
         start=config["train_start"],
         end=config["train_end"],
         min_duration=config["train_min_duration"],
+        segment_server=config["segment_server"],
     shell:
         "generate-segments"
         " --flags '{params.flags}'"
         " --start {params.start}"
         " --end {params.end}"
         " --min_duration {params.min_duration}"
+        " --segment_server {params.segment_server}"
         " --output_file {output}"
         " &> {log}"
 
@@ -195,12 +197,14 @@ checkpoint generate_test_segments:
         start=config["test_start"],
         end=config["test_end"],
         min_duration=config["test_min_duration"],
+        segment_server=config["segment_server"],
     shell:
         "generate-segments"
         " --flags '{params.flags}'"
         " --start {params.start}"
         " --end {params.end}"
         " --min_duration {params.min_duration}"
+        " --segment_server {params.segment_server}"
         " --output_file {output}"
         " &> {log}"
 

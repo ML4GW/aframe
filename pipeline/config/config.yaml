@@ -47,6 +47,8 @@ flags:
   - H1_DATA
   - L1_DATA
 
+# DQSegDB server for non-open flags and vetoes. Needs HTTPS and a SciToken.
+segment_server: https://segments.igwn.org
 train_min_duration: 1024.0  # minimum train segment length (seconds)
 test_min_duration: 128.0    # minimum test segment length (seconds)
 max_duration: 20000.0       # maximum chunk length when splitting segments

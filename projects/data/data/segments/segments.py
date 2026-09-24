@@ -4,6 +4,9 @@ from collections.abc import Iterable
 from gwpy.segments import DataQualityDict, DataQualityFlag, SegmentList
 
 OPEN_DATA_FLAGS = ["H1_DATA", "L1_DATA", "V1_DATA"]
+# Passed explicitly: without $DEFAULT_SEGMENT_SERVER, dqsegdb2 falls back
+# to segments.ligo.org, which was shut down on 2026-09-10.
+DEFAULT_SEGMENT_SERVER = "https://segments.igwn.org"
 O3A_END = 1253977218
 O3B_START = 1256655618
 
@@ -65,6 +68,7 @@ class DataQualityDict(DataQualityDict):
         start: float,
         end: float,
         min_duration: float | None = None,
+        segment_server: str = DEFAULT_SEGMENT_SERVER,
         **kwargs,
     ) -> SegmentList:
         flags = set(flags)
@@ -77,7 +81,13 @@ class DataQualityDict(DataQualityDict):
         if flags:
             # Authenticate only if we need to query non-open flags
             authenticate()
-            segments.update(cls.query_non_open(flags, start, end, **kwargs))
+            # Only `query_non_open` needs host passed. `query_open` reads
+            # from the GWOSC host.
+            segments.update(
+                cls.query_non_open(
+                    flags, start, end, host=segment_server, **kwargs
+                )
+            )
         if open_data_flags:
             segments.update(
                 cls.query_open(open_data_flags, start, end, **kwargs)
@@ -96,6 +106,7 @@ class DataQualityDict(DataQualityDict):
         start: float,
         end: float,
         min_duration: float | None = None,
+        segment_server: str = DEFAULT_SEGMENT_SERVER,
         **kwargs,
     ) -> SegmentList:
         # if the requested time period
@@ -105,14 +116,26 @@ class DataQualityDict(DataQualityDict):
             segments = SegmentList()
             segments.extend(
                 cls._query_segments(
-                    flags, start, O3A_END, min_duration, **kwargs
+                    flags,
+                    start,
+                    O3A_END,
+                    min_duration,
+                    segment_server,
+                    **kwargs,
                 )
             )
             segments.extend(
                 cls._query_segments(
-                    flags, O3B_START, end, min_duration, **kwargs
+                    flags,
+                    O3B_START,
+                    end,
+                    min_duration,
+                    segment_server,
+                    **kwargs,
                 )
             )
             return segments
         # otherwise, just query the whole period
-        return cls._query_segments(flags, start, end, min_duration, **kwargs)
+        return cls._query_segments(
+            flags, start, end, min_duration, segment_server, **kwargs
+        )

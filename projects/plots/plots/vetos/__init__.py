@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .vetos import (
+    DEFAULT_SEGMENT_SERVER,
     VETO_CATEGORIES,
     VetoParser,
     gates_to_veto_segments,
@@ -71,6 +72,7 @@ VETO_DEFINER_FILE = EPOCHS["O3"].veto_definer_file
 GATE_PATHS = EPOCHS["O3"].gate_paths
 
 __all__ = [
+    "DEFAULT_SEGMENT_SERVER",
     "EPOCHS",
     "GATE_PATHS",
     "VETO_CATEGORIES",

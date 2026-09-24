@@ -31,6 +31,11 @@ def gates_to_veto_segments(path: Path):
     return vetos
 
 
+# Without $DEFAULT_SEGMENT_SERVER, dqsegdb2 falls back
+# to segments.ligo.org, which was shut down on 2026-09-10.
+DEFAULT_SEGMENT_SERVER = "https://segments.igwn.org"
+
+
 def get_catalog_vetos(start: float, stop: float, delta: float = 1.0):
     events = datasets.query_events(
         select=[f"gps-time >= {start}", f"gps-time <= {stop}"]
@@ -48,6 +53,7 @@ class VetoParser:
         start: float,
         stop: float,
         ifos: list[str],
+        segment_server: str = DEFAULT_SEGMENT_SERVER,
     ):
         self.logger = logging.getLogger("vizapp")
         self.veto_definer_file = Path(veto_definer_file)
@@ -59,7 +65,9 @@ class VetoParser:
             f"Populating {len(self.vetos)} vetos from "
             f"{self.veto_definer_file.name} over [{start:.0f}, {stop:.0f})"
         )
-        self.vetos.populate(segments=[[start, stop]], verbose=True)
+        self.vetos.populate(
+            source=segment_server, segments=[[start, stop]], verbose=True
+        )
         self.logger.info("Vetos populated")
         self.gate_paths = gate_paths
         self.ifos = ifos

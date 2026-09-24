@@ -23,4 +23,5 @@ load_or_fetch_segments(
     start,
     stop,
     cache=Path(snakemake.output[0]),
+    segment_server=snakemake.params.segment_server,
 )
