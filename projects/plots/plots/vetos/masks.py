@@ -60,6 +60,20 @@ def _segments_key(
     return h.hexdigest()
 
 
+def read_segments(path: Path) -> dict[str, dict[str, np.ndarray]]:
+    """Read segments written by `load_or_fetch_segments`, ignoring its key.
+
+    Returns:
+        `{category: {ifo: (N, 2) array of [start, end) segment bounds}}`.
+    """
+    with open(path) as f:
+        cached = json.load(f)
+    return {
+        cat: {ifo: np.asarray(segs) for ifo, segs in ifo_segs.items()}
+        for cat, ifo_segs in cached["segments"].items()
+    }
+
+
 def load_or_fetch_segments(
     categories: Sequence[VETO_CATEGORIES],
     ifos: Sequence[str],
@@ -91,13 +105,10 @@ def load_or_fetch_segments(
     )
     if cache.exists():
         with open(cache) as f:
-            cached = json.load(f)
-        if cached.get("key") == key:
+            cached_key = json.load(f).get("key")
+        if cached_key == key:
             logging.info(f"Using cached veto segments from {cache}")
-            return {
-                cat: {ifo: np.asarray(segs) for ifo, segs in ifo_segs.items()}
-                for cat, ifo_segs in cached["segments"].items()
-            }
+            return read_segments(cache)
 
     segments: dict[str, dict[str, np.ndarray]] = {}
     parser_categories = [c for c in categories if c != "CATALOG"]
