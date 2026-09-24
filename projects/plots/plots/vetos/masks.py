@@ -10,6 +10,7 @@ from astropy.config.paths import get_cache_dir
 from ledger.events import veto_mask
 
 from plots.vetos import (
+    DEFAULT_SEGMENT_SERVER,
     VETO_CATEGORIES,
     VetoParser,
     get_catalog_vetos,
@@ -82,6 +83,7 @@ def load_or_fetch_segments(
     cache: Path = DEFAULT_SEGMENTS_CACHE,
     veto_definer_file: Path | None = None,
     gate_paths: dict[str, Path] | None = None,
+    segment_server: str = DEFAULT_SEGMENT_SERVER,
 ) -> dict[str, dict[str, np.ndarray]]:
     """Segment lookup for `categories`, cached to `cache` on disk.
 
@@ -114,7 +116,7 @@ def load_or_fetch_segments(
     parser_categories = [c for c in categories if c != "CATALOG"]
     if parser_categories:
         veto_parser = VetoParser(
-            veto_definer_file, gate_paths, start, stop, ifos
+            veto_definer_file, gate_paths, start, stop, ifos, segment_server
         )
         for cat in parser_categories:
             segments[cat] = veto_parser.get_vetos(cat)

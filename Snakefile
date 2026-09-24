@@ -32,6 +32,7 @@ run_dir = Path(config["run_dir"])
 log_dir = Path(config["log_dir"])
 
 
+include: "pipeline/resources.smk"
 include: "projects/data/data.smk"
 include: "projects/train/train.smk"
 include: "projects/export/export.smk"

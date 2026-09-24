@@ -1,13 +1,14 @@
 """Snakemake rules for batch inference.
 
 Two inference modes, selected by `inference_mode` in the run config.
-Both run branches in groups of size `branches_per_job` via
+Both run branches in groups of at most `branches_per_job` via
 `infer-triton` / `infer-local`, and both write the same outputs.
 The `compute_branch_map` and `aggregate_infer` rules are shared.
 
-    triton: A Triton server hosts the model, and each group job is a CPU client
-            that streams its branches to it. Best when GPUs are scarce but
-            multiple exist on a node. Realistically, only used on LDG.
+    triton: A Triton server on the submit node hosts the model, and each group
+            job is a CPU client, also on the submit node, that streams its
+            branches to it. Best when GPUs are scarce but multiple exist on
+            the submit node. Realistically, only used on LDG.
 
     inprocess: Each group job is one GPU job that loads the model locally.
                Best when there are many GPUs available and jobs can be
@@ -18,7 +19,6 @@ At very large branch counts the DAG construction can be batched:
 """
 
 import json
-import math
 import os
 from pathlib import Path
 
@@ -55,6 +55,7 @@ AOTI_PKG = str(export_out / "model_aoti.pt2")
 
 BRANCHES_PER_JOB = config.get("branches_per_job", 1)
 
+
 if ANALYSIS_TYPE == "rnp":
     FRAME_DIR = config["rnp_frame_dir"]
     CHANNEL = config["rnp_channel"]
@@ -83,9 +84,25 @@ def _load_branch_map():
         return json.load(f)
 
 
+def _assign_groups(branch_map, split_at_file_changes):
+    """Number the branches, in order, into groups of at most branches_per_job.
+
+    With `split_at_file_changes`, a group never spans two strain files, so
+    a file is transferred to a job once for all of its shifts in that group.
+    """
+    group, size, last = -1, BRANCHES_PER_JOB, None
+    for branch in branch_map.values():
+        if size == BRANCHES_PER_JOB or (
+            split_at_file_changes and branch["fname"] != last
+        ):
+            group, size = group + 1, 0
+        branch["group"] = group
+        size += 1
+        last = branch["fname"]
+
+
 def _group_branches(branch_map, group_id):
-    ids = list(branch_map)[group_id * BRANCHES_PER_JOB :][:BRANCHES_PER_JOB]
-    return [branch_map[i] for i in ids]
+    return [b for b in branch_map.values() if b["group"] == group_id]
 
 
 def get_infer_group_inputs(wildcards):
@@ -99,7 +116,7 @@ def get_infer_group_inputs(wildcards):
 
 def get_infer_group_outputs(wildcards):
     """Every group's outputs, keyed by output name."""
-    num_groups = math.ceil(len(_load_branch_map()) / BRANCHES_PER_JOB)
+    num_groups = 1 + max(b["group"] for b in _load_branch_map().values())
     return {
         name: expand(fname, group_id=range(num_groups))
         for name, fname in _group_outputs.items()
@@ -120,6 +137,8 @@ if ANALYSIS_TYPE == "rnp":
             branch_map = {
                 str(i): {"fname": f, "shifts": shifts} for i, f in enumerate(files)
             }
+            # one frame per branch, so there's nothing to share within a group
+            _assign_groups(branch_map, split_at_file_changes=False)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -208,13 +227,13 @@ else:
                     f"Testing waveform branches {sorted(unmatched, key=int)} "
                     "match no inference branch"
                 )
+            _assign_groups(branch_map, split_at_file_changes=True)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
 
 
 _group_common_params = dict(
-    branches_per_job=BRANCHES_PER_JOB,
     analysis_type=ANALYSIS_TYPE,
     ifos="[" + ",".join(config["ifos"]) + "]",
     inference_sampling_rate=config["inference_sampling_rate"],
@@ -228,7 +247,6 @@ _group_common_params = dict(
 _GROUP_SHELL_SUFFIX = (
     " --branch_map {input.branch_map}"
     " --group_id {wildcards.group_id}"
-    " --branches_per_job {params.branches_per_job}"
     " --analysis_type {params.analysis_type}"
     " --background_out {output.background}"
     " --foreground_out {output.foreground}"
@@ -255,9 +273,12 @@ if INFERENCE_MODE == "triton":
     rate_per_gpu = config.get("rate_per_gpu")
     infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
 
+    # The clients run where the server does because we can't
+    # guarantee that the EP can reach the submit node.
     localrules:
         compute_branch_map,
         start_triton,
+        infer_group,
         stop_triton,
 
     rule start_triton:
@@ -283,12 +304,11 @@ if INFERENCE_MODE == "triton":
             "scripts/start_triton.py"
 
     rule infer_group:
-        """Stream a group of branches to the Triton server from one CPU client."""
+        """Stream a group of branches to the Triton server from a local client."""
         input:
             unpack(get_infer_group_inputs),
             branch_map=str(infer_dir / "branch_map.json"),
             triton_started=str(triton_dir / "triton.started"),
-            ip_file=str(triton_dir / "triton.ip"),
         output:
             **_group_outputs,
         log:
@@ -304,7 +324,8 @@ if INFERENCE_MODE == "triton":
             rate=infer_rate,
         shell:
             "infer-triton"
-            " --address $(cat {input.ip_file}):8001"
+            # a localrule, so the server is on this node
+            " --address localhost:8001"
             " --model_name {params.model_name}"
             " --model_version {params.model_version}"
             " --rate {params.rate}" + _GROUP_SHELL_SUFFIX
@@ -337,11 +358,8 @@ else:
             container:
                 INFER_CONTAINER
             resources:
-                slurm_partition=config.get("inference_partition", "gpuA40x4"),
-                gpu=1,  # slurm
-                request_gpus=1,  # condor
-                mem_mb=config.get("compile_mem_mb", 32000),
-                runtime=10,
+                **rule_resources("compile_model"),
+                **gpu_resources(),
             params:
                 num_ifos=len(config["ifos"]),
                 sample_rate=config["sample_rate"],
@@ -366,11 +384,8 @@ else:
         container:
             INFER_CONTAINER
         resources:
-            slurm_partition=config.get("inference_partition", "gpuA40x4"),
-            gpu=1,  # slurm
-            request_gpus=1,  # condor
-            mem_mb=config.get("infer_mem_mb", 32000),
-            runtime=config.get("infer_runtime", 60),
+            **rule_resources("infer_group"),
+            **gpu_resources(),
         params:
             **_group_common_params,
             weights=_artifact,
@@ -409,6 +424,8 @@ rule aggregate_infer:
         str(infer_log_dir / "aggregate_infer.log"),
     container:
         INFER_CONTAINER
+    resources:
+        **rule_resources("aggregate_infer"),
     params:
         analysis_type=ANALYSIS_TYPE,
     script:

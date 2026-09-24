@@ -35,11 +35,11 @@ snakemake is invoked.
     localrule: config.get("gpu_rules_local", True)
     container:
         EXPORT_CONTAINER
+    # never reaches condor, so slurm GPU keys only
     resources:
+        **rule_resources("export"),
         slurm_partition=config.get("inference_partition", "gpuA40x4"),
         gpu=1,
-        mem_mb=config.get("export_mem_mb", 32000),
-        runtime=10,
     params:
         preprocessor=config["export_preprocessor"],
         num_ifos=len(config["ifos"]),
