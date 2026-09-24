@@ -8,7 +8,6 @@ The `snakemake` object is injected by snakemake.
 import sys
 from pathlib import Path
 
-from data.cleanup import remove_empty_dirs
 from ledger.injections import (
     InjectionParameterSet,
     InterferometerResponseSet,
@@ -36,8 +35,4 @@ InjectionParameterSet.aggregate(
     [Path(i) for i in snakemake.input.rejected],
     snakemake.output.rejected,
     clean=True,
-)
-remove_empty_dirs(
-    [*snakemake.input.waveforms, *snakemake.input.rejected],
-    Path(snakemake.output.waveforms).parent,
 )
