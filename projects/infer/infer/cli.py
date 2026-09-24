@@ -130,9 +130,8 @@ def _merge_group(cfg, branch_map, group, scratch):
 def _run_group(client, cfg, rate=None, reset=None):
     with open(cfg.branch_map) as f:
         branch_map = json.load(f)
-    ids = list(branch_map.keys())
-    start = cfg.group_id * cfg.branches_per_job
-    group = ids[start : start + cfg.branches_per_job]
+    # groups are assigned by compute_branch_map in infer.smk
+    group = [i for i, b in branch_map.items() if b["group"] == cfg.group_id]
 
     # Per-branch outputs only exist until they're merged. Keep them next
     # to the group's outputs rather than in /tmp, which may be small.
@@ -161,7 +160,6 @@ def _shared_args(p):
     p.add_argument("--logfile", type=str, default=None)
     p.add_argument("--branch_map", type=str)
     p.add_argument("--group_id", type=int)
-    p.add_argument("--branches_per_job", type=int)
     p.add_argument("--analysis_type", type=str, default="hdf5")
     p.add_argument("--background_out", type=str)
     p.add_argument("--foreground_out", type=str)
