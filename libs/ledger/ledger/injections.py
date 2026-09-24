@@ -837,12 +837,15 @@ class InterferometerResponseSet(WaveformSet):
             if all(i is None for i in [start, end, shifts]):
                 return cls._load_with_idx(f, None)
 
-            left_pad = f.attrs["duration"] - f.attrs["right_pad"]
+            # a waveform spans [t - left_pad, t + right_pad] around its
+            # coalescence time t; keep those that overlap [start, end]
+            right_pad = f.attrs["right_pad"]
+            left_pad = f.attrs["duration"] - right_pad
             times = f["parameters"]["injection_time"][:]
 
             mask = True
             if start is not None:
-                mask &= (times + left_pad) >= start
+                mask &= (times + right_pad) >= start
             if end is not None:
                 mask &= (times - left_pad) <= end
             if shifts is not None:
@@ -895,8 +898,8 @@ class InterferometerResponseSet(WaveformSet):
         stop = start + x.shape[-1] / self.sample_rate
         left_pad = self.duration - self.right_pad
 
-        mask = self.injection_time >= (start - left_pad)
-        mask &= self.injection_time <= (stop + self.right_pad)
+        mask = self.injection_time >= (start - self.right_pad)
+        mask &= self.injection_time <= (stop + left_pad)
 
         if not mask.any():
             return x

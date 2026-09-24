@@ -256,8 +256,13 @@ rule fetch_test_background:
 checkpoint compute_waveform_branches:
     """Create a file of (start, end, shifts) branches for testing waveforms.
 
+Each branch covers the analyzed part of one test background file at one
+timeslide: after the PSD burn-in at the file's start, and before the
+timeslide loss (max shift) at its end. Every injection, including its
+full waveform, falls inside a single inference branch.
+
 Adds branches until enough data is present to generate as many waveforms
-as requested. Loops over chunked segments, adding an additional timeslide
+as requested. Loops over background files, adding an additional timeslide
 if the target has not yet been met.
 
 Runs locally on the submit node.
@@ -267,14 +272,13 @@ Runs locally on the submit node.
     output:
         str(test_waveforms / "waveform_branch_map.json"),
     run:
-        segments = [
+        files = [
             (start, start + duration)
-            for start, duration in _read_segments(input[0])
+            for start, duration in _segment_chunks(input[0])
         ]
         shifts = config["shifts"]
         psd_length = config["psd_length"]
         target = config["num_testing_signals"]
-        max_duration = float(config.get("max_duration", -1))
         edge = config["buffer"] + config["waveform_duration"] // 2
         stride = config["spacing"] + config["waveform_duration"]
         branch_map, branch_id, total = {}, 0, 0
@@ -283,40 +287,28 @@ Runs locally on the submit node.
             i += 1
             shift = [i * s for s in shifts]
             added = False
-            for start, end in segments:
+            for start, end in files:
                 if total >= target:
                     break
                 if not _is_analyzeable_segment(start, end, shift, psd_length):
                     continue
-                # skip PSD burn-in at the segment start and the timeslide
-                # loss (max shift) at the end
                 avail_start = start + psd_length
                 avail_end = end - max(shift)
-                avail_duration = avail_end - avail_start
-                # split into <= max_duration chunks so per-branch resources
-                # stay bounded regardless of segment length.
-                chunk_size = avail_duration if max_duration == -1 else max_duration
-                for chunk_idx in range(math.ceil(avail_duration / chunk_size)):
-                    chunk_start = avail_start + chunk_idx * chunk_size
-                    chunk_end = min(
-                        avail_start + (chunk_idx + 1) * chunk_size, avail_end
-                    )
-                    chunk_slots = max(
-                        0, math.ceil((chunk_end - chunk_start - 2 * edge) / stride)
-                    )
-                    if chunk_slots <= 0:
-                        continue
-                    branch_map[str(branch_id)] = {
-                        "start": chunk_start,
-                        "end": chunk_end,
-                        "shifts": shift,
-                    }
-                    branch_id += 1
-                    total += chunk_slots
-                    added = True
-                    if total >= target:
-                        break
-            # segments shrink as the shift grows,
+                slots = math.ceil((avail_end - avail_start - 2 * edge) / stride)
+                if slots <= 0:
+                    continue
+                branch_map[str(branch_id)] = {
+                    "background": str(
+                        test_bg / f"background-{start}-{end - start}.hdf5"
+                    ),
+                    "start": avail_start,
+                    "end": avail_end,
+                    "shifts": shift,
+                }
+                branch_id += 1
+                total += slots
+                added = True
+            # files shrink as the shift grows,
             # stop if nothing is getting added
             if not added:
                 break

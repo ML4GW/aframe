@@ -12,50 +12,39 @@ or rnp (Rates and Populations frames).
 """
 
 import json
+import tempfile
 from pathlib import Path
 
 import h5py
 import jsonargparse
-import numpy as np
+from ledger.events import EventSet, RecoveredInjectionSet
 from utils.logging import configure_logging
 
+from infer.aggregate import merge_timeseries, write_timeseries
 from infer.data import Hdf5Sequence, RnPSequence
 from infer.main import infer
 from infer.postprocess import Postprocessor
 
 
-def _write_outputs(outdir, results, seq, postproc, return_timeseries):
+def _write_outputs(outdir, branch_id, results, seq, postproc, cfg):
     background, foreground, background_ts, foreground_ts = results
-    outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     background.write(outdir / "background.hdf5")
     foreground.write(outdir / "foreground.hdf5")
-    with (outdir / "metadata.json").open("w") as f:
-        json.dump(
-            {
-                "background_length": len(background),
-                "foreground_length": len(foreground),
-            },
-            f,
+    if cfg.timeseries_out is not None:
+        write_timeseries(
+            outdir / "timeseries.hdf5",
+            branch_id,
+            background_ts,
+            foreground_ts,
+            t0=seq.t0,
+            sample_t0=seq.t0 - cfg.fduration / 2,
+            inference_sampling_rate=postproc.inference_sampling_rate,
+            shifts=postproc.shifts,
         )
-    if return_timeseries:
-        with h5py.File(outdir / "timeseries.hdf5", "w") as f:
-            f.attrs["t0"] = seq.t0
-            f.attrs["sample_t0"] = postproc.t0
-            f.attrs["inference_sampling_rate"] = (
-                postproc.inference_sampling_rate
-            )
-            f.attrs["shifts"] = postproc.shifts
-            f.create_dataset("background", data=background_ts)
-            f.create_dataset(
-                "foreground",
-                data=foreground_ts
-                if foreground_ts is not None
-                else np.zeros(0),
-            )
 
 
-def _run_branch(client, cfg, branch, outdir, rate=None):
+def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
     shifts = branch["shifts"]
     if cfg.analysis_type == "rnp":
         seq = RnPSequence(
@@ -87,7 +76,55 @@ def _run_branch(client, cfg, branch, outdir, rate=None):
         cluster_window_length=cfg.cluster_window_length,
     )
     results = infer(client, seq, postproc)
-    _write_outputs(outdir, results, seq, postproc, cfg.return_timeseries)
+    _write_outputs(outdir, branch_id, results, seq, postproc, cfg)
+
+
+def _merge_group(cfg, branch_map, group, scratch):
+    """Merge the group's branch outputs into the group's declared outputs.
+
+    With `zero_lag_out`, branches with all-zero shifts go there rather
+    than to `background_out`. The row count of each event set goes to
+    `metadata_out`, so that aggregate_infer can size its outputs without
+    opening every group's files an extra time.
+    """
+    split_zero_lag = cfg.zero_lag_out is not None
+    background, zero_lag = [], []
+    for branch_id in group:
+        fname = scratch / branch_id / "background.hdf5"
+        shifts = branch_map[branch_id]["shifts"]
+        if split_zero_lag and all(s == 0 for s in shifts):
+            zero_lag.append(fname)
+        else:
+            background.append(fname)
+    # R&P foregrounds are plain EventSets, not RecoveredInjectionSets.
+    foreground_cls = (
+        EventSet if cfg.analysis_type == "rnp" else RecoveredInjectionSet
+    )
+
+    event_sets = {
+        "background": (EventSet, background, cfg.background_out),
+        "foreground": (
+            foreground_cls,
+            [scratch / i / "foreground.hdf5" for i in group],
+            cfg.foreground_out,
+        ),
+    }
+    if split_zero_lag:
+        event_sets["zero_lag"] = (EventSet, zero_lag, cfg.zero_lag_out)
+
+    lengths = {}
+    for name, (cls, files, fname) in event_sets.items():
+        cls.aggregate(files, fname, clean=False)
+        with h5py.File(fname, "r") as f:
+            lengths[name] = int(f.attrs["length"])
+    with open(cfg.metadata_out, "w") as f:
+        json.dump(lengths, f)
+
+    if cfg.timeseries_out is not None:
+        merge_timeseries(
+            [scratch / i / "timeseries.hdf5" for i in group],
+            cfg.timeseries_out,
+        )
 
 
 def _run_group(client, cfg, rate=None, reset=None):
@@ -96,17 +133,26 @@ def _run_group(client, cfg, rate=None, reset=None):
     ids = list(branch_map.keys())
     start = cfg.group_id * cfg.branches_per_job
     group = ids[start : start + cfg.branches_per_job]
-    with client:
-        for branch_id in group:
-            if reset:
-                reset()
-            _run_branch(
-                client,
-                cfg,
-                branch=branch_map[branch_id],
-                outdir=Path(cfg.outdir_root) / branch_id,
-                rate=rate,
-            )
+
+    # Per-branch outputs only exist until they're merged. Keep them next
+    # to the group's outputs rather than in /tmp, which may be small.
+    outdir = Path(cfg.background_out).parent
+    outdir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=outdir) as scratch:
+        scratch = Path(scratch)
+        with client:
+            for branch_id in group:
+                if reset:
+                    reset()
+                _run_branch(
+                    client,
+                    cfg,
+                    branch_id=branch_id,
+                    branch=branch_map[branch_id],
+                    outdir=scratch / branch_id,
+                    rate=rate,
+                )
+        _merge_group(cfg, branch_map, group, scratch)
 
 
 def _shared_args(p):
@@ -117,9 +163,12 @@ def _shared_args(p):
     p.add_argument("--group_id", type=int)
     p.add_argument("--branches_per_job", type=int)
     p.add_argument("--analysis_type", type=str, default="hdf5")
-    p.add_argument("--waveforms", type=str)
-    p.add_argument("--outdir_root", type=str)
-    p.add_argument("--return_timeseries", type=bool, default=False)
+    p.add_argument("--waveforms", type=list[str], default=[])
+    p.add_argument("--background_out", type=str)
+    p.add_argument("--foreground_out", type=str)
+    p.add_argument("--metadata_out", type=str)
+    p.add_argument("--zero_lag_out", type=str | None, default=None)
+    p.add_argument("--timeseries_out", type=str | None, default=None)
     p.add_argument("--ifos", type=list[str])
     p.add_argument("--inference_sampling_rate", type=float)
     p.add_argument("--batch_size", type=int)
