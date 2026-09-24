@@ -5,9 +5,10 @@ Both run branches in groups of size `branches_per_job` via
 `infer-triton` / `infer-local`, and both write the same outputs.
 The `compute_branch_map` and `aggregate_infer` rules are shared.
 
-    triton: A Triton server hosts the model, and each group job is a CPU client
-            that streams its branches to it. Best when GPUs are scarce but
-            multiple exist on a node. Realistically, only used on LDG.
+    triton: A Triton server on the submit node hosts the model, and each group
+            job is a CPU client, also on the submit node, that streams its
+            branches to it. Best when GPUs are scarce but multiple exist on
+            the submit node. Realistically, only used on LDG.
 
     inprocess: Each group job is one GPU job that loads the model locally.
                Best when there are many GPUs available and jobs can be
@@ -255,9 +256,12 @@ if INFERENCE_MODE == "triton":
     rate_per_gpu = config.get("rate_per_gpu")
     infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
 
+    # The clients run where the server does because we can't
+    # guarantee that the EP can reach the submit node.
     localrules:
         compute_branch_map,
         start_triton,
+        infer_group,
         stop_triton,
 
     rule start_triton:
@@ -283,12 +287,11 @@ if INFERENCE_MODE == "triton":
             "scripts/start_triton.py"
 
     rule infer_group:
-        """Stream a group of branches to the Triton server from one CPU client."""
+        """Stream a group of branches to the Triton server from a local client."""
         input:
             unpack(get_infer_group_inputs),
             branch_map=str(infer_dir / "branch_map.json"),
             triton_started=str(triton_dir / "triton.started"),
-            ip_file=str(triton_dir / "triton.ip"),
         output:
             **_group_outputs,
         log:
@@ -304,7 +307,8 @@ if INFERENCE_MODE == "triton":
             rate=infer_rate,
         shell:
             "infer-triton"
-            " --address $(cat {input.ip_file}):8001"
+            # a localrule, so the server is on this node
+            " --address localhost:8001"
             " --model_name {params.model_name}"
             " --model_version {params.model_version}"
             " --rate {params.rate}" + _GROUP_SHELL_SUFFIX
