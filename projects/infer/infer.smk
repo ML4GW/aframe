@@ -337,11 +337,8 @@ else:
             container:
                 INFER_CONTAINER
             resources:
-                slurm_partition=config.get("inference_partition", "gpuA40x4"),
-                gpu=1,  # slurm
-                request_gpus=1,  # condor
-                mem_mb=config.get("compile_mem_mb", 32000),
-                runtime=10,
+                **rule_resources("compile_model"),
+                **gpu_resources(),
             params:
                 num_ifos=len(config["ifos"]),
                 sample_rate=config["sample_rate"],
@@ -366,11 +363,8 @@ else:
         container:
             INFER_CONTAINER
         resources:
-            slurm_partition=config.get("inference_partition", "gpuA40x4"),
-            gpu=1,  # slurm
-            request_gpus=1,  # condor
-            mem_mb=config.get("infer_mem_mb", 32000),
-            runtime=config.get("infer_runtime", 60),
+            **rule_resources("infer_group"),
+            **gpu_resources(),
         params:
             **_group_common_params,
             weights=_artifact,
@@ -409,6 +403,8 @@ rule aggregate_infer:
         str(infer_log_dir / "aggregate_infer.log"),
     container:
         INFER_CONTAINER
+    resources:
+        **rule_resources("aggregate_infer"),
     params:
         analysis_type=ANALYSIS_TYPE,
     script:

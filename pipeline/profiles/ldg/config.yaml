@@ -80,40 +80,8 @@ default-resources:
   classad_AcctGroup: $ENV(LIGO_GROUP)
   classad_AcctGroupUser: $ENV(LIGO_USERNAME)
 
-  # Static defaults, can be overridden per rule.
-  request_memory: 8GB
+  # Defaults for rules the run config's `resources` block doesn't cover.
+  # htcondor_request_mem_mb rather than request_memory because that's the key
+  # rules set and having both makes the plugin warn on every job.
+  htcondor_request_mem_mb: 8192
   request_disk: 1GB
-
-# Per-rule memory based on observed values
-set-resources:
-  generate_train_segments:
-    request_memory: 512MB
-  generate_test_segments:
-    request_memory: 512MB
-  fetch_train_background:
-    request_memory: 6GB
-  fetch_test_background:
-    request_memory: 6GB
-  testing_waveforms_branch:
-    request_memory: 8GB
-  val_waveforms_branch:
-    request_memory: 6GB
-  aggregate_testing_waveforms:
-    request_memory: 2GB
-  aggregate_val_waveforms:
-    request_memory: 2GB
-  training_waveforms_branch:
-    request_memory: 2GB
-  aggregate_training_waveforms:
-    request_memory: 2GB
-  infer_group:
-    request_memory: 8GB
-  aggregate_infer:
-    request_memory: 4GB
-  sensitive_volume:
-    request_memory: 16GB
-
-# `fetch` downloads with nproc=3, so give the fetch rules a few cores.
-set-threads:
-  fetch_train_background: 4
-  fetch_test_background: 4

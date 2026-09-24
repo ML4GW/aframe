@@ -50,6 +50,7 @@ rule fetch_veto_segments:
     params:
         vetos=VETOS,
         ifos=config["ifos"],
+        segment_server=config["segment_server"],
     script:
         "scripts/fetch_veto_segments.py"
 
@@ -70,6 +71,8 @@ rule sensitive_volume:
         str(plots_log_dir / "sensitive_volume.log"),
     container:
         PLOTS_CONTAINER
+    resources:
+        **rule_resources("sensitive_volume"),
     params:
         ifos=_fmt_list(config["ifos"]),
         mass_combos=json.dumps(config["mass_combos"]),

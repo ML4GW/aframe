@@ -27,5 +27,5 @@ dependencies:
   - python>=3.11
   - uv
   - snakemake>=9.0
-  - snakemake-executor-plugin-htcondor
+  - snakemake-executor-plugin-htcondor>=0.3.0
   - snakemake-executor-plugin-slurm

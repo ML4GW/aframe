@@ -81,7 +81,8 @@ Profiles determine snakemake configuration:
 - **`local`**: run everything as a subprocess on the local node
     for testing.
 - **`condor`**: the LDG profile (name changed in PR #504). 
-    Per-rule resources are set with `set-resources`. Two LDG
+    Per-rule memory and walltime come from the run config's
+    `resources` block (see `pipeline/resources.smk`). Two LDG
     specifics worth knowing:
   - SciTokens: every job receives `+OAuthServicesNeeded = scitokens`
     and accounting group attributes from `$ENV(LIGO_GROUP)` /

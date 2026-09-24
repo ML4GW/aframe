@@ -88,16 +88,48 @@ max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
 # Number of condor jobs that validation waveforms are split across
 num_validation_jobs: 200
 
-# --- Slurm -------------------------------------------------------------------
-# GPU partition for training.
+# --- Resources ---------------------------------------------------------------
+# Memory (MB) and walltime (minutes) for rules submitted as batch jobs,
+# under slurm or condor. Rules and keys not listed here use the profile's
+# default-resources.
+resources:
+  fetch_train_background: {mem_mb: 6144, runtime: 480}
+  fetch_test_background: {mem_mb: 6144, runtime: 480}
+  testing_waveforms_branch: {mem_mb: 8192, runtime: 60}
+  aggregate_testing_waveforms: {mem_mb: 2048, runtime: 10}
+  val_waveforms_branch: {mem_mb: 6144, runtime: 60}
+  aggregate_val_waveforms: {mem_mb: 2048, runtime: 10}
+  training_waveforms_branch: {mem_mb: 2048, runtime: 30}
+  aggregate_training_waveforms: {mem_mb: 2048, runtime: 10}
+  train: {mem_mb: 32000, runtime: 2880}
+  export: {mem_mb: 32000, runtime: 10}
+  compile_model: {mem_mb: 32000, runtime: 10}
+  # scale runtime with branches_per_job
+  infer_group: {mem_mb: 8192, runtime: 20}
+  aggregate_infer: {mem_mb: 4096, runtime: 15}
+  sensitive_volume: {mem_mb: 16384, runtime: 15}
+
+# --- GPUs --------------------------------------------------------------------
+# Slurm GPU partition for training.
 train_partition: gpuA40x4
 
 # Number of GPUs to request for training. Must match trainer.devices in
 # your train.yaml.
 train_num_gpus: 1
 
-# GPU partition for export and inference.
+# Slurm GPU partition for export and inference.
 inference_partition: gpuA40x4
+
+# Condor GPU matchmaking for in-process inference.
+# gpu_min_memory_mb: null sets no memory minimum.
+gpu_min_capability: 7.0
+gpu_min_memory_mb: null
+
+# An AOTI package only runs on the architecture it was compiled for, so
+# with inference_backend: aoti, compile_model and infer_group are pinned
+# to exactly this capability.
+# 8.6 is the A10.
+aoti_gpu_capability: 8.6
 
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
@@ -134,7 +166,7 @@ inference_mode: triton
 #              on clusters with heterogeneous GPU pools like OSG.
 inference_backend: export
 
-# Number of (file, shift) branches each job processes
+# Maximum number of (file, shift) branches each job processes.
 branches_per_job: 1
 
 # Preprocessor class compiled into the served model. Its init_args are

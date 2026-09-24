@@ -42,7 +42,8 @@ default-resources:
   mem_mb: 8000
   runtime: 60    # minutes
 
-# GPU rules override the CPU default account with the Delta GPU allocation. 
+# Per-rule memory and runtime live in the run config's `resources` block.
+# GPU rules override the CPU default account with the Delta GPU allocation.
 # The GPU partition/count can be changed in the run config.
 set-resources:
   train:
@@ -51,52 +52,9 @@ set-resources:
     slurm_account: bcse-delta-gpu
   compile_model:
     slurm_account: bcse-delta-gpu
-  generate_train_segments:
-    mem_mb: 512
-    runtime: 10
-  generate_test_segments:
-    mem_mb: 512
-    runtime: 10
-  fetch_train_background:
-    mem_mb: 6144
-    runtime: 480
-  fetch_test_background:
-    mem_mb: 6144
-    runtime: 480
-  testing_waveforms_branch:
-    mem_mb: 8192
-    runtime: 60
-  val_waveforms_branch:
-    mem_mb: 6144
-    runtime: 60
-  aggregate_testing_waveforms:
-    mem_mb: 2048
-    runtime: 10
-  aggregate_val_waveforms:
-    mem_mb: 2048
-    runtime: 10
-  training_waveforms_branch:
-    mem_mb: 2048
-    runtime: 30
-  aggregate_training_waveforms:
-    mem_mb: 2048
-    runtime: 10
-  # On Delta this is the in-process GPU job (model loaded locally); it needs the
-  # GPU memory headroom. The GPU itself comes from the rule (gpu=1 +
-  # inference_partition). Scale runtime up if branches_per_job is large.
   infer_group:
     slurm_account: bcse-delta-gpu
-    mem_mb: 8192
-    runtime: 20
-  aggregate_infer:
-    mem_mb: 4096
-    runtime: 15
-  sensitive_volume:
-    mem_mb: 16384
-    runtime: 15
 
 set-threads:
-  fetch_train_background: 4
-  fetch_test_background: 4
   train: 16
   compile_model: 16

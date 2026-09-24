@@ -215,6 +215,10 @@ rule fetch_train_background:
         str(data_log_dir / "fetch_train_background-{start}-{duration}.log"),
     container:
         DATA_CONTAINER
+    # `fetch` downloads with nproc=3
+    threads: 4
+    resources:
+        **rule_resources("fetch_train_background"),
     params:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
@@ -239,6 +243,10 @@ rule fetch_test_background:
         str(data_log_dir / "fetch_test_background-{start}-{duration}.log"),
     container:
         DATA_CONTAINER
+    # `fetch` downloads with nproc=3
+    threads: 4
+    resources:
+        **rule_resources("fetch_test_background"),
     params:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
@@ -336,6 +344,8 @@ the rejected parameters for this branch.
         str(data_log_dir / "testing_waveforms_branch-{wbranch_id}.log"),
     container:
         DATA_CONTAINER
+    resources:
+        **rule_resources("testing_waveforms_branch"),
     params:
         branch=_branch_params,
         ifos=_fmt_list(config["ifos"]),
@@ -391,6 +401,8 @@ rule aggregate_testing_waveforms:
     localrule: config.get("aggregate_rules_local", False)
     container:
         DATA_CONTAINER
+    resources:
+        **rule_resources("aggregate_testing_waveforms"),
     params:
         ifos=config["ifos"],
     script:
@@ -411,6 +423,8 @@ The PSD reference is the last fetched train-background chunk.
         str(data_log_dir / "val_waveforms_branch-{vbranch_id}.log"),
     container:
         DATA_CONTAINER
+    resources:
+        **rule_resources("val_waveforms_branch"),
     params:
         num_signals=math.ceil(config["num_validation_signals"] / num_validation_jobs),
         ifos=_fmt_list(config["ifos"]),
@@ -459,6 +473,8 @@ rule aggregate_val_waveforms:
     localrule: config.get("aggregate_rules_local", False)
     container:
         DATA_CONTAINER
+    resources:
+        **rule_resources("aggregate_val_waveforms"),
     params:
         ifos=config["ifos"],
     script:
@@ -478,6 +494,8 @@ if config.get("pregenerate_training_waveforms", False):
             str(data_log_dir / "training_waveforms_branch-{tbranch_id}.log"),
         container:
             DATA_CONTAINER
+        resources:
+            **rule_resources("training_waveforms_branch"),
         params:
             num_signals=math.ceil(
                 config["num_training_signals"] / num_train_waveform_jobs
@@ -516,5 +534,7 @@ if config.get("pregenerate_training_waveforms", False):
         localrule: config.get("aggregate_rules_local", False)
         container:
             DATA_CONTAINER
+        resources:
+            **rule_resources("aggregate_training_waveforms"),
         script:
             "scripts/aggregate_training_waveforms.py"
