@@ -385,10 +385,9 @@ class Ledger:
             idx = 0
             for source in tqdm(_iter_open(files, "r", clean=clean)):
                 source_length = source.attrs["length"]
-                if source_length == 0:
-                    continue
                 # for each dataset in the ledger, move the data
-                # from the source into the correct spot in the target
+                # from the source into the correct spot in the target.
+                # Empty sources still contribute metadata, e.g. Tb.
                 for key, attr in cls.__dataclass_fields__.items():
                     shape = (length,)
                     if attr.metadata["kind"] == "metadata":
@@ -409,9 +408,12 @@ class Ledger:
                         else:
                             ours = target.attrs[key]
 
-                        theirs = source.attrs[key]
+                        theirs = source.attrs.get(key)
                         value = cls.compare_metadata(key, ours, theirs)
-                        target.attrs[key] = value
+                        if value is not None:
+                            target.attrs[key] = value
+                    elif source_length == 0:
+                        continue
                     else:
                         # only chunk waveforms, not parameters
                         _chunks = (
@@ -449,3 +451,13 @@ class Ledger:
 
                 # advance the corresponding row index
                 idx += source_length
+
+            # With no rows, no source created the datasets. Create
+            # empty ones so that the file can be read back.
+            for key, attr in cls.__dataclass_fields__.items():
+                kind = attr.metadata["kind"]
+                if kind == "metadata":
+                    continue
+                group = target.require_group(kind + "s")
+                if key not in group:
+                    group.create_dataset(key, shape=(0,), dtype=dtype)

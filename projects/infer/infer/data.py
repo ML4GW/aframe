@@ -159,7 +159,7 @@ class Hdf5Sequence(BaseSequence):
     def __init__(
         self,
         background_fname: str,
-        injection_set_fname: str,
+        injection_set_fnames: list[str],
         ifos: list[str],
         shifts: list[float],
         inference_sampling_rate: float,
@@ -177,8 +177,10 @@ class Hdf5Sequence(BaseSequence):
         Args:
             background_fname:
                 Path to the background segment
-            injection_set_fname:
-                Path to the injection set file
+            injection_set_fnames:
+                Paths to the injection set files. Each is filtered to this
+                segment and shifts, so files covering other segments or
+                shifts contribute nothing. May be empty.
             ifos:
                 Interferometer names
             shifts:
@@ -196,7 +198,7 @@ class Hdf5Sequence(BaseSequence):
             batch_size=batch_size,
             rate=rate,
             background_fname=background_fname,
-            injection_set_fname=injection_set_fname,
+            injection_set_fnames=injection_set_fnames,
             ifos=ifos,
             shifts=shifts,
         )
@@ -208,7 +210,7 @@ class Hdf5Sequence(BaseSequence):
     def _setup(
         self,
         background_fname: str,
-        injection_set_fname: str,
+        injection_set_fnames: list[str],
         ifos: list[str],
         shifts: list[float],
     ):
@@ -235,17 +237,20 @@ class Hdf5Sequence(BaseSequence):
             InterferometerResponseSet,
             "ResponseSet",
         )
-        injection_set = cls.read(
-            injection_set_fname,
-            start=self.t0,
-            end=self.t0 + self.duration,
-            shifts=shifts,
-        )
+        injection_set = cls()
+        for fname in injection_set_fnames:
+            injection_set.append(
+                cls.read(
+                    fname,
+                    start=self.t0,
+                    end=self.t0 + self.duration,
+                    shifts=shifts,
+                )
+            )
         if len(injection_set) == 0:
             logging.info(
-                f"No injections found in {injection_set_fname} "
-                f"for segment {background_fname} and "
-                f"shifts {shifts}, skipping."
+                f"No injections found for segment {background_fname} "
+                f"and shifts {shifts}, skipping."
             )
             injection_set = None
 

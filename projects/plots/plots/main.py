@@ -18,9 +18,21 @@ from plots.vetos.masks import (
     combine_masks,
     compute_veto_masks,
     load_or_fetch_segments,
+    read_segments,
 )
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+def analysis_span(background) -> tuple[float, float]:
+    """GPS span of the data behind `background`, including timeslides."""
+    if not len(background):
+        return 0.0, 0.0
+    shifts = background.shift
+    return (
+        background.detection_time.min() + min(shifts.min(), 0),
+        background.detection_time.max() + max(shifts.max(), 0),
+    )
 
 
 def _apply_vetos(
@@ -31,6 +43,7 @@ def _apply_vetos(
     start,
     stop,
     veto_definer_file=None,
+    veto_segments=None,
 ):
     """Filter background and foreground events through veto categories.
 
@@ -39,9 +52,18 @@ def _apply_vetos(
     coincidences in every timeslide, so that fraction, and not the fraction
     of background events removed, estimates the livetime lost.
     """
-    segments = load_or_fetch_segments(
-        vetos, ifos, start, stop, veto_definer_file=veto_definer_file
-    )
+    if veto_segments is None:
+        segments = load_or_fetch_segments(
+            vetos, ifos, start, stop, veto_definer_file=veto_definer_file
+        )
+    else:
+        logging.info(f"Reading veto segments from {veto_segments}")
+        segments = read_segments(veto_segments)
+        missing = set(vetos) - set(segments)
+        if missing:
+            raise ValueError(
+                f"{veto_segments} has no segments for {sorted(missing)}"
+            )
 
     logging.info("Computing background veto masks")
     back_masks = compute_veto_masks(background, vetos, ifos, segments)
@@ -79,6 +101,7 @@ def sensitive_volume(
     verbose: bool = False,
     vetos: list[VETO_CATEGORIES] | None = None,
     veto_definer_file: Path | None = None,
+    veto_segments: Path | None = None,
     injection_file: Path | None = None,
 ):
     """
@@ -119,6 +142,11 @@ def sensitive_volume(
         veto_definer_file:
             Path to a LIGO_LW veto definer to use instead of the definitions
             shipped for the observing run the data falls in.
+        veto_segments:
+            Path to segments written by
+            `plots.vetos.masks.load_or_fetch_segments`, used as-is instead
+            of querying the segment database. If not provided, segments
+            are queried and cached under `~/.aframe/cache`.
         injection_file:
             Path to the LVK O3 sensitivity injection set used for the
             GWTC-3 comparison curves. If not provided, it is downloaded
@@ -129,14 +157,7 @@ def sensitive_volume(
     background = data.background
     foreground = data.foreground
 
-    if len(background):
-        shifts = background.shift
-        start, stop = (
-            background.detection_time.min() + min(shifts.min(), 0),
-            background.detection_time.max() + max(shifts.max(), 0),
-        )
-    else:
-        start = stop = 0.0
+    start, stop = analysis_span(background)
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
     # optionally apply vetos if the user passed a list of veto categories
@@ -149,6 +170,7 @@ def sensitive_volume(
             start,
             stop,
             veto_definer_file=veto_definer_file,
+            veto_segments=veto_segments,
         )
         data = AnalysisData(background, foreground, data.rejected)
 

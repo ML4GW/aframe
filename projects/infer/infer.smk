@@ -65,20 +65,48 @@ wildcard_constraints:
     group_id=r"\d+",
 
 
-def _num_groups(branch_map_file):
-    with open(branch_map_file) as f:
-        n = len(json.load(f))
-    return math.ceil(n / BRANCHES_PER_JOB)
+# Outputs of each group job, merged across groups by aggregate_infer.
+# metadata.json holds the row count of each event set.
+group_dir = infer_dir / "groups" / "{group_id}"
+_group_outputs = {
+    name: str(group_dir / f"{name}.hdf5")
+    for name in ["background", "foreground"]
+    + (["zero_lag"] if zero_lag else [])
+    + (["timeseries"] if return_timeseries else [])
+}
+_group_outputs["metadata"] = str(group_dir / "metadata.json")
 
 
-def get_infer_group_sentinels(wildcards):
-    """One sentinel per group of branches_per_job branches"""
-    bmap_file = checkpoints.compute_branch_map.get(**wildcards).output[0]
+def _load_branch_map():
+    bmap_file = checkpoints.compute_branch_map.get().output[0]
+    with open(bmap_file) as f:
+        return json.load(f)
+
+
+def _group_branches(branch_map, group_id):
+    ids = list(branch_map)[group_id * BRANCHES_PER_JOB :][:BRANCHES_PER_JOB]
+    return [branch_map[i] for i in ids]
+
+
+def get_infer_group_inputs(wildcards):
+    """Strain files, plus their testing waveforms, for one group."""
+    branches = _group_branches(_load_branch_map(), int(wildcards.group_id))
+    inputs = {"background": sorted({b["fname"] for b in branches})}
+    if ANALYSIS_TYPE == "hdf5":
+        inputs["waveforms"] = [
+            str(test_waveforms / "branches" / b["waveform_branch"] / "waveforms.hdf5")
+            for b in branches
+            if b["waveform_branch"] is not None
+        ]
+    return inputs
+
+
+def get_infer_group_outputs(wildcards):
+    """Every group's outputs, keyed by output name."""
+    num_groups = math.ceil(len(_load_branch_map()) / BRANCHES_PER_JOB)
     return {
-        "sentinels": expand(
-            str(infer_dir / "tmp" / "groups" / "{group_id}.done"),
-            group_id=list(range(_num_groups(bmap_file))),
-        )
+        name: expand(fname, group_id=range(num_groups))
+        for name, fname in _group_outputs.items()
     }
 
 
@@ -108,7 +136,9 @@ else:
         The number of shift multiples is the minimum needed to accumulate
         Tb seconds of background livetime. Branches that are too short to
         analyze after shifting and PSD burn-in are dropped. Optionally
-        includes zero-lag branches.
+        includes zero-lag branches. Each branch records the testing waveform
+        branch with the same file and shifts, which holds all of its
+        injections, or null if there is none (e.g. zero-lag).
         """
         input:
             background=get_test_background_files,
@@ -140,6 +170,9 @@ else:
             )
             with open(input.waveform_branch_map) as f:
                 wbmap = json.load(f)
+            wbranch_ids = {
+                (w["background"], tuple(w["shifts"])): i for i, w in wbmap.items()
+            }
             max_waveform_shift = max(max(b["shifts"]) for b in wbmap.values())
             num_waveform_shifts = max_waveform_shift / max(shifts)
             if num_waveform_shifts > num_shifts:
@@ -148,26 +181,32 @@ else:
                     f"multiples but Tb={config['Tb']} only covers {num_shifts}. "
                     f"Reduce num_testing_signals or increase Tb."
                 )
+            branch_shifts = [
+                [(j + 1) * s for s in shifts] for j in range(num_shifts)
+            ]
+            if zero_lag:
+                branch_shifts.insert(0, [0] * len(shifts))
             branch_map, i = {}, 0
             for fname, (start, stop) in zip(input.background, segments):
-                if zero_lag:
-                    zero_shifts = [0] * len(shifts)
-                    if _is_analyzeable_segment(
-                        start, stop, zero_shifts, psd_length
-                    ):
-                        branch_map[str(i)] = {
-                            "fname": str(fname),
-                            "shifts": zero_shifts,
-                        }
-                        i += 1
-                for j in range(num_shifts):
-                    shift = [(j + 1) * s for s in shifts]
+                for shift in branch_shifts:
                     if _is_analyzeable_segment(start, stop, shift, psd_length):
                         branch_map[str(i)] = {
                             "fname": str(fname),
                             "shifts": shift,
+                            "waveform_branch": wbranch_ids.get(
+                                (str(fname), tuple(shift))
+                            ),
                         }
                         i += 1
+            # every testing waveform must be analyzed by some branch
+            unmatched = set(wbmap) - {
+                b["waveform_branch"] for b in branch_map.values()
+            }
+            if unmatched:
+                raise WorkflowError(
+                    f"Testing waveform branches {sorted(unmatched, key=int)} "
+                    "match no inference branch"
+                )
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -176,7 +215,6 @@ else:
 _group_common_params = dict(
     branches_per_job=BRANCHES_PER_JOB,
     analysis_type=ANALYSIS_TYPE,
-    outdir_root=str(infer_dir / "tmp"),
     ifos="[" + ",".join(config["ifos"]) + "]",
     inference_sampling_rate=config["inference_sampling_rate"],
     batch_size=config["inference_batch_size"],
@@ -184,24 +222,30 @@ _group_common_params = dict(
     fduration=config["fduration"],
     integration_window_length=config["integration_window_length"],
     cluster_window_length=config["cluster_window_length"],
-    return_timeseries=return_timeseries,
 )
+if ANALYSIS_TYPE == "hdf5":
+    _group_common_params["waveforms"] = lambda wc, input: (
+        "[" + ",".join(input.waveforms) + "]"
+    )
 
 _GROUP_SHELL_SUFFIX = (
     " --branch_map {input.branch_map}"
     " --group_id {wildcards.group_id}"
     " --branches_per_job {params.branches_per_job}"
     " --analysis_type {params.analysis_type}"
-    + ("" if ANALYSIS_TYPE == "rnp" else " --waveforms {input.waveforms}")
-    + " --outdir_root {params.outdir_root}"
-    " '--ifos={params.ifos}'"
+    + ("" if ANALYSIS_TYPE == "rnp" else " '--waveforms={params.waveforms}'")
+    + " --background_out {output.background}"
+    " --foreground_out {output.foreground}"
+    " --metadata_out {output.metadata}"
+    + (" --zero_lag_out {output.zero_lag}" if zero_lag else "")
+    + (" --timeseries_out {output.timeseries}" if return_timeseries else "")
+    + " '--ifos={params.ifos}'"
     " --inference_sampling_rate {params.inference_sampling_rate}"
     " --batch_size {params.batch_size}"
     " --psd_length {params.psd_length}"
     " --fduration {params.fduration}"
     " --integration_window_length {params.integration_window_length}"
     " --cluster_window_length {params.cluster_window_length}"
-    " --return_timeseries {params.return_timeseries}"
     " &> {log}"
 )
 
@@ -245,12 +289,12 @@ if INFERENCE_MODE == "triton":
     rule infer_group:
         """Stream a group of branches to the Triton server from one CPU client."""
         input:
+            unpack(get_infer_group_inputs),
             branch_map=str(infer_dir / "branch_map.json"),
-            waveforms=str(test_waveforms / "waveforms.hdf5"),
             triton_started=str(triton_dir / "triton.started"),
             ip_file=str(triton_dir / "triton.ip"),
         output:
-            touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
+            **_group_outputs,
         log:
             str(infer_log_dir / "infer_group-{group_id}.log"),
         container:
@@ -312,20 +356,15 @@ else:
 
     else:
         _artifact = str(train_out / "model_exported.pt2")
-    # Only hdf5 needs the test waveform set.
-    infer_local_inputs = dict(
-        branch_map=str(infer_dir / "branch_map.json"),
-        artifact=_artifact,
-    )
-    if ANALYSIS_TYPE == "hdf5":
-        infer_local_inputs["waveforms"] = str(test_waveforms / "waveforms.hdf5")
 
     rule infer_group:
         """Run a group of branches in-process on one GPU."""
         input:
-            **infer_local_inputs,
+            unpack(get_infer_group_inputs),
+            branch_map=str(infer_dir / "branch_map.json"),
+            artifact=_artifact,
         output:
-            touch(str(infer_dir / "tmp" / "groups" / "{group_id}.done")),
+            **_group_outputs,
         log:
             str(infer_log_dir / "infer_group-{group_id}.log"),
         container:
@@ -358,10 +397,9 @@ else:
 
 
 rule aggregate_infer:
-    """Merge per-branch outputs into the final background and foreground."""
+    """Merge per-group outputs into the final background and foreground."""
     input:
-        unpack(get_infer_group_sentinels),
-        branch_map=str(infer_dir / "branch_map.json"),
+        unpack(get_infer_group_outputs),
     output:
         **({"zero_lag": str(infer_dir / "0lag.hdf5")} if zero_lag else {}),
         **(
@@ -376,7 +414,6 @@ rule aggregate_infer:
     container:
         INFER_CONTAINER
     params:
-        tmp_dir=str(infer_dir / "tmp"),
         analysis_type=ANALYSIS_TYPE,
     script:
         "scripts/aggregate_infer.py"
