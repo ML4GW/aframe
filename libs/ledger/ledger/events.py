@@ -62,9 +62,11 @@ class EventSet(Ledger):
 
     @classmethod
     def compare_metadata(cls, key, ours, theirs):
-        # accumulate background time when merging or appending
+        # accumulate background time when merging or appending. Files
+        # aggregated from no sources, e.g. a group with no zero-lag
+        # branches, have no Tb, which means no livetime.
         if key == "Tb":
-            return ours + theirs
+            return (ours or 0) + (theirs or 0)
         return super().compare_metadata(key, ours, theirs)
 
     def get_shift(self, shift: np.ndarray) -> "EventSet":
