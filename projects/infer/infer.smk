@@ -51,6 +51,16 @@ TRITON_IMAGE = os.path.join(
     os.getenv("AFRAME_CONTAINER_ROOT", ""), config["triton_image"]
 )
 
+
+def check_triton_image():
+    if INFERENCE_MODE == "triton" and not os.path.exists(TRITON_IMAGE):
+        raise WorkflowError(
+            f"Triton image {TRITON_IMAGE} doesn't exist. Pull the release "
+            f"in its name, e.g. `apptainer pull {TRITON_IMAGE} "
+            "docker://nvcr.io/nvidia/tritonserver:25.06-py3`."
+        )
+
+
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
 BRANCHES_PER_JOB = config.get("branches_per_job", 1)

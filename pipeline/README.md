@@ -13,6 +13,11 @@ cp pipeline/.env.example pipeline/.env   # then edit pipeline/.env (git-ignored)
 # One-time: build the per-project containers
 uv run build-containers # may need to build one at a time
 
+# One-time, for inference_mode: triton: pull the server image named by
+# triton_image in config.yaml
+apptainer pull $AFRAME_CONTAINER_ROOT/tritonserver_25.06.sif \
+    docker://nvcr.io/nvidia/tritonserver:25.06-py3
+
 # Initialize a run directory with a config.yaml, train.yaml, and run.sh
 uv run aframe-init snakemake -d /path/to/my-run
 # Edit /path/to/my-run/config.yaml to override paramerers in pipeline/config/config.yaml
@@ -181,7 +186,9 @@ If these conditions are met, then we can implement various upgrades:
 must currently name a local image (a bare filename resolved against
 `$AFRAME_CONTAINER_ROOT`, or an absolute path) because the more modern
 Triton containers have not been added to CVMFS. We could instead
-have a shared cache directory to auto-pull from `ghcr.io/ml4gw/hermes`.
+have a shared cache directory to auto-pull from
+`nvcr.io/nvidia/tritonserver:<release>-py3`. (hermes' images on
+`ghcr.io/ml4gw/hermes` add only a label and stop at 24.12.)
 
 **Hyperparameter tuning currently has no Snakemake equivalent.** The law
 pipeline had a `TuneTask` that stood up a Ray cluster on Kubernetes via
