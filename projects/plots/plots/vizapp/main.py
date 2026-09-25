@@ -18,7 +18,7 @@ def cli(args=None):
     parser.add_argument("--config", action="config")
     parser.add_function_arguments(main)
     args = parser.parse_args()
-    args = parser.instantiate_classes(args)
+    args = parser.instantiate(args)
     args.pop("config", None)
     main(**vars(args))
 

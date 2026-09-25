@@ -287,7 +287,7 @@ def main(args=None):
         Path(cfg.logfile).parent.mkdir(parents=True, exist_ok=True)
     configure_logging(cfg.logfile, cfg.verbose)
 
-    cfg = parser.instantiate_classes(cfg)
+    cfg = parser.instantiate(cfg)
     cfg.trainer.run(cfg.train_args)
 
 

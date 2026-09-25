@@ -30,7 +30,7 @@ def cli(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
     args.pop("config")
-    args = parser.instantiate_classes(args)
+    args = parser.instantiate(args)
     main(**vars(args))
 
 

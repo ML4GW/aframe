@@ -18,7 +18,7 @@ def main(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
     logfile = args.pop("logfile")
-    args = parser.instantiate_classes(args)
+    args = parser.instantiate(args)
     if logfile is not None:
         logdir = os.path.dirname(logfile)
         os.makedirs(logdir, exist_ok=True)
