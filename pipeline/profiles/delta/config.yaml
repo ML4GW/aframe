@@ -33,7 +33,7 @@ software-deployment-method: apptainer
 # The local repo is bound to /opt/aframe
 apptainer-args: >-
   --nv
-  --bind $AFRAME_DATA_DIRS
+  --bind ${AFRAME_DATA_DIRS:?must be set, see pipeline/.env.example}
   --bind $PWD:/opt/aframe
   --home $HOME
 

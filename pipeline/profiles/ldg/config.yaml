@@ -50,6 +50,8 @@ local-cores: 16
 software-deployment-method: apptainer
 
 # $AFRAME_DATA_DIRS binds the run/data/waveform dirs into the container.
+# If it's unset, the rule fails with a message saying so, rather than
+# apptainer misreading the next flag as the bind path.
 # The local repo ($PWD, since snakemake runs from the repo root) is bound to
 # /opt/aframe, where the images install the projects in editable mode, so
 # code always comes from the local repo.
@@ -57,7 +59,7 @@ software-deployment-method: apptainer
 # to the repo root and creates caches there. A `--home $HOME` overrides it.
 apptainer-args: >-
   --nv
-  --bind $AFRAME_DATA_DIRS
+  --bind ${AFRAME_DATA_DIRS:?must be set, see pipeline/.env.example}
   --bind $PWD:/opt/aframe
   --home $HOME
 
