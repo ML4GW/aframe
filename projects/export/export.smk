@@ -4,12 +4,10 @@ Rules:
   export: compile the trained model into an accelerated format
 """
 
-import os
-
 export_out = run_dir / "export"
 export_log_dir = log_dir / "export"
 
-EXPORT_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "export.sif")
+EXPORT_CONTAINER = container("export")
 
 remote_train = config.get("remote_train", False)
 

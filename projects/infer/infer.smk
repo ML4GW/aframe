@@ -45,7 +45,7 @@ if ANALYSIS_TYPE not in ("hdf5", "rnp"):
 if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
     raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
 
-INFER_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "infer.sif")
+INFER_CONTAINER = container("infer")
 
 TRITON_IMAGE = os.path.join(
     os.getenv("AFRAME_CONTAINER_ROOT", ""), config["triton_image"]

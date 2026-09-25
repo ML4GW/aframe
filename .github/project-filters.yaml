@@ -3,6 +3,7 @@ workflow: &workflow
   - '.github/workflows/project-build-test.yaml'
   - 'container_templates/**'
   - 'scripts/build_containers.py'
+  - 'scripts/env_hash.py'
   - 'pyproject.toml'
   - 'uv.lock'
 

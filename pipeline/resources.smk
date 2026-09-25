@@ -5,17 +5,65 @@ Slurm uses `mem_mb`, `runtime` and `gpu`, while htcondor ignores those
 and reads `htcondor_request_mem_mb`, `allowed_execute_duration`, and
 `request_gpus` plus its GPU matchmaking keys. Each helper returns both
 slurm and htcondor sets.
+
+Also resolves each project's container image.
 """
+
+import os
+import shutil
+import subprocess
+
+from snakemake.logging import logger
+
+from scripts.env_hash import env_hash
+
+
+def container(project):
+    """The image to run `project`'s rules in:
+    `$AFRAME_CONTAINER_ROOT/<project>.sif`.
+    """
+    return os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), f"{project}.sif")
+
+
+def check_images(projects=("data", "train", "export", "infer", "plots")):
+    """Warn about images built for a different environment than the local
+    repo's.
+
+    Images record their environment hash (scripts/env_hash.py) at build time.
+    """
+    exe = shutil.which("apptainer") or shutil.which("singularity")
+    if exe is None:
+        return
+    for project in projects:
+        image = container(project)
+        if not os.path.exists(image):
+            continue
+        result = subprocess.run(
+            [exe, "exec", image, "cat", "/opt/env_hash"],
+            capture_output=True,
+            text=True,
+        )
+        built = result.stdout.strip() if result.returncode == 0 else "unknown"
+        expected = env_hash(project)
+        if built != expected:
+            logger.warning(
+                f"{image} was built for environment {built}, but the "
+                f"local repo's is {expected}. Rebuild it with "
+                f"`uv run build-containers {project}`."
+            )
 
 
 def rule_resources(name):
     """Memory and walltime for rule `name`, from the config's `resources`.
 
     Anything a rule doesn't set there fall back to the profile's
-    default-resources.
+    default-resources. With `epnfs`, condor jobs only match execute points
+    that mount the AP's /home.
     """
     res = config.get("resources", {}).get(name, {})
     out = {}
+    if config.get("epnfs"):
+        out["requirements"] = "TARGET.EPNFS =?= True"
     if "mem_mb" in res:
         out["mem_mb"] = out["htcondor_request_mem_mb"] = res["mem_mb"]
     if "runtime" in res:

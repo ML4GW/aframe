@@ -41,6 +41,7 @@ include: "projects/plots/plots.smk"
 
 
 onstart:
+    check_images()
     check_triton_image()
 
 

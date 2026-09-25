@@ -15,12 +15,10 @@ The train_config YAML defines all the model/data/trainer hyperparameters.
 This rule adds the preprocessing args shared with inference.
 """
 
-import os
-
 train_out = run_dir / "train"
 train_log_dir = log_dir / "train"
 
-TRAIN_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "train.sif")
+TRAIN_CONTAINER = container("train")
 
 
 # GPUs for local training. `train_gpus` pins specific devices on a shared

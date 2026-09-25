@@ -10,12 +10,11 @@ inputs and needs no network access.
 """
 
 import json
-import os
 
 plots_dir = run_dir / "plots"
 plots_log_dir = log_dir / "plots"
 
-PLOTS_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "plots.sif")
+PLOTS_CONTAINER = container("plots")
 
 VETOS = config.get("vetos")
 

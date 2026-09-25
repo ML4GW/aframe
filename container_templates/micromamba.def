@@ -52,6 +52,10 @@ rm pylock.toml
 rm -rf /opt/build-tmp
 micromamba clean -ay
 
+# Record the environment hash (scripts/env_hash.py) so the pipeline can
+# tell whether this image matches the repo it's run from
+echo @@ENV_HASH@@ > /opt/env_hash
+
 @@PURGE_BUILD_TOOLS@@
 
 # initialize our shell so that we can execute

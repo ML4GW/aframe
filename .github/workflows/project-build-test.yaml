@@ -81,7 +81,7 @@ jobs:
 
     -
       name: Write apptainer definition
-      run: python scripts/build_containers.py --definition-only ${{ matrix.project }}
+      run: python -m scripts.build_containers --definition-only ${{ matrix.project }}
 
     # build the singularity image as a sandbox directory
     # inside a docker container that has singularity

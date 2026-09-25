@@ -1,11 +1,12 @@
 import logging
 import os
-import tomllib
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from jsonargparse import ArgumentParser
 from spython.main import Client
+
+from scripts.env_hash import env_hash, local_libs
 
 # Define the directory where the projects are located
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -39,32 +40,6 @@ COPY_EXCLUDE: set[str] = {
 }
 
 
-def _local_libs(project_name: str) -> list[str]:
-    """
-    Collect a list of the `libs/` that a project depends on, including
-    those that enter via a library's own dependencies.
-    """
-    seen: set[str] = set()
-    pyproject_files: list[Path] = [BASE_DIR / project_name / "pyproject.toml"]
-
-    while len(pyproject_files) > 0:
-        with open(pyproject_files.pop(), "rb") as f:
-            data = tomllib.load(f)
-
-        sources = data.get("tool", {}).get("uv", {}).get("sources", {})
-        for name, source in sources.items():
-            # index pins like torch are lists, not dicts.
-            # git sources are dicts but don't have a `workspace` key
-            if not isinstance(source, dict) or not source.get("workspace"):
-                continue
-            if name in seen:
-                continue
-            seen.add(name)
-            pyproject_files.append(LIBS_DIR / name / "pyproject.toml")
-
-    return sorted(seen)
-
-
 def _copy_entries(
     source_prefix: str, directory: Path, destination: str
 ) -> list[str]:
@@ -90,7 +65,7 @@ def _get_files_block(project_name: str) -> str:
         BASE_DIR / project_name,
         f"/opt/aframe/projects/{project_name}",
     )
-    for lib in _local_libs(project_name):
+    for lib in local_libs(project_name):
         lines.extend(
             _copy_entries(
                 f"../../libs/{lib}/",
@@ -154,6 +129,7 @@ def create_definition_file(project_name: str) -> Path:
         .replace("@@EXTRA_POST@@", extra_post)
         .replace("@@EXTRA_ENV@@", extra_env)
         .replace("@@PURGE_BUILD_TOOLS@@", PURGE_BUILD_TOOLS)
+        .replace("@@ENV_HASH@@", env_hash(project_name))
     )
 
     output_path = project_dir / "apptainer.def"

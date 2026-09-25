@@ -29,7 +29,6 @@ split num_validation_signals between them.
 
 import json
 import math
-import os
 from pathlib import Path
 
 bg_dir = Path(config["background_dir"])
@@ -40,7 +39,7 @@ train_waveforms = waveform_dir / "train"
 test_waveforms = waveform_dir / "test"
 data_log_dir = log_dir / "data"
 
-DATA_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "data.sif")
+DATA_CONTAINER = container("data")
 
 num_validation_jobs = int(config.get("num_validation_jobs", 200))
 validation_branch_ids = [str(i) for i in range(num_validation_jobs)]
