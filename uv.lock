@@ -448,7 +448,7 @@ requires-dist = [
     { name = "einops", specifier = ">=0.8,<0.9" },
     { name = "h5py", specifier = ">=3.10,<4" },
     { name = "jaxtyping", specifier = ">=0.2" },
-    { name = "ml4gw", specifier = ">=0.7.2" },
+    { name = "ml4gw", specifier = ">=0.8.4" },
     { name = "numpy", specifier = ">=2" },
     { name = "torch" },
 ]
@@ -3442,7 +3442,7 @@ wheels = [
 
 [[package]]
 name = "ml4gw"
-version = "0.8.0"
+version = "0.8.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jaxtyping" },
@@ -3455,9 +3455,9 @@ dependencies = [
     { name = "torchaudio", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra != 'extra-4-data-cpu' and extra == 'extra-5-plots-vizapp-cuda') or (extra != 'extra-4-data-cpu' and extra != 'extra-5-plots-vizapp') or (extra != 'extra-4-data-cuda' and extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
     { name = "torchaudio", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-4-data-cpu') or (sys_platform != 'darwin' and extra == 'extra-5-plots-vizapp') or (extra == 'extra-4-data-cpu' and extra == 'extra-4-data-cuda') or (extra == 'extra-5-plots-vizapp' and extra == 'extra-5-plots-vizapp-cuda')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/56/abb490d353f989802f918ee92cf6c9a37336483aa20c7f17df7730d81744/ml4gw-0.8.0.tar.gz", hash = "sha256:43a2411ae348f8f911fdc0e2defd4fa54370414fa8b51c63518de3cb805754ba", size = 121709, upload-time = "2026-04-17T13:15:20.347Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/51/8a4f2c8061fb1dfa9a8bc6cbb3d0f79ddfa10121eb8e1f6ee910ba29ed7e/ml4gw-0.8.4.tar.gz", hash = "sha256:3a801759d38a4aaab64030a810505a72ba73acfb0a5f286b2bda534cc23e47a8", size = 131414, upload-time = "2026-09-25T13:53:41.624Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/22/64102f10ad7f9043083d8bafcf84b8f2e8abc84bfc214fd04dd8d243ece9/ml4gw-0.8.0-py3-none-any.whl", hash = "sha256:0b4377541d5a90dcf9c728efa4008b4d57b942452acf564856ac58f599273070", size = 132926, upload-time = "2026-04-17T13:15:18.751Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/ce/f65f38f5db0a37160c1e171a0471b61727709e4008f69879991d41026239/ml4gw-0.8.4-py3-none-any.whl", hash = "sha256:bac66cbed02b2082ad1c2d845a47bedf67cfb8cce0928d2157658e8788eb7bb3", size = 143589, upload-time = "2026-09-25T13:53:40.554Z" },
 ]
 
 [[package]]
@@ -4123,7 +4123,7 @@ requires-dist = [
     { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.15.4" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
     { name = "matplotlib", specifier = ">=3.9.4" },
-    { name = "ml4gw", specifier = ">=0.7.4" },
+    { name = "ml4gw", specifier = ">=0.8.4" },
     { name = "numpy", specifier = ">=2" },
     { name = "omegaconf", specifier = ">=2.3.0,<3" },
     { name = "p-astro", editable = "libs/p_astro" },
@@ -6811,7 +6811,7 @@ requires-dist = [
     { name = "ledger", editable = "libs/ledger" },
     { name = "lightning", specifier = ">=2.2.1" },
     { name = "lightray", specifier = ">=0.2.3" },
-    { name = "ml4gw", specifier = ">=0.8.0" },
+    { name = "ml4gw", specifier = ">=0.8.4" },
     { name = "numpy", specifier = ">=2" },
     { name = "ray", extras = ["default", "tune"], specifier = ">=2.8.0,<3" },
     { name = "s3fs", specifier = ">=2024" },

@@ -23,9 +23,9 @@ model:
         spec_kernel_size: 3
         spec_classes: 1
         spec_norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm2DGetter
+          class_path: ml4gw.nn.norm.GroupNorm2D
           init_args:
-            groups: 16
+            num_groups: 16
     train_X_coeff: 0.3
     train_X_spec_coeff: 0.7
     val_X_coeff: 0.5

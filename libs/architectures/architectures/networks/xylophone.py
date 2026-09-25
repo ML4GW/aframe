@@ -1,7 +1,8 @@
 from collections import namedtuple
 
 import torch
-from ml4gw.nn.resnet.resnet_1d import GroupNorm1DGetter, NormLayer, convN
+from ml4gw.nn.norm import GroupNorm1D, NormLayer
+from ml4gw.nn.resnet.resnet_1d import convN
 
 
 class XylophoneResidualBlock(torch.nn.Module):
@@ -87,7 +88,7 @@ class Xylophone(torch.nn.Module):
         base_channels: int = 8,
     ):
         super().__init__()
-        self._norm_layer = norm_layer or GroupNorm1DGetter()
+        self._norm_layer = norm_layer or GroupNorm1D
 
         self.base_channels = base_channels
         self.initial = torch.nn.Sequential(

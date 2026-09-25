@@ -3,7 +3,7 @@ from collections.abc import Callable
 import numpy as np
 import torch
 import torch.nn as nn
-from ml4gw.nn.norm import GroupNorm1DGetter, NormLayer
+from ml4gw.nn.norm import GroupNorm1D, NormLayer
 
 
 class GatedActivation(torch.nn.Module):
@@ -95,7 +95,7 @@ class WaveNet(torch.nn.Module):
         kernel_size: int = 2,
         norm_layer: NormLayer | None = None,
     ):
-        self.norm_layer = norm_layer or GroupNorm1DGetter()
+        self.norm_layer = norm_layer or GroupNorm1D
         super().__init__()
         self.init_conv = nn.Conv1d(
             in_channels, res_channels, kernel_size=2, dilation=1

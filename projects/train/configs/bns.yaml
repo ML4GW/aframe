@@ -14,9 +14,9 @@ model:
       init_args:
         layers: [3, 4, 6, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm2DGetter
+          class_path: ml4gw.nn.norm.GroupNorm2D
           init_args:
-            groups: 16
+            num_groups: 16
     metric:
       class_path: train.metrics.TimeSlideAUROC
       init_args:
