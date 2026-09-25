@@ -23,6 +23,17 @@ train_log_dir = log_dir / "train"
 TRAIN_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "train.sif")
 
 
+# GPUs for local training. `train_gpus` pins specific devices on a shared
+# node; otherwise use `train_num_gpus` of whatever is visible, which under
+# slurm is the allocation.
+if config.get("train_gpus") is not None:
+    TRAIN_GPU_ENV = f"CUDA_VISIBLE_DEVICES={config['train_gpus']} "
+    TRAIN_NUM_GPUS = len(str(config["train_gpus"]).split(","))
+else:
+    TRAIN_GPU_ENV = ""
+    TRAIN_NUM_GPUS = config.get("train_num_gpus", 1)
+
+
 def _train_waveform_inputs(wildcards):
     """Pre-generated training waveforms, when enabled."""
     if config.get("pregenerate_training_waveforms", False):
@@ -98,7 +109,8 @@ else:
         snakemake is invoked.
 
         AFRAME_TRAIN_WAVEFORMS_DIR is exported so the config resolves
-        to this run's validation/training waveform files.
+        to this run's validation/training waveform files. The GPU count
+        overrides trainer.devices in the train config.
         """
         input:
             background=get_train_background_files,
@@ -116,12 +128,16 @@ else:
         resources:
             **rule_resources("train"),
             slurm_partition=config.get("train_partition", "gpuA40x4"),
-            gpu=config.get("train_num_gpus", 1),
+            gpu=TRAIN_NUM_GPUS,
         params:
             **train_data_params,
+            gpu_env=TRAIN_GPU_ENV,
+            num_gpus=TRAIN_NUM_GPUS,
             background_dir=str(train_bg),
             waveforms_dir=str(train_waveforms),
             save_dir=str(train_out),
         shell:
-            "AFRAME_TRAIN_WAVEFORMS_DIR={params.waveforms_dir}"
-            " python -m train fit" + train_cli_args + " &> {log}"
+            "{params.gpu_env}AFRAME_TRAIN_WAVEFORMS_DIR={params.waveforms_dir}"
+            " python -m train fit"
+            + train_cli_args
+            + " --trainer.devices {params.num_gpus} &> {log}"

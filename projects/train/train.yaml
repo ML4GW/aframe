@@ -142,8 +142,7 @@ trainer:
     # class_path: lightning.pytorch.profilers.PyTorchProfiler
     # dict_kwargs:
       # profile_memory: true
-  # devices:
-  # strategy: set to ddp if len(devices) > 1
+  # devices: set by the pipeline from train_gpus / train_num_gpus
   #precision: 16-mixed
   accelerator: auto
   max_epochs: 200
