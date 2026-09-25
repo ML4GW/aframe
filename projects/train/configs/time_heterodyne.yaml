@@ -15,9 +15,9 @@ model:
         layers: [3, 4, 6, 3]
         kernel_size: 25
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          class_path: ml4gw.nn.norm.GroupNorm1D
           init_args:
-            groups: 16
+            num_groups: 16
     metric:
       class_path: train.metrics.TimeSlideAUROC
       init_args:
