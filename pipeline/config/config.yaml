@@ -115,8 +115,11 @@ resources:
 # Slurm GPU partition for training.
 train_partition: gpuA40x4
 
-# Number of GPUs to request for training. Must match trainer.devices in
-# your train.yaml.
+# GPUs for training, which override trainer.devices in the train config.
+# On a shared node, pin specific devices with train_gpus (comma-separated
+# IDs, e.g. "2" or "2,3"), since Lightning would otherwise take every
+# visible GPU. Leave it null under slurm, which assigns train_num_gpus.
+train_gpus: null
 train_num_gpus: 1
 
 # Slurm GPU partition for export and inference.
@@ -195,7 +198,7 @@ model_version: -1
 # Resolved against $AFRAME_CONTAINER_ROOT unless given as an absolute path.
 triton_image: tritonserver_25.06.sif
 # Comma-separated GPU IDs for export and inference server only.
-# Pin training GPUs via trainer.devices in the train_config.
+# Training uses train_gpus.
 gpus: "0"
 
 # Snapshotter instances hosted per GPU. Baked into the model at export time

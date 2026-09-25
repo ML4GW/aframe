@@ -13,7 +13,7 @@ dependencies = [
     "s3fs>=2024",
     "ml4gw-hermes[torch]",
     "utils[torch]",
-    "jsonargparse[signatures]>=4.29,<5",
+    "jsonargparse[signatures]>=4.49,<5",
     "h5py>=3.10,<4",
     "nvidia-cudnn-cu12",
     # CUDA-12 TensorRT build. The default `tensorrt` now resolves to CUDA-13,
