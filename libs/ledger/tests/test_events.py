@@ -33,6 +33,22 @@ class TestEventSet:
         assert (obj2.detection_time == times).all()
         assert (obj2.shift == shifts).all()
 
+    def test_aggregate_no_sources(self, tmp_path):
+        # a file aggregated from no sources has no Tb, and merging it
+        # with others counts it as no livetime
+        empty = tmp_path / "empty.hdf5"
+        events.EventSet.aggregate([], empty)
+        full = tmp_path / "full.hdf5"
+        events.EventSet(
+            np.arange(3.0), np.arange(3.0), np.zeros((3, 2)), 100
+        ).write(full)
+
+        merged = tmp_path / "merged.hdf5"
+        events.EventSet.aggregate([empty, full], merged, clean=False)
+        obj = events.EventSet.read(merged)
+        assert obj.Tb == 100
+        assert len(obj) == 3
+
     def test_sorting(self):
         det_stats = np.arange(10)[::-1]
         times = np.arange(10)

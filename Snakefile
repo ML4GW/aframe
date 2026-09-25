@@ -40,6 +40,11 @@ include: "projects/infer/infer.smk"
 include: "projects/plots/plots.smk"
 
 
+onstart:
+    check_images()
+    check_triton_image()
+
+
 rule all:
     default_target: True
     input:

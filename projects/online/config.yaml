@@ -19,9 +19,9 @@ amplfi_hl_architecture:
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          class_path: ml4gw.nn.norm.GroupNorm1D
           init_args:
-            groups: 8
+            num_groups: 8
 amplfi_hlv_architecture: 
   class_path: amplfi.train.architectures.flows.NSF
   init_args:
@@ -37,9 +37,9 @@ amplfi_hlv_architecture:
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
-          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          class_path: ml4gw.nn.norm.GroupNorm1D
           init_args:
-            groups: 8
+            num_groups: 8
 amplfi_hl_weights: ${oc.env:AMPLFI_HL_WEIGHTS}
 amplfi_hlv_weights: ${oc.env:AMPLFI_HLV_WEIGHTS}
 amplfi_parameter_sampler: ./prior.yaml

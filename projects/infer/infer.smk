@@ -45,11 +45,21 @@ if ANALYSIS_TYPE not in ("hdf5", "rnp"):
 if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
     raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
 
-INFER_CONTAINER = os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), "infer.sif")
+INFER_CONTAINER = container("infer")
 
 TRITON_IMAGE = os.path.join(
     os.getenv("AFRAME_CONTAINER_ROOT", ""), config["triton_image"]
 )
+
+
+def check_triton_image():
+    if INFERENCE_MODE == "triton" and not os.path.exists(TRITON_IMAGE):
+        raise WorkflowError(
+            f"Triton image {TRITON_IMAGE} doesn't exist. Pull the release "
+            f"in its name, e.g. `apptainer pull {TRITON_IMAGE} "
+            "docker://nvcr.io/nvidia/tritonserver:25.06-py3`."
+        )
+
 
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 

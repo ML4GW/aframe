@@ -8,7 +8,7 @@ license = "MIT"
 dependencies = [
     "einops>=0.8,<0.9",
     "jaxtyping>=0.2",
-    "ml4gw>=0.7.2",
+    "ml4gw>=0.8.4",
     "h5py>=3.10,<4",
     "numpy>=2",
     "torch",

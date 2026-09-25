@@ -16,7 +16,7 @@ dependencies = [
     "architectures",
     "arrakis>=0.20,<0.21",
     "amplfi",
-    "ml4gw>=0.7.4",
+    "ml4gw>=0.8.4",
     "torch==2.10.0",
     "omegaconf>=2.3.0,<3",
     "numpy>=2",

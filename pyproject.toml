@@ -78,13 +78,12 @@ packages = ["scripts"]
 
 [tool.ruff]
 line-length = 79
-extend-include = ["T201"]
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
 extend-safe-fixes = ["C408"]
 mccabe = {"max-complexity" = 18}
-select = ["B", "C", "E", "F", "W", "I", "UP", "B9"]
+select = ["B", "C", "E", "F", "W", "I", "UP", "B9", "T201"]
 # ignore W605 and E203 for consistency with black
 # ignore F722 for compatibility with jaxtyping
 ignore = ["W605", "E203", "F722"]

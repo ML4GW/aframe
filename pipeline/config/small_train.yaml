@@ -1,0 +1,86 @@
+# projects/train/train.yaml shrunk for pipeline/config/small.yaml
+model:
+  class_path: train.model.SupervisedAframe
+  init_args:
+    arch:
+      class_path: architectures.supervised.SupervisedTimeDomainResNet
+      init_args:
+        layers: [1, 1, 1, 1]
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1D
+          init_args:
+            num_groups: 16
+    metric:
+      class_path: train.metrics.TimeSlideAUROC
+      init_args:
+        max_fpr: 1e-3
+        pool_length: 8
+    weight_decay: 0.0
+    learning_rate: 0.000585
+    pct_lr_ramp: 0.115
+data:
+  class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
+  init_args:
+    batch_size: 32
+    batches_per_epoch: 4
+    num_files_per_batch: 2
+    chunks_per_epoch: 1
+    chunk_size: 1000
+    psd_length: 8
+    fftlength: null
+    waveform_prob: 0.277
+    swap_prob: 0.014
+    mute_prob: 0.055
+    left_pad: 0.25
+    right_pad: 0.05
+    snr_sampler:
+      class_path: ml4gw.distributions.PowerLaw
+      init_args:
+        minimum: 4
+        maximum: 100
+        index: -3
+    waveform_sampler:
+      class_path: train.data.waveforms.WaveformLoader
+      init_args:
+        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
+        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms.hdf5
+    dec:
+      class_path: ml4gw.distributions.Cosine
+    psi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 3.14159
+        validate_args: false
+    phi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 6.28318
+        validate_args: false
+    valid_stride: 0.5
+    num_valid_views: 5
+    # one background file
+    min_valid_duration: 2048
+    valid_livetime: 3600
+trainer:
+  logger:
+    class_path: lightning.pytorch.loggers.CSVLogger
+    init_args:
+      name: lightning_logs
+      flush_logs_every_n_steps: 10
+  callbacks:
+    - class_path: train.callbacks.ModelCheckpoint
+      init_args:
+        monitor: "valid_auroc"
+        mode: "max"
+        save_top_k: 1
+        save_last: true
+        auto_insert_metric_name: false
+    - class_path: train.callbacks.SaveAugmentedBatch
+  # devices: set by the pipeline from train_gpus / train_num_gpus
+  accelerator: auto
+  max_epochs: 2
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 1
+  benchmark: false

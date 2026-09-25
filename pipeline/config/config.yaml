@@ -136,6 +136,9 @@ gpu_min_memory_mb: null
 # 8.6 is the A10.
 aoti_gpu_capability: 8.6
 
+# Only match condor execute points that mount /home
+epnfs: false
+
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
 train_config: projects/train/train.yaml

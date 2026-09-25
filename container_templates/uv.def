@@ -31,6 +31,10 @@ mkdir -p $TMPDIR
 
 rm -rf /opt/build-tmp
 
+# Record the environment hash (scripts/env_hash.py) so the pipeline can
+# tell whether this image matches the repo it's run from
+echo @@ENV_HASH@@ > /opt/env_hash
+
 @@PURGE_BUILD_TOOLS@@
 
 %environment

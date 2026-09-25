@@ -80,7 +80,6 @@ In the experiment directory a `run.sh` file will be created that looks like
 
 ```bash
 #!/bin/bash
-# Set AFRAME_DEV=1 to bind the working tree into containers.
 cd /home/albert.einstein/projects/aframe
 source pipeline/.env
 snakemake --configfile /home/albert.einstein/aframe/my-first-run/config.yaml --profile pipeline/profiles/ldg
