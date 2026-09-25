@@ -1,0 +1,28 @@
+# A small-scale run that exercises every stage, for checking that the
+# pipeline runs. Layer it over config.yaml:
+#
+#     snakemake --configfile pipeline/config/small.yaml --config run_dir=...
+
+# Continuous H1+L1 open data in O3a, four background files per split
+train_start: 1250917000
+train_end: 1250925192
+test_start: 1250925192
+test_end: 1250933384
+max_duration: 2048.0
+
+train_config: pipeline/config/small_train.yaml
+
+num_training_signals: 2000
+num_train_waveform_jobs: 2
+
+num_validation_signals: 500
+num_validation_jobs: 2
+
+num_testing_signals: 500
+
+# Three shifts plus zero lag: 16 inference branches
+Tb: 20000.0
+zero_lag: true
+
+# Groups of more than one branch, still within one file
+branches_per_job: 2
