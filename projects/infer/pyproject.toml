@@ -17,6 +17,7 @@ dependencies = [
     "utils",
     "ledger",
     "urllib3>=1.25.4,<1.27",
+    "gwpy",
 ]
 
 [project.scripts]

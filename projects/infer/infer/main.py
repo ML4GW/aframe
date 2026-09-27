@@ -5,13 +5,13 @@ import numpy as np
 from hermes.aeriel.client import InferenceClient
 from tqdm import tqdm
 
-from infer.data import Sequence
+from infer.data import BaseSequence
 from infer.postprocess import Postprocessor
 
 
 def infer(
     client: InferenceClient,
-    sequence: Sequence,
+    sequence: BaseSequence,
     postprocessor: Postprocessor,
     return_timeseries: bool = False,
 ):
@@ -38,7 +38,7 @@ def infer(
         "at GPS time {}".format(
             sequence.id,
             sequence.duration,
-            sequence.background_fname,
+            sequence.inference_filenames,
             sequence.shifts / sequence.sample_rate,
             sequence.sample_rate,
             sequence.t0,
