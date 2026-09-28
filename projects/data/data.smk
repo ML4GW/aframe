@@ -352,7 +352,6 @@ the rejected parameters for this branch.
     params:
         branch=_branch_params,
         ifos=_fmt_list(config["ifos"]),
-        output_dir=lambda wc, output: str(Path(output.waveforms).parent),
         prior=config["prior"],
         minimum_frequency=config["minimum_frequency"],
         reference_frequency=config["reference_frequency"],
@@ -388,7 +387,8 @@ the rejected parameters for this branch.
         " --psd_file {input.psd_file}"
         " --max_num_samples {params.max_num_samples}"
         " --seed {params.seed}"
-        " --output_dir {params.output_dir}"
+        " --waveforms_file {output.waveforms}"
+        " --rejected_file {output.rejected}"
         " &> {log}"
 
 
