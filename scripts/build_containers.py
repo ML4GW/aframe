@@ -6,7 +6,7 @@ from pathlib import Path
 from jsonargparse import ArgumentParser
 from spython.main import Client
 
-from scripts.env_hash import build_commit, env_hash, local_libs, uv_args
+from scripts.env_hash import build_commit, env_hash, local_libs, uv_command
 
 # Define the directory where the projects are located
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -80,7 +80,7 @@ def _get_uv_command(project_name: str, subcommand: str) -> str:
     Build a `uv sync`/`uv export` command for a project with the same
     arguments that scripts/env_hash.py hashes.
     """
-    cmd = " ".join(uv_args(project_name, subcommand))
+    cmd = " ".join(uv_command(project_name, subcommand))
     if subcommand == "export":
         # Need to use the pylock format here rather than requirements.txt
         # so that the index each package was locked from gets recorded.
