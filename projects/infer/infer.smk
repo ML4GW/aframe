@@ -111,13 +111,15 @@ def _assign_groups(branch_map, split_at_file_changes):
         last = branch["fname"]
 
 
-def _group_branches(branch_map, group_id):
-    return [b for b in branch_map.values() if b["group"] == group_id]
+def _group_branches(group_id):
+    """The branches for one group"""
+    branch_map = _load_branch_map()
+    return {i: b for i, b in branch_map.items() if b["group"] == int(group_id)}
 
 
 def get_infer_group_inputs(wildcards):
     """Strain files, plus their testing waveforms, for one group."""
-    branches = _group_branches(_load_branch_map(), int(wildcards.group_id))
+    branches = _group_branches(wildcards.group_id).values()
     inputs = {"background": sorted({b["fname"] for b in branches})}
     if ANALYSIS_TYPE == "hdf5":
         inputs["waveforms"] = [b["waveforms"] for b in branches if b["waveforms"]]
@@ -243,6 +245,38 @@ else:
                 json.dump(branch_map, f, indent=2)
 
 
+rule infer_group_branches:
+    """Write one group's branches for infer_group. Contains the ID, shifts,
+and indices into infer_group's --background and --waveforms lists, so
+that the job finds its files only through its declared inputs.
+
+Both rules take their file lists from get_infer_group_inputs, so the
+indices match infer_group's inputs.
+"""
+    input:
+        str(infer_dir / "branch_map.json"),
+    output:
+        str(group_dir / "branches.json"),
+    localrule: True
+    run:
+        inputs = get_infer_group_inputs(wildcards)
+        background = inputs["background"]
+        waveforms = inputs.get("waveforms", [])
+        branches = [
+            {
+                "id": i,
+                "shifts": b["shifts"],
+                "background": background.index(b["fname"]),
+                "waveforms": (
+                    waveforms.index(b["waveforms"]) if b.get("waveforms") else None
+                ),
+            }
+            for i, b in _group_branches(wildcards.group_id).items()
+        ]
+        with open(output[0], "w") as f:
+            json.dump(branches, f, indent=2)
+
+
 _group_common_params = dict(
     analysis_type=ANALYSIS_TYPE,
     ifos="[" + ",".join(config["ifos"]) + "]",
@@ -255,8 +289,9 @@ _group_common_params = dict(
 )
 
 _GROUP_SHELL_SUFFIX = (
-    " --branch_map {input.branch_map}"
-    " --group_id {wildcards.group_id}"
+    " --background {input.background}"
+    + (" --waveforms {input.waveforms}" if ANALYSIS_TYPE == "hdf5" else "")
+    + " --branches {input.branches}"
     " --analysis_type {params.analysis_type}"
     " --background_out {output.background}"
     " --foreground_out {output.foreground}"
@@ -317,7 +352,7 @@ if INFERENCE_MODE == "triton":
         """Stream a group of branches to the Triton server from a local client."""
         input:
             unpack(get_infer_group_inputs),
-            branch_map=str(infer_dir / "branch_map.json"),
+            branches=str(group_dir / "branches.json"),
             triton_started=str(triton_dir / "triton.started"),
         output:
             **_group_outputs,
@@ -385,7 +420,7 @@ else:
         """Run a group of branches in-process on one GPU."""
         input:
             unpack(get_infer_group_inputs),
-            branch_map=str(infer_dir / "branch_map.json"),
+            branches=str(group_dir / "branches.json"),
             artifact=_artifact,
         output:
             **_group_outputs,
@@ -398,18 +433,17 @@ else:
             **gpu_resources(),
         params:
             **_group_common_params,
-            weights=_artifact,
             backend=INFERENCE_BACKEND,
-            aoti_arg=(f" --aoti_path {AOTI_PKG}" if INFERENCE_BACKEND == "aoti" else ""),
             sample_rate=config["sample_rate"],
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
         shell:
             "infer-local"
-            " --weights {params.weights}"
-            " --backend {params.backend}{params.aoti_arg}"
-            " --sample_rate {params.sample_rate}"
+            " --weights {input.artifact}"
+            " --backend {params.backend}"
+            + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
+            + " --sample_rate {params.sample_rate}"
             " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
             " --fftlength {params.fftlength}"

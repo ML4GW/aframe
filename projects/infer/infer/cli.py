@@ -79,7 +79,27 @@ def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
     _write_outputs(outdir, branch_id, results, seq, postproc, cfg)
 
 
-def _merge_group(cfg, branch_map, group, scratch):
+def _resolve_branches(cfg):
+    """The group's branches, by ID, with the files they read.
+
+    The `--branches` file, written by infer_group_branches in infer.smk,
+    gives each branch's ID, shifts, and indices into `--background` and
+    `--waveforms` (null for none).
+    """
+    with open(cfg.branches) as f:
+        branch_list = json.load(f)
+    branches = {}
+    for branch in branch_list:
+        index = branch["waveforms"]
+        branches[str(branch["id"])] = {
+            "fname": cfg.background[branch["background"]],
+            "waveforms": None if index is None else cfg.waveforms[index],
+            "shifts": branch["shifts"],
+        }
+    return branches
+
+
+def _merge_group(cfg, branches, scratch):
     """Merge the group's branch outputs into the group's declared outputs.
 
     With `zero_lag_out`, branches with all-zero shifts go there rather
@@ -89,9 +109,9 @@ def _merge_group(cfg, branch_map, group, scratch):
     """
     split_zero_lag = cfg.zero_lag_out is not None
     background, zero_lag = [], []
-    for branch_id in group:
+    for branch_id, branch in branches.items():
         fname = scratch / branch_id / "background.hdf5"
-        shifts = branch_map[branch_id]["shifts"]
+        shifts = branch["shifts"]
         if split_zero_lag and all(s == 0 for s in shifts):
             zero_lag.append(fname)
         else:
@@ -105,7 +125,7 @@ def _merge_group(cfg, branch_map, group, scratch):
         "background": (EventSet, background, cfg.background_out),
         "foreground": (
             foreground_cls,
-            [scratch / i / "foreground.hdf5" for i in group],
+            [scratch / i / "foreground.hdf5" for i in branches],
             cfg.foreground_out,
         ),
     }
@@ -122,16 +142,13 @@ def _merge_group(cfg, branch_map, group, scratch):
 
     if cfg.timeseries_out is not None:
         merge_timeseries(
-            [scratch / i / "timeseries.hdf5" for i in group],
+            [scratch / i / "timeseries.hdf5" for i in branches],
             cfg.timeseries_out,
         )
 
 
 def _run_group(client, cfg, rate=None, reset=None):
-    with open(cfg.branch_map) as f:
-        branch_map = json.load(f)
-    # groups are assigned by compute_branch_map in infer.smk
-    group = [i for i, b in branch_map.items() if b["group"] == cfg.group_id]
+    branches = _resolve_branches(cfg)
 
     # Per-branch outputs only exist until they're merged. Keep them next
     # to the group's outputs rather than in /tmp, which may be small.
@@ -140,26 +157,27 @@ def _run_group(client, cfg, rate=None, reset=None):
     with tempfile.TemporaryDirectory(dir=outdir) as scratch:
         scratch = Path(scratch)
         with client:
-            for branch_id in group:
+            for branch_id, branch in branches.items():
                 if reset:
                     reset()
                 _run_branch(
                     client,
                     cfg,
                     branch_id=branch_id,
-                    branch=branch_map[branch_id],
+                    branch=branch,
                     outdir=scratch / branch_id,
                     rate=rate,
                 )
-        _merge_group(cfg, branch_map, group, scratch)
+        _merge_group(cfg, branches, scratch)
 
 
 def _shared_args(p):
     p.add_argument("--config", action=jsonargparse.ActionConfigFile)
     p.add_argument("--verbose", type=bool, default=False)
     p.add_argument("--logfile", type=str, default=None)
-    p.add_argument("--branch_map", type=str)
-    p.add_argument("--group_id", type=int)
+    p.add_argument("--background", type=str, nargs="+")
+    p.add_argument("--waveforms", type=str, nargs="*", default=[])
+    p.add_argument("--branches", type=str)
     p.add_argument("--analysis_type", type=str, default="hdf5")
     p.add_argument("--background_out", type=str)
     p.add_argument("--foreground_out", type=str)
