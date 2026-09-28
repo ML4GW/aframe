@@ -53,8 +53,11 @@ rm -rf /opt/build-tmp
 micromamba clean -ay
 
 # Record the environment hash (scripts/env_hash.py) so the pipeline can
-# tell whether this image matches the repo it's run from
+# tell whether this image matches the repo it's run from.
+# Also record commit it was built from, with "-dirty" if its environment 
+# files had uncommitted changes.
 echo @@ENV_HASH@@ > /opt/env_hash
+echo @@BUILD_COMMIT@@ > /opt/build_commit
 
 @@PURGE_BUILD_TOOLS@@
 
