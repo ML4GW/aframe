@@ -92,7 +92,9 @@ def sensitive_volume(
     ifos: list[str],
     mass_combos: list[tuple],
     source_prior: Callable,
-    output_dir: Path,
+    output_file: Path,
+    plot_file: Path,
+    gwtc3_file: Path,
     log_file: Path | None = None,
     dt: float | None = None,
     max_far: float = 365,
@@ -117,8 +119,12 @@ def sensitive_volume(
         rejected_params:
             Path to the rejected parameter set. Should be an HDF5 file
             readable by `ledger.injections.InjectionParameterSet.read`
-        output_dir:
-            Path to the directory to save the output plots and data
+        output_file:
+            Path to write the sensitive volume data to
+        plot_file:
+            Path to write the sensitive volume plot to
+        gwtc3_file:
+            Path to write the GWTC-3 pipelines' sensitive volumes to
         log_file:
             Path to the log file. If not provided, will log to stdout
         dt:
@@ -191,9 +197,9 @@ def sensitive_volume(
         injection_file=injection_file,
         detection_criterion="far",
         detection_thresholds=result.fars,
-        output_dir=output_dir,
+        output_file=gwtc3_file,
     )
     comparisons = comparisons_from_gwtc3_curves(
         gwtc3_sv, gwtc3_err, mass_combos
     )
-    SensitiveVolumePlot(result, comparisons).save(output_dir)
+    SensitiveVolumePlot(result, comparisons).save(output_file, plot_file)

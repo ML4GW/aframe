@@ -76,7 +76,6 @@ rule sensitive_volume:
         ifos=_fmt_list(config["ifos"]),
         mass_combos=json.dumps(config["mass_combos"]),
         source_prior=config["source_prior"],
-        output_dir=lambda wc, output: str(Path(output.sv_data).parent),
         dt=config["dt"] or "null",
         vetos=_fmt_list(VETOS or []),
     shell:
@@ -88,7 +87,9 @@ rule sensitive_volume:
         " --ifos '{params.ifos}'"
         " --mass_combos '{params.mass_combos}'"
         " --source_prior {params.source_prior}"
-        " --output_dir {params.output_dir}"
+        " --output_file {output.sv_data}"
+        " --plot_file {output.sv_plot}"
+        " --gwtc3_file {output.gwtc3_sv}"
         " --dt {params.dt}"
         # Omitted entirely when unset. If we pass an empty list,
         # we still do a query.
