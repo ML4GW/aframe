@@ -100,6 +100,7 @@ def env_files(project: str) -> list[Path]:
     template = "micromamba.def" if conda_lock.exists() else "uv.def"
     candidates = [
         ROOT_DIR / "scripts" / "build_containers.py",
+        TEMPLATES_DIR / "base.def",
         TEMPLATES_DIR / template,
         project_dir / "pyproject.toml",
         project_dir / "apptainer.post",

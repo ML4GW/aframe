@@ -1,28 +1,7 @@
-Bootstrap: docker
 From: mambaorg/micromamba:2
-Stage: build
-
-%files
-@@FILES_BLOCK@@
-
-%environment
-# Put the conda env on PATH. The snakemake apptainer integration
-# uses `apptainer exec`, which ignores %runscript; prepending
-# to PATH here makes the project commands findable.
-export PATH=/opt/env/bin:$PATH
-
-@@EXTRA_ENV@@
 
 %post
-mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
-
-apt-get update
-apt-get install -y --no-install-recommends git build-essential
-rm -rf /var/lib/apt/lists/*
-
-@@EXTRA_POST@@
-
-# activate micromamba and create environment from lockfile
+# create the environment from the project's lockfile
 micromamba create -p /opt/env -f /opt/aframe/projects/@@PROJECT@@/@@PROJECT@@.conda-lock.yml
 
 # install uv so we can install local deps of deps editably
@@ -32,15 +11,7 @@ micromamba run -p /opt/env python -m \
 # Export rather than `uv sync`, so that uv installs into the existing conda
 # env instead of managing its own. Export to pylock.toml rather than
 # requirements.txt so that the index each package was locked from is
-# recorded. This allows torch to be installed from the PyTorch CPU index. 
-# `--no-cache` makes uv unpack wheels into a temporary directory under
-# TMPDIR. Apptainer bind-mounts the host's /tmp into %post, so the default
-# would use the host's /tmp rather than the build filesystem, which
-# can easily run out of space. Keep it inside the image instead, where it
-# follows APPTAINER_TMPDIR, and remove it before the image is finalized.
-export TMPDIR=/opt/build-tmp
-mkdir -p $TMPDIR
-
+# recorded. This allows torch to be installed from the PyTorch CPU index.
 cd /opt/aframe
 micromamba run -p /opt/env \
     @@UV_CMD@@ --no-cache -o pylock.toml
@@ -49,29 +20,4 @@ micromamba run -p /opt/env \
     uv pip install --no-cache -r pylock.toml
 
 rm pylock.toml
-rm -rf /opt/build-tmp
 micromamba clean -ay
-
-# Record the environment hash (scripts/env_hash.py) so the pipeline can
-# tell whether this image matches the repo it's run from.
-# Also record commit it was built from, with "-dirty" if its environment 
-# files had uncommitted changes.
-echo @@ENV_HASH@@ > /opt/env_hash
-echo @@BUILD_COMMIT@@ > /opt/build_commit
-
-@@PURGE_BUILD_TOOLS@@
-
-# initialize our shell so that we can execute
-# commands in our environment at run time
-# set path, and add it to /etc/profile
-# so that it will be set if login shell
-# is invoked
-export PATH=/opt/env/bin:$PATH
-echo export PATH=$PATH >> /etc/profile
-
-
-%runscript
-#!/bin/bash
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate /opt/env
-exec "$@"
