@@ -22,8 +22,9 @@ def build_model(weights, backend, device, aoti_path=None):
         if aoti_path is None:
             raise ValueError("backend 'aoti' requires aoti_path")
         # aoti_load_package references torch._inductor.codecache without
-        # importing it
-        import torch._inductor.codecache  # noqa: F401
+        # importing it. `import torch._inductor.codecache` would make
+        # `torch` local to this function, breaking the other backends.
+        from torch._inductor import codecache  # noqa: F401
 
         runner = torch._inductor.aoti_load_package(str(aoti_path))
 

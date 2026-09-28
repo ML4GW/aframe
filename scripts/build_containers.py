@@ -6,7 +6,8 @@ from pathlib import Path
 from jsonargparse import ArgumentParser
 from spython.main import Client
 
-from scripts.env_hash import env_hash, local_libs
+from scripts.env_hash import build_commit, env_hash, local_libs, uv_command
+from scripts.publish_images import OSDF_PROJECTS
 
 # Define the directory where the projects are located
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -16,11 +17,6 @@ TEMPLATES_DIR: Path = ROOT_DIR / "container_templates"
 
 # List of all available project names
 PROJECTS: list[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
-
-# Extras to install into each project's container.
-# Currently only needed for `data`, which uses extras to keep CUDA-torch
-# out of its container.
-EXTRAS: dict[str, list[str]] = {"data": ["cpu"]}
 
 # Clear out the tools used to build the environment once complete to shrink
 # container size. A project that needs a compiler at run time should install
@@ -82,19 +78,14 @@ def _get_files_block(project_name: str) -> str:
 
 def _get_uv_command(project_name: str, subcommand: str) -> str:
     """
-    Build a `uv sync`/`uv export` command for a project. The `test`
-    group is installed so that CI can run tests inside the container.
+    Build a `uv sync`/`uv export` command for a project with the same
+    arguments that scripts/env_hash.py hashes.
     """
-    cmd = (
-        f"uv {subcommand} --frozen --no-default-groups --group test"
-        f" --package {project_name}"
-    )
+    cmd = " ".join(uv_command(project_name, subcommand))
     if subcommand == "export":
         # Need to use the pylock format here rather than requirements.txt
         # so that the index each package was locked from gets recorded.
         cmd += " --format pylock.toml"
-    for extra in EXTRAS.get(project_name, []):
-        cmd += f" --extra {extra}"
     return cmd
 
 
@@ -130,6 +121,7 @@ def create_definition_file(project_name: str) -> Path:
         .replace("@@EXTRA_ENV@@", extra_env)
         .replace("@@PURGE_BUILD_TOOLS@@", PURGE_BUILD_TOOLS)
         .replace("@@ENV_HASH@@", env_hash(project_name))
+        .replace("@@BUILD_COMMIT@@", build_commit(project_name))
     )
 
     output_path = project_dir / "apptainer.def"
@@ -183,6 +175,20 @@ def build(projects: list[str], container_root: Path, max_workers: int) -> None:
         logging.info("Container root path is not set.")
         return
 
+    # publish_images refuses images built from uncommitted environment files
+    unpublishable = [
+        p
+        for p in projects
+        if p in OSDF_PROJECTS and build_commit(p).endswith("-dirty")
+    ]
+    if unpublishable:
+        warning = (
+            "Environment files for the following projects have uncommitted "
+            f"changes: {', '.join(unpublishable)}. Their images will build, "
+            "but can't be published until they're committed and rebuilt."
+        )
+        logging.warning(warning)
+
     failed_projects = []
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
@@ -206,6 +212,8 @@ def build(projects: list[str], container_root: Path, max_workers: int) -> None:
         )
     else:
         logging.info("All containers built successfully")
+    if unpublishable:
+        logging.warning(warning)
 
 
 def main():

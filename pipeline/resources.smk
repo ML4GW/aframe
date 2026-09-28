@@ -10,36 +10,54 @@ Also resolves each project's container image.
 """
 
 import os
-import shutil
 import subprocess
 
+from snakemake.exceptions import WorkflowError
 from snakemake.logging import logger
 
 from scripts.env_hash import env_hash
+from scripts.publish_images import OSDF_PROJECTS, image_name, staging_dir
 
 
 def container(project):
-    """The image to run `project`'s rules in:
-    `$AFRAME_CONTAINER_ROOT/<project>.sif`.
+    """The image that `project`'s rules run in.
+
+    By default, the locally built `$AFRAME_CONTAINER_ROOT/<project>.sif`.
+    With `container_source: osdf`, the data, infer and plots rules instead
+    use the image published for the local repo's environment, read from
+    `osdf_staging_dir` (your own staging directory by default) through the
+    AP's `/osdf` mount.
     """
+    if config.get("container_source", "local") == "osdf" and project in OSDF_PROJECTS:
+        name = image_name(project, env_hash(project))
+        source = config.get("osdf_staging_dir") or staging_dir()
+        return f"/osdf{source}/{name}"
     return os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), f"{project}.sif")
 
 
 def check_images(projects=("data", "train", "export", "infer", "plots")):
-    """Warn about images built for a different environment than the local
-    repo's.
+    """Fail on missing published images, and warn about local images built
+    for a different environment than the local repo's.
 
     Images record their environment hash (scripts/env_hash.py) at build time.
     """
-    exe = shutil.which("apptainer") or shutil.which("singularity")
-    if exe is None:
-        return
     for project in projects:
         image = container(project)
+        if image.startswith("/osdf/"):
+            # published images are named by their environment hash
+            if not os.path.exists(image):
+                raise WorkflowError(
+                    f"{image} doesn't exist. Either the local repo's "
+                    f"{project} environment hasn't been published (build the "
+                    "image, then run `python -m scripts.publish_images "
+                    f"{project}` on a CIT AP), or this isn't a CIT AP. "
+                    "Otherwise, set `container_source: local`."
+                )
+            continue
         if not os.path.exists(image):
             continue
         result = subprocess.run(
-            [exe, "exec", image, "cat", "/opt/env_hash"],
+            ["apptainer", "exec", image, "cat", "/opt/env_hash"],
             capture_output=True,
             text=True,
         )
@@ -90,5 +108,5 @@ def gpu_resources():
     else:
         res["gpus_minimum_capability"] = config["gpu_min_capability"]
         if config.get("gpu_min_memory_mb"):
-            res["gpus_minimum_memory"] = config["gpu_min_memory_mb"]
+            res["gpus_minimum_memory"] = f"{config['gpu_min_memory_mb']}M"
     return res
