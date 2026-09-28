@@ -90,6 +90,17 @@ max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
 # Number of condor jobs that validation waveforms are split across
 num_validation_jobs: 200
 
+# --- Containers --------------------------------------------------------------
+# Where the data, infer and plots images come from (train and export are
+# always local):
+#   local: $AFRAME_CONTAINER_ROOT/<project>.sif, built with build-containers
+#   osdf:  the images published for this repo's environment with
+#          `python -m scripts.publish_images`, read through a CIT AP's /osdf
+container_source: local
+# The OSDF staging directory to read published images from. null for your
+# own (/igwn/cit/staging/<USER>). Anyone's can be read.
+osdf_staging_dir: null
+
 # --- Resources ---------------------------------------------------------------
 # Memory (MB) and walltime (minutes) for rules submitted as batch jobs,
 # under slurm or condor. Rules and keys not listed here use the profile's

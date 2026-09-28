@@ -7,6 +7,7 @@ from jsonargparse import ArgumentParser
 from spython.main import Client
 
 from scripts.env_hash import build_commit, env_hash, local_libs, uv_command
+from scripts.publish_images import OSDF_PROJECTS
 
 # Define the directory where the projects are located
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -174,6 +175,20 @@ def build(projects: list[str], container_root: Path, max_workers: int) -> None:
         logging.info("Container root path is not set.")
         return
 
+    # publish_images refuses images built from uncommitted environment files
+    unpublishable = [
+        p
+        for p in projects
+        if p in OSDF_PROJECTS and build_commit(p).endswith("-dirty")
+    ]
+    if unpublishable:
+        warning = (
+            "Environment files for the following projects have uncommitted "
+            f"changes: {', '.join(unpublishable)}. Their images will build, "
+            "but can't be published until they're committed and rebuilt."
+        )
+        logging.warning(warning)
+
     failed_projects = []
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
@@ -197,6 +212,8 @@ def build(projects: list[str], container_root: Path, max_workers: int) -> None:
         )
     else:
         logging.info("All containers built successfully")
+    if unpublishable:
+        logging.warning(warning)
 
 
 def main():

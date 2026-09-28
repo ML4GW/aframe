@@ -75,6 +75,10 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    # scripts/env_hash.py runs `uv export`
+    -
+      name: Install uv
+      uses: astral-sh/setup-uv@v5
     -
       name: Install definition generation dependencies
       run: python -m pip install jsonargparse spython
@@ -100,6 +104,28 @@ jobs:
           --entrypoint /bin/bash \
           quay.io/singularity/singularity:v3.8.1 \
           -c 'singularity build --sandbox /opt/aframe/sandbox apptainer.def'
+
+    # Every condor job fetches its image from OSDF, and IGWN asks for images
+    # under 5 GB, so check the compressed .sif that jobs transfer. Only for
+    # OSDF_PROJECTS in scripts/publish_images.py.
+    -
+      name: check image size
+      if: contains(fromJSON('["data", "infer", "plots"]'), matrix.project)
+      run: |
+        docker run \
+          --rm \
+          -v ${{ github.workspace }}:/opt/aframe \
+          --privileged \
+          --entrypoint /bin/bash \
+          quay.io/singularity/singularity:v3.8.1 \
+          -c 'singularity build /opt/aframe/image.sif /opt/aframe/sandbox'
+        size=$(stat -c %s image.sif)
+        sudo rm image.sif
+        echo "Image size: $((size / 1024**2)) MB"
+        if [ "$size" -gt $((5 * 1024**3)) ]; then
+          echo "::error::${{ matrix.project }} image exceeds IGWN's 5 GB limit"
+          exit 1
+        fi
 
     # run tests inside the sandbox;
     # if this is a push event or a tag, tar the sandbox
