@@ -24,7 +24,7 @@ class AframeCLI(LightningCLI):
             apply_on="instantiate",
         )
         parser.link_arguments(
-            "data.init_args.kernel_length",
+            "data.init_args.windowing.kernel_length",
             "model.init_args.arch.init_args.kernel_length",
             apply_on="parse",
         )
