@@ -66,8 +66,9 @@ apptainer-args: >-
 default-resources:
   # Forward environment variables from the submit node. 
   # HOME is not accessible on the execute node, and the bearer
-  # token is delivered by condor.
-  getenv: AFRAME_*, PATH, KRB5*
+  # token is delivered by condor. Fetching proprietary data needs the
+  # datafind server.
+  getenv: AFRAME_*, PATH, KRB5*, GWDATAFIND_SERVER
 
   # Pass through authentication and account info as raw job ad attributes
   # using the classad_ prefix. The plugin supports passing attributes
