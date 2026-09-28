@@ -86,8 +86,8 @@ def testing_waveforms(
             that result in an SNR below this threshold will be rejected,
             but saved for later use
         psd_file:
-            Background file from which to calculate PSDs used for
-            estimating waveforms SNR
+            PSDs written by `utils.write_psds`, or a background file from
+            which to calculate them, used for estimating waveforms SNR
         max_num_samples:
             Maximum number of samples to generate at once in the rejection
             sampling process.
@@ -135,7 +135,7 @@ def testing_waveforms(
 
     # calculate psd that will be used for snr calculation
     df = 1 / waveform_duration
-    logging.info(f"Using background file {psd_file} for psd calculation")
+    logging.info(f"Using {psd_file} for PSDs")
     psds = utils.load_psds(psd_file, ifos, df=df)
 
     # perform the rejection sampling
