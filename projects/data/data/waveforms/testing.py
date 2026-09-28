@@ -27,7 +27,8 @@ def testing_waveforms(
     snr_threshold: float,
     psd_file: Path,
     max_num_samples: int,
-    output_dir: Path,
+    waveforms_file: Path,
+    rejected_file: Path,
     jitter: float = 0.1,
     seed: int | None = None,
 ):
@@ -85,14 +86,15 @@ def testing_waveforms(
             that result in an SNR below this threshold will be rejected,
             but saved for later use
         psd_file:
-            Background file from which to calculate PSDs used for
-            estimating waveforms SNR
+            PSDs written by `utils.write_psds`, or a background file from
+            which to calculate them, used for estimating waveforms SNR
         max_num_samples:
             Maximum number of samples to generate at once in the rejection
             sampling process.
-        output_dir:
-            Directory to which the waveform file and rejected parameter
-            file will be written
+        waveforms_file:
+            File to which the accepted waveforms will be written
+        rejected_file:
+            File to which the rejected parameters will be written
         jitter:
             Scale of random jitter to add to injection times
         seed:
@@ -133,7 +135,7 @@ def testing_waveforms(
 
     # calculate psd that will be used for snr calculation
     df = 1 / waveform_duration
-    logging.info(f"Using background file {psd_file} for psd calculation")
+    logging.info(f"Using {psd_file} for PSDs")
     psds = utils.load_psds(psd_file, ifos, df=df)
 
     # perform the rejection sampling
@@ -166,17 +168,15 @@ def testing_waveforms(
     parameters["injection_time"] = injection_times
     parameters["shift"] = np.array([shifts for _ in range(num_signals)])
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    for fname in (waveforms_file, rejected_file):
+        fname.parent.mkdir(parents=True, exist_ok=True)
     response_set = ResponseSet(**parameters)
-    waveform_fname = output_dir / "waveforms.hdf5"
-    utils.io_with_blocking(response_set.write, waveform_fname)
-
-    rejected_fname = output_dir / "rejected_parameters.hdf5"
-    utils.io_with_blocking(rejected_params.write, rejected_fname)
+    utils.io_with_blocking(response_set.write, waveforms_file)
+    utils.io_with_blocking(rejected_params.write, rejected_file)
 
     # TODO: compute probability of all parameters against
     # source and all target priors here then save them somehow
-    return waveform_fname, rejected_fname
+    return waveforms_file, rejected_file
 
 
 def main(args):

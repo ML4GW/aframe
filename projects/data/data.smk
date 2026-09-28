@@ -6,6 +6,7 @@ Rules:
   fetch_train_background        download one chunk of train strain data
   fetch_test_background         download one chunk of test strain data
   compute_waveform_branches     checkpoint: enumerate (segment, shifts) combos
+  compute_psd                   PSDs that waveform jobs rejection-sample against
   val_waveforms_branch          validation waveforms for one branch
   aggregate_val_waveforms       merge per-branch validation waveforms
   testing_waveforms_branch      testing waveforms for one branch
@@ -17,8 +18,8 @@ Directory layout:
 
   {background_dir}/{train,test}/segments.txt
   {background_dir}/{train,test}/background-{start}-{duration}.hdf5
-  {waveforms_dir}/train/{val_waveforms,training_waveforms}.hdf5
-  {waveforms_dir}/test/{waveforms,rejected_parameters}.hdf5
+  {waveforms_dir}/train/{val_waveforms,training_waveforms,psd}.hdf5
+  {waveforms_dir}/test/{waveforms,rejected_parameters,psd}.hdf5
 
 The fetch rules wildcard over {start} and {duration}.
 Testing waveforms wildcard over {wbranch_id}, which are indices into the
@@ -41,15 +42,16 @@ data_log_dir = log_dir / "data"
 
 DATA_CONTAINER = container("data")
 
-num_validation_jobs = int(config.get("num_validation_jobs", 200))
+num_validation_jobs = int(config["num_validation_jobs"])
 validation_branch_ids = [str(i) for i in range(num_validation_jobs)]
 
-num_train_waveform_jobs = int(config.get("num_train_waveform_jobs", 10))
+num_train_waveform_jobs = int(config["num_train_waveform_jobs"])
 training_branch_ids = [str(i) for i in range(num_train_waveform_jobs)]
 
 
 localrules:
     compute_waveform_branches,
+    compute_psd,
     # DQSegDB seems to be unreachable from execute points
     generate_train_segments,
     generate_test_segments,
@@ -93,7 +95,7 @@ def _read_segments(segments_file):
 
 def _segment_chunks(segments_file):
     """Split segments into (start, duration) chunks of <= max_duration."""
-    max_duration = float(config.get("max_duration", -1))
+    max_duration = float(config["max_duration"])
     chunks = []
     for start, duration in _read_segments(segments_file):
         step = duration if max_duration == -1 else max_duration
@@ -121,14 +123,27 @@ def get_test_background_files(wildcards):
     ]
 
 
-def _train_psd_file(wildcards):
-    """PSD reference for validation waveforms."""
-    return get_train_background_files(wildcards)[-1]
+# Shortest background file to compute waveform PSDs from
+PSD_MIN_DURATION = 2048
 
 
-def _test_psd_file(wildcards):
-    """PSD reference file for testing waveforms"""
-    return get_test_background_files(wildcards)[-1]
+def _psd_background_file(wildcards):
+    """
+    The background file from which to compute PSDs that waveforms are
+    rejection-sampled against. We take the last file of the split that
+    is at least PSD_MIN_DURATION long.
+    """
+    if wildcards.split == "train":
+        files = get_train_background_files(wildcards)
+    else:
+        files = get_test_background_files(wildcards)
+    for fname in reversed(files):
+        if int(Path(fname).stem.split("-")[-1]) >= PSD_MIN_DURATION:
+            return fname
+    raise WorkflowError(
+        f"No {wildcards.split} background file is at least "
+        f"{PSD_MIN_DURATION} s long"
+    )
 
 
 def _branch_params(wildcards, input):
@@ -328,16 +343,38 @@ Runs locally on the submit node.
             json.dump(branch_map, f, indent=2)
 
 
+rule compute_psd:
+    """Compute the PSDs that a split's waveform jobs rejection-sample
+against so that each job reads a small file instead of a full
+background file.
+"""
+    input:
+        _psd_background_file,
+    output:
+        str(waveform_dir / "{split}" / "psd.hdf5"),
+    log:
+        str(data_log_dir / "compute_psd-{split}.log"),
+    wildcard_constraints:
+        split="train|test",
+    container:
+        DATA_CONTAINER
+    params:
+        ifos=config["ifos"],
+        df=1 / config["waveform_duration"],
+    script:
+        "scripts/compute_psd.py"
+
+
 rule testing_waveforms_branch:
     """Generate testing waveforms for one (segment, shifts) branch.
 
-Rejection-samples waveforms against the PSD of the last fetched
+Rejection-samples waveforms against the PSDs of the last fetched
 test-background chunk and writes the accepted injection set and
 the rejected parameters for this branch.
 """
     input:
         branch_map=str(test_waveforms / "waveform_branch_map.json"),
-        psd_file=_test_psd_file,
+        psd_file=str(test_waveforms / "psd.hdf5"),
     output:
         waveforms=str(test_waveforms / "branches" / "{wbranch_id}" / "waveforms.hdf5"),
         rejected=str(
@@ -352,7 +389,6 @@ the rejected parameters for this branch.
     params:
         branch=_branch_params,
         ifos=_fmt_list(config["ifos"]),
-        output_dir=lambda wc, output: str(Path(output.waveforms).parent),
         prior=config["prior"],
         minimum_frequency=config["minimum_frequency"],
         reference_frequency=config["reference_frequency"],
@@ -388,7 +424,8 @@ the rejected parameters for this branch.
         " --psd_file {input.psd_file}"
         " --max_num_samples {params.max_num_samples}"
         " --seed {params.seed}"
-        " --output_dir {params.output_dir}"
+        " --waveforms_file {output.waveforms}"
+        " --rejected_file {output.rejected}"
         " &> {log}"
 
 
@@ -401,7 +438,7 @@ rule aggregate_testing_waveforms:
         rejected=str(test_waveforms / "rejected_parameters.hdf5"),
     log:
         str(data_log_dir / "aggregate_testing_waveforms.log"),
-    localrule: config.get("aggregate_rules_local", False)
+    localrule: config["aggregate_rules_local"]
     container:
         DATA_CONTAINER
     resources:
@@ -416,10 +453,10 @@ rule val_waveforms_branch:
     """Generate one branch of validation waveforms via rejection sampling.
 
 num_validation_signals is split evenly across num_validation_jobs branches.
-The PSD reference is the last fetched train-background chunk.
+The PSDs are those of the last fetched train-background chunk.
 """
     input:
-        psd_file=_train_psd_file,
+        psd_file=str(train_waveforms / "psd.hdf5"),
     output:
         str(train_waveforms / "validation_tmp" / "waveforms-{vbranch_id}.hdf5"),
     log:
@@ -473,7 +510,7 @@ rule aggregate_val_waveforms:
         str(train_waveforms / "val_waveforms.hdf5"),
     log:
         str(data_log_dir / "aggregate_val_waveforms.log"),
-    localrule: config.get("aggregate_rules_local", False)
+    localrule: config["aggregate_rules_local"]
     container:
         DATA_CONTAINER
     resources:
@@ -484,7 +521,7 @@ rule aggregate_val_waveforms:
         "scripts/aggregate_val_waveforms.py"
 
 
-if config.get("pregenerate_training_waveforms", False):
+if config["pregenerate_training_waveforms"]:
 
     rule training_waveforms_branch:
         """Generate one branch of training waveform polarizations.
@@ -534,7 +571,7 @@ if config.get("pregenerate_training_waveforms", False):
             str(train_waveforms / "training_waveforms.hdf5"),
         log:
             str(data_log_dir / "aggregate_training_waveforms.log"),
-        localrule: config.get("aggregate_rules_local", False)
+        localrule: config["aggregate_rules_local"]
         container:
             DATA_CONTAINER
         resources:

@@ -23,6 +23,9 @@ run_dir: /path/to/run
 # Can be shared across experiments with identical waveform parameters.
 # waveforms_dir: /path/to/shared/waveforms
 
+# Snakemake and job logs. Defaults to {run_dir}/logs if omitted.
+# log_dir: /path/to/logs
+
 # --- Interferometers ---------------------------------------------------------
 ifos:
   - H1
@@ -100,6 +103,16 @@ container_source: local
 # The OSDF staging directory to read published images from. null for your
 # own (/igwn/cit/staging/<USER>). Anyone's can be read.
 osdf_staging_dir: null
+
+# --- Rule placement ----------------------------------------------------------
+# Whether rules run on the node snakemake runs on rather than as batch jobs.
+# On LDG, both should be true, though the second is allowed to be false.
+# On Delta, both should be false.
+#
+# Whether train and export, which need a GPU, run locally
+gpu_rules_local: true
+# Whether the aggregation rules run locally
+aggregate_rules_local: true
 
 # --- Resources ---------------------------------------------------------------
 # Memory (MB) and walltime (minutes) for rules submitted as batch jobs,
@@ -205,6 +218,7 @@ integration_window_length: 1.5   # seconds
 cluster_window_length: 8.0       # seconds
 Tb: 31536000.0                   # target background livetime (seconds)
 zero_lag: false                  # also analyze unshifted (zero-lag) data
+return_timeseries: false         # also write the network's output timeseries
 
 # Triton server.
 model_name: aframe-stream

@@ -28,9 +28,9 @@ def container(project):
     `osdf_staging_dir` (your own staging directory by default) through the
     AP's `/osdf` mount.
     """
-    if config.get("container_source", "local") == "osdf" and project in OSDF_PROJECTS:
+    if config["container_source"] == "osdf" and project in OSDF_PROJECTS:
         name = image_name(project, env_hash(project))
-        source = config.get("osdf_staging_dir") or staging_dir()
+        source = config["osdf_staging_dir"] or staging_dir()
         return f"/osdf{source}/{name}"
     return os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), f"{project}.sif")
 
@@ -78,9 +78,9 @@ def rule_resources(name):
     default-resources. With `epnfs`, condor jobs only match execute points
     that mount the AP's /home.
     """
-    res = config.get("resources", {}).get(name, {})
+    res = config["resources"].get(name, {})
     out = {}
-    if config.get("epnfs"):
+    if config["epnfs"]:
         out["requirements"] = "TARGET.EPNFS =?= True"
     if "mem_mb" in res:
         out["mem_mb"] = out["htcondor_request_mem_mb"] = res["mem_mb"]
@@ -99,14 +99,14 @@ def gpu_resources():
     instead.
     """
     res = {
-        "slurm_partition": config.get("inference_partition", "gpuA40x4"),
+        "slurm_partition": config["inference_partition"],
         "gpu": 1,
         "request_gpus": 1,
     }
-    if config.get("inference_backend", "export") == "aoti":
+    if config["inference_backend"] == "aoti":
         res["require_gpus"] = f"Capability == {config['aoti_gpu_capability']}"
     else:
         res["gpus_minimum_capability"] = config["gpu_min_capability"]
-        if config.get("gpu_min_memory_mb"):
+        if config["gpu_min_memory_mb"]:
             res["gpus_minimum_memory"] = f"{config['gpu_min_memory_mb']}M"
     return res

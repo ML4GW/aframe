@@ -80,7 +80,7 @@ def test_gwtc3_vectorized_matches_reference_loop(
         mass_combos=MASS_COMBOS,
         detection_criterion=criterion,
         detection_thresholds=thresholds,
-        output_dir=tmp_path / "run",
+        output_file=tmp_path / "run" / "gwtc-3_pipeline_sv.hdf5",
         injection_file=injection_file,
         pipelines=PIPELINES,
     )

@@ -1,0 +1,58 @@
+# Written by scripts/build_containers.py from container_templates/base.def.
+# The base image and install steps come from uv.def, or micromamba.def for
+# projects with a conda lock file.
+Bootstrap: docker
+@@FROM@@
+
+%files
+@@FILES_BLOCK@@
+
+%post
+# Targets for the data directories bound in at run time
+mkdir -p /cvmfs /hdfs /gpfs /ceph /hadoop
+
+apt-get update
+apt-get install -y --no-install-recommends build-essential git
+rm -rf /var/lib/apt/lists/*
+
+@@EXTRA_POST@@
+
+# Installing with `--no-cache` unpacks packages into a temporary directory
+# under TMPDIR. Apptainer bind-mounts the host's /tmp into %post, so the
+# default would use the host's /tmp rather than the build filesystem, which
+# can easily run out of space. Keep it inside the image instead, where it
+# follows APPTAINER_TMPDIR, and remove it before the image is finalized.
+export TMPDIR=/opt/build-tmp
+mkdir -p $TMPDIR
+
+@@INSTALL@@
+
+rm -rf /opt/build-tmp
+
+# Record the environment hash (scripts/env_hash.py) so the pipeline can
+# tell whether this image matches the repo it's run from.
+# Also record commit it was built from, with "-dirty" if its environment
+# files had uncommitted changes.
+echo @@ENV_HASH@@ > /opt/env_hash
+echo @@BUILD_COMMIT@@ > /opt/build_commit
+
+@@PURGE_BUILD_TOOLS@@
+
+%environment
+# Put the environment on PATH. The snakemake apptainer integration uses
+# `apptainer exec`, which ignores %runscript, so this is what makes the
+# project commands findable.
+export PATH="/opt/env/bin:$PATH"
+
+# Condor jobs may have no usable $HOME, so keep caches (astropy, gwpy,
+# pycbc, matplotlib, torch inductor, triton) in the job's scratch directory.
+# Outside condor, nothing changes.
+if [ -n "${_CONDOR_SCRATCH_DIR:-}" ]; then
+    export HOME="$_CONDOR_SCRATCH_DIR"
+    export XDG_CACHE_HOME="$HOME/.cache"
+    export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
+    export TORCHINDUCTOR_CACHE_DIR="$XDG_CACHE_HOME/torchinductor"
+    export TRITON_CACHE_DIR="$XDG_CACHE_HOME/triton"
+fi
+
+@@EXTRA_ENV@@

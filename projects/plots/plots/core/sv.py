@@ -321,6 +321,6 @@ class SensitiveVolumePlot:
     def layout(self):
         return self.grid
 
-    def save(self, output_dir: Path) -> None:
-        self.result.write(output_dir / "sensitive_volume.hdf5")
-        io.save(self.grid, filename=output_dir / "sensitive_volume.html")
+    def save(self, data_file: Path, plot_file: Path) -> None:
+        self.result.write(data_file)
+        io.save(self.grid, filename=plot_file)

@@ -24,17 +24,17 @@ TRAIN_CONTAINER = container("train")
 # GPUs for local training. `train_gpus` pins specific devices on a shared
 # node; otherwise use `train_num_gpus` of whatever is visible, which under
 # slurm is the allocation.
-if config.get("train_gpus") is not None:
+if config["train_gpus"] is not None:
     TRAIN_GPU_ENV = f"CUDA_VISIBLE_DEVICES={config['train_gpus']} "
     TRAIN_NUM_GPUS = len(str(config["train_gpus"]).split(","))
 else:
     TRAIN_GPU_ENV = ""
-    TRAIN_NUM_GPUS = config.get("train_num_gpus", 1)
+    TRAIN_NUM_GPUS = config["train_num_gpus"]
 
 
 def _train_waveform_inputs(wildcards):
     """Pre-generated training waveforms, when enabled."""
-    if config.get("pregenerate_training_waveforms", False):
+    if config["pregenerate_training_waveforms"]:
         return [str(train_waveforms / "training_waveforms.hdf5")]
     return []
 
@@ -47,7 +47,7 @@ train_data_params = dict(
     sample_rate=config["sample_rate"],
     kernel_length=config["kernel_length"],
     fduration=config["fduration"],
-    fftlength=config.get("fftlength") or "null",
+    fftlength=config["fftlength"] or "null",
     highpass=config["highpass"],
     lowpass=config["lowpass"] or "null",
 )
@@ -68,7 +68,7 @@ train_cli_args = (
 )
 
 
-if config.get("remote_train", False):
+if config["remote_train"]:
 
     rule train_remote:
         """Submit training to Nautilus and wait for the pod.
@@ -119,13 +119,13 @@ else:
             batch=str(train_out / "batch.hdf5"),
         log:
             str(train_log_dir / "train.log"),
-        localrule: config.get("gpu_rules_local", True)
+        localrule: config["gpu_rules_local"]
         container:
             TRAIN_CONTAINER
         # never reaches condor, so slurm GPU keys only
         resources:
             **rule_resources("train"),
-            slurm_partition=config.get("train_partition", "gpuA40x4"),
+            slurm_partition=config["train_partition"],
             gpu=TRAIN_NUM_GPUS,
         params:
             **train_data_params,

@@ -91,16 +91,27 @@ def _get_uv_command(project_name: str, subcommand: str) -> str:
 
 def create_definition_file(project_name: str) -> Path:
     """
-    Create the apptainer definition file for a project from the appropriate
-    template and write it to projects/<project>/apptainer.def.
+    Create the apptainer definition file for a project and write it to
+    projects/<project>/apptainer.def.
 
-    Projects with a <project>.conda-lock.yml use the micromamba template; all
-    others use the uv template.
+    Every definition is base.def, with its base image and install steps
+    from micromamba.def for projects with a <project>.conda-lock.yml, and
+    from uv.def otherwise.
     """
     project_dir = BASE_DIR / project_name
     is_micromamba = (project_dir / f"{project_name}.conda-lock.yml").exists()
     template_name = "micromamba.def" if is_micromamba else "uv.def"
-    template_text = (TEMPLATES_DIR / template_name).read_text()
+    header, sep, install = (
+        (TEMPLATES_DIR / template_name).read_text().partition("\n%post\n")
+    )
+    if not sep:
+        raise ValueError(f"{template_name} has no %post line")
+    template_text = (
+        (TEMPLATES_DIR / "base.def")
+        .read_text()
+        .replace("@@FROM@@", header.strip())
+        .replace("@@INSTALL@@", install.strip())
+    )
 
     files_block = _get_files_block(project_name)
     # Optional per-project hooks

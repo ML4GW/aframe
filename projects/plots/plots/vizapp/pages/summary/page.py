@@ -35,7 +35,7 @@ class Summary(Page):
             mass_combos=self.app.mass_combos,
             detection_criterion="far",
             detection_thresholds=result.fars,
-            output_dir=self.app.results_dir,
+            output_file=self.app.results_dir / "gwtc-3_pipeline_sv.hdf5",
         )
         comparisons = comparisons_from_gwtc3_curves(
             gwtc3_sv, gwtc3_err, self.app.mass_combos

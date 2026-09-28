@@ -45,8 +45,12 @@ def _run(paths, output_dir):
         str([list(c) for c in MASS_COMBOS]),
         "--source_prior",
         "priors.priors.end_o3_ratesandpops",
-        "--output_dir",
-        str(output_dir),
+        "--output_file",
+        str(output_dir / "sensitive_volume.hdf5"),
+        "--plot_file",
+        str(output_dir / "sensitive_volume.html"),
+        "--gwtc3_file",
+        str(output_dir / "gwtc-3_pipeline_sv.hdf5"),
     ]
     cli.main(args)
 

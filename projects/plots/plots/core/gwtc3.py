@@ -309,7 +309,7 @@ def get_logdNs(
 
 
 def _write_result_file(
-    output_dir: Path,
+    output_file: Path,
     detection_criterion: str,
     detection_thresholds: np.ndarray,
     pipelines: list[str],
@@ -317,10 +317,9 @@ def _write_result_file(
     sv: dict,
     err: dict,
 ) -> None:
-    """Write the `gwtc-3_pipeline_sv.hdf5` data file."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    outfile = output_dir / "gwtc-3_pipeline_sv.hdf5"
-    with h5py.File(outfile, "w") as f:
+    """Write the pipelines' sensitive volumes to `output_file`."""
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with h5py.File(output_file, "w") as f:
         f.create_dataset(f"{detection_criterion}", data=detection_thresholds)
         for p in pipelines:
             g = f.create_group(p)
@@ -334,7 +333,7 @@ def main(
     mass_combos: list[float],
     detection_criterion: str,
     detection_thresholds: list[float],
-    output_dir: Path,
+    output_file: Path,
     injection_file: Path | None = None,
     pipelines: list[str] = None,
     sig_lognorm: float = 0.1,
@@ -387,7 +386,7 @@ def main(
         )
 
     _write_result_file(
-        output_dir,
+        output_file,
         detection_criterion,
         detection_thresholds,
         pipelines,

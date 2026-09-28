@@ -25,11 +25,11 @@ from pathlib import Path
 triton_dir = run_dir / "triton"
 infer_dir = run_dir / "infer"
 infer_log_dir = log_dir / "infer"
-zero_lag = config.get("zero_lag", False)
-return_timeseries = config.get("return_timeseries", False)
+zero_lag = config["zero_lag"]
+return_timeseries = config["return_timeseries"]
 
-INFERENCE_MODE = config.get("inference_mode", "triton")
-INFERENCE_BACKEND = config.get("inference_backend", "export")
+INFERENCE_MODE = config["inference_mode"]
+INFERENCE_BACKEND = config["inference_backend"]
 if INFERENCE_MODE not in ("triton", "inprocess"):
     raise WorkflowError(
         f"inference_mode must be 'triton' or 'inprocess', got {INFERENCE_MODE}"
@@ -39,7 +39,7 @@ if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
         f"inference_backend must be 'export', 'compile', or 'aoti', got {INFERENCE_BACKEND}"
     )
 
-ANALYSIS_TYPE = config.get("analysis_type", "hdf5")
+ANALYSIS_TYPE = config["analysis_type"]
 if ANALYSIS_TYPE not in ("hdf5", "rnp"):
     raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
 if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
@@ -63,7 +63,7 @@ def check_triton_image():
 
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
-BRANCHES_PER_JOB = config.get("branches_per_job", 1)
+BRANCHES_PER_JOB = config["branches_per_job"]
 
 
 if ANALYSIS_TYPE == "rnp":
@@ -111,13 +111,15 @@ def _assign_groups(branch_map, split_at_file_changes):
         last = branch["fname"]
 
 
-def _group_branches(branch_map, group_id):
-    return [b for b in branch_map.values() if b["group"] == group_id]
+def _group_branches(group_id):
+    """The branches for one group"""
+    branch_map = _load_branch_map()
+    return {i: b for i, b in branch_map.items() if b["group"] == int(group_id)}
 
 
 def get_infer_group_inputs(wildcards):
     """Strain files, plus their testing waveforms, for one group."""
-    branches = _group_branches(_load_branch_map(), int(wildcards.group_id))
+    branches = _group_branches(wildcards.group_id).values()
     inputs = {"background": sorted({b["fname"] for b in branches})}
     if ANALYSIS_TYPE == "hdf5":
         inputs["waveforms"] = [b["waveforms"] for b in branches if b["waveforms"]]
@@ -243,6 +245,38 @@ else:
                 json.dump(branch_map, f, indent=2)
 
 
+rule infer_group_branches:
+    """Write one group's branches for infer_group. Contains the ID, shifts,
+and indices into infer_group's --background and --waveforms lists, so
+that the job finds its files only through its declared inputs.
+
+Both rules take their file lists from get_infer_group_inputs, so the
+indices match infer_group's inputs.
+"""
+    input:
+        str(infer_dir / "branch_map.json"),
+    output:
+        str(group_dir / "branches.json"),
+    localrule: True
+    run:
+        inputs = get_infer_group_inputs(wildcards)
+        background = inputs["background"]
+        waveforms = inputs.get("waveforms", [])
+        branches = [
+            {
+                "id": i,
+                "shifts": b["shifts"],
+                "background": background.index(b["fname"]),
+                "waveforms": (
+                    waveforms.index(b["waveforms"]) if b.get("waveforms") else None
+                ),
+            }
+            for i, b in _group_branches(wildcards.group_id).items()
+        ]
+        with open(output[0], "w") as f:
+            json.dump(branches, f, indent=2)
+
+
 _group_common_params = dict(
     analysis_type=ANALYSIS_TYPE,
     ifos="[" + ",".join(config["ifos"]) + "]",
@@ -255,8 +289,9 @@ _group_common_params = dict(
 )
 
 _GROUP_SHELL_SUFFIX = (
-    " --branch_map {input.branch_map}"
-    " --group_id {wildcards.group_id}"
+    " --background {input.background}"
+    + (" --waveforms {input.waveforms}" if ANALYSIS_TYPE == "hdf5" else "")
+    + " --branches {input.branches}"
     " --analysis_type {params.analysis_type}"
     " --background_out {output.background}"
     " --foreground_out {output.foreground}"
@@ -280,7 +315,7 @@ if INFERENCE_MODE == "triton":
     streams_per_gpu = config["streams_per_gpu"]
 
     workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
-    rate_per_gpu = config.get("rate_per_gpu")
+    rate_per_gpu = config["rate_per_gpu"]
     infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
 
     # The clients run where the server does because we can't
@@ -309,7 +344,7 @@ if INFERENCE_MODE == "triton":
             gpus=config["gpus"],
             batch_size=config["inference_batch_size"],
             triton_image=TRITON_IMAGE,
-            idle_timeout=config.get("triton_idle_timeout", 3600),
+            idle_timeout=config["triton_idle_timeout"],
         script:
             "scripts/start_triton.py"
 
@@ -317,7 +352,7 @@ if INFERENCE_MODE == "triton":
         """Stream a group of branches to the Triton server from a local client."""
         input:
             unpack(get_infer_group_inputs),
-            branch_map=str(infer_dir / "branch_map.json"),
+            branches=str(group_dir / "branches.json"),
             triton_started=str(triton_dir / "triton.started"),
         output:
             **_group_outputs,
@@ -385,7 +420,7 @@ else:
         """Run a group of branches in-process on one GPU."""
         input:
             unpack(get_infer_group_inputs),
-            branch_map=str(infer_dir / "branch_map.json"),
+            branches=str(group_dir / "branches.json"),
             artifact=_artifact,
         output:
             **_group_outputs,
@@ -398,18 +433,17 @@ else:
             **gpu_resources(),
         params:
             **_group_common_params,
-            weights=_artifact,
             backend=INFERENCE_BACKEND,
-            aoti_arg=(f" --aoti_path {AOTI_PKG}" if INFERENCE_BACKEND == "aoti" else ""),
             sample_rate=config["sample_rate"],
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
-            fftlength=config.get("fftlength") or "null",
+            fftlength=config["fftlength"] or "null",
         shell:
             "infer-local"
-            " --weights {params.weights}"
-            " --backend {params.backend}{params.aoti_arg}"
-            " --sample_rate {params.sample_rate}"
+            " --weights {input.artifact}"
+            " --backend {params.backend}"
+            + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
+            + " --sample_rate {params.sample_rate}"
             " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
             " --fftlength {params.fftlength}"
