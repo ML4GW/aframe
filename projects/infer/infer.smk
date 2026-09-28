@@ -25,11 +25,11 @@ from pathlib import Path
 triton_dir = run_dir / "triton"
 infer_dir = run_dir / "infer"
 infer_log_dir = log_dir / "infer"
-zero_lag = config.get("zero_lag", False)
-return_timeseries = config.get("return_timeseries", False)
+zero_lag = config["zero_lag"]
+return_timeseries = config["return_timeseries"]
 
-INFERENCE_MODE = config.get("inference_mode", "triton")
-INFERENCE_BACKEND = config.get("inference_backend", "export")
+INFERENCE_MODE = config["inference_mode"]
+INFERENCE_BACKEND = config["inference_backend"]
 if INFERENCE_MODE not in ("triton", "inprocess"):
     raise WorkflowError(
         f"inference_mode must be 'triton' or 'inprocess', got {INFERENCE_MODE}"
@@ -39,7 +39,7 @@ if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
         f"inference_backend must be 'export', 'compile', or 'aoti', got {INFERENCE_BACKEND}"
     )
 
-ANALYSIS_TYPE = config.get("analysis_type", "hdf5")
+ANALYSIS_TYPE = config["analysis_type"]
 if ANALYSIS_TYPE not in ("hdf5", "rnp"):
     raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
 if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
@@ -63,7 +63,7 @@ def check_triton_image():
 
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
-BRANCHES_PER_JOB = config.get("branches_per_job", 1)
+BRANCHES_PER_JOB = config["branches_per_job"]
 
 
 if ANALYSIS_TYPE == "rnp":
@@ -280,7 +280,7 @@ if INFERENCE_MODE == "triton":
     streams_per_gpu = config["streams_per_gpu"]
 
     workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
-    rate_per_gpu = config.get("rate_per_gpu")
+    rate_per_gpu = config["rate_per_gpu"]
     infer_rate = 2 * rate_per_gpu / streams_per_gpu if rate_per_gpu else "null"
 
     # The clients run where the server does because we can't
@@ -309,7 +309,7 @@ if INFERENCE_MODE == "triton":
             gpus=config["gpus"],
             batch_size=config["inference_batch_size"],
             triton_image=TRITON_IMAGE,
-            idle_timeout=config.get("triton_idle_timeout", 3600),
+            idle_timeout=config["triton_idle_timeout"],
         script:
             "scripts/start_triton.py"
 
@@ -404,7 +404,7 @@ else:
             sample_rate=config["sample_rate"],
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
-            fftlength=config.get("fftlength") or "null",
+            fftlength=config["fftlength"] or "null",
         shell:
             "infer-local"
             " --weights {params.weights}"

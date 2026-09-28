@@ -16,7 +16,7 @@ plots_log_dir = log_dir / "plots"
 
 PLOTS_CONTAINER = container("plots")
 
-VETOS = config.get("vetos")
+VETOS = config["vetos"]
 
 
 localrules:
@@ -77,14 +77,8 @@ rule sensitive_volume:
         mass_combos=json.dumps(config["mass_combos"]),
         source_prior=config["source_prior"],
         output_dir=lambda wc, output: str(Path(output.sv_data).parent),
-        dt=config.get("dt") or "null",
-        # Omitted entirely when unset. If we pass an empty list,
-        # we still do a query.
-        vetos=lambda wc, input: (
-            f" --vetos '{_fmt_list(VETOS)}' --veto_segments {input.veto_segments}"
-            if VETOS
-            else ""
-        ),
+        dt=config["dt"] or "null",
+        vetos=_fmt_list(VETOS or []),
     shell:
         "sensitive-volume"
         " --background {input.background}"
@@ -96,5 +90,11 @@ rule sensitive_volume:
         " --source_prior {params.source_prior}"
         " --output_dir {params.output_dir}"
         " --dt {params.dt}"
-        "{params.vetos}"
-        " &> {log}"
+        # Omitted entirely when unset. If we pass an empty list,
+        # we still do a query.
+        + (
+            " --vetos '{params.vetos}' --veto_segments {input.veto_segments}"
+            if VETOS
+            else ""
+        )
+        + " &> {log}"

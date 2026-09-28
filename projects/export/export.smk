@@ -9,7 +9,7 @@ export_log_dir = log_dir / "export"
 
 EXPORT_CONTAINER = container("export")
 
-remote_train = config.get("remote_train", False)
+remote_train = config["remote_train"]
 
 
 def _train_artifacts(wildcards):
@@ -30,13 +30,13 @@ snakemake is invoked.
         model_repo=directory(str(export_out / "model_repo")),
     log:
         str(export_log_dir / "export.log"),
-    localrule: config.get("gpu_rules_local", True)
+    localrule: config["gpu_rules_local"]
     container:
         EXPORT_CONTAINER
     # never reaches condor, so slurm GPU keys only
     resources:
         **rule_resources("export"),
-        slurm_partition=config.get("inference_partition", "gpuA40x4"),
+        slurm_partition=config["inference_partition"],
         gpu=1,
     params:
         preprocessor=config["export_preprocessor"],
@@ -46,7 +46,7 @@ snakemake is invoked.
         inference_sampling_rate=config["inference_sampling_rate"],
         batch_size=config["inference_batch_size"],
         fduration=config["fduration"],
-        fftlength=config.get("fftlength") or "null",
+        fftlength=config["fftlength"] or "null",
         psd_length=config["psd_length"],
         highpass=config["highpass"],
         streams_per_gpu=config["streams_per_gpu"],

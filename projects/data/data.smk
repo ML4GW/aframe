@@ -41,10 +41,10 @@ data_log_dir = log_dir / "data"
 
 DATA_CONTAINER = container("data")
 
-num_validation_jobs = int(config.get("num_validation_jobs", 200))
+num_validation_jobs = int(config["num_validation_jobs"])
 validation_branch_ids = [str(i) for i in range(num_validation_jobs)]
 
-num_train_waveform_jobs = int(config.get("num_train_waveform_jobs", 10))
+num_train_waveform_jobs = int(config["num_train_waveform_jobs"])
 training_branch_ids = [str(i) for i in range(num_train_waveform_jobs)]
 
 
@@ -93,7 +93,7 @@ def _read_segments(segments_file):
 
 def _segment_chunks(segments_file):
     """Split segments into (start, duration) chunks of <= max_duration."""
-    max_duration = float(config.get("max_duration", -1))
+    max_duration = float(config["max_duration"])
     chunks = []
     for start, duration in _read_segments(segments_file):
         step = duration if max_duration == -1 else max_duration
@@ -401,7 +401,7 @@ rule aggregate_testing_waveforms:
         rejected=str(test_waveforms / "rejected_parameters.hdf5"),
     log:
         str(data_log_dir / "aggregate_testing_waveforms.log"),
-    localrule: config.get("aggregate_rules_local", False)
+    localrule: config["aggregate_rules_local"]
     container:
         DATA_CONTAINER
     resources:
@@ -473,7 +473,7 @@ rule aggregate_val_waveforms:
         str(train_waveforms / "val_waveforms.hdf5"),
     log:
         str(data_log_dir / "aggregate_val_waveforms.log"),
-    localrule: config.get("aggregate_rules_local", False)
+    localrule: config["aggregate_rules_local"]
     container:
         DATA_CONTAINER
     resources:
@@ -484,7 +484,7 @@ rule aggregate_val_waveforms:
         "scripts/aggregate_val_waveforms.py"
 
 
-if config.get("pregenerate_training_waveforms", False):
+if config["pregenerate_training_waveforms"]:
 
     rule training_waveforms_branch:
         """Generate one branch of training waveform polarizations.
@@ -534,7 +534,7 @@ if config.get("pregenerate_training_waveforms", False):
             str(train_waveforms / "training_waveforms.hdf5"),
         log:
             str(data_log_dir / "aggregate_training_waveforms.log"),
-        localrule: config.get("aggregate_rules_local", False)
+        localrule: config["aggregate_rules_local"]
         container:
             DATA_CONTAINER
         resources:
