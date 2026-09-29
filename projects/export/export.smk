@@ -50,6 +50,7 @@ snakemake is invoked.
         psd_length=config["psd_length"],
         highpass=config["highpass"],
         streams_per_gpu=config["streams_per_gpu"],
+        gpu_env=gpu_env(config["inference_gpus"], 1),
         weights=(
             (config["remote_run_dir"] + "/model_exported.pt2")
             if remote_train
@@ -61,7 +62,7 @@ snakemake is invoked.
             else str(train_out / "batch.hdf5")
         ),
     shell:
-        "python -m export"
+        "{params.gpu_env}python -m export"
         " --weights {params.weights}"
         " --batch_file {params.batch_file}"
         " --repository_directory {output.model_repo}"

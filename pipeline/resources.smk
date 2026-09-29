@@ -107,6 +107,32 @@ def check_images(projects=("data", "train", "export", "infer", "plots")):
             )
 
 
+def gpu_env(gpus, num_gpus):
+    """Shell command that sets CUDA_VISIBLE_DEVICES for a rule. Either uses
+    `gpus` as given, or picks the `num_gpus` least-used GPUs with `auto` via
+    scripts/free_gpus.py, Empty for null, which uses all visible GPUs.
+    """
+    if gpus is None:
+        return ""
+    if gpus == "auto":
+        gpus = f"$(python /opt/aframe/scripts/free_gpus.py {num_gpus})"
+    return f"CUDA_VISIBLE_DEVICES={gpus}; export CUDA_VISIBLE_DEVICES; "
+
+
+def check_gpus():
+    """Check that pinned GPU lists name as many GPUs as their counts."""
+    for prefix in ("train", "inference"):
+        gpus = config[f"{prefix}_gpus"]
+        num_gpus = config[f"{prefix}_num_gpus"]
+        if gpus is None or gpus == "auto":
+            continue
+        if len(str(gpus).split(",")) != num_gpus:
+            raise WorkflowError(
+                f"{prefix}_gpus ({gpus}) should list {prefix}_num_gpus "
+                f"({num_gpus}) GPUs"
+            )
+
+
 def rule_resources(name):
     """Memory and walltime for rule `name`, from the config's `resources`.
 

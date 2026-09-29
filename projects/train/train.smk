@@ -21,15 +21,11 @@ train_log_dir = log_dir / "train"
 TRAIN_CONTAINER = container("train")
 
 
-# GPUs for local training. `train_gpus` pins specific devices on a shared
-# node; otherwise use `train_num_gpus` of whatever is visible, which under
-# slurm is the allocation.
-if config["train_gpus"] is not None:
-    TRAIN_GPU_ENV = f"CUDA_VISIBLE_DEVICES={config['train_gpus']} "
-    TRAIN_NUM_GPUS = len(str(config["train_gpus"]).split(","))
-else:
-    TRAIN_GPU_ENV = ""
-    TRAIN_NUM_GPUS = config["train_num_gpus"]
+# GPUs for training. Uses `train_num_gpus` of them, determined by `train_gpus`
+# on a shared node or the least used with `auto`. `null` uses whatever is
+# visible, which for slurm is the allocation.
+TRAIN_GPU_ENV = gpu_env(config["train_gpus"], config["train_num_gpus"])
+TRAIN_NUM_GPUS = config["train_num_gpus"]
 
 
 def _train_waveform_inputs(wildcards):

@@ -47,6 +47,10 @@ include: "projects/infer/infer.smk"
 include: "projects/plots/plots.smk"
 
 
+# Outside of `onstart` so that dry-runs do the check
+check_gpus()
+
+
 onstart:
     set_container_binds()
     check_images()
