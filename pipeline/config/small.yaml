@@ -1,7 +1,5 @@
 # A small-scale run that exercises every stage, for checking that the
-# pipeline runs. Layer it over config.yaml:
-#
-#     snakemake --configfile pipeline/config/small.yaml --config run_dir=...
+# pipeline runs. Start one with `aframe-init snakemake --preset small`.
 
 # Continuous H1+L1 open data in O3a, four background files per split
 train_start: 1250917000
