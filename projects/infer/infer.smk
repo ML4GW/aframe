@@ -311,7 +311,7 @@ _GROUP_SHELL_SUFFIX = (
 
 if INFERENCE_MODE == "triton":
 
-    num_gpus = len(str(config["gpus"]).split(","))
+    num_gpus = config["inference_num_gpus"]
     streams_per_gpu = config["streams_per_gpu"]
 
     workflow.global_resources["triton_streams"] = streams_per_gpu * num_gpus
@@ -341,9 +341,12 @@ if INFERENCE_MODE == "triton":
             logfile=str(triton_dir / "server.log"),
             model_name=config["model_name"],
             model_version=config["model_version"],
-            gpus=config["gpus"],
+            gpus=config["inference_gpus"],
+            num_gpus=num_gpus,
+            free_gpus=str(REPO / "scripts" / "free_gpus.py"),
             batch_size=config["inference_batch_size"],
             triton_image=TRITON_IMAGE,
+            infer_project=str(REPO / "projects" / "infer"),
             idle_timeout=config["triton_idle_timeout"],
         script:
             "scripts/start_triton.py"

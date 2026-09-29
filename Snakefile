@@ -1,28 +1,35 @@
 """Top-level Snakefile
 
-Usage, from the root directory:
-    snakemake -n                                   # dry-run
-    snakemake --profile pipeline/profiles/ldg   # HTCondor
-    snakemake --profile pipeline/profiles/local    # local execution (dev)
+Run from a run directory made by `aframe-init snakemake`, whose run.sh
+calls, from that directory:
 
-The pipeline config is loaded from pipeline/config/config.yaml by
-default. To use a different config, copy the original, make
-modifications, and run:
+    snakemake --snakefile <repo>/Snakefile --configfile config.yaml \
+        --profile <repo>/pipeline/profiles/ldg
 
-    snakemake --configfile my_run.yaml --profile pipeline/profiles/ldg
+Each run has its own .snakemake/ directory and run_dir defaults to the
+working directory. Settings that the run's config doesn't give come from
+pipeline/config/config.yaml. A relative train_config is relative to the
+repo, like the presets in pipeline/config/.
 """
 
+import os
 from pathlib import Path
 
+REPO = Path(workflow.basedir)
 
-configfile: "pipeline/config/config.yaml"
+
+configfile: str(REPO / "pipeline" / "config" / "config.yaml")
 
 
-if "run_dir" not in config:
-    raise WorkflowError(
-        "'run_dir' must be set in your config. "
-        "Pass it via --configfile or --config run_dir=..."
-    )
+if config["run_dir"] is None:
+    # Prevent runs from writing into the repo
+    if Path.cwd().resolve() == REPO.resolve():
+        raise WorkflowError(
+            "Set run_dir (--config run_dir=...) or run from a run "
+            "directory made by `aframe-init snakemake`"
+        )
+    config["run_dir"] = os.getcwd()
+config["train_config"] = str(REPO / config["train_config"])
 
 config.setdefault("background_dir", str(Path(config["run_dir"]) / "data"))
 config.setdefault("waveforms_dir", str(Path(config["run_dir"]) / "waveforms"))
@@ -40,7 +47,12 @@ include: "projects/infer/infer.smk"
 include: "projects/plots/plots.smk"
 
 
+# Outside of `onstart` so that dry-runs do the check
+check_gpus()
+
+
 onstart:
+    set_container_binds()
     check_images()
     check_triton_image()
 

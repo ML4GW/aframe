@@ -8,6 +8,14 @@ from jsonargparse import ArgumentParser
 
 root = Path(__file__).resolve().parent.parent
 
+# Presets for `aframe-init snakemake --preset`
+PRESETS = {
+    "small": (
+        root / "pipeline" / "config" / "small.yaml",
+        root / "pipeline" / "config" / "small_train.yaml",
+    ),
+}
+
 ONLINE_CONFIGS = [
     root / "projects" / "online" / "config.yaml",
     root / "projects" / "online" / "prior.yaml",
@@ -40,13 +48,15 @@ def write_content(content: str, path: Path):
     return content
 
 
-def create_snakemake_runfile(path: Path, profile: str):
-    config = path / "config.yaml"
-    cmd = f"snakemake --configfile {config} --profile {profile}"
+def create_snakemake_runfile(path: Path, profile: Path):
+    cmd = (
+        f"snakemake --snakefile {root}/Snakefile"
+        f" --configfile config.yaml --profile {profile}"
+    )
     content = f"""
     #!/bin/bash
-    cd {root}
-    source pipeline/.env
+    cd {path}
+    [ -f {root}/pipeline/.env ] && source {root}/pipeline/.env
     {cmd}
     """
     runfile = path / "run.sh"
@@ -168,7 +178,16 @@ def main():
         "--profile",
         type=str,
         default="pipeline/profiles/ldg",
-        help="Path to the snakemake profile directory",
+        help="Path to the snakemake profile directory, relative to the repo "
+        "if not absolute",
+    )
+    snakemake_parser.add_argument(
+        "--preset",
+        type=str | None,
+        default=None,
+        choices=[None, *PRESETS],
+        help="Start from a preset run, e.g. `small` to check that the "
+        "pipeline runs",
     )
 
     # online subcommand
@@ -200,14 +219,22 @@ def main():
 
     if subcommand == "snakemake":
         train_yaml = root / "projects" / "train" / "train.yaml"
+        overrides = ""
+        if args.preset is not None:
+            preset_config, train_yaml = PRESETS[args.preset]
+            # the preset's own train_config is replaced by the run's copy
+            lines = preset_config.read_text().splitlines(keepends=True)
+            overrides = f"\n# From the {args.preset} preset\n" + "".join(
+                line for line in lines if not line.startswith("train_config:")
+            )
         shutil.copy(train_yaml, directory / "train.yaml")
         run_config = directory / "config.yaml"
         run_config.write_text(
             f"# Overrides for pipeline/config/config.yaml.\n"
             f"run_dir: {directory}\n"
-            f"train_config: {directory / 'train.yaml'}\n"
+            f"train_config: {directory / 'train.yaml'}\n" + overrides
         )
-        create_snakemake_runfile(directory, args.profile)
+        create_snakemake_runfile(directory, root / args.profile)
 
     elif subcommand == "online":
         copy_configs(directory, ONLINE_CONFIGS)

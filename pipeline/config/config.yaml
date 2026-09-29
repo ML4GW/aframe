@@ -7,9 +7,9 @@
 # =============================================================================
 
 # --- Output directories ------------------------------------------------------
-# REQUIRED: experiment-specific outputs (train/, export/, infer/, plots/) are
-# written here. There is no default, so set this in your run config.
-run_dir: /path/to/run
+# Experiment-specific outputs (train/, export/, infer/, plots/) are written
+# here. null for the directory snakemake runs from.
+run_dir: null
 
 # Background strain data directory, containing train/ and test/
 # subdirectories of fetched HDF5 files. Defaults to {run_dir}/data if
@@ -139,15 +139,21 @@ resources:
 # Slurm GPU partition for training.
 train_partition: gpuA40x4
 
-# GPUs for training, which override trainer.devices in the train config.
-# On a shared node, pin specific devices with train_gpus (comma-separated
-# IDs, e.g. "2" or "2,3"), since Lightning would otherwise take every
-# visible GPU. Leave it null under slurm, which assigns train_num_gpus.
-train_gpus: null
+# Which and how many GPUs for training, which overrides trainer.devices in
+# the train config. On a shared node, pin train_num_gpus devices with
+# train_gpus (comma-separated IDs, e.g. "2" or "2,3"), or use `auto` for the
+# least-used GPUs when training starts, since Lightning would otherwise take
+# every visible GPU. Leave it null under slurm, which assigns the GPUs.
+train_gpus: auto
 train_num_gpus: 1
 
 # Slurm GPU partition for export and inference.
 inference_partition: gpuA40x4
+
+# GPUs for export and the Triton server. Pass inference_num_gpus
+# comma-separated IDs, or `auto` for the least-used GPUs when each starts.
+inference_gpus: auto
+inference_num_gpus: 1
 
 # Condor GPU matchmaking for in-process inference.
 # gpu_min_memory_mb: null sets no memory minimum.
@@ -165,6 +171,7 @@ epnfs: false
 
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
+# Relative to the repo if not absolute.
 train_config: projects/train/train.yaml
 
 # Submit training to Nautilus via train-remote instead of
@@ -225,9 +232,6 @@ model_name: aframe-stream
 model_version: -1
 # Resolved against $AFRAME_CONTAINER_ROOT unless given as an absolute path.
 triton_image: tritonserver_25.06.sif
-# Comma-separated GPU IDs for export and inference server only.
-# Training uses train_gpus.
-gpus: "0"
 
 # Snapshotter instances hosted per GPU. Baked into the model at export time
 # and used to size the concurrent-inference pool (streams_per_gpu * num_gpus)

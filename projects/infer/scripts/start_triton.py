@@ -33,6 +33,13 @@ started = Path(snakemake.output.started)
 
 Path(params.output_dir).mkdir(parents=True, exist_ok=True)
 
+gpus = str(params.gpus)
+if gpus == "auto":
+    gpus = subprocess.check_output(
+        [sys.executable, params.free_gpus, str(params.num_gpus)], text=True
+    ).strip()
+logging.info(f"Serving on GPUs {gpus}")
+
 # Clear stale sentinel files before launching a fresh server.
 ip_file.unlink(missing_ok=True)
 Path(params.stop_sentinel).unlink(missing_ok=True)
@@ -43,7 +50,7 @@ cmd = [
     "uv",
     "run",
     "--directory",
-    "projects/infer",
+    params.infer_project,
     "start-server",
     "--model_repo_dir",
     snakemake.input.model_repo,
@@ -54,7 +61,7 @@ cmd = [
     "--model_version",
     str(params.model_version),
     "--gpus",
-    str(params.gpus),
+    gpus,
     "--batch_size",
     str(params.batch_size),
     "--triton_image",
