@@ -344,6 +344,7 @@ if INFERENCE_MODE == "triton":
             gpus=config["gpus"],
             batch_size=config["inference_batch_size"],
             triton_image=TRITON_IMAGE,
+            infer_project=str(REPO / "projects" / "infer"),
             idle_timeout=config["triton_idle_timeout"],
         script:
             "scripts/start_triton.py"

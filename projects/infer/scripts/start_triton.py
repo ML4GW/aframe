@@ -43,7 +43,7 @@ cmd = [
     "uv",
     "run",
     "--directory",
-    "projects/infer",
+    params.infer_project,
     "start-server",
     "--model_repo_dir",
     snakemake.input.model_repo,

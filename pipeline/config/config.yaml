@@ -7,9 +7,9 @@
 # =============================================================================
 
 # --- Output directories ------------------------------------------------------
-# REQUIRED: experiment-specific outputs (train/, export/, infer/, plots/) are
-# written here. There is no default, so set this in your run config.
-run_dir: /path/to/run
+# Experiment-specific outputs (train/, export/, infer/, plots/) are written
+# here. null for the directory snakemake runs from.
+run_dir: null
 
 # Background strain data directory, containing train/ and test/
 # subdirectories of fetched HDF5 files. Defaults to {run_dir}/data if
@@ -165,6 +165,7 @@ epnfs: false
 
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
+# Relative to the repo if not absolute.
 train_config: projects/train/train.yaml
 
 # Submit training to Nautilus via train-remote instead of

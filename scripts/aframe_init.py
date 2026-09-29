@@ -40,13 +40,15 @@ def write_content(content: str, path: Path):
     return content
 
 
-def create_snakemake_runfile(path: Path, profile: str):
-    config = path / "config.yaml"
-    cmd = f"snakemake --configfile {config} --profile {profile}"
+def create_snakemake_runfile(path: Path, profile: Path):
+    cmd = (
+        f"snakemake --snakefile {root}/Snakefile"
+        f" --configfile config.yaml --profile {profile}"
+    )
     content = f"""
     #!/bin/bash
-    cd {root}
-    source pipeline/.env
+    cd {path}
+    [ -f {root}/pipeline/.env ] && source {root}/pipeline/.env
     {cmd}
     """
     runfile = path / "run.sh"
@@ -168,7 +170,8 @@ def main():
         "--profile",
         type=str,
         default="pipeline/profiles/ldg",
-        help="Path to the snakemake profile directory",
+        help="Path to the snakemake profile directory, relative to the repo "
+        "if not absolute",
     )
 
     # online subcommand
@@ -207,7 +210,7 @@ def main():
             f"run_dir: {directory}\n"
             f"train_config: {directory / 'train.yaml'}\n"
         )
-        create_snakemake_runfile(directory, args.profile)
+        create_snakemake_runfile(directory, root / args.profile)
 
     elif subcommand == "online":
         copy_configs(directory, ONLINE_CONFIGS)
