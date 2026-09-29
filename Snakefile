@@ -41,6 +41,7 @@ include: "projects/plots/plots.smk"
 
 
 onstart:
+    set_container_binds()
     check_images()
     check_triton_image()
 

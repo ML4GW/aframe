@@ -5,8 +5,8 @@
 # Requirements on the submit node:
 #   - The aframe-smk conda environment (pipeline/envs/snakemake.yaml)
 #   - AFRAME_CONTAINER_ROOT pointing at the built .sif images
-#   - AFRAME_DATA_DIRS: comma-separated directories to bind into
-#     containers (run_dir, background_dir, waveforms_dir parents)
+#   - AFRAME_DATA_DIRS (optional): comma-separated extra directories to
+#     bind into containers; the run's own directories are added at startup
 #   - WANDB_API_KEY if using W&B logging
 #
 
@@ -33,8 +33,8 @@ software-deployment-method: apptainer
 # The local repo is bound to /opt/aframe
 apptainer-args: >-
   --nv
-  --bind ${AFRAME_DATA_DIRS:?must be set, see pipeline/.env.example}
-  --bind $PWD:/opt/aframe
+  --bind ${AFRAME_DATA_DIRS:?set at startup by set_container_binds in pipeline/resources.smk}
+  --bind ${AFRAME_REPO:?set at startup by set_container_binds in pipeline/resources.smk}:/opt/aframe
   --home $HOME
 
 default-resources:

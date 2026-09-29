@@ -6,11 +6,14 @@ and reads `htcondor_request_mem_mb`, `allowed_execute_duration`, and
 `request_gpus` plus its GPU matchmaking keys. Each helper returns both
 slurm and htcondor sets.
 
-Also resolves each project's container image.
+Also resolves each project's container image, checks the image hash
+against the source code's, and sets up run's directories to be
+bound into the image.
 """
 
 import os
 import subprocess
+from pathlib import Path
 
 from snakemake.exceptions import WorkflowError
 from snakemake.logging import logger
@@ -33,6 +36,39 @@ def container(project):
         source = config["osdf_staging_dir"] or staging_dir()
         return f"/osdf{source}/{name}"
     return os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), f"{project}.sif")
+
+
+def set_container_binds():
+    """Create the run's directories and set what the profiles'
+    `apptainer-args` bind into each container.
+
+    `AFRAME_REPO` is the local repo, which bound over the code in the image.
+    `AFRAME_DATA_DIRS` is `run_dir`, `background_dir`, `waveforms_dir`,
+    `log_dir` and possible `rnp_frame_dir`, plus whatever the variable
+    already held.
+    """
+    # REPO is defined in Snakefile
+    os.environ["AFRAME_REPO"] = str(REPO)
+    run_dirs = [
+        config[key] for key in ("run_dir", "background_dir", "waveforms_dir", "log_dir")
+    ]
+    for path in run_dirs:
+        os.makedirs(path, exist_ok=True)
+    dirs = os.getenv("AFRAME_DATA_DIRS", "").split(",") + run_dirs
+    if config.get("rnp_frame_dir"):
+        dirs.append(config["rnp_frame_dir"])
+
+    # Absolute paths, sorted by their number of parts
+    paths = sorted(
+        {Path(os.path.abspath(d)) for d in dirs if d}, key=lambda p: len(p.parts)
+    )
+    binds = []
+    for path in paths:
+        # Skip if the parent will be bound
+        if not any(path.is_relative_to(parent) for parent in binds):
+            binds.append(path)
+    os.environ["AFRAME_DATA_DIRS"] = ",".join(str(path) for path in binds)
+    logger.info(f"Binding {os.environ['AFRAME_DATA_DIRS']} into containers")
 
 
 def check_images(projects=("data", "train", "export", "infer", "plots")):
