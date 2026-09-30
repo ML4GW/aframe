@@ -5,12 +5,25 @@ from utils.logging import configure_logging
 
 from export.main import export
 
+# Arguments that the preprocessor shares with the model export
+PREPROCESSOR_ARGUMENTS = [
+    "kernel_length",
+    "sample_rate",
+    "inference_sampling_rate",
+    "batch_size",
+    "fduration",
+]
+
 
 def build_parser():
     parser = jsonargparse.ArgumentParser()
     parser.add_argument("--config", action=jsonargparse.ActionConfigFile)
     parser.add_argument("--logfile", type=str, default=None)
     parser.add_function_arguments(export)
+    for arg in PREPROCESSOR_ARGUMENTS:
+        parser.link_arguments(
+            arg, f"preprocessor.init_args.{arg}", apply_on="parse"
+        )
     return parser
 
 
