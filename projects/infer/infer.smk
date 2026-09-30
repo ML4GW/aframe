@@ -166,10 +166,11 @@ else:
         includes zero-lag branches. Each branch records the waveform file of
         the testing waveform branch with the same file and shifts, which
         holds all of its injections, or null if there is none (e.g. zero-lag).
+
+        Needs only the test segments, so it doesn't wait for fetching.
         """
         input:
-            background=get_test_background_files,
-            waveform_branch_map=str(test_waveforms / "waveform_branch_map.json"),
+            str(bg_dir / "test" / "segments.txt"),
         output:
             str(infer_dir / "branch_map.json"),
         run:

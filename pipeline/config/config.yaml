@@ -119,8 +119,7 @@ aggregate_rules_local: true
 # under slurm or condor. Rules and keys not listed here use the profile's
 # default-resources.
 resources:
-  fetch_train_background: {mem_mb: 6144, runtime: 480}
-  fetch_test_background: {mem_mb: 6144, runtime: 480}
+  fetch_background: {mem_mb: 6144, runtime: 480}
   testing_waveforms_branch: {mem_mb: 8192, runtime: 60}
   aggregate_testing_waveforms: {mem_mb: 2048, runtime: 10}
   val_waveforms_branch: {mem_mb: 6144, runtime: 60}

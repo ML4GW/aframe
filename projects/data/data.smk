@@ -1,11 +1,8 @@
 """Snakemake rules for data acquisition and waveform generation.
 
 Rules:
-  generate_train_segments       checkpoint: query DQSegDB for train segments
-  generate_test_segments        checkpoint: query DQSegDB for test segments
-  fetch_train_background        download one chunk of train strain data
-  fetch_test_background         download one chunk of test strain data
-  compute_waveform_branches     checkpoint: enumerate (segment, shifts) combos
+  generate_segments             checkpoint: query DQSegDB for a split's segments
+  fetch_background              download one chunk of a split's strain data
   compute_psd                   PSDs that waveform jobs rejection-sample against
   val_waveforms_branch          validation waveforms for one branch
   aggregate_val_waveforms       merge per-branch validation waveforms
@@ -21,14 +18,14 @@ Directory layout:
   {waveforms_dir}/train/{val_waveforms,training_waveforms,psd}.hdf5
   {waveforms_dir}/test/{waveforms,rejected_parameters,psd}.hdf5
 
-The fetch rules wildcard over {start} and {duration}.
-Testing waveforms wildcard over {wbranch_id}, which are indices into the
-compute_waveform_branches output.
+Segments, fetching and PSDs wildcard over {split}, "train" or "test", and
+fetching over each file's {start} and {duration}.
+Testing waveforms wildcard over a test file's {start} and {duration} and
+a {timeslide}, from testing_waveform_branches.
 Validation waveforms over {vbranch_id}, a fixed number of jobs that
 split num_validation_signals between them.
 """
 
-import json
 import math
 from pathlib import Path
 
@@ -50,17 +47,16 @@ training_branch_ids = [str(i) for i in range(num_train_waveform_jobs)]
 
 
 localrules:
-    compute_waveform_branches,
     compute_psd,
     # DQSegDB seems to be unreachable from execute points
-    generate_train_segments,
-    generate_test_segments,
+    generate_segments,
 
 
 wildcard_constraints:
+    split="train|test",
     start=r"\d{10}",
     duration=r"\d+",
-    wbranch_id=r"\d+",
+    timeslide=r"\d+",
     vbranch_id=r"\d+",
     tbranch_id=r"\d+",
 
@@ -73,6 +69,16 @@ def _fmt_list(values):
 def _is_analyzeable_segment(start, stop, shifts, psd_length):
     """Whether a segment survives PSD burn-in and the max timeslide."""
     return (stop - start) - max(shifts) - psd_length > 0
+
+
+def timeslide_shifts(timeslide):
+    """Each detector's time shift, in seconds, at a timeslide.
+
+    `shifts` in the config is the step each detector moves per timeslide,
+    so timeslide n shifts each detector by n of its steps.
+    Timeslide 0 is zero lag.
+    """
+    return [int(timeslide) * step for step in config["shifts"]]
 
 
 def _read_segments(segments_file):
@@ -107,20 +113,29 @@ def _segment_chunks(segments_file):
     return chunks
 
 
-def get_train_background_files(wildcards):
-    """All training background file paths."""
-    seg_file = checkpoints.generate_train_segments.get(**wildcards).output[0]
+def background_files(split):
+    """All background file paths of a split, "train" or "test"."""
+    seg_file = checkpoints.generate_segments.get(split=split).output[0]
     return [
-        str(train_bg / f"background-{s}-{d}.hdf5") for s, d in _segment_chunks(seg_file)
+        str(bg_dir / split / f"background-{s}-{d}.hdf5")
+        for s, d in _segment_chunks(seg_file)
     ]
 
 
-def get_test_background_files(wildcards):
-    """All testing background file paths."""
-    seg_file = checkpoints.generate_test_segments.get(**wildcards).output[0]
-    return [
-        str(test_bg / f"background-{s}-{d}.hdf5") for s, d in _segment_chunks(seg_file)
-    ]
+def train_background_files(wildcards):
+    """Every training background file as an input for the training rules.
+
+    The list of files isn't known until generate_segments has queried the
+    training segments, which happens partway through a run. Because a rule
+    can't list all the files directly, it names this function as its input,
+    list these files directly. Instead it names this function as its input,
+    `background=train_background_files`, without calling it, and snakemake
+    calls it later.
+
+    Snakemake passes every such function the rule's wildcards. They aren't
+    used here, but the argument is required.
+    """
+    return background_files("train")
 
 
 # Shortest background file to compute waveform PSDs from
@@ -133,11 +148,7 @@ def _psd_background_file(wildcards):
     rejection-sampled against. We take the last file of the split that
     is at least PSD_MIN_DURATION long.
     """
-    if wildcards.split == "train":
-        files = get_train_background_files(wildcards)
-    else:
-        files = get_test_background_files(wildcards)
-    for fname in reversed(files):
+    for fname in reversed(background_files(wildcards.split)):
         if int(Path(fname).stem.split("-")[-1]) >= PSD_MIN_DURATION:
             return fname
     raise WorkflowError(
@@ -146,46 +157,81 @@ def _psd_background_file(wildcards):
     )
 
 
-def _branch_params(wildcards, input):
-    """Read one branch's params from the branch map file."""
-    with open(input.branch_map) as f:
-        branch = json.load(f)[wildcards.wbranch_id]
+def testing_waveform_branches():
+    """The (start, duration, timeslide) of each testing waveform branch.
+
+    A branch is one test background file, identified by its start and
+    duration, analyzed at one timeslide (see timeslide_shifts). These are
+    the same (file, timeslide) pairs that inference runs on, so every
+    injection falls inside a single inference branch.
+
+    Branches are added until they have room for num_testing_signals injections.
+
+    Branches are named by file and timeslide rather than numbered, so their
+    files stay valid in a waveforms_dir shared between runs.
+    """
+    seg_file = checkpoints.generate_segments.get(split="test").output[0]
+    chunks = _segment_chunks(seg_file)
+    psd_length = config["psd_length"]
+    target = config["num_testing_signals"]
+    edge = config["buffer"] + config["waveform_duration"] // 2
+    stride = config["spacing"] + config["waveform_duration"]
+    branches, total, timeslide = [], 0, 0
+    while total < target:
+        timeslide += 1
+        shifts = timeslide_shifts(timeslide)
+        added = False
+        for start, duration in chunks:
+            if total >= target:
+                break
+            if not _is_analyzeable_segment(start, start + duration, shifts, psd_length):
+                continue
+            span = duration - psd_length - max(shifts)
+            slots = math.ceil((span - 2 * edge) / stride)
+            if slots <= 0:
+                continue
+            branches.append((start, duration, timeslide))
+            total += slots
+            added = True
+        # the analyzed part of each file shrinks as the shifts grow,
+        # stop if nothing is getting added
+        if not added:
+            break
+    return branches
+
+
+testing_branch_dir = test_waveforms / "branches" / "{start}-{duration}-{timeslide}"
+
+
+def testing_waveform_file(start, duration, timeslide, name="waveforms"):
+    """One testing waveform branch's output file."""
+    return str(testing_branch_dir / f"{name}.hdf5").format(
+        start=start, duration=duration, timeslide=timeslide
+    )
+
+
+def get_testing_waveform_files(wildcards):
+    """Every testing waveform branch's outputs, keyed by output name."""
+    branches = testing_waveform_branches()
     return {
-        "start": branch["start"],
-        "end": branch["end"],
-        "shifts": _fmt_list(branch["shifts"]),
+        name: [testing_waveform_file(*b, name) for b in branches]
+        for name in ["waveforms", "rejected_parameters"]
     }
 
 
-def get_waveform_branch_files(wildcards):
-    """Per-branch testing waveform outputs."""
-    bmap_file = checkpoints.compute_waveform_branches.get(**wildcards).output[0]
-    with open(bmap_file) as f:
-        branch_map = json.load(f)
-    waveforms = expand(
-        str(test_waveforms / "branches" / "{wbranch_id}" / "waveforms.hdf5"),
-        wbranch_id=branch_map.keys(),
-    )
-    rejected = expand(
-        str(test_waveforms / "branches" / "{wbranch_id}" / "rejected_parameters.hdf5"),
-        wbranch_id=branch_map.keys(),
-    )
-    return {"waveforms": waveforms, "rejected": rejected}
-
-
-checkpoint generate_train_segments:
-    """Query DQSegDB for valid training data segments."""
+checkpoint generate_segments:
+    """Query DQSegDB for a split's valid data segments."""
     output:
-        str(train_bg / "segments.txt"),
+        str(bg_dir / "{split}" / "segments.txt"),
     log:
-        str(data_log_dir / "generate_train_segments.log"),
+        str(data_log_dir / "generate_segments-{split}.log"),
     container:
         DATA_CONTAINER
     params:
         flags=_fmt_list(config["flags"]),
-        start=config["train_start"],
-        end=config["train_end"],
-        min_duration=config["train_min_duration"],
+        start=lambda wc: config[f"{wc.split}_start"],
+        end=lambda wc: config[f"{wc.split}_end"],
+        min_duration=lambda wc: config[f"{wc.split}_min_duration"],
         segment_server=config["segment_server"],
     shell:
         "generate-segments"
@@ -198,45 +244,20 @@ checkpoint generate_train_segments:
         " &> {log}"
 
 
-checkpoint generate_test_segments:
-    """Query DQSegDB for valid test data segments."""
-    output:
-        str(test_bg / "segments.txt"),
-    log:
-        str(data_log_dir / "generate_test_segments.log"),
-    container:
-        DATA_CONTAINER
-    params:
-        flags=_fmt_list(config["flags"]),
-        start=config["test_start"],
-        end=config["test_end"],
-        min_duration=config["test_min_duration"],
-        segment_server=config["segment_server"],
-    shell:
-        "generate-segments"
-        " --flags '{params.flags}'"
-        " --start {params.start}"
-        " --end {params.end}"
-        " --min_duration {params.min_duration}"
-        " --segment_server {params.segment_server}"
-        " --output_file {output}"
-        " &> {log}"
-
-
-rule fetch_train_background:
-    """Download one chunk of training strain data."""
+rule fetch_background:
+    """Download one chunk of a split's strain data."""
     input:
-        str(train_bg / "segments.txt"),
+        str(bg_dir / "{split}" / "segments.txt"),
     output:
-        str(train_bg / "background-{start}-{duration}.hdf5"),
+        str(bg_dir / "{split}" / "background-{start}-{duration}.hdf5"),
     log:
-        str(data_log_dir / "fetch_train_background-{start}-{duration}.log"),
+        str(data_log_dir / "fetch_background-{split}-{start}-{duration}.log"),
     container:
         DATA_CONTAINER
     # `fetch` downloads with nproc=3
     threads: 4
     resources:
-        **rule_resources("fetch_train_background"),
+        **rule_resources("fetch_background"),
     params:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
@@ -249,98 +270,6 @@ rule fetch_train_background:
         " --sample_rate {params.sample_rate}"
         " --output_file {output}"
         " &> {log}"
-
-
-rule fetch_test_background:
-    """Download one chunk of test strain data."""
-    input:
-        str(test_bg / "segments.txt"),
-    output:
-        str(test_bg / "background-{start}-{duration}.hdf5"),
-    log:
-        str(data_log_dir / "fetch_test_background-{start}-{duration}.log"),
-    container:
-        DATA_CONTAINER
-    # `fetch` downloads with nproc=3
-    threads: 4
-    resources:
-        **rule_resources("fetch_test_background"),
-    params:
-        channels=_fmt_list(config["channels"]),
-        sample_rate=config["sample_rate"],
-        end=lambda wc: int(wc.start) + int(wc.duration),
-    shell:
-        "fetch-data"
-        " --start {wildcards.start}"
-        " --end {params.end}"
-        " --channels '{params.channels}'"
-        " --sample_rate {params.sample_rate}"
-        " --output_file {output}"
-        " &> {log}"
-
-
-checkpoint compute_waveform_branches:
-    """Create a file of (start, end, shifts) branches for testing waveforms.
-
-Each branch covers the analyzed part of one test background file at one
-timeslide: after the PSD burn-in at the file's start, and before the
-timeslide loss (max shift) at its end. Every injection, including its
-full waveform, falls inside a single inference branch.
-
-Adds branches until enough data is present to generate as many waveforms
-as requested. Loops over background files, adding an additional timeslide
-if the target has not yet been met.
-
-Runs locally on the submit node.
-"""
-    input:
-        lambda wildcards: checkpoints.generate_test_segments.get(**wildcards).output[0],
-    output:
-        str(test_waveforms / "waveform_branch_map.json"),
-    run:
-        files = [
-            (start, start + duration)
-            for start, duration in _segment_chunks(input[0])
-        ]
-        shifts = config["shifts"]
-        psd_length = config["psd_length"]
-        target = config["num_testing_signals"]
-        edge = config["buffer"] + config["waveform_duration"] // 2
-        stride = config["spacing"] + config["waveform_duration"]
-        branch_map, branch_id, total = {}, 0, 0
-        i = 0
-        while total < target:
-            i += 1
-            shift = [i * s for s in shifts]
-            added = False
-            for start, end in files:
-                if total >= target:
-                    break
-                if not _is_analyzeable_segment(start, end, shift, psd_length):
-                    continue
-                avail_start = start + psd_length
-                avail_end = end - max(shift)
-                slots = math.ceil((avail_end - avail_start - 2 * edge) / stride)
-                if slots <= 0:
-                    continue
-                branch_map[str(branch_id)] = {
-                    "background": str(
-                        test_bg / f"background-{start}-{end - start}.hdf5"
-                    ),
-                    "start": avail_start,
-                    "end": avail_end,
-                    "shifts": shift,
-                }
-                branch_id += 1
-                total += slots
-                added = True
-            # files shrink as the shift grows,
-            # stop if nothing is getting added
-            if not added:
-                break
-        Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
-        with open(output[0], "w") as f:
-            json.dump(branch_map, f, indent=2)
 
 
 rule compute_psd:
@@ -354,8 +283,6 @@ background file.
         str(waveform_dir / "{split}" / "psd.hdf5"),
     log:
         str(data_log_dir / "compute_psd-{split}.log"),
-    wildcard_constraints:
-        split="train|test",
     container:
         DATA_CONTAINER
     params:
@@ -366,28 +293,35 @@ background file.
 
 
 rule testing_waveforms_branch:
-    """Generate testing waveforms for one (segment, shifts) branch.
+    """Generate testing waveforms for one branch: the analyzed part of
+the test background file starting at {start}, lasting {duration}, at
+timeslide {timeslide}. The PSD burn-in at the file's start and
+the timeslide loss (max shift) at its end are accounted for.
 
 Rejection-samples waveforms against the PSDs of the last fetched
 test-background chunk and writes the accepted injection set and
 the rejected parameters for this branch.
 """
     input:
-        branch_map=str(test_waveforms / "waveform_branch_map.json"),
         psd_file=str(test_waveforms / "psd.hdf5"),
     output:
-        waveforms=str(test_waveforms / "branches" / "{wbranch_id}" / "waveforms.hdf5"),
-        rejected=str(
-            test_waveforms / "branches" / "{wbranch_id}" / "rejected_parameters.hdf5"
-        ),
+        waveforms=str(testing_branch_dir / "waveforms.hdf5"),
+        rejected=str(testing_branch_dir / "rejected_parameters.hdf5"),
     log:
-        str(data_log_dir / "testing_waveforms_branch-{wbranch_id}.log"),
+        str(
+            data_log_dir
+            / "testing_waveforms_branch-{start}-{duration}-{timeslide}.log"
+        ),
     container:
         DATA_CONTAINER
     resources:
         **rule_resources("testing_waveforms_branch"),
     params:
-        branch=_branch_params,
+        start=lambda wc: int(wc.start) + config["psd_length"],
+        end=lambda wc: (
+            int(wc.start) + int(wc.duration) - max(timeslide_shifts(wc.timeslide))
+        ),
+        shifts=lambda wc: _fmt_list(timeslide_shifts(wc.timeslide)),
         ifos=_fmt_list(config["ifos"]),
         prior=config["prior"],
         minimum_frequency=config["minimum_frequency"],
@@ -405,10 +339,10 @@ the rejected parameters for this branch.
         seed=config["seed"],
     shell:
         "generate-testing-waveforms"
-        " --start {params.branch[start]}"
-        " --end {params.branch[end]}"
+        " --start {params.start}"
+        " --end {params.end}"
         " --ifos '{params.ifos}'"
-        " --shifts '{params.branch[shifts]}'"
+        " --shifts '{params.shifts}'"
         " --spacing {params.spacing}"
         " --buffer {params.buffer}"
         " --prior {params.prior}"
@@ -432,10 +366,10 @@ the rejected parameters for this branch.
 rule aggregate_testing_waveforms:
     """Merge per-branch testing waveforms into the final injection set."""
     input:
-        unpack(get_waveform_branch_files),
+        unpack(get_testing_waveform_files),
     output:
         waveforms=str(test_waveforms / "waveforms.hdf5"),
-        rejected=str(test_waveforms / "rejected_parameters.hdf5"),
+        rejected_parameters=str(test_waveforms / "rejected_parameters.hdf5"),
     log:
         str(data_log_dir / "aggregate_testing_waveforms.log"),
     localrule: config["aggregate_rules_local"]
@@ -445,8 +379,9 @@ rule aggregate_testing_waveforms:
         **rule_resources("aggregate_testing_waveforms"),
     params:
         ifos=config["ifos"],
+        classes={"waveforms": "responses", "rejected_parameters": "parameters"},
     script:
-        "scripts/aggregate_testing_waveforms.py"
+        "scripts/aggregate_waveforms.py"
 
 
 rule val_waveforms_branch:
@@ -502,12 +437,12 @@ The PSDs are those of the last fetched train-background chunk.
 rule aggregate_val_waveforms:
     """Merge per-branch validation waveforms into val_waveforms.hdf5."""
     input:
-        expand(
+        waveforms=expand(
             str(train_waveforms / "validation_tmp" / "waveforms-{vbranch_id}.hdf5"),
             vbranch_id=validation_branch_ids,
         ),
     output:
-        str(train_waveforms / "val_waveforms.hdf5"),
+        waveforms=str(train_waveforms / "val_waveforms.hdf5"),
     log:
         str(data_log_dir / "aggregate_val_waveforms.log"),
     localrule: config["aggregate_rules_local"]
@@ -517,8 +452,9 @@ rule aggregate_val_waveforms:
         **rule_resources("aggregate_val_waveforms"),
     params:
         ifos=config["ifos"],
+        classes={"waveforms": "waveforms"},
     script:
-        "scripts/aggregate_val_waveforms.py"
+        "scripts/aggregate_waveforms.py"
 
 
 if config["pregenerate_training_waveforms"]:
@@ -563,12 +499,12 @@ if config["pregenerate_training_waveforms"]:
     rule aggregate_training_waveforms:
         """Merge per-branch training waveforms into training_waveforms.hdf5."""
         input:
-            expand(
+            waveforms=expand(
                 str(train_waveforms / "training_tmp" / "{tbranch_id}.hdf5"),
                 tbranch_id=training_branch_ids,
             ),
         output:
-            str(train_waveforms / "training_waveforms.hdf5"),
+            waveforms=str(train_waveforms / "training_waveforms.hdf5"),
         log:
             str(data_log_dir / "aggregate_training_waveforms.log"),
         localrule: config["aggregate_rules_local"]
@@ -576,5 +512,8 @@ if config["pregenerate_training_waveforms"]:
             DATA_CONTAINER
         resources:
             **rule_resources("aggregate_training_waveforms"),
+        params:
+            ifos=config["ifos"],
+            classes={"waveforms": "polarizations"},
         script:
-            "scripts/aggregate_training_waveforms.py"
+            "scripts/aggregate_waveforms.py"
