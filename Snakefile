@@ -21,6 +21,10 @@ REPO = Path(workflow.basedir)
 configfile: str(REPO / "pipeline" / "config" / "config.yaml")
 
 
+# `--config key=false` arrives as the string "false", which is truthy
+for key, value in config.items():
+    if isinstance(value, str) and value.lower() in ("true", "false"):
+        config[key] = value.lower() == "true"
 if config["run_dir"] is None:
     # Prevent runs from writing into the repo
     if Path.cwd().resolve() == REPO.resolve():
