@@ -49,6 +49,7 @@ snakemake is invoked.
         fftlength=config["fftlength"] or "null",
         psd_length=config["psd_length"],
         highpass=config["highpass"],
+        lowpass=config["lowpass"] or "null",
         streams_per_gpu=config["streams_per_gpu"],
         gpu_env=gpu_env(config["inference_gpus"], 1),
         weights=(
@@ -75,12 +76,8 @@ snakemake is invoked.
         " --fduration {params.fduration}"
         " --psd_length {params.psd_length}"
         " --streams_per_gpu {params.streams_per_gpu}"
-        " --preprocessor.init_args.kernel_length {params.kernel_length}"
-        " --preprocessor.init_args.sample_rate {params.sample_rate}"
-        " --preprocessor.init_args.inference_sampling_rate"
-        " {params.inference_sampling_rate}"
-        " --preprocessor.init_args.batch_size {params.batch_size}"
-        " --preprocessor.init_args.fduration {params.fduration}"
+        # the rest of the preprocessor's arguments are linked from the above
         " --preprocessor.init_args.fftlength {params.fftlength}"
         " --preprocessor.init_args.highpass {params.highpass}"
+        " --preprocessor.init_args.lowpass {params.lowpass}"
         " &> {log}"

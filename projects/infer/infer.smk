@@ -158,87 +158,77 @@ if ANALYSIS_TYPE == "rnp":
 else:
 
     checkpoint compute_branch_map:
-        """Enumerate (background file, shifts) inference branches.
+        """Enumerate (background file, timeslide) inference branches.
 
-        The number of shift multiples is the minimum needed to accumulate
+        The number of timeslides is the minimum needed to accumulate
         Tb seconds of background livetime. Branches that are too short to
         analyze after shifting and PSD burn-in are dropped. Optionally
         includes zero-lag branches. Each branch records the waveform file of
-        the testing waveform branch with the same file and shifts, which
+        the testing waveform branch with the same file and timeslide, which
         holds all of its injections, or null if there is none (e.g. zero-lag).
+
+        Needs only the test segments, so it doesn't wait for fetching.
         """
         input:
-            background=get_test_background_files,
-            waveform_branch_map=str(test_waveforms / "waveform_branch_map.json"),
+            str(bg_dir / "test" / "segments.txt"),
         output:
             str(infer_dir / "branch_map.json"),
         run:
-            def _get_num_shifts(segments, Tb, shift, psd_length):
+            def _get_num_timeslides(segments, Tb, shift_step, psd_length):
                 if Tb == 0:
                     return 0
-                livetime, num_shifts = 0, 0
+                livetime, num_timeslides = 0, 0
                 durations = [stop - start - psd_length for start, stop in segments]
                 while livetime < Tb:
-                    num_shifts += 1
+                    num_timeslides += 1
                     for dur in durations:
-                        dur -= shift * num_shifts
+                        dur -= shift_step * num_timeslides
                         if dur > 0:
                             livetime += dur
-                return num_shifts
+                return num_timeslides
 
-            shifts = config["shifts"]
             psd_length = config["psd_length"]
-            segments = []
-            for fname in input.background:
-                start, duration = map(float, Path(fname).stem.split("-")[-2:])
-                segments.append((start, start + duration))
-            num_shifts = _get_num_shifts(
-                segments, config["Tb"], max(shifts), psd_length
+            chunks = _segment_chunks(input[0])
+            num_timeslides = _get_num_timeslides(
+                [(start, start + duration) for start, duration in chunks],
+                config["Tb"],
+                max(config["shifts"]),
+                psd_length,
             )
-            with open(input.waveform_branch_map) as f:
-                wbmap = json.load(f)
-            wbranch_ids = {
-                (w["background"], tuple(w["shifts"])): i for i, w in wbmap.items()
-            }
-            max_waveform_shift = max(max(b["shifts"]) for b in wbmap.values())
-            num_waveform_shifts = max_waveform_shift / max(shifts)
-            if num_waveform_shifts > num_shifts:
+            waveform_branches = set(testing_waveform_branches())
+            num_waveform_timeslides = max(
+                (t for _, _, t in waveform_branches), default=0
+            )
+            if num_waveform_timeslides > num_timeslides:
                 raise WorkflowError(
-                    f"num_testing_signals requires {num_waveform_shifts} shift "
-                    f"multiples but Tb={config['Tb']} only covers {num_shifts}. "
+                    f"num_testing_signals requires {num_waveform_timeslides} "
+                    f"timeslides but Tb={config['Tb']} only covers "
+                    f"{num_timeslides}. "
                     f"Reduce num_testing_signals or increase Tb."
                 )
-            branch_shifts = [
-                [(j + 1) * s for s in shifts] for j in range(num_shifts)
-            ]
-            if zero_lag:
-                branch_shifts.insert(0, [0] * len(shifts))
-            branch_map, i, matched = {}, 0, set()
-            for fname, (start, stop) in zip(input.background, segments):
-                for shift in branch_shifts:
-                    if _is_analyzeable_segment(start, stop, shift, psd_length):
-                        branch_map[str(i)] = {
-                            "fname": str(fname),
-                            "shifts": shift,
-                            "waveforms": None,
-                        }
-                        wbranch_id = wbranch_ids.get((str(fname), tuple(shift)))
-                        if wbranch_id is not None:
-                            branch_map[str(i)]["waveforms"] = str(
-                                test_waveforms
-                                / "branches"
-                                / wbranch_id
-                                / "waveforms.hdf5"
-                            )
-                            matched.add(wbranch_id)
-                        i += 1
-            # every testing waveform must be analyzed by some branch
-            unmatched = set(wbmap) - matched
-            if unmatched:
-                raise WorkflowError(
-                    f"Testing waveform branches {sorted(unmatched, key=int)} "
-                    "match no inference branch"
-                )
+            # zero lag is timeslide 0, which has no testing waveforms
+            timeslides = range(0 if zero_lag else 1, num_timeslides + 1)
+            branch_map, i = {}, 0
+            for start, duration in chunks:
+                for timeslide in timeslides:
+                    shifts = timeslide_shifts(timeslide)
+                    if not _is_analyzeable_segment(
+                        start, start + duration, shifts, psd_length
+                    ):
+                        continue
+                    branch = (start, duration, timeslide)
+                    branch_map[str(i)] = {
+                        "fname": str(
+                            test_bg / f"background-{start}-{duration}.hdf5"
+                        ),
+                        "shifts": shifts,
+                        "waveforms": (
+                            testing_waveform_file(*branch)
+                            if branch in waveform_branches
+                            else None
+                        ),
+                    }
+                    i += 1
             _assign_groups(branch_map, split_at_file_changes=True)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:

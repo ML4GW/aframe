@@ -78,7 +78,7 @@ if config["remote_train"]:
         NOTE: not yet functional
         """
         input:
-            background=get_train_background_files,
+            background=train_background_files,
             val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
             train_waveforms=_train_waveform_inputs,
         output:
@@ -107,7 +107,7 @@ else:
         overrides trainer.devices in the train config.
         """
         input:
-            background=get_train_background_files,
+            background=train_background_files,
             val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
             train_waveforms=_train_waveform_inputs,
         output:

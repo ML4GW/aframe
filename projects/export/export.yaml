@@ -20,11 +20,6 @@ psd_length: 64
 preprocessor:
   class_path: utils.preprocessing.BatchWhitener
   init_args:
-    kernel_length: 1.5
-    sample_rate: 2048
-    inference_sampling_rate: 4
-    batch_size: 128
-    fduration: 1
     fftlength: 2
     highpass: 32
 streams_per_gpu: 6
