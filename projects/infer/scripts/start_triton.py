@@ -45,7 +45,14 @@ ip_file.unlink(missing_ok=True)
 Path(params.stop_sentinel).unlink(missing_ok=True)
 
 # start-server lives in the infer project's environment, so it is launched
-# via `uv run --directory projects/infer` rather than imported.
+# via `uv run --directory projects/infer` rather than imported. That runs it
+# from another directory, so it gets absolute paths.
+
+
+def absolute(path):
+    return str(Path(path).resolve())
+
+
 cmd = [
     "uv",
     "run",
@@ -53,9 +60,9 @@ cmd = [
     params.infer_project,
     "start-server",
     "--model_repo_dir",
-    snakemake.input.model_repo,
+    absolute(snakemake.input.model_repo),
     "--output_dir",
-    params.output_dir,
+    absolute(params.output_dir),
     "--model_name",
     str(params.model_name),
     "--model_version",
@@ -67,11 +74,11 @@ cmd = [
     "--triton_image",
     params.triton_image,
     "--ip_file",
-    str(ip_file),
+    absolute(ip_file),
     "--stop_sentinel",
-    params.stop_sentinel,
+    absolute(params.stop_sentinel),
     "--logfile",
-    params.logfile,
+    absolute(params.logfile),
     "--idle_timeout",
     str(params.idle_timeout),
 ]

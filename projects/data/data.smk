@@ -13,10 +13,10 @@ Rules:
 
 Directory layout:
 
-  {background_dir}/{train,test}/segments.txt
-  {background_dir}/{train,test}/background-{start}-{duration}.hdf5
-  {waveforms_dir}/train/{val_waveforms,training_waveforms,psd}.hdf5
-  {waveforms_dir}/test/{waveforms,rejected_parameters,psd}.hdf5
+  data/{train,test}/segments.txt
+  data/{train,test}/background-{start}-{duration}.hdf5
+  waveforms/train/{val_waveforms,training_waveforms,psd}.hdf5
+  waveforms/test/{waveforms,rejected_parameters,psd}.hdf5
 
 Segments, fetching and PSDs wildcard over {split}, "train" or "test", and
 fetching over each file's {start} and {duration}.
@@ -29,8 +29,8 @@ split num_validation_signals between them.
 import math
 from pathlib import Path
 
-bg_dir = Path(config["background_dir"])
-waveform_dir = Path(config["waveforms_dir"])
+bg_dir = run_dir / "data"
+waveform_dir = run_dir / "waveforms"
 train_bg = bg_dir / "train"
 test_bg = bg_dir / "test"
 train_waveforms = waveform_dir / "train"

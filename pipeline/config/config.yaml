@@ -7,24 +7,21 @@
 # =============================================================================
 
 # --- Output directories ------------------------------------------------------
-# Experiment-specific outputs (train/, export/, infer/, plots/) are written
-# here. null for the directory snakemake runs from.
+# Snakemake runs from the run directory, and everything a run writes is in
+# it: data/ (background), waveforms/, train/, export/, infer/, plots/ and
+# logs/. Every path is relative to it, so that condor jobs that share no
+# filesystem with this node can recreate them. null, or the run directory.
 run_dir: null
 
-# Background strain data directory, containing train/ and test/
-# subdirectories of fetched HDF5 files. Defaults to {run_dir}/data if
-# omitted. Can be shared across experiments that cover the same GPS range,
-# channels, and sample rate to avoid re-downloading data.
-# background_dir: /path/to/shared/background
+# Another run's data/ directory, whose background files and segments this
+# run reuses instead of fetching them again. Only for runs that cover the
+# same GPS range, channels and sample rate. Its files are linked into this
+# run's data/. Anything this run fetches stays in its own data/.
+# background_dir: /path/to/other_run/data
 
-# Waveform data directory for training, validation, and testing waveforms.
-# Defaults to {run_dir}/waveforms if omitted. Kept separate from
-# background_dir so background and waveforms can point at different storage. 
-# Can be shared across experiments with identical waveform parameters.
-# waveforms_dir: /path/to/shared/waveforms
-
-# Snakemake and job logs. Defaults to {run_dir}/logs if omitted.
-# log_dir: /path/to/logs
+# Likewise, another run's waveforms/ directory to reuse, for identical
+# waveform parameters.
+# waveforms_dir: /path/to/other_run/waveforms
 
 # --- Interferometers ---------------------------------------------------------
 ifos:

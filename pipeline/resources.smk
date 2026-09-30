@@ -42,21 +42,19 @@ def set_container_binds():
     """Create the run's directories and set what the profiles'
     `apptainer-args` bind into each container.
 
-    `AFRAME_REPO` is the local repo, which bound over the code in the image.
-    `AFRAME_DATA_DIRS` is `run_dir`, `background_dir`, `waveforms_dir`,
-    `log_dir` and possible `rnp_frame_dir`, plus whatever the variable
-    already held.
+    `AFRAME_REPO` is the local repo, which is bound over the code in the image.
+    `AFRAME_DATA_DIRS` is the run directory, the directories whose files it
+    reuses (where its links point) and any `rnp_frame_dir`, plus whatever the
+    variable already held.
     """
     # REPO is defined in Snakefile
     os.environ["AFRAME_REPO"] = str(REPO)
-    run_dirs = [
-        config[key] for key in ("run_dir", "background_dir", "waveforms_dir", "log_dir")
-    ]
-    for path in run_dirs:
+    for path in (run_dir / "data", run_dir / "waveforms", log_dir):
         os.makedirs(path, exist_ok=True)
-    dirs = os.getenv("AFRAME_DATA_DIRS", "").split(",") + run_dirs
-    if config.get("rnp_frame_dir"):
-        dirs.append(config["rnp_frame_dir"])
+    dirs = os.getenv("AFRAME_DATA_DIRS", "").split(",") + [str(run_dir)]
+    for key in ("background_dir", "waveforms_dir", "rnp_frame_dir"):
+        if config.get(key):
+            dirs.append(config[key])
 
     # Absolute paths, sorted by their number of parts
     paths = sorted(
@@ -69,6 +67,30 @@ def set_container_binds():
             binds.append(path)
     os.environ["AFRAME_DATA_DIRS"] = ",".join(str(path) for path in binds)
     logger.info(f"Binding {os.environ['AFRAME_DATA_DIRS']} into containers")
+
+
+def link_files(source, dest):
+    """Link each file under `source` to the same relative path under `dest`,
+    unless something is already there.
+
+    Condor can't send a job a file through a linked directory, so reused
+    directories are linked file by file. Snakemake compares the links' own
+    times, not their files', so each link gets its file's modification
+    time, or a file linked after its inputs would look newer and be redone.
+    """
+    source = Path(source)
+    for path in source.rglob("*"):
+        if path.is_file():
+            link = Path(dest) / path.relative_to(source)
+            if not link.exists():
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(path.resolve())
+                stat = path.stat()
+                os.utime(
+                    link,
+                    ns=(stat.st_atime_ns, stat.st_mtime_ns),
+                    follow_symlinks=False,
+                )
 
 
 def check_images(projects=("data", "train", "export", "infer", "plots")):
