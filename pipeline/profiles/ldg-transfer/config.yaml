@@ -57,6 +57,10 @@ local-cores: 16
 # their image, and the workflow gives them no container.
 software-deployment-method: apptainer
 
+# Where snakemake would keep images it pulls. Without it, snakemake uses
+# $APPTAINER_CACHEDIR, which may not exist on the EP.
+apptainer-prefix: .snakemake/apptainer
+
 # As in the ldg profile. Only for the rules that run on the submit node.
 # Condor starts each job's container itself, and job_wrapper.sh puts code/
 # on PYTHONPATH instead.
