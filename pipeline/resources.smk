@@ -42,10 +42,10 @@ def set_container_binds():
     """Create the run's directories and set what the profiles'
     `apptainer-args` bind into each container.
 
-    `AFRAME_REPO` is the local repo, which is bound over the code in the image.
-    `AFRAME_DATA_DIRS` is the run directory, the directories whose files it
-    reuses (where its links point) and any `rnp_frame_dir`, plus whatever the
-    variable already held.
+    `AFRAME_REPO` is the run's copy of the code, which is bound over the code
+    in the image. `AFRAME_DATA_DIRS` is the run directory, the directories whose
+    files it reuses (where its links point) and any `rnp_frame_dir`, plus whatever
+    the variable already held.
     """
     # REPO is defined in Snakefile
     os.environ["AFRAME_REPO"] = str(REPO)

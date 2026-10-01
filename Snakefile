@@ -1,14 +1,15 @@
 """Top-level Snakefile
 
 Run from a run directory made by `aframe-init snakemake`, whose run.sh
-calls, from that directory:
+copies the local repo into the run's code/ directory and then calls, from
+the run directory:
 
-    snakemake --snakefile <repo>/Snakefile --configfile config.yaml \
-        --profile <repo>/pipeline/profiles/ldg
+    snakemake --snakefile code/Snakefile --configfile config.yaml \
+        --profile code/pipeline/profiles/ldg
 
 Each run has its own .snakemake/ directory, and runs its own copy of the
 code, so edits to the local repo take effect when a run is restarted.
-Settings that the run's config doesn't give come from 
+Settings that the run's config doesn't give come from
 pipeline/config/config.yaml. A relative train_config is relative to the
 repo, like the presets in pipeline/config/.
 

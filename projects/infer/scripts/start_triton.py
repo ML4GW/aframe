@@ -53,9 +53,14 @@ def absolute(path):
     return str(Path(path).resolve())
 
 
+# The project is in the run's read-only copy of the code, so rather than
+# make an environment there, uv makes a temporary one in its cache, which
+# gets cleaned up once the server stops
 cmd = [
     "uv",
     "run",
+    "--isolated",
+    "--frozen",
     "--directory",
     params.infer_project,
     "start-server",
