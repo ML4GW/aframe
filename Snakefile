@@ -14,8 +14,8 @@ pipeline/config/config.yaml. A relative train_config is relative to the
 repo, like the presets in pipeline/config/.
 
 Every path that the rules use is relative to the run directory, so that a
-condor job that shares no filesystem with this node can recreate them in
-its scratch directory.
+condor job that shares no filesystem with the submit node can recreate
+them in its scratch directory.
 """
 
 from pathlib import Path

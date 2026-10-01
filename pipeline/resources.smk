@@ -9,6 +9,11 @@ slurm and htcondor sets.
 Also resolves each project's container image, checks the image hash
 against the source code's, and sets up run's directories to be
 bound into the image.
+
+With `shared-fs-usage: none`, the condor jobs share no filesystem with
+the submit node. Each job runs snakemake for its rule in the project's
+image, which condor fetches, with the run's copy of the code and the
+rule's input files sent in and its outputs and logs sent back.
 """
 
 import os
@@ -21,6 +26,10 @@ from snakemake.logging import logger
 from scripts.env_hash import env_hash
 from scripts.publish_images import OSDF_PROJECTS, image_name, staging_dir
 
+# Whether the submit node and the condor jobs share a filesystem. False with
+# `shared-fs-usage: none`.
+SHARED_FS = bool(workflow.storage_settings.shared_fs_usage)
+
 
 def container(project):
     """The image that `project`'s rules run in.
@@ -30,12 +39,26 @@ def container(project):
     use the image published for the local repo's environment, read from
     `osdf_staging_dir` (your own staging directory by default) through the
     AP's `/osdf` mount.
+
+    None in a condor job without a shared filesystem, which already runs
+    inside its image.
     """
+    if workflow.remote_exec and not SHARED_FS:
+        return None
     if config["container_source"] == "osdf" and project in OSDF_PROJECTS:
         name = image_name(project, env_hash(project))
         source = config["osdf_staging_dir"] or staging_dir()
         return f"/osdf{source}/{name}"
     return os.path.join(os.getenv("AFRAME_CONTAINER_ROOT", ""), f"{project}.sif")
+
+
+def job_image(project):
+    """The `osdf://` URL of the image published for the local repo's
+    `project` environment, which condor fetches for a job on the execute
+    point.
+    """
+    source = config["osdf_staging_dir"] or staging_dir()
+    return f"osdf://{source}/{image_name(project, env_hash(project))}"
 
 
 def set_container_binds():
@@ -98,7 +121,18 @@ def check_images(projects=("data", "train", "export", "infer", "plots")):
     for a different environment than the local repo's.
 
     Images record their environment hash (scripts/env_hash.py) at build time.
+    Without a shared filesystem, condor jobs use the published images, so
+    those must exist.
     """
+    if not SHARED_FS:
+        for project in OSDF_PROJECTS:
+            image = "/osdf" + job_image(project).removeprefix("osdf://")
+            if not os.path.exists(image):
+                raise WorkflowError(
+                    f"{image} doesn't exist and condor jobs need it. Build "
+                    "the image, then run `python -m scripts.publish_images "
+                    f"{project}` on a CIT AP."
+                )
     for project in projects:
         image = container(project)
         if image.startswith("/osdf/"):
@@ -155,8 +189,9 @@ def check_gpus():
             )
 
 
-def rule_resources(name):
-    """Memory and walltime for rule `name`, from the config's `resources`.
+def rule_resources(name, project):
+    """Memory and walltime for rule `name`, from the config's `resources`,
+    and for a condor job without a shared filesystem, `project`'s image.
 
     Anything a rule doesn't set there fall back to the profile's
     default-resources. With `epnfs`, condor jobs only match execute points
@@ -164,6 +199,11 @@ def rule_resources(name):
     """
     res = config["resources"].get(name, {})
     out = {}
+    # Only snakemake on the AP submits jobs. On an execute point these are
+    # unused, and job_image() would run `uv export` there for every rule.
+    if not SHARED_FS and not workflow.remote_exec:
+        out["universe"] = "container"
+        out["container_image"] = job_image(project)
     if config["epnfs"]:
         out["requirements"] = "TARGET.EPNFS =?= True"
     if "mem_mb" in res:

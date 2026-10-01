@@ -1,0 +1,90 @@
+# Snakemake HTCondor execution profile for LDG execute points that share
+# no filesystem with the access point.
+#
+#     cd <run_dir> && python <repo>/scripts/code_snapshot.py
+#     snakemake --snakefile code/Snakefile --configfile config.yaml \
+#         --profile code/pipeline/profiles/ldg-transfer
+#
+# which is what run.sh from `aframe-init snakemake --profile
+# pipeline/profiles/ldg-transfer` does. Each condor job runs snakemake for
+# its rule in the image published for the local repo's environment, fetched
+# by condor from OSDF, with the run's code/ copy and the rule's input files
+# sent to its scratch directory, and its outputs and logs sent back. See
+# pipeline/condor/.
+#
+# Requirements on the submit node are those of the ldg profile, plus images
+# published for the local repo's environment (scripts/publish_images.py).
+
+executor: htcondor
+
+# Nothing is shared with the execute points, so condor transfers the files
+shared-fs-usage: none
+
+# On LDG, use GPUs on the submit node for train/export/infer, and merge
+# per-branch waveform files on the submit node.
+config:
+  gpu_rules_local: true
+  aggregate_rules_local: true
+
+# Maximum number of simultaneously submitted jobs. (placeholder)
+jobs: 500
+
+# Outputs are back once a job ends
+latency-wait: 5
+
+# Resubmit failed jobs. Jobs only go on hold for problems with condor or the
+# execute point (job_wrapper.sh keeps failures from holding them), so fail
+# held jobs after 10 minutes. (placeholders)
+retries: 2
+htcondor-held-timeout: 600
+htcondor-jobdir: .snakemake/htcondor
+
+rerun-incomplete: true
+keep-going: false
+
+# Each rule's stdout/stderr goes to a log file, so trim console output
+# to just a progress counter and job-stats summary. show-failed-logs
+# dumps a failed job's log to the console so failures aren't silent.
+quiet:
+  - rules
+  - reason
+show-failed-logs: true
+
+# Cores available to localrules
+local-cores: 16
+
+# For the rules that run on the submit node. Condor jobs already run in
+# their image, and the workflow gives them no container.
+software-deployment-method: apptainer
+
+# As in the ldg profile. Only for the rules that run on the submit node.
+# Condor starts each job's container itself, and job_wrapper.sh puts code/
+# on PYTHONPATH instead.
+apptainer-args: >-
+  --nv
+  --bind ${AFRAME_DATA_DIRS:?set at startup by set_container_binds in pipeline/resources.smk}
+  --bind ${AFRAME_REPO:?set at startup by set_container_binds in pipeline/resources.smk}:/opt/aframe
+  --home $HOME
+
+# Passed to every job's environment with the submit node's values.
+# Fetching proprietary data needs the datafind server.
+envvars:
+  - GWDATAFIND_SERVER
+
+default-resources:
+  # The executable that runs snakemake for the job in its image
+  job_wrapper: code/pipeline/condor/job_wrapper.sh
+  # Every job gets the run's copy of the code, and returns its logs
+  htcondor_transfer_input_files: code
+  htcondor_transfer_output_files: logs
+
+  # As in the ldg profile. Condor writes the token to
+  # $_CONDOR_CREDS/scitokens.use, which IGWN scitoken clients discover.
+  classad_OAuthServicesNeeded: scitokens
+  classad_AcctGroup: $ENV(LIGO_GROUP)
+  classad_AcctGroupUser: $ENV(LIGO_USERNAME)
+
+  # Defaults for rules the run config's `resources` block doesn't cover.
+  # The disk holds the image (up to 4.2 GB for infer) as well as the files.
+  htcondor_request_mem_mb: 8192
+  request_disk: 10GB

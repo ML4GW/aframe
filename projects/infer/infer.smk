@@ -396,7 +396,7 @@ else:
             container:
                 INFER_CONTAINER
             resources:
-                **rule_resources("compile_model"),
+                **rule_resources("compile_model", "infer"),
                 **gpu_resources(),
             params:
                 num_ifos=len(config["ifos"]),
@@ -422,7 +422,7 @@ else:
         container:
             INFER_CONTAINER
         resources:
-            **rule_resources("infer_group"),
+            **rule_resources("infer_group", "infer"),
             **gpu_resources(),
         params:
             **_group_common_params,
@@ -462,7 +462,7 @@ rule aggregate_infer:
     container:
         INFER_CONTAINER
     resources:
-        **rule_resources("aggregate_infer"),
+        **rule_resources("aggregate_infer", "infer"),
     params:
         analysis_type=ANALYSIS_TYPE,
     script:

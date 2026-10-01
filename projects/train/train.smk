@@ -120,7 +120,7 @@ else:
             TRAIN_CONTAINER
         # never reaches condor, so slurm GPU keys only
         resources:
-            **rule_resources("train"),
+            **rule_resources("train", "train"),
             slurm_partition=config["train_partition"],
             gpu=TRAIN_NUM_GPUS,
         params:

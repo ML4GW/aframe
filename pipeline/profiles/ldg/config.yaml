@@ -50,11 +50,12 @@ local-cores: 16
 software-deployment-method: apptainer
 
 # $AFRAME_DATA_DIRS binds the run's directories into the container.
-# $AFRAME_REPO, the local repo, is bound to /opt/aframe, where the images
-# install the projects in editable mode, so code always comes from the local
-# repo. The workflow sets both at startup via `set_container_binds` in
-# pipeline/resources.smk. If one is somehow unset, the rule fails with a
-# message so that apptainer doesn't misread the next flag.
+# $AFRAME_REPO, the run's copy of the code (code/), is bound to /opt/aframe,
+# where the images install the projects in editable mode, so code comes from
+# the copy taken when the run started. The workflow sets both at startup via
+# `set_container_binds` in pipeline/resources.smk. If one is somehow unset,
+# the rule fails with a message so that apptainer doesn't misread the next
+# flag.
 # Snakemake invokes apptainer with `--home <workdir>`, which sets $HOME
 # to the repo root and creates caches there. A `--home $HOME` overrides it.
 apptainer-args: >-

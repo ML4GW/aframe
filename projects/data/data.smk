@@ -257,7 +257,7 @@ rule fetch_background:
     # `fetch` downloads with nproc=3
     threads: 4
     resources:
-        **rule_resources("fetch_background"),
+        **rule_resources("fetch_background", "data"),
     params:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],
@@ -315,7 +315,7 @@ the rejected parameters for this branch.
     container:
         DATA_CONTAINER
     resources:
-        **rule_resources("testing_waveforms_branch"),
+        **rule_resources("testing_waveforms_branch", "data"),
     params:
         start=lambda wc: int(wc.start) + config["psd_length"],
         end=lambda wc: (
@@ -376,7 +376,7 @@ rule aggregate_testing_waveforms:
     container:
         DATA_CONTAINER
     resources:
-        **rule_resources("aggregate_testing_waveforms"),
+        **rule_resources("aggregate_testing_waveforms", "data"),
     params:
         ifos=config["ifos"],
         classes={"waveforms": "responses", "rejected_parameters": "parameters"},
@@ -399,7 +399,7 @@ The PSDs are those of the last fetched train-background chunk.
     container:
         DATA_CONTAINER
     resources:
-        **rule_resources("val_waveforms_branch"),
+        **rule_resources("val_waveforms_branch", "data"),
     params:
         num_signals=math.ceil(config["num_validation_signals"] / num_validation_jobs),
         ifos=_fmt_list(config["ifos"]),
@@ -449,7 +449,7 @@ rule aggregate_val_waveforms:
     container:
         DATA_CONTAINER
     resources:
-        **rule_resources("aggregate_val_waveforms"),
+        **rule_resources("aggregate_val_waveforms", "data"),
     params:
         ifos=config["ifos"],
         classes={"waveforms": "waveforms"},
@@ -471,7 +471,7 @@ if config["pregenerate_training_waveforms"]:
         container:
             DATA_CONTAINER
         resources:
-            **rule_resources("training_waveforms_branch"),
+            **rule_resources("training_waveforms_branch", "data"),
         params:
             num_signals=math.ceil(
                 config["num_training_signals"] / num_train_waveform_jobs
@@ -511,7 +511,7 @@ if config["pregenerate_training_waveforms"]:
         container:
             DATA_CONTAINER
         resources:
-            **rule_resources("aggregate_training_waveforms"),
+            **rule_resources("aggregate_training_waveforms", "data"),
         params:
             ifos=config["ifos"],
             classes={"waveforms": "polarizations"},

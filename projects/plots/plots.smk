@@ -71,7 +71,7 @@ rule sensitive_volume:
     container:
         PLOTS_CONTAINER
     resources:
-        **rule_resources("sensitive_volume"),
+        **rule_resources("sensitive_volume", "plots"),
     params:
         ifos=_fmt_list(config["ifos"]),
         mass_combos=json.dumps(config["mass_combos"]),
