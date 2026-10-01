@@ -15,6 +15,9 @@ dependencies = [
     "numpy>=2",
     "gwpy>=4.0,<5",
     "jsonargparse[signatures]>=4.29,<5",
+    # Condor jobs without a shared filesystem run snakemake in this image.
+    # Keep it equal to the version in pipeline/envs/snakemake.conda-lock.yml.
+    "snakemake==9.27.0",
 ]
 
 # Create two dependency groups to allow the splitting

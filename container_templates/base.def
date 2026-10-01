@@ -44,15 +44,4 @@ echo @@BUILD_COMMIT@@ > /opt/build_commit
 # project commands findable.
 export PATH="/opt/env/bin:$PATH"
 
-# Condor jobs may have no usable $HOME, so keep caches (astropy, gwpy,
-# pycbc, matplotlib, torch inductor, triton) in the job's scratch directory.
-# Outside condor, nothing changes.
-if [ -n "${_CONDOR_SCRATCH_DIR:-}" ]; then
-    export HOME="$_CONDOR_SCRATCH_DIR"
-    export XDG_CACHE_HOME="$HOME/.cache"
-    export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
-    export TORCHINDUCTOR_CACHE_DIR="$XDG_CACHE_HOME/torchinductor"
-    export TRITON_CACHE_DIR="$XDG_CACHE_HOME/triton"
-fi
-
 @@EXTRA_ENV@@

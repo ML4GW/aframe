@@ -19,6 +19,9 @@ dependencies = [
     "gwpy>=4.0,<5",
     "h5py>=3.10,<4",
     "numpy>=2",
+    # Condor jobs without a shared filesystem run snakemake in this image.
+    # Keep it equal to the version in pipeline/envs/snakemake.conda-lock.yml.
+    "snakemake==9.27.0",
 ]
 
 [project.scripts]

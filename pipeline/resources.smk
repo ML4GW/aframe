@@ -18,12 +18,14 @@ rule's input files sent in and its outputs and logs sent back.
 
 import os
 import subprocess
+import tomllib
 from pathlib import Path
 
+import snakemake
 from snakemake.exceptions import WorkflowError
 from snakemake.logging import logger
 
-from scripts.env_hash import env_hash
+from scripts.env_hash import LOCK_FILE, env_hash
 from scripts.publish_images import OSDF_PROJECTS, image_name, staging_dir
 
 # Whether the submit node and the condor jobs share a filesystem. False with
@@ -125,6 +127,23 @@ def check_images(projects=("data", "train", "export", "infer", "plots")):
     those must exist.
     """
     if not SHARED_FS:
+        # Condor jobs run the snakemake installed in their images,
+        # with command lines written by this snakemake, so the two
+        # versions must match
+        with open(LOCK_FILE, "rb") as f:
+            packages = tomllib.load(f)["package"]
+        locked = next(p["version"] for p in packages if p["name"] == "snakemake")
+        if snakemake.__version__ != locked:
+            raise WorkflowError(
+                "Snakemake in the current environment is Snakemake "
+                f"{snakemake.__version__}, but version installed in the images "
+                f"is Snakemake {locked}. Without a shared filesystem, each job "
+                "runs the images' snakemake with a command written by the "
+                "current version, so versions should match. Ensure that the "
+                "pins in the data, infer, and plots pyproject.toml files match "
+                "pipeline/envs/snakemake.conda-lock.yaml. If the uv.lock file "
+                "changes, rebuild and publish the images."
+            )
         for project in OSDF_PROJECTS:
             image = "/osdf" + job_image(project).removeprefix("osdf://")
             if not os.path.exists(image):
