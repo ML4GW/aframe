@@ -415,6 +415,9 @@ else:
             unpack(get_infer_group_inputs),
             branches=str(group_dir / "branches.json"),
             artifact=_artifact,
+            # Unused by the command, but get_infer_group_inputs reads it, so
+            # a condor job without a shared filesystem needs it sent along.
+            branch_map=str(infer_dir / "branch_map.json"),
         output:
             **_group_outputs,
         log:
