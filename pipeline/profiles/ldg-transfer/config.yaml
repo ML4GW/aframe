@@ -2,7 +2,8 @@
 # no filesystem with the access point.
 #
 #     cd <run_dir> && python <repo>/scripts/code_snapshot.py
-#     snakemake --snakefile code/Snakefile --configfile config.yaml \
+#     snakemake --snakefile code/Snakefile \
+#         --configfiles code/pipeline/config/config.yaml config.yaml \
 #         --profile code/pipeline/profiles/ldg-transfer
 #
 # which is what run.sh from `aframe-init snakemake --profile

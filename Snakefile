@@ -4,14 +4,18 @@ Run from a run directory made by `aframe-init snakemake`, whose run.sh
 copies the local repo into the run's code/ directory and then calls, from
 the run directory:
 
-    snakemake --snakefile code/Snakefile --configfile config.yaml \
+    snakemake --snakefile code/Snakefile \
+        --configfiles code/pipeline/config/config.yaml config.yaml \
         --profile code/pipeline/profiles/ldg
 
 Each run has its own .snakemake/ directory, and runs its own copy of the
 code, so edits to the local repo take effect when a run is restarted.
-Settings that the run's config doesn't give come from
-pipeline/config/config.yaml. A relative train_config is relative to the
-repo, like the presets in pipeline/config/.
+The defaults in pipeline/config/config.yaml come first, so the run's
+config.yaml overrides them, and `--config` overrides both. They're given
+on the command line rather than with `configfile:` because the htcondor
+executor causes the default config to be merged after the run's config,
+overriding the run-specific settings. A relative train_config is
+relative to the repo, like the presets in pipeline/config/.
 
 Every path that the rules use is relative to the run directory, so that a
 condor job that shares no filesystem with the submit node can recreate
@@ -21,10 +25,6 @@ them in its scratch directory.
 from pathlib import Path
 
 REPO = Path(workflow.basedir)
-
-
-configfile: str(REPO / "pipeline" / "config" / "config.yaml")
-
 
 # `--config key=false` arrives as the string "false", which is truthy
 for key, value in config.items():

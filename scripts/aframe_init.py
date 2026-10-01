@@ -55,7 +55,8 @@ def create_snakemake_runfile(path: Path, profile: str):
         profile = f"code/{profile}"
     cmd = (
         "snakemake --snakefile code/Snakefile"
-        f' --configfile config.yaml --profile {profile} "$@"'
+        " --configfiles code/pipeline/config/config.yaml config.yaml"
+        f' --profile {profile} "$@"'
     )
     content = f"""
     #!/bin/bash
