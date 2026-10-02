@@ -23,25 +23,40 @@ from enum import Enum
 
 
 class GdbServer(Enum):
-    """Enum for GraceDB servers."""
+    """
+    Enum for GraceDB servers, each paired with the
+    Kafka broker its events are submitted through.
+    """
 
-    local = None
-    playground = "https://gracedb-playground.ligo.org/"
-    test = "https://gracedb-test.ligo.org/"
-    production = "https://gracedb.ligo.org/"
-    test01 = "https://gracedb-test01.igwn.org/"
+    local = (None, None)
+    playground = (
+        "https://gracedb-playground.ligo.org/",
+        "kafkagracedbtest1.igwn.org:9092",
+    )
+    test = (
+        "https://gracedb-test.ligo.org/",
+        "kafkagracedbtest1.igwn.org:9092",
+    )
+    production = (
+        "https://gracedb.ligo.org/",
+        "kafkagracedb1.igwn.org:9092",
+    )
+
+    def __init__(self, url: str | None, kafka_bootstrap_server: str | None):
+        self.url = url
+        self.kafka_bootstrap_server = kafka_bootstrap_server
 
     @property
     def service_url(self) -> str:
         if self == GdbServer.local:
             return self.name
-        return self.value + "api/"
+        return self.url + "api/"
 
     def gevent_url(self, graceid: str) -> str:
         """Get the URL for a specific event on this server."""
         if self == GdbServer.local:
             return graceid
-        return self.value + f"events/{graceid}/view"
+        return self.url + f"events/{graceid}/view"
 
     def create_gracedb(self, write_dir: Path, **kwargs) -> "GraceDb":
         """Create a GraceDb client instance for this server."""
@@ -66,6 +81,9 @@ class GraceDb(_GraceDb):
             upon submission
         logger:
             Optional logger object to emit logs
+        http_fallback:
+            Whether to fall back to submitting an event over HTTP
+            if submitting it through Kafka raises an error
     """
 
     def __init__(
@@ -74,6 +92,7 @@ class GraceDb(_GraceDb):
         server: GdbServer,
         write_dir: Path,
         logger: Optional[logging.Logger] = None,
+        http_fallback: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -89,20 +108,22 @@ class GraceDb(_GraceDb):
 
         self.server = server
         self.write_dir = write_dir
+        self.http_fallback = http_fallback
         if logger is None:
             self.logger = logging.getLogger()
         else:
             self.logger = logger
 
-    def setup_kafka_producer(self, bootstrap_server: str):
+    def setup_kafka_producer(self):
         """
-        Create the kafka producer used to submit events
+        Create the kafka producer used to submit events, connecting
+        to the broker that goes with this GraceDB server.
 
         Must be called from the subprocess that uses it because
         the producer can't be passed between processes.
         """
         self.kafka_producer = GraceDbKafkaProducer(
-            bootstrap_servers=bootstrap_server,
+            bootstrap_servers=self.server.kafka_bootstrap_server,
             service_url=self.server.service_url,
             ca_cert_path=certifi.where(),
         )
@@ -118,7 +139,7 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
             kafka=self.kafka_producer,
-            http_fallback=True,
+            http_fallback=self.http_fallback,
         )
 
         self.logger.debug("Event created")
@@ -371,7 +392,7 @@ class LocalGraceDb(GraceDb):
     Mock GraceDB client that just writes events locally
     """
 
-    def setup_kafka_producer(self, bootstrap_server: str):
+    def setup_kafka_producer(self):
         pass
 
     def create_event(self, filename: str, **_):

@@ -18,7 +18,6 @@ def event_creation_subprocess(
     outdir: Path,
     amplfi_queue: Queue,
     pastro_queue: Queue,
-    gracedb_kafka_bootstrap_server: str,
 ):
     logger.info("event creation subprocess initialized")
 
@@ -26,7 +25,7 @@ def event_creation_subprocess(
     gdb.logger = logger
 
     # Need to create the producer within the subprocess that uses it
-    gdb.setup_kafka_producer(gracedb_kafka_bootstrap_server)
+    gdb.setup_kafka_producer()
     while True:
         event = event_queue.get()
         logger.debug("Putting event in pastro queue")
