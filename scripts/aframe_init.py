@@ -65,7 +65,6 @@ def create_snakemake_runfile(path: Path, profile: str):
     content = f"""
     #!/bin/bash
     cd {path}
-    [ -f {root}/pipeline/.env ] && source {root}/pipeline/.env
     python {root}/scripts/code_snapshot.py || exit 1
     {cmd}
     """
