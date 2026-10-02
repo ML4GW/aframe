@@ -392,6 +392,7 @@ def main(
     refractory_period: float = 8,
     far_threshold: float = 1,
     server: "GdbServer" = "local",
+    http_fallback: bool = False,
     ifo_suffix: str = None,
     input_buffer_length: int = 75,
     output_buffer_length: int = 8,
@@ -487,6 +488,9 @@ def main(
             "local", "playground", "test" or "production".
             Events are submitted through the Kafka broker that
             goes with the server.
+        http_fallback:
+            Whether to fall back to submitting an event over HTTP
+            if submitting it through Kafka raises an error
         ifo_suffix:
             Optional suffix for accessing data from /dev/shm.
             Useful when analyzing alternative streams like
@@ -611,6 +615,7 @@ def main(
     # Initialize GraceDB client
     gdb = server.create_gracedb(
         outdir / "events",
+        http_fallback=http_fallback,
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
     )

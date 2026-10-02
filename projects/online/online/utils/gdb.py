@@ -81,6 +81,9 @@ class GraceDb(_GraceDb):
             upon submission
         logger:
             Optional logger object to emit logs
+        http_fallback:
+            Whether to fall back to submitting an event over HTTP
+            if submitting it through Kafka raises an error
     """
 
     def __init__(
@@ -89,6 +92,7 @@ class GraceDb(_GraceDb):
         server: GdbServer,
         write_dir: Path,
         logger: Optional[logging.Logger] = None,
+        http_fallback: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -104,6 +108,7 @@ class GraceDb(_GraceDb):
 
         self.server = server
         self.write_dir = write_dir
+        self.http_fallback = http_fallback
         if logger is None:
             self.logger = logging.getLogger()
         else:
@@ -134,7 +139,7 @@ class GraceDb(_GraceDb):
             filename=str(filename),
             search="AllSky",
             kafka=self.kafka_producer,
-            http_fallback=True,
+            http_fallback=self.http_fallback,
         )
 
         self.logger.debug("Event created")
