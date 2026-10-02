@@ -122,9 +122,18 @@ jobs:
       if: ${{ github.event_name == 'push' || startsWith(github.ref, 'refs/tags/') }}
       env:
         tag: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.project }}:${{ github.ref_name }}
+        # online's environment is conda-based, and its libraries need to
+        # come ahead of the system's. docker import drops the def's
+        # %environment, and apptainer ignores a docker LD_LIBRARY_PATH
+        # but reads PREPEND_LD_LIBRARY_PATH and prepends it.
+        ld_prepend: ${{ matrix.project == 'online' && '/opt/env/lib' || '' }}
       run: |
         export TAG_LC=${tag,,}
-        cat app.tar.gz | docker import --change "ENV PATH=${{ env.PATH }}" - $TAG_LC
+        changes=(--change "ENV PATH=${{ env.PATH }}")
+        if [ -n "$ld_prepend" ]; then
+          changes+=(--change "ENV PREPEND_LD_LIBRARY_PATH=$ld_prepend")
+        fi
+        cat app.tar.gz | docker import "${changes[@]}" - $TAG_LC
         docker push $TAG_LC
 
 
