@@ -148,9 +148,8 @@ def latency_plot(plotsdir: Path, df: pd.DataFrame) -> None:
     latency = df["aframe latency"].dropna()
     median = latency.median()
     ninetieth_percentile = latency.quantile(0.9)
-    bins = np.logspace(
-        np.log10(latency.min()), np.log10(latency.max()), num=30
-    )
+    # Pad the range so that the fastest and slowest events are inside the bins
+    bins = np.geomspace(0.95 * latency.min(), 1.05 * latency.max(), num=30)
     plt.hist(latency, bins=bins, alpha=0.7)
     plt.axvline(
         median, color="red", linestyle="--", label=f"Median: {median:.2f} s"
