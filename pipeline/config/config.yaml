@@ -10,9 +10,7 @@
 # Snakemake runs from the run directory, and everything a run writes is in
 # it: data/ (background), waveforms/, train/, export/, infer/, plots/ and
 # logs/. Every path is relative to it, so that condor jobs that share no
-# filesystem with the submit node can recreate them. null, or the run
-# directory.
-run_dir: null
+# filesystem with the submit node can recreate them.
 
 # Another run's data/ directory, whose background files and segments this
 # run reuses instead of fetching them again. Only for runs that cover the

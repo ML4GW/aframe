@@ -237,7 +237,6 @@ def main():
         run_config = directory / "config.yaml"
         run_config.write_text(
             f"# Overrides for pipeline/config/config.yaml.\n"
-            f"run_dir: {directory}\n"
             f"train_config: {directory / 'train.yaml'}\n" + overrides
         )
         create_snakemake_runfile(directory, args.profile)

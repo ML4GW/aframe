@@ -36,11 +36,6 @@ if Path.cwd().resolve() == REPO.resolve():
     raise WorkflowError(
         "Run from a run directory made by `aframe-init snakemake`, not the repo"
     )
-if config["run_dir"] and Path(config["run_dir"]).resolve() != Path.cwd().resolve():
-    raise WorkflowError(
-        f"Run snakemake from run_dir ({config['run_dir']}), since every path is "
-        "relative to it"
-    )
 config["train_config"] = str(REPO / config["train_config"])
 
 run_dir = Path(".")

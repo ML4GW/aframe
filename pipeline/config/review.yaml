@@ -2,9 +2,8 @@
 # Review run: short end-to-end validation of the full pipeline
 # =============================================================================
 #
-#     snakemake --configfile pipeline/config/review.yaml \
-#         --config run_dir=/path/to/run \
-#         --profile pipeline/profiles/ldg
+# Copy these settings into the config.yaml of a run directory made by
+# `aframe-init snakemake`, then start it with its run.sh.
 #
 # =============================================================================
 
