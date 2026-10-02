@@ -84,7 +84,8 @@ default-resources:
   htcondor_transfer_output_files: logs
 
   # As in the ldg profile. Condor writes the token to
-  # $_CONDOR_CREDS/scitokens.use, which IGWN scitoken clients discover.
+  # $_CONDOR_CREDS/scitokens.use, and job_wrapper.sh sets BEARER_TOKEN_FILE
+  # to it.
   classad_OAuthServicesNeeded: scitokens
   classad_AcctGroup: $ENV(LIGO_GROUP)
   classad_AcctGroupUser: $ENV(LIGO_USERNAME)

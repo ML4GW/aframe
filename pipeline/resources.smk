@@ -208,13 +208,14 @@ def check_gpus():
             )
 
 
-def rule_resources(name, project):
+def rule_resources(name, project, local_pool=False):
     """Memory and walltime for rule `name`, from the config's `resources`,
     and for a condor job without a shared filesystem, `project`'s image.
 
     Anything a rule doesn't set there fall back to the profile's
     default-resources. With `epnfs`, condor jobs only match execute points
-    that mount the AP's /home.
+    that mount the AP's /home. With `local_pool`, they only match the AP's
+    local pool rather than glideins, for jobs that read the site's frames.
     """
     res = config["resources"].get(name, {})
     out = {}
@@ -223,8 +224,14 @@ def rule_resources(name, project):
     if not SHARED_FS and not workflow.remote_exec:
         out["universe"] = "container"
         out["container_image"] = job_image(project)
+    requirements = []
     if config["epnfs"]:
-        out["requirements"] = "TARGET.EPNFS =?= True"
+        requirements.append("TARGET.EPNFS =?= True")
+    if local_pool:
+        # Glideins advertise the site they run at
+        requirements.append("isUndefined(TARGET.GLIDEIN_Site)")
+    if requirements:
+        out["requirements"] = " && ".join(requirements)
     if "mem_mb" in res:
         out["mem_mb"] = out["htcondor_request_mem_mb"] = res["mem_mb"]
     if "runtime" in res:
