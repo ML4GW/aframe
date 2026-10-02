@@ -14,6 +14,10 @@ PRESETS = {
         root / "pipeline" / "config" / "small.yaml",
         root / "pipeline" / "config" / "small_train.yaml",
     ),
+    "review": (
+        root / "pipeline" / "config" / "review.yaml",
+        root / "projects" / "train" / "train.yaml",
+    ),
 }
 
 ONLINE_CONFIGS = [
@@ -192,8 +196,8 @@ def main():
         type=str | None,
         default=None,
         choices=[None, *PRESETS],
-        help="Start from a preset run, e.g. `small` to check that the "
-        "pipeline runs",
+        help="Start from a preset run: `small` to check that the pipeline "
+        "runs, or `review` for a short run at production model size",
     )
 
     # online subcommand

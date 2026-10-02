@@ -1,11 +1,5 @@
-# =============================================================================
-# Review run: short end-to-end validation of the full pipeline
-# =============================================================================
-#
-# Copy these settings into the config.yaml of a run directory made by
-# `aframe-init snakemake`, then start it with its run.sh.
-#
-# =============================================================================
+# A review run: a short end-to-end validation of the full pipeline at
+# production model size. Start one with `aframe-init snakemake --preset review`.
 
 # --- GPS time ranges ---------------------------------------------------------
 # ~9k seconds of training data, ~200k seconds of test data
