@@ -22,7 +22,7 @@ executor: htcondor
 shared-fs-usage: none
 
 # On LDG, use GPUs on the submit node for train/export/infer, and merge
-# per-branch waveform files on the submit node.
+# per-branch waveforms and per-group inference outputs on the submit node.
 config:
   gpu_rules_local: true
   aggregate_rules_local: true

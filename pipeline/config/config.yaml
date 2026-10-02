@@ -105,9 +105,9 @@ osdf_staging_dir: null
 # On LDG, both should be true, though the second is allowed to be false.
 # On Delta, both should be false.
 #
-# Whether train and export, which need a GPU, run locally
+# Whether train, export and compile_model, which need a GPU, run locally
 gpu_rules_local: true
-# Whether the aggregation rules run locally
+# Whether the aggregation rules (waveforms and inference) run locally
 aggregate_rules_local: true
 
 # --- Resources ---------------------------------------------------------------

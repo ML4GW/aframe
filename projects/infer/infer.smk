@@ -393,6 +393,7 @@ else:
                 AOTI_PKG,
             log:
                 str(infer_log_dir / "compile_model.log"),
+            localrule: config["gpu_rules_local"]
             container:
                 INFER_CONTAINER
             resources:
@@ -462,6 +463,7 @@ rule aggregate_infer:
         foreground=str(infer_dir / "foreground.hdf5"),
     log:
         str(infer_log_dir / "aggregate_infer.log"),
+    localrule: config["aggregate_rules_local"]
     container:
         INFER_CONTAINER
     resources:
