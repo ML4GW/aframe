@@ -112,6 +112,7 @@ class GraceDb(_GraceDb):
         event_dir = self.write_dir / event.event_dir
         filename = event_dir / event.filename
         self.logger.info("Creating event in GraceDB")
+        submission_start = gps_now()
         response = self.create_event(
             group="CBC",
             pipeline="aframe",
@@ -136,11 +137,12 @@ class GraceDb(_GraceDb):
         with open(filename, "w") as f:
             f.write(url)
 
+        submission_end = gps_now()
+
         # record latencies for this event;
         # TODO: determine underlying issue here
         # Handle issue where sometimes the pipeline lags,
         # and the frame file has already left the buffer
-        submission_time = gps_now()
         try:
             t_write = event.get_frame_write_time()
         except FileNotFoundError:
@@ -157,13 +159,20 @@ class GraceDb(_GraceDb):
             t_write = int(event.gpstime)
 
         # time to submit since event occured and since the file was written
-        total_latency = submission_time - event.gpstime
+        total_latency = submission_start - event.gpstime
         write_latency = t_write - event.gpstime
-        aframe_latency = submission_time - t_write
+        aframe_latency = submission_start - t_write
+        submission_duration = submission_end - submission_start
 
         latency_fname = event_dir / "latency.log"
-        latency = "Total Latency (s),Write Latency (s),Aframe Latency (s)\n"
-        latency += f"{total_latency},{write_latency},{aframe_latency}"
+        latency = (
+            "Total Latency (s),Write Latency (s),Aframe Latency (s),"
+            "Submission Duration (s)\n"
+        )
+        latency += (
+            f"{total_latency},{write_latency},"
+            f"{aframe_latency},{submission_duration}"
+        )
         with open(latency_fname, "w") as f:
             f.write(latency)
 
