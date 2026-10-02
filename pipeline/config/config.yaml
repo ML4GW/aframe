@@ -1,9 +1,8 @@
 # =============================================================================
 # Aframe pipeline configuration
 # =============================================================================
-# Copy this file and adjust it for your run, then pass it to snakemake:
-#
-#     snakemake --configfile my_run.yaml --profile pipeline/profiles/ldg
+# Defaults for every run. A run directory made by `aframe-init snakemake`
+# has its own config.yaml, which overrides any of these.
 # =============================================================================
 
 # --- Output directories ------------------------------------------------------
@@ -50,7 +49,7 @@ flags:
 segment_server: https://segments.igwn.org
 train_min_duration: 1024.0  # minimum train segment length (seconds)
 test_min_duration: 128.0    # minimum test segment length (seconds)
-max_duration: 20000.0       # maximum chunk length when splitting segments
+max_duration: 20000.0       # maximum chunk length when splitting segments (seconds)
 sample_rate: 2048.0         # Hz
 
 # --- Waveform generation -----------------------------------------------------
@@ -75,7 +74,7 @@ num_train_waveform_jobs: 100
 num_testing_signals: 500000
 num_validation_signals: 20000
 
-shifts:
+shift_steps:
   - 0.0  # seconds to shift H1 each time shift
   - 1.0  # seconds to shift L1 each time shift
 
@@ -88,81 +87,6 @@ max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
 
 # Number of condor jobs that validation waveforms are split across
 num_validation_jobs: 200
-
-# --- Containers --------------------------------------------------------------
-# Where the data, infer and plots images come from (train and export are
-# always local):
-#   local: $AFRAME_CONTAINER_ROOT/<project>.sif, built with build-containers
-#   osdf:  the images published for this repo's environment with
-#          `python -m scripts.publish_images`, read through a CIT AP's /osdf
-container_source: local
-# The OSDF staging directory to read published images from. null for your
-# own (/igwn/cit/staging/<USER>). Anyone's can be read.
-osdf_staging_dir: null
-
-# --- Rule placement ----------------------------------------------------------
-# Whether rules run on the node snakemake runs on rather than as batch jobs.
-# On LDG, both should be true, though the second is allowed to be false.
-# On Delta, both should be false.
-#
-# Whether train, export and compile_model, which need a GPU, run locally
-gpu_rules_local: true
-# Whether the aggregation rules (waveforms and inference) run locally
-aggregate_rules_local: true
-
-# --- Resources ---------------------------------------------------------------
-# Memory (MB) and walltime (minutes) for rules submitted as batch jobs,
-# under slurm or condor. Rules and keys not listed here use the profile's
-# default-resources.
-resources:
-  fetch_background: {mem_mb: 6144, runtime: 480}
-  testing_waveforms_branch: {mem_mb: 8192, runtime: 60}
-  aggregate_testing_waveforms: {mem_mb: 2048, runtime: 10}
-  val_waveforms_branch: {mem_mb: 6144, runtime: 60}
-  aggregate_val_waveforms: {mem_mb: 2048, runtime: 10}
-  training_waveforms_branch: {mem_mb: 2048, runtime: 30}
-  aggregate_training_waveforms: {mem_mb: 2048, runtime: 10}
-  train: {mem_mb: 32000, runtime: 2880}
-  export: {mem_mb: 32000, runtime: 10}
-  compile_model: {mem_mb: 32000, runtime: 10}
-  # scale runtime with branches_per_job
-  infer_group: {mem_mb: 8192, runtime: 20}
-  aggregate_infer: {mem_mb: 4096, runtime: 15}
-  sensitive_volume: {mem_mb: 16384, runtime: 15}
-
-# --- GPUs --------------------------------------------------------------------
-# Slurm GPU partition for training.
-train_partition: gpuA40x4
-
-# Which and how many GPUs for training, which overrides trainer.devices in
-# the train config. On a shared node, pin train_num_gpus devices with
-# train_gpus (comma-separated IDs, e.g. "2" or "2,3"), or use `auto` for the
-# least-used GPUs when training starts, since Lightning would otherwise take
-# every visible GPU. Leave it null under slurm, which assigns the GPUs.
-train_gpus: auto
-train_num_gpus: 1
-
-# Slurm GPU partition for export and inference.
-inference_partition: gpuA40x4
-
-# GPUs for export and the Triton server. Pass inference_num_gpus
-# comma-separated IDs, or `auto` for the least-used GPUs when each starts.
-inference_gpus: auto
-inference_num_gpus: 1
-
-# Condor GPU matchmaking for in-process inference.
-# gpu_min_memory_mb: null sets no memory minimum.
-gpu_min_capability: 7.0
-gpu_min_memory_mb: null
-
-# An AOTI package only runs on the architecture it was compiled for, so
-# with inference_backend: aoti, compile_model and infer_group are pinned
-# to exactly this capability.
-# 8.6 is the A10.
-aoti_gpu_capability: 8.6
-
-# Only match condor execute points that mount /home
-epnfs: false
 
 # --- Training ----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
@@ -203,10 +127,6 @@ inference_backend: export
 # Maximum number of (file, shift) branches each job processes.
 branches_per_job: 1
 
-# Preprocessor class compiled into the served model. Its init_args are
-# supplied from the shared parameters below by export.smk.
-export_preprocessor: utils.preprocessing.BatchWhitener
-
 # Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data
 kernel_length: 1.5               # model input window (seconds)
@@ -223,8 +143,6 @@ zero_lag: false                  # also analyze unshifted (zero-lag) data
 return_timeseries: false         # also write the network's output timeseries
 
 # Triton server.
-model_name: aframe-stream
-model_version: -1
 # Resolved against $AFRAME_CONTAINER_ROOT unless given as an absolute path.
 triton_image: tritonserver_25.06.sif
 
@@ -259,3 +177,78 @@ dt: null  # recovery time delta in seconds (null to disable)
 # The O3 definitions have CAT1/CAT2/CAT3 plus GATES, while the O4 ones are
 # CAT1 only. CATALOG vetoes known events from GWOSC.
 vetos: []
+
+# --- Containers --------------------------------------------------------------
+# Where the data, infer and plots images come from (train and export are
+# always local):
+#   local: $AFRAME_CONTAINER_ROOT/<project>.sif, built with build-containers
+#   osdf:  the images published for this repo's environment with
+#          `python -m scripts.publish_images`, read through a CIT AP's /osdf
+container_source: local
+# The OSDF staging directory to read published images from. null for your
+# own (/igwn/cit/staging/<USER>). Anyone's can be read.
+osdf_staging_dir: null
+
+# --- Rule placement ----------------------------------------------------------
+# Whether rules run on the node snakemake runs on rather than as batch jobs.
+# On LDG, both should be true, though the second is allowed to be false.
+# On Delta, both should be false.
+#
+# Whether train, export and compile_model, which need a GPU, run locally
+gpu_rules_local: true
+# Whether the aggregation rules (waveforms and inference) run locally
+aggregate_rules_local: true
+
+# --- Resources ---------------------------------------------------------------
+# Memory (MB) and walltime (minutes) for rules submitted as batch jobs,
+# under slurm or condor. Rules and keys not listed here use the profile's
+# default-resources.
+resources:
+  fetch_background: {mem_mb: 6144, runtime: 480}
+  testing_waveforms_branch: {mem_mb: 8192, runtime: 60}
+  aggregate_testing_waveforms: {mem_mb: 2048, runtime: 10}
+  val_waveforms_branch: {mem_mb: 6144, runtime: 60}
+  aggregate_val_waveforms: {mem_mb: 2048, runtime: 10}
+  training_waveforms_branch: {mem_mb: 2048, runtime: 30}
+  aggregate_training_waveforms: {mem_mb: 2048, runtime: 10}
+  train: {mem_mb: 32000, runtime: 2880}
+  export: {mem_mb: 32000, runtime: 10}
+  compile_model: {mem_mb: 32000, runtime: 10}
+  # runtime per branch, scaled by branches_per_job
+  infer_group: {mem_mb: 8192, runtime: 20}
+  aggregate_infer: {mem_mb: 4096, runtime: 15}
+  sensitive_volume: {mem_mb: 16384, runtime: 15}
+
+# --- GPUs --------------------------------------------------------------------
+# Slurm GPU partition for training.
+train_partition: gpuA40x4
+
+# Which and how many GPUs for training, which overrides trainer.devices in
+# the train config. On a shared node, pin train_num_gpus devices with
+# train_gpus (comma-separated IDs, e.g. "2" or "2,3"), or use `auto` for the
+# least-used GPUs when training starts, since Lightning would otherwise take
+# every visible GPU. Leave it null under slurm, which assigns the GPUs.
+train_gpus: auto
+train_num_gpus: 1
+
+# Slurm GPU partition for export and inference.
+inference_partition: gpuA40x4
+
+# GPUs for export and the Triton server. Pass inference_num_gpus
+# comma-separated IDs, or `auto` for the least-used GPUs when each starts.
+inference_gpus: auto
+inference_num_gpus: 1
+
+# Condor GPU matchmaking for in-process inference.
+# gpu_min_memory_mb: null sets no memory minimum.
+gpu_min_capability: 7.0
+gpu_min_memory_mb: null
+
+# An AOTI package only runs on the architecture it was compiled for, so
+# with inference_backend: aoti, compile_model and infer_group are pinned
+# to exactly this capability.
+# 8.6 is the A10.
+aoti_gpu_capability: 8.6
+
+# Only match condor execute points that mount /home
+epnfs: false

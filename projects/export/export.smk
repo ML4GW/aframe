@@ -9,13 +9,19 @@ export_log_dir = log_dir / "export"
 
 EXPORT_CONTAINER = container("export")
 
-remote_train = config["remote_train"]
-
-
-def _train_artifacts(wildcards):
-    if remote_train:
-        return [str(train_out / "remote_train.done")]
-    return [str(train_out / "model_exported.pt2"), str(train_out / "batch.hdf5")]
+# Remote training leaves the model and batch file on S3, and only a
+# sentinel here
+if config["remote_train"]:
+    _train_artifacts = {"done": str(train_out / "remote_train.done")}
+    _weights = config["remote_run_dir"] + "/model_exported.pt2"
+    _batch_file = config["remote_run_dir"] + "/batch.hdf5"
+else:
+    _train_artifacts = {
+        "weights": str(train_out / "model_exported.pt2"),
+        "batch_file": str(train_out / "batch.hdf5"),
+    }
+    _weights = _train_artifacts["weights"]
+    _batch_file = _train_artifacts["batch_file"]
 
 
 rule export:
@@ -25,7 +31,7 @@ With gpu_rules_local set to True, this runs on the node where
 snakemake is invoked.
 """
     input:
-        _train_artifacts,
+        **_train_artifacts,
     output:
         model_repo=directory(str(export_out / "model_repo")),
     log:
@@ -39,7 +45,7 @@ snakemake is invoked.
         slurm_partition=config["inference_partition"],
         gpu=1,
     params:
-        preprocessor=config["export_preprocessor"],
+        preprocessor="utils.preprocessing.BatchWhitener",
         num_ifos=len(config["ifos"]),
         kernel_length=config["kernel_length"],
         sample_rate=config["sample_rate"],
@@ -52,16 +58,8 @@ snakemake is invoked.
         lowpass=config["lowpass"] or "null",
         streams_per_gpu=config["streams_per_gpu"],
         gpu_env=gpu_env(config["inference_gpus"], 1),
-        weights=(
-            (config["remote_run_dir"] + "/model_exported.pt2")
-            if remote_train
-            else str(train_out / "model_exported.pt2")
-        ),
-        batch_file=(
-            (config["remote_run_dir"] + "/batch.hdf5")
-            if remote_train
-            else str(train_out / "batch.hdf5")
-        ),
+        weights=_weights,
+        batch_file=_batch_file,
     shell:
         "{params.gpu_env}python -m export"
         " --weights {params.weights}"

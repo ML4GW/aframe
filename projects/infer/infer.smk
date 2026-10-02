@@ -63,6 +63,11 @@ def check_triton_image():
 
 AOTI_PKG = str(export_out / "model_aoti.pt2")
 
+# The model that export writes to the Triton model repository, at its
+# latest version
+MODEL_NAME = "aframe-stream"
+MODEL_VERSION = -1
+
 BRANCHES_PER_JOB = config["branches_per_job"]
 
 
@@ -124,6 +129,17 @@ def get_infer_group_inputs(wildcards):
     if ANALYSIS_TYPE == "hdf5":
         inputs["waveforms"] = [b["waveforms"] for b in branches if b["waveforms"]]
     return inputs
+
+
+def _infer_group_resources():
+    """rule_resources for an inprocess infer_group job. The configured
+    runtime is per branch, so it's scaled to a group of branches_per_job.
+    """
+    res = rule_resources("infer_group", "infer")
+    if "runtime" in res:
+        res["runtime"] *= BRANCHES_PER_JOB
+        res["allowed_execute_duration"] *= BRANCHES_PER_JOB
+    return res
 
 
 def get_infer_group_outputs(wildcards):
@@ -192,7 +208,7 @@ else:
             num_timeslides = _get_num_timeslides(
                 [(start, start + duration) for start, duration in chunks],
                 config["Tb"],
-                max(config["shifts"]),
+                max(config["shift_steps"]),
                 psd_length,
             )
             waveform_branches = set(testing_waveform_branches())
@@ -329,8 +345,8 @@ if INFERENCE_MODE == "triton":
             output_dir=str(triton_dir),
             stop_sentinel=str(triton_dir / "triton.stop"),
             logfile=str(triton_dir / "server.log"),
-            model_name=config["model_name"],
-            model_version=config["model_version"],
+            model_name=MODEL_NAME,
+            model_version=MODEL_VERSION,
             gpus=config["inference_gpus"],
             num_gpus=num_gpus,
             free_gpus=str(REPO / "scripts" / "free_gpus.py"),
@@ -357,8 +373,8 @@ if INFERENCE_MODE == "triton":
             triton_streams=2,
         params:
             **_group_common_params,
-            model_name=config["model_name"],
-            model_version=config["model_version"],
+            model_name=MODEL_NAME,
+            model_version=MODEL_VERSION,
             rate=infer_rate,
         shell:
             "infer-triton"
@@ -426,7 +442,7 @@ else:
         container:
             INFER_CONTAINER
         resources:
-            **rule_resources("infer_group", "infer"),
+            **_infer_group_resources(),
             **gpu_resources(),
         params:
             **_group_common_params,

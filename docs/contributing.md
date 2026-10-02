@@ -40,7 +40,7 @@ If the code you're writing is some general-purpose function that gets used in ma
 Code that produces _artifacts_ of some specific experiment (training data, optimized models, analysis plots, etc.) should be implemented as a project in the `projects` directory. Projects should be kept modular and specific to the artifact they are designed to generate, with light-weight environments.
 
 ### Pipelines
-End-to-end pipelines are constructed with [Snakemake](https://snakemake.readthedocs.io/). Each project contributes a `projects/<project>/<project>.smk` rule file, which the top-level `Snakefile` includes; `pipeline/` holds the shared config and the execution profiles (`local`, `ldg`, `delta`). Rules that need a project's environment declare its Apptainer image, so each step runs in its own container. See [pipeline/README.md](https://github.com/ML4GW/aframe/blob/main/pipeline/README.md) for running and configuring the pipeline.
+End-to-end pipelines are constructed with [Snakemake](https://snakemake.readthedocs.io/). Each project contributes a `projects/<project>/<project>.smk` rule file, which the top-level `Snakefile` includes; `pipeline/` holds the shared config and the execution profiles (`ldg`, `ldg-transfer`, `delta`). Rules that need a project's environment declare its Apptainer image, so each step runs in its own container. See [pipeline/README.md](https://github.com/ML4GW/aframe/blob/main/pipeline/README.md) for running and configuring the pipeline.
 
 If you think your contribution would benefit from being included in a broader pipeline, add a rule to the relevant project's `.smk` file.
 
