@@ -35,7 +35,7 @@ snakemake is invoked.
         EXPORT_CONTAINER
     # never reaches condor, so slurm GPU keys only
     resources:
-        **rule_resources("export"),
+        **rule_resources("export", "export"),
         slurm_partition=config["inference_partition"],
         gpu=1,
     params:

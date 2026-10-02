@@ -48,15 +48,21 @@ def write_content(content: str, path: Path):
     return content
 
 
-def create_snakemake_runfile(path: Path, profile: Path):
+def create_snakemake_runfile(path: Path, profile: str):
+    # The run executes its own copy of the local repo, copied each time it
+    # starts, so profiles in the repo are used from the copy
+    if not Path(profile).is_absolute():
+        profile = f"code/{profile}"
     cmd = (
-        f"snakemake --snakefile {root}/Snakefile"
-        f" --configfile config.yaml --profile {profile}"
+        "snakemake --snakefile code/Snakefile"
+        " --configfiles code/pipeline/config/config.yaml config.yaml"
+        f' --profile {profile} "$@"'
     )
     content = f"""
     #!/bin/bash
     cd {path}
     [ -f {root}/pipeline/.env ] && source {root}/pipeline/.env
+    python {root}/scripts/code_snapshot.py || exit 1
     {cmd}
     """
     runfile = path / "run.sh"
@@ -231,10 +237,9 @@ def main():
         run_config = directory / "config.yaml"
         run_config.write_text(
             f"# Overrides for pipeline/config/config.yaml.\n"
-            f"run_dir: {directory}\n"
             f"train_config: {directory / 'train.yaml'}\n" + overrides
         )
-        create_snakemake_runfile(directory, root / args.profile)
+        create_snakemake_runfile(directory, args.profile)
 
     elif subcommand == "online":
         copy_configs(directory, ONLINE_CONFIGS)

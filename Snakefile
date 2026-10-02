@@ -1,45 +1,59 @@
 """Top-level Snakefile
 
 Run from a run directory made by `aframe-init snakemake`, whose run.sh
-calls, from that directory:
+copies the local repo into the run's code/ directory and then calls, from
+the run directory:
 
-    snakemake --snakefile <repo>/Snakefile --configfile config.yaml \
-        --profile <repo>/pipeline/profiles/ldg
+    snakemake --snakefile code/Snakefile \
+        --configfiles code/pipeline/config/config.yaml config.yaml \
+        --profile code/pipeline/profiles/ldg
 
-Each run has its own .snakemake/ directory and run_dir defaults to the
-working directory. Settings that the run's config doesn't give come from
-pipeline/config/config.yaml. A relative train_config is relative to the
-repo, like the presets in pipeline/config/.
+Each run has its own .snakemake/ directory, and runs its own copy of the
+code, so edits to the local repo take effect when a run is restarted.
+The defaults in pipeline/config/config.yaml come first, so the run's
+config.yaml overrides them, and `--config` overrides both. They're given
+on the command line rather than with `configfile:` because the htcondor
+executor causes the default config to be merged after the run's config,
+overriding the run-specific settings. A relative train_config is
+relative to the repo, like the presets in pipeline/config/.
+
+Every path that the rules use is relative to the run directory, so that a
+condor job that shares no filesystem with the submit node can recreate
+them in its scratch directory.
 """
 
-import os
 from pathlib import Path
 
 REPO = Path(workflow.basedir)
 
+# `--config key=false` arrives as the string "false", which is truthy
+for key, value in config.items():
+    if isinstance(value, str) and value.lower() in ("true", "false"):
+        config[key] = value.lower() == "true"
 
-configfile: str(REPO / "pipeline" / "config" / "config.yaml")
-
-
-if config["run_dir"] is None:
-    # Prevent runs from writing into the repo
-    if Path.cwd().resolve() == REPO.resolve():
-        raise WorkflowError(
-            "Set run_dir (--config run_dir=...) or run from a run "
-            "directory made by `aframe-init snakemake`"
-        )
-    config["run_dir"] = os.getcwd()
+# Prevent runs from writing into the repo
+if Path.cwd().resolve() == REPO.resolve():
+    raise WorkflowError(
+        "Run from a run directory made by `aframe-init snakemake`, not the repo"
+    )
 config["train_config"] = str(REPO / config["train_config"])
 
-config.setdefault("background_dir", str(Path(config["run_dir"]) / "data"))
-config.setdefault("waveforms_dir", str(Path(config["run_dir"]) / "waveforms"))
-config.setdefault("log_dir", str(Path(config["run_dir"]) / "logs"))
-
-run_dir = Path(config["run_dir"])
-log_dir = Path(config["log_dir"])
+run_dir = Path(".")
+log_dir = Path("logs")
 
 
 include: "pipeline/resources.smk"
+
+
+# Background and waveforms are always in the run's data/ and waveforms/.
+# background_dir and waveforms_dir name another run's directories whose
+# files to reuse instead of fetching or generating them again. Their files
+# are linked into this run's directories, on the AP only.
+for key, name in (("background_dir", "data"), ("waveforms_dir", "waveforms")):
+    if config.get(key) and not workflow.remote_exec:
+        link_files(config[key], name)
+
+
 include: "projects/data/data.smk"
 include: "projects/train/train.smk"
 include: "projects/export/export.smk"

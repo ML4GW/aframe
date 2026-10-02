@@ -11,6 +11,7 @@ on:
       - "Snakefile"
       - "**/*.smk"
       - "pipeline/**"
+      - "scripts/code_snapshot.py"
   push:
     branches:
       - main
@@ -27,11 +28,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The version in pipeline/envs/snakemake.conda-lock.yml and the images
       - name: install snakemake
-        run: pip install "snakemake>=9.0"
+        run: pip install "snakemake==9.27.0"
 
+      # As run.sh does: copy the repo into a run directory and run from there
       - name: validate the pipeline DAG
         run: |
-          snakemake -n --cores 2 \
-            --configfile pipeline/config/config.yaml \
-            --config run_dir=/tmp/aframe-ci-run
+          mkdir /tmp/aframe-ci-run
+          cd /tmp/aframe-ci-run
+          python "$GITHUB_WORKSPACE/scripts/code_snapshot.py"
+          snakemake -n --cores 2 --snakefile code/Snakefile \
+            --configfiles code/pipeline/config/config.yaml

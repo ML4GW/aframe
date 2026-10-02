@@ -88,7 +88,10 @@ def main() -> None:
         description="Publish container images to OSDF staging"
     )
     parser.add_argument(
-        "projects", nargs="*", default=OSDF_PROJECTS, choices=OSDF_PROJECTS
+        "projects",
+        nargs="*",
+        choices=OSDF_PROJECTS,
+        help=f"Default is all: {', '.join(OSDF_PROJECTS)}",
     )
     parser.add_argument(
         "--container_root",
@@ -103,7 +106,7 @@ def main() -> None:
         raise FileNotFoundError(
             f"{dest_dir} doesn't exist. Use an AP with OSDF mounted."
         )
-    for project in args.projects:
+    for project in args.projects or OSDF_PROJECTS:
         publish(project, args.container_root, dest_dir)
 
 

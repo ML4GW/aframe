@@ -393,10 +393,11 @@ else:
                 AOTI_PKG,
             log:
                 str(infer_log_dir / "compile_model.log"),
+            localrule: config["gpu_rules_local"]
             container:
                 INFER_CONTAINER
             resources:
-                **rule_resources("compile_model"),
+                **rule_resources("compile_model", "infer"),
                 **gpu_resources(),
             params:
                 num_ifos=len(config["ifos"]),
@@ -415,6 +416,9 @@ else:
             unpack(get_infer_group_inputs),
             branches=str(group_dir / "branches.json"),
             artifact=_artifact,
+            # Unused by the command, but get_infer_group_inputs reads it, so
+            # a condor job without a shared filesystem needs it sent along.
+            branch_map=str(infer_dir / "branch_map.json"),
         output:
             **_group_outputs,
         log:
@@ -422,7 +426,7 @@ else:
         container:
             INFER_CONTAINER
         resources:
-            **rule_resources("infer_group"),
+            **rule_resources("infer_group", "infer"),
             **gpu_resources(),
         params:
             **_group_common_params,
@@ -459,10 +463,11 @@ rule aggregate_infer:
         foreground=str(infer_dir / "foreground.hdf5"),
     log:
         str(infer_log_dir / "aggregate_infer.log"),
+    localrule: config["aggregate_rules_local"]
     container:
         INFER_CONTAINER
     resources:
-        **rule_resources("aggregate_infer"),
+        **rule_resources("aggregate_infer", "infer"),
     params:
         analysis_type=ANALYSIS_TYPE,
     script:
