@@ -74,11 +74,10 @@ def _is_analyzeable_segment(start, stop, shifts, psd_length):
 def timeslide_shifts(timeslide):
     """Each detector's time shift, in seconds, at a timeslide.
 
-    `shifts` in the config is the step each detector moves per timeslide,
-    so timeslide n shifts each detector by n of its steps.
-    Timeslide 0 is zero lag.
+    Timeslide n shifts each detector by n of its `shift_steps`. Timeslide 0
+    is zero lag.
     """
-    return [int(timeslide) * step for step in config["shifts"]]
+    return [int(timeslide) * step for step in config["shift_steps"]]
 
 
 def _read_segments(segments_file):

@@ -9,7 +9,8 @@ config flag.
 
 For remote training, the model and batch file end up in
 `remote_run_dir` on S3, so the rule's local output is a
-sentinel file marking the rule's completion.
+sentinel file marking the rule's completion. Remote training also needs
+`remote_background_dir` and `remote_waveforms_dir` in the config.
 
 The train_config YAML defines all the model/data/trainer hyperparameters.
 This rule adds the preprocessing args shared with inference.
