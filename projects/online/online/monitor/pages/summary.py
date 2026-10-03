@@ -16,6 +16,7 @@ from online.monitor.utils.segments import (
     compute_duty_cycle,
     current_status,
     downtime_breakdown,
+    find_overlaps,
 )
 from online.utils.timing import gps_now
 
@@ -68,6 +69,7 @@ class SummaryPage(MonitorPage):
         self.html_file = self.out_dir / "summary.html"
         self.segments = None
         self.stats = None
+        self.overlaps = None
 
     @property
     def plot_name_dict(self) -> dict:
@@ -80,6 +82,22 @@ class SummaryPage(MonitorPage):
             "duty_cycle_timeline": "Duty cycle timeline",
             "duty_cycle_trend": "Hourly search duty cycle",
         }
+
+    def overlap_html(self) -> str:
+        """Writes a warning if any segment overlaps another segment"""
+        if self.overlaps.empty:
+            return ""
+
+        date_format = "%Y-%m-%d %H:%M:%S"
+        first = tconvert(self.overlaps["start"].iloc[0]).strftime(date_format)
+        duration = format_duration(self.overlaps["overlap"].sum())
+        return f"""
+            <p class="red" style="max-width: 820px; margin: 0 auto;">
+            The segment record overlaps itself, counting {duration} of
+            time more than once, first at {first} UTC. The duty cycle and
+            uptime below may be wrong.
+            </p>
+        """
 
     def duty_cycle_html(self) -> str:
         """
@@ -106,7 +124,8 @@ class SummaryPage(MonitorPage):
             ]
             for window, stats in windows.items()
         ]
-        html = self.html_table(
+        html = self.overlap_html()
+        html += self.html_table(
             [
                 "Window",
                 "Duty cycle",
@@ -238,5 +257,6 @@ class SummaryPage(MonitorPage):
         """
         self.segments = segments
         self.stats = compute_duty_cycle(segments)
+        self.overlaps = find_overlaps(segments)
         self.update_summary_plots()
         self.write_html()

@@ -21,6 +21,9 @@ SEARCH_FAULT_STATES = (
 # How long the heartbeat can go unwritten before calling the search dead.
 STALE_SECONDS = 30.0
 
+# Times are written to 5 decimal places, so ignore overlap below this
+OVERLAP_TOLERANCE = 1e-3
+
 
 def segment_dir(run_dir: Path) -> Path:
     return run_dir / "output" / "segments"
@@ -109,6 +112,26 @@ def load_segments(
     if start_time is not None:
         df = _window(df, start=start_time)
     return df.reset_index(drop=True)
+
+
+def find_overlaps(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    The segments that start before earlier ones have ended, with how
+    long each overlaps for in an `overlap` column.
+    """
+    df = df.sort_values("start")
+
+    overlapping = []
+    latest_stop = float("-inf")
+    for row in df.to_dict("records"):
+        if row["start"] < latest_stop:
+            # this segment starts before an earlier one has ended, and
+            # overlaps from its start until it or the earlier one ends
+            overlap = min(row["stop"], latest_stop) - row["start"]
+            if overlap > OVERLAP_TOLERANCE:
+                overlapping.append({**row, "overlap": overlap})
+        latest_stop = max(latest_stop, row["stop"])
+    return pd.DataFrame(overlapping, columns=[*df.columns, "overlap"])
 
 
 def _fill_gaps(df: pd.DataFrame) -> pd.DataFrame:

@@ -99,12 +99,23 @@ class SegmentWriter:
     def _flush_current_file(self) -> None:
         with open(self.current_file, "r") as f:
             current_data = json.load(f)
-        self._append(
-            current_data["state"],
-            current_data["start"],
-            current_data["stop"],
-            current_data["ifos_ready"],
+
+        # The last process may have been interrupted on its way out,
+        # after recording this segment but before removing the file
+        with open(self.segments_file, "r") as f:
+            last_state, last_start = f.read().splitlines()[-1].split(",")[:2]
+        recorded = (
+            last_state == current_data["state"]
+            and last_start == f"{current_data['start']:.5f}"
         )
+
+        if not recorded:
+            self._append(
+                current_data["state"],
+                current_data["start"],
+                current_data["stop"],
+                current_data["ifos_ready"],
+            )
         self.current_file.unlink()
 
     def _append(
