@@ -29,15 +29,11 @@ amplfi_hlv_architecture:
     transforms: 15
     randperm: true
     embedding_net: 
-      class_path: amplfi.train.architectures.embeddings.MultiModalPsdEmbeddingWithDecimator
+      class_path: amplfi.train.architectures.embeddings.MultiModalPsd
       init_args:
         num_ifos: 3
         time_context_dim: 48
         freq_context_dim: 48
-        strain_sample_rate: ${sample_rate}
-        decimator_schedule: [[0, 10, 256], [10, 28, 512], [28, 30, 2048]]
-        time_kernel_size: 5
-        freq_kernel_size: 3
         time_layers: [5, 3, 3]
         freq_layers: [5, 3, 3]
         norm_layer:
@@ -51,23 +47,17 @@ channels: ["H1:GDS-CALIB_STRAIN_CLEAN_INJ1_O4Replay", "L1:GDS-CALIB_STRAIN_CLEAN
 state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:DQ_ANALYSIS_STATE_VECTOR"]
 data_source: "frames"
 sample_rate: 2048
-astro_event_rate: 89
-kernel_length: 8
+astro_event_rate: 31
+kernel_length: 1.5
 online_inference_rate: 512
-offline_inference_rate: 16
-chirp_mass_low: 1.0
-chirp_mass_high: 2.5
-num_chirp_masses: 100
-chirp_mass_spacing: "log"
-keep_last_n_seconds: 1.5
-top_k: 10
+offline_inference_rate: 4
 inference_params: ["chirp_mass", "mass_ratio", "luminosity_distance", "phic", "inclination", "dec", "psi", "phi"]
 psd_length: 64
 nside: 64
 min_samples_per_pix: 5
 amplfi_psd_length: 64
 aframe_right_pad: 0.0
-fduration: 2
+fduration: 1
 amplfi_fduration: 2
 integration_window_length: 1.5
 amplfi_kernel_length: 4
@@ -88,3 +78,13 @@ output_buffer_length: 8
 device: "cuda"
 verbose: true
 matmul_precision: "high"
+# optional augmentor arguments
+# augmentor:
+#   class_path: utils.augmentation.HeterodyneAugmentor
+#   init_args:
+#     chirp_mass_low: 1.0
+#     chirp_mass_high: 2.5
+#     num_chirp_masses: 100
+#     chirp_mass_spacing: "log"
+#     keep_last_n_seconds: 1.5
+#     top_k: 10

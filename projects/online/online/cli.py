@@ -23,6 +23,27 @@ def build_parser():
         apply_on="parse",
     )
 
+    # TODO: This is a workaround for linking sample_rate and
+    # kernel_length argument between the augmentor and
+    # the global parameters in the config.
+    try:
+        parser.link_arguments(
+            "sample_rate",
+            "augmentor.init_args.sample_rate",
+            apply_on="parse",
+        )
+    except Exception:
+        pass
+
+    try:
+        parser.link_arguments(
+            "kernel_length",
+            "augmentor.init_args.kernel_length",
+            apply_on="parse",
+        )
+    except Exception:
+        pass
+
     return parser
 
 
