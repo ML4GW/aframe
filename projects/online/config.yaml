@@ -78,3 +78,13 @@ output_buffer_length: 8
 device: "cuda"
 verbose: true
 matmul_precision: "high"
+# optional augmentor arguments
+# augmentor:
+#   class_path: utils.augmentation.HeterodyneAugmentor
+#   init_args:
+#     chirp_mass_low: 1.0
+#     chirp_mass_high: 2.5
+#     num_chirp_masses: 100
+#     chirp_mass_spacing: "log"
+#     keep_last_n_seconds: 1.5
+#     top_k: 10

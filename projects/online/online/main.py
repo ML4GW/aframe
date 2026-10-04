@@ -386,6 +386,7 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: Literal["frames", "arrakis"] = "frames",
+    augmentor: torch.nn.Module | None = None,
     state_channels: list[str] | None = None,
     fftlength: float | None = None,
     highpass: float | None = None,
@@ -450,6 +451,10 @@ def main(
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
+        augmentor:
+            Optional augmentor module that performs augmentation
+            of the input data that need to be analyzed by Aframe.
+            If not provided, no augmentation will be performed.
         psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten aframe data
@@ -842,6 +847,7 @@ def main(
         batch_size=int(update_size * online_inference_rate),
         fduration=fduration,
         fftlength=fftlength,
+        augmentor=augmentor,
         highpass=highpass,
         lowpass=lowpass,
     ).to(device)
