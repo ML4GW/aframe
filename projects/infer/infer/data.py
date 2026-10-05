@@ -202,7 +202,7 @@ class ShiftBatchSequence:
         return list(range(num_shifts)) + list(self.injected_idx)
 
     def results(
-        self, outputs: np.ndarray, heatmap: np.ndarray, postprocessors: list[Postprocessor]
+        self, outputs: np.ndarray, postprocessors: list[Postprocessor], output_shapes = dict[str, tuple[int, ...]]
     ) -> list[
         tuple[EventSet, RecoveredInjectionSet, np.ndarray, np.ndarray | None]
     ]:
@@ -217,6 +217,9 @@ class ShiftBatchSequence:
             postprocessors:
                 A list of postprocessors for each shift, arranged in
                 the order of the shifts.
+            output_shapes:
+                A dictionary of output shapes and keys. Use () for a 1d timeseries and (int,) for other shapes.
+                Postprocessor assumes that one of the keys is "detection_statistic"
 
         Returns:
             A list of tuples, one tuple per shift. Each tuple holds
@@ -224,35 +227,28 @@ class ShiftBatchSequence:
               foreground outputs or None)`.
         """
         # Trim the outputs from the padded final batch
-        outputs = outputs[:, : self.stream_layout.num_outputs]
-        heatmap = heatmap[:, : self.stream_layout.num_outputs]
+        outputs = {key: outputs[key][:, : self.stream_layout.num_outputs] for key in output_shapes.keys()}
 
         # Split the rows into each shift's background and injected outputs.
         # The first S rows are the background streams, and row S + j is the
         # injected stream of shift injected_idx[j].
         num_shifts = len(self.shifts)
         background_outputs, foreground_outputs = (
-            outputs[:num_shifts],
-            outputs[num_shifts:],
+            {key: outputs[key][:num_shifts] for key in output_shapes.keys()},
+            {key: outputs[key][num_shifts:] for key in output_shapes.keys()},
         )
-        background_heatmap, foreground_heatmap = (
-            heatmap[:num_shifts],
-            heatmap[num_shifts:],
-        )
-        
+
         # Postprocess each shift's outputs into events, and match its
         # injected events to that shift's injections.
         results = []
         for s, postprocessor in enumerate(postprocessors):
-            background_ts = background_outputs[s]
-            background_heatmap_ts = background_heatmap[s]
-            background = postprocessor(background_ts, background_heatmap_ts)
+            background_ts = {key: background_outputs[key][s] for key in output_shapes.keys()}
+            background = postprocessor(background_ts)
             foreground_ts = None
             if s in self.injected_idx:
                 idx = self.injected_idx.index(s)
-                foreground_ts = foreground_outputs[idx]
-                foreground_heatmap_ts = foreground_heatmap[idx]
-            foreground = self.recover(postprocessor(background_ts, foreground_heatmap_ts), s)
+                foreground_ts = {key: foreground_outputs[key][idx] for key in output_shapes.keys()}
+            foreground = self.recover(postprocessor(foreground_ts), s)
 
             results.append(
                 (

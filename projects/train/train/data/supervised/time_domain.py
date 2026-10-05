@@ -265,7 +265,7 @@ class TimeDomainSupervisedRegressionDataset(SupervisedAframeDataset):
         mu[swap_indices] = -1
         mu[mute_indices] = -1
         mu = mu[mu >= 0]
-        
+
         X = self.whitener(X, psds)
         return X, (y, mu)
 

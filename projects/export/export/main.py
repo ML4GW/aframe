@@ -34,7 +34,7 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
-    num_outputs: int | None = 1,
+    output_names: list[str] = ["detection_statistic"],
     aframe_instances: int | None = None,
     preproc_instances: int | None = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
@@ -88,8 +88,8 @@ def export(
         streams_per_gpu:
             The number of snapshot states to host per GPU during
             inference
-        num_outputs:
-            The number of neural network outputs. Default is set to 1
+        output_names:
+            Names used to label outputs.
         aframe_instances:
             The number of concurrent execution instances of the
             aframe architecture to host per GPU during inference
@@ -132,13 +132,13 @@ def export(
         scale_model(aframe, aframe_instances)
 
     # Infer the shape of each input from the batch file.
-    # Assumes the output is stored as "y"
+    # Assumes the inputs are stored as "input_{i}"
     with open_file(batch_file, "rb") as f:
         batch_file = h5py.File(io.BytesIO(f.read()))
         input_shape_dict = {
             key: (batch_size,) + tuple(batch_file[key].shape[1:])
             for key in batch_file.keys()
-            if not key.startswith("output")
+            if key.startswith("input")
         }
 
     # the network will have some different keyword
@@ -157,16 +157,6 @@ def export(
         kwargs["use_fp16"] = False
     if platform in (qv.Platform.ONNX, qv.Platform.TENSORRT):
         kwargs["dynamo"] = True
-
-    # determining the number of neural networks for
-    # naming the outputs
-    if num_outputs < 1:
-        raise ValueError("num_outputs must be >= 1")
-    output_names = (
-        ["discriminator"]
-        if num_outputs == 1
-        else [f"discriminator_{i}" for i in range(num_outputs)]
-    )
 
     aframe.export_version(
         graph,

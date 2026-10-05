@@ -87,6 +87,34 @@ class SupervisedAframeRegression(SupervisedAframe):
         }
         return losses
 
+    def training_step(self, batch: tuple[Tensor, Tensor]) -> Tensor:
+        loss = self.train_step(batch)
+
+        # TODO: maybe check if our model has a .loss
+        # attribute and if so include it as a loss
+        # term, this way models can do arbitrary things
+        # to penalize themselves if desired. Should probably
+        # just be added to whatever pops out of
+        # self.compute_loss_fn, under the assumption that the
+        # model has applied the appropriate scale to this
+        # value. More complicated functionality can be
+        # achieved by subclasses in self.train_step.
+
+        # if our train step returned a dictionary of losses,
+        # log them all separately then combine them into a
+        # single loss via `compute_loss_fn`
+        loss["loss"] = self.compute_loss_fn(**loss).mean()
+        self.log_dict(
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+            batch_size=batch[0].shape[0],
+        )
+        return loss
+
     def validation_step(self, batch, _) -> None:
         shift, X_bg, X_inj, mu = batch
         y_bg, heatmap_bg_hat = self.score(X_bg)

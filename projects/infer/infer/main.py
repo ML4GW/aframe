@@ -63,7 +63,7 @@ class TritonOutputs:
     """Collect a Triton server's responses for every stream of a sequence."""
 
     def __init__(
-        self, num_streams: int, num_steps: int, batch_size: int, base_id: int
+        self, num_streams: int, num_steps: int, batch_size: int, base_id: int, output_shapes: dict[str, tuple[int, ...]]
     ):
         """
         Args:
@@ -71,15 +71,16 @@ class TritonOutputs:
             num_steps: The total number of updates in a sequence
             batch_size: Number of outputs in each response
             base_id: Sequence ID of stream 0. Stream i uses base_id + i.
+            output_shapes: A dictionary of output shapes and keys
         """
         self.num_steps = num_steps
         self.batch_size = batch_size
         self.base_id = base_id
+        self.output_shapes = output_shapes
 
         # Allocate one row of outputs per stream and keep track of which
         # streams have had a response and which have had their final one.
-        self.outputs = np.zeros((num_streams, num_steps * batch_size))
-        self.heatmap = np.zeros((num_streams, num_steps * batch_size, 192))
+        self.outputs = {key: np.zeros((num_streams, num_steps * batch_size, *self.output_shapes[key])) for key in self.output_shapes.keys()}
         self._started = {base_id + i: False for i in range(num_streams)}
         self._done = {base_id + i: False for i in range(num_streams)}
 
@@ -92,14 +93,14 @@ class TritonOutputs:
         return all(self._done.values())
 
     def __call__(
-        self, y: np.ndarray, request_id: int, sequence_id: int
+        self, output: np.ndarray, request_id: int, sequence_id: int
     ) -> np.ndarray | None:
         """
         Once all outputs are present, returns those outputs in an array
         with one row per stream.
 
         Args:
-            y: Outputs of one request, of shape `(batch_size, 1)`
+            output: Outputs of one request, of shape `key: (batch_size, *self.output_shapes[key])`
             request_id: Step at which the request was sent
             sequence_id: the base_id plus the index of the request's stream
 
@@ -107,14 +108,18 @@ class TritonOutputs:
             If all `(num_streams, num_steps * batch_size)` outputs are present,
             they are returned. Otherwise None.
         """
-        h, y = y
-
         # Write the response into its stream's row with this step's offset.
         stream = sequence_id - self.base_id
         start = request_id * self.batch_size
         stop = (request_id + 1) * self.batch_size
-        self.outputs[stream, start:stop] = y[:, 0]
-        self.heatmap[stream, start:stop] = h
+        if len(self.output_shapes.keys()) == 1:
+            self.outputs[next(iter(self.output_shapes))][stream, start:stop] = output[:, 0]
+        else:
+            for i, key in enumerate(self.output_shapes.keys()):
+                if len(self.output_shapes[key]) == 0:
+                    self.outputs[key][stream, start:stop] = output[key][:, 0]
+                else:
+                    self.outputs[key][stream, start:stop] = output[key]
 
         # Record that the stream has started, and whether this was the
         # response to its last step.
@@ -123,7 +128,7 @@ class TritonOutputs:
             self._done[sequence_id] = True
 
         if self.done:
-            return self.outputs, self.heatmap
+            return self.outputs
         return None
 
 
@@ -133,6 +138,7 @@ def infer_triton(
     postprocessors: list[Postprocessor],
     base_id: int,
     rate: float | None = None,
+    output_shapes: dict[str, tuple[int, ...]] = {"detection_statistic": ()},
 ) -> list[tuple[EventSet, EventSet, np.ndarray, np.ndarray | None]]:
     """
     Run inference on every stream of a sequence through a Triton server.
@@ -149,6 +155,9 @@ def infer_triton(
             Non-zero sequence ID of stream 0. Stream i uses base_id + i.
         rate:
             Average number of requests per second, or None for no limit.
+        output_shapes:
+                A dictionary of output shapes and keys. Use () for a 1d timeseries and (int,) for other shapes.
+                Postprocessor assumes that one of the keys is "detection_statistic"
 
     Returns:
         A list of tuples, one tuple per shift. Each tuple holds
@@ -162,6 +171,7 @@ def infer_triton(
         len(sequence),
         sequence.stream_layout.batch_size,
         base_id,
+        output_shapes
     )
     client.callback = triton_outputs
 
@@ -193,9 +203,9 @@ def infer_triton(
                 time.sleep(1e-2)
 
     # Wait for the callback to give back the full outputs
-    outputs, heatmap = client.get()
+    outputs = client.get()
     while outputs is None:
-        outputs, heatmap = client.get()
+        outputs = client.get()
         time.sleep(1e-1)
 
-    return sequence.results(outputs, heatmap, postprocessors)
+    return sequence.results(outputs, postprocessors, output_shapes)
