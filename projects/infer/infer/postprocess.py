@@ -39,8 +39,16 @@ class Postprocessor:
 
         # offset our initial time both by the psd data
         # that we're going to slough off as well as by
-        # the filter settle-in and integration time
-        self.t0 = t0 + psd_length - fduration / 2 - integration_window_length
+        # the filter settle-in and integration time, plus
+        # one inference step since the first output is
+        # produced from a full window ending one step in
+        self.t0 = (
+            t0
+            + psd_length
+            - fduration / 2
+            - integration_window_length
+            + 1 / inference_sampling_rate
+        )
         self.offset = int(psd_length * inference_sampling_rate)
 
         # convert our window lengths to sample units
