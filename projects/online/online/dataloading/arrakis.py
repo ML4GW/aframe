@@ -23,8 +23,20 @@ def stream_channels(
     return channels
 
 
+def check_replay_id(replay_id: str) -> None:
+    """Check that `replay_id` is one registered on the Arrakis server"""
+    replays = Client().replays()
+    if replay_id not in replays:
+        raise ValueError(
+            f"Unknown replay ID {replay_id}. "
+            f"Available replays: {sorted(replays)}"
+        )
+
+
 def get_block_duration(
-    channels: list[str], metadata: dict | None = None
+    channels: list[str],
+    metadata: dict | None = None,
+    replay_id: str | None = None,
 ) -> float:
     """
     The cadence at which the server will deliver blocks of
@@ -32,7 +44,7 @@ def get_block_duration(
     of the individual stride of each channel.
     """
     if not metadata:
-        metadata = Client().describe(channels)
+        metadata = Client().describe(channels, replay_id=replay_id)
     strides = [metadata[channel].stride for channel in channels]
     # Strides are returned in nanoseconds
     return lcm(*strides) / Time.SECONDS
@@ -59,13 +71,14 @@ def data_iterator(
     sample_rate: float,
     state_channels: dict[str, str] | None = None,
     numtaps: int | None = 60,
+    replay_id: str | None = None,
 ) -> torch.Tensor:
     channels = stream_channels(strain_channels, ifos, state_channels)
 
     client = Client()
-    metadata = client.describe(channels)
+    metadata = client.describe(channels, replay_id=replay_id)
     strain_sample_rate = get_strain_sample_rate(strain_channels, metadata)
-    block_duration = get_block_duration(channels, metadata)
+    block_duration = get_block_duration(channels, metadata, replay_id)
 
     # build resampling filter
     factor = strain_sample_rate / sample_rate
@@ -97,7 +110,7 @@ def data_iterator(
     # a discontinuous jump
     expected_t0 = None
 
-    blocks = client.stream(channels)
+    blocks = client.stream(channels, replay_id=replay_id)
     for block in blocks:
         # Check if the expected t0 differs by more than half a sample
         discontinuous = expected_t0 is not None and (
