@@ -21,6 +21,7 @@ from online.dataloading import (
     data_iterator,
     offline_data_iterator,
     arrakis_data_iterator,
+    check_replay_id,
     get_block_duration,
     stream_channels,
 )
@@ -384,6 +385,7 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     data_source: Literal["frames", "arrakis"] = "frames",
+    replay_id: str | None = None,
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,
     highpass: Optional[float] = None,
@@ -469,6 +471,11 @@ def main(
             Length of output integration window in seconds
         astro_event_rate:
             Prior on rate of astrophysical events in units Gpc^-3 yr^-1
+        replay_id:
+            Arrakis replay to stream from. Must be one of the
+            replays registered on the Arrakis server, and some
+            channels are only available within a replay. Only
+            valid when `data_source` is "arrakis"
         fftlength:
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
@@ -541,6 +548,14 @@ def main(
     # models and warming up before the first block of data arrives is
     # accounted for
     search_start = gps_now()
+
+    # check the replay before spawning any subprocesses
+    if replay_id is not None:
+        if data_source != "arrakis":
+            raise ValueError(
+                "replay_id should be set only when data_source='arrakis'"
+            )
+        check_replay_id(replay_id)
 
     # create various queues for message
     # passing between subprocesses
@@ -734,7 +749,8 @@ def main(
 
     if data_source == "arrakis":
         update_size = get_block_duration(
-            stream_channels(channels, ifos, state_channels)
+            stream_channels(channels, ifos, state_channels),
+            replay_id=replay_id,
         )
         logging.info(f"Arrakis update size: {update_size} s")
         data_it = arrakis_data_iterator(
@@ -742,6 +758,7 @@ def main(
             ifos=ifos,
             sample_rate=sample_rate,
             state_channels=state_channels,
+            replay_id=replay_id,
         )
     elif data_source == "frames":
         update_size = 1
