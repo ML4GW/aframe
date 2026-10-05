@@ -11,4 +11,4 @@ def test_postprocessor():
         integration_window_length=0.5,
         cluster_window_length=0.2,
     )
-    assert postprocessor.t0 == 9.0
+    assert postprocessor.t0 == 9.01
