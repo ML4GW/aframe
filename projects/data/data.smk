@@ -413,6 +413,8 @@ The PSDs are those of the last fetched train-background chunk.
         lowpass=config["lowpass"] or "null",
         snr_threshold=config["snr_threshold"],
         max_num_samples=config["max_num_samples"],
+        # offset by branch so each branch samples different parameters
+        seed=lambda wc: config["seed"] + int(wc.vbranch_id),
     shell:
         "generate-validation-waveforms"
         " --num_signals {params.num_signals}"
@@ -429,6 +431,7 @@ The PSDs are those of the last fetched train-background chunk.
         " --snr_threshold {params.snr_threshold}"
         " --psd {input.psd_file}"
         " --max_num_samples {params.max_num_samples}"
+        " --seed {params.seed}"
         " --output_file {output}"
         " &> {log}"
 
