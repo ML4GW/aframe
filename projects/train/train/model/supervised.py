@@ -184,6 +184,74 @@ class SupervisedTimeSpectrogramAframe(SupervisedAframe):
         )
 
 
+class SupervisedDecimatedAframe(SupervisedAframe):
+    """Model class for multi-branch decimated architectures."""
+
+    def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
+        super().__init__(arch, *args, **kwargs)
+
+    def forward(self, *segments):
+        return self.model(*segments)
+
+    def score(self, *segments):
+        return self(*segments)
+
+    def train_step(self, batch: tuple[tuple, Tensor]) -> Tensor:
+        segments, y = batch
+        y_hat = self(*segments)
+        return torch.nn.functional.binary_cross_entropy_with_logits(
+            y_hat, y.squeeze(-1)
+        )
+
+    def validation_step(self, batch, _) -> None:
+        shift = batch[0]
+        bg_segments = batch[1]
+        fg_segments = batch[2]
+
+        y_bg = self.score(*bg_segments)
+
+        # For each segment, reshape views and compute predictions
+        num_views, batch_size = fg_segments[0].shape[:2]
+        reshaped = []
+        for seg in fg_segments:
+            shape = seg.shape[2:]
+            reshaped.append(seg.view(num_views * batch_size, *shape))
+
+        y_fg = self.score(*reshaped)
+        y_fg = y_fg.view(num_views, batch_size)
+        y_fg = y_fg.mean(0)
+
+        self.metric.update(shift, y_bg, y_fg)
+        self.log(
+            "valid_auroc",
+            self.metric,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+        )
+
+
+class SimpleDecimatedAframe(SupervisedDecimatedAframe):
+    """Decimated model with simple BCE+accuracy validation.
+
+    Uses the same train_step as SupervisedDecimatedAframe but
+    replaces timeslide-based validation with straightforward
+    BCE loss and accuracy. Suitable for pre-whitened data where
+    background and signal segments are already labeled.
+    """
+
+    def validation_step(self, batch, _) -> None:
+        segments, y = batch
+        y_hat = self.model(*segments)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(
+            y_hat, y.squeeze(-1)
+        )
+        preds = (y_hat > 0).float()
+        acc = (preds == y.squeeze(-1)).float().mean()
+        self.log("val_loss", loss, prog_bar=True, sync_dist=True)
+        self.log("val_acc", acc, prog_bar=True, sync_dist=True)
+
+
 class SupervisedAframeS4(SupervisedAframe):
     def __init__(self, arch: SupervisedArchitecture, *args, **kwargs) -> None:
         super().__init__(arch, *args, **kwargs)
