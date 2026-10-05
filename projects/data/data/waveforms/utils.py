@@ -1,12 +1,13 @@
+import hashlib
 import logging
 import random
 import time
 from pathlib import Path
-from zlib import adler32
 
 import h5py
 import numpy as np
 import torch
+from bilby.core.utils import random as bilby_random
 from gwpy.timeseries import TimeSeriesDict
 
 
@@ -22,13 +23,16 @@ def seed_worker(
     start: float, stop: float, shifts: list[float], seed: int
 ) -> np.random.Generator:
     fingerprint = str((start, stop) + tuple(shifts))
-    worker_hash = adler32(fingerprint.encode())
+    digest = hashlib.sha256(fingerprint.encode()).digest()
+    worker_hash = int.from_bytes(digest[:8], "big")
     combined = seed + worker_hash
     logging.info(
         f"Seeding data generation with seed {seed}, "
         f"augmented by worker seed {worker_hash}"
     )
     random.seed(combined)
+    # bilby priors sample from bilby's own generator
+    bilby_random.seed(combined)
     return np.random.default_rng(combined)
 
 

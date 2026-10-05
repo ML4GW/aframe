@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from bilby.core.utils import random as bilby_random
 from data.waveforms.utils import convert_to_detector_frame, load_psds
 from ledger.injections import (
     BilbyParameterSet,
@@ -30,7 +31,12 @@ def rejection_sample(
     snr_threshold: float,
     psd: Path | torch.Tensor,
     max_num_samples: int,
+    seed: int | None = None,
 ) -> tuple[ResponseSetFields, InjectionParameterSet]:
+    # bilby priors sample from bilby's own generator
+    if seed is not None:
+        bilby_random.seed(seed)
+
     # get the detector tensors and vertices
     # for projecting our waveforms
     tensors, vertices = get_ifo_geometry(*ifos)
