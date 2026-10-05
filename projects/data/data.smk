@@ -255,8 +255,15 @@ rule fetch_background:
         DATA_CONTAINER
     # `fetch` downloads with nproc=3
     threads: 4
+    # Proprietary frames (full channel names) are only readable on the site's
+    # own nodes, not on glideins. Open data (bare IFO names) can come from
+    # anywhere.
     resources:
-        **rule_resources("fetch_background", "data"),
+        **rule_resources(
+            "fetch_background",
+            "data",
+            local_pool=any(":" in channel for channel in config["channels"]),
+        ),
     params:
         channels=_fmt_list(config["channels"]),
         sample_rate=config["sample_rate"],

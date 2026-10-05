@@ -14,6 +14,12 @@
 export HOME=$PWD
 export TORCHINDUCTOR_CACHE_DIR=$PWD/.cache/torchinductor
 
+# Condor writes the job's token here. Set the variable explicitly so
+# that services can find it.
+if [ -f "$_CONDOR_CREDS/scitokens.use" ]; then
+    export BEARER_TOKEN_FILE=$_CONDOR_CREDS/scitokens.use
+fi
+
 # The image installs the projects against /opt/aframe, which holds the code
 # from when it was built. PYTHONPATH comes first, so the run's copy wins.
 for package in "$PWD"/code/projects/*/ "$PWD"/code/libs/*/; do

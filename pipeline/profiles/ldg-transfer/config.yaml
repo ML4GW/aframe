@@ -71,20 +71,20 @@ apptainer-args: >-
   --bind ${AFRAME_REPO:?set at startup by set_container_binds in pipeline/resources.smk}:/opt/aframe
   --home $HOME
 
-# Passed to every job's environment with the submit node's values.
-# Fetching proprietary data needs the datafind server.
-envvars:
-  - GWDATAFIND_SERVER
-
 default-resources:
   # The executable that runs snakemake for the job in its image
   job_wrapper: code/pipeline/condor/job_wrapper.sh
+  # Every job's environment, using the submit node's values. Fetching
+  # proprietary data needs the datafind server. Not set via `envvars`, which
+  # the plugin passes with literal quotes around each value.
+  environment: GWDATAFIND_SERVER=$ENV(GWDATAFIND_SERVER)
   # Every job gets the run's copy of the code, and returns its logs
   htcondor_transfer_input_files: code
   htcondor_transfer_output_files: logs
 
   # As in the ldg profile. Condor writes the token to
-  # $_CONDOR_CREDS/scitokens.use, which IGWN scitoken clients discover.
+  # $_CONDOR_CREDS/scitokens.use, and job_wrapper.sh sets BEARER_TOKEN_FILE
+  # to it.
   classad_OAuthServicesNeeded: scitokens
   classad_AcctGroup: $ENV(LIGO_GROUP)
   classad_AcctGroupUser: $ENV(LIGO_USERNAME)
