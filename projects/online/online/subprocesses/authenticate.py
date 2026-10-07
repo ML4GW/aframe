@@ -15,7 +15,9 @@ AFRAME_CREDKEY = os.getenv(
 )
 
 
-def authenticate(minsecs: float = 1000, debug: bool = False):
+def authenticate(
+    minsecs: float = 1000, debug: bool = False, strict: bool = False
+):
     """
     Refresh the credentials necessary for online deployment
 
@@ -25,6 +27,11 @@ def authenticate(minsecs: float = 1000, debug: bool = False):
             it to be used
         debug:
             Run `htgettoken` in debug mode
+        strict:
+            Raise an error if either command fails. Otherwise the command's
+            error output is written to this process's stderr and
+            execution continues, which is fine when refreshing a token
+            that's still valid.
     """
     args = [
         "kinit",
@@ -33,9 +40,11 @@ def authenticate(minsecs: float = 1000, debug: bool = False):
         "-t",
         AFRAME_KEYTAB,
     ]
-    run_subprocess_with_logging(
+    result = run_subprocess_with_logging(
         args, logger=logger, log_stderr_on_success=False
     )
+    if strict and result.returncode:
+        raise RuntimeError(f"`kinit` failed: {result.stderr.strip()}")
 
     args = [
         "htgettoken",
@@ -55,9 +64,11 @@ def authenticate(minsecs: float = 1000, debug: bool = False):
     if debug:
         args.append("-d")
 
-    run_subprocess_with_logging(
+    result = run_subprocess_with_logging(
         args, logger=logger, log_stderr_on_success=False
     )
+    if strict and result.returncode:
+        raise RuntimeError(f"`htgettoken` failed: {result.stderr.strip()}")
 
 
 @subprocess_wrapper
