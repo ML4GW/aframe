@@ -77,7 +77,7 @@ class HeterodyneTimeDomainSupervisedAframeDataset(SupervisedAframeDataset):
         super().build_transforms(*args, **kwargs)
         self.heterodyne_transform = Heterodyne(
             sample_rate=self.hparams.sample_rate,
-            kernel_length=self.hparams.kernel_length,
+            kernel_length=self.hparams.windowing.kernel_length,
             chirp_mass=self.chirp_mass_grid,
             return_type="time",
         )

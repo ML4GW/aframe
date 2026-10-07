@@ -42,8 +42,9 @@ class WaveformLoader(WaveformSampler):
         )
         if waveform_set.right_pad != self.right_pad:
             raise ValueError(
-                "Training waveform file does not have the same "
-                "right pad as validation waveform file"
+                "Training and validation waveform files have different "
+                f"right_pad: {waveform_set.right_pad:.4f}s vs "
+                f"{self.right_pad:.4f}s"
             )
 
     def get_train_waveforms(self, world_size, rank, device):
