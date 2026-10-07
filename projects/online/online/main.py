@@ -549,6 +549,10 @@ def main(
     # accounted for
     search_start = gps_now()
 
+    # auth once up front, before anything that needs a token, and
+    # stop here if that doesn't work rather than failing later
+    authenticate(strict=True)
+
     # check the replay before spawning any subprocesses
     if replay_id is not None:
         if data_source != "arrakis":
@@ -623,8 +627,6 @@ def main(
 
     logging.info(f"{', '.join(ifos)} interferometer configuration set")
 
-    # auth once up front before initializing gracedb client
-    authenticate()
     logging.info(f"Uploading to GraceDb server: {server}")
 
     # Initialize GraceDB client
