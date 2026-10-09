@@ -49,6 +49,26 @@ class TestEventSet:
         assert obj.Tb == 100
         assert len(obj) == 3
 
+    def test_aggregate_segments(self, tmp_path):
+        # every timeslide analyzes the same files, so each is kept once,
+        # and a file without segments adds none
+        segments = [
+            np.array([[0.0, 5.0]]),
+            np.array([[0.0, 5.0]]),
+            np.array([[5.0, 9.0]]),
+            None,
+        ]
+        fnames = [tmp_path / f"{i}.hdf5" for i in range(len(segments))]
+        for fname, segs in zip(fnames, segments, strict=True):
+            events.EventSet(
+                np.arange(3.0), np.arange(3.0), np.zeros((3, 2)), 10, segs
+            ).write(fname)
+
+        merged = tmp_path / "merged.hdf5"
+        events.EventSet.aggregate(fnames, merged)
+        obj = events.EventSet.read(merged)
+        assert (obj.segments == np.array([[0.0, 5.0], [5.0, 9.0]])).all()
+
     def test_sorting(self):
         det_stats = np.arange(10)[::-1]
         times = np.arange(10)
