@@ -28,12 +28,14 @@ def write_timeseries(
 
     The file has `background` and `foreground` groups holding one dataset
     per branch, keyed by branch id. Each dataset has attributes for t0
-    (segment start), sample_t0 (GPS time of the first sample), and shifts.
-    The series include the PSD burn-in and are not integrated; see
-    `Postprocessor` for the steps that turn them into events.
+    (segment start), sample_t0 (when the first output became available),
+    and shifts. The series include the PSD burn-in and are not integrated;
+    see `Postprocessor` for the steps that turn them into events.
     An `index` dataset at the root allows easy lookup, and
-    inference_sampling_rate is stored as a file-level attribute. The time
-    of sample i is sample_t0 + i / inference_sampling_rate.
+    inference_sampling_rate is stored as a file-level attribute. Sample i
+    became available at sample_t0 + i / inference_sampling_rate, and events
+    built from it are timestamped fduration / 2 plus the integration window
+    earlier.
     """
     if foreground is None:
         foreground = np.zeros(0)

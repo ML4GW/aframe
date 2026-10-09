@@ -61,7 +61,7 @@ class StreamLayout:
 
 
 @dataclass(frozen=True)
-class StreamTiming:
+class StreamOutputs:
     """How network outputs are integrated and timestamped.
 
     Args:
@@ -121,12 +121,12 @@ class StreamTiming:
         can be computed"""
         return t0 + (index + 1) / self.inference_sampling_rate
 
-    def output_time(self, t0: float, index: int | np.ndarray):
+    def timestamp(self, t0: float, index: int | np.ndarray):
         """Timestamp of the integrated output `index` of a stream starting
         at `t0`"""
         return self.availability_time(t0, index) - self.lag
 
-    def output_index(self, time: float, t0: float) -> int:
+    def index(self, time: float, t0: float) -> int:
         """Index of the integrated output of a stream starting at `t0`
         with timestamp `time`."""
         available = time + self.lag - t0
