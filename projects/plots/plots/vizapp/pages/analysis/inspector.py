@@ -167,8 +167,7 @@ class InspectorPlot:
         for i, ax in enumerate(fig.axes):
             from matplotlib import ticker
 
-            # TODO: account for half second somewhere
-            ax.set_epoch(self.analyzer.fduration / 2)
+            ax.set_epoch(0)
             ax.set_title(self.analyzer.ifos[i])
             ax.set_xlabel("Time [s]")
             ax.set_ylabel("Frequency [Hz]")
@@ -203,23 +202,19 @@ class InspectorPlot:
         title: str,
     ) -> None:
         foreground = type == "foreground"
-        nn, integrated, whitened = self.analyzer.analyze(
-            time, shifts, foreground
-        )
+        analysis = self.analyzer.analyze(time, shifts, foreground)
+        nn, integrated = analysis.nn, analysis.integrated
 
         # update the strain source plot data
         # with the whitened strain, nn outputs,
         # and integrated outputs
-        strain_source = {
-            ifo: whitened[0][i][-len(self.analyzer.whitened_times) :]
-            for i, ifo in enumerate(self.analyzer.ifos)
-        }
-        freqs, fft_source = self.analyzer.get_fft(strain_source)
-        strain_source["t"] = self.analyzer.whitened_times
+        strain_source = dict(analysis.whitened)
+        freqs, fft_source = self.analyzer.get_fft(analysis)
+        strain_source["t"] = analysis.whitened_times
         fft_source["f"] = freqs
 
         # qscan whitened strain and plot spectrogram
-        qscans = self.analyzer.qscan(strain_source)
+        qscans = self.analyzer.qscan(analysis)
         img = self.plot(qscans)
 
         width, height = img.shape[1], img.shape[0]
@@ -249,13 +244,13 @@ class InspectorPlot:
         self.response_source.data = {
             "nn": nn,
             "integrated": integrated,
-            "t": self.analyzer.inference_times,
+            "t": analysis.availability_times,
         }
         for r in self.output_renderers:
             r.data_source.data = {
                 "nn": nn,
                 "integrated": integrated,
-                "t": self.analyzer.inference_times,
+                "t": analysis.availability_times,
             }
 
         # update axis labels, title and ranges of timeseries plot

@@ -13,7 +13,6 @@ class Postprocessor:
         inference_sampling_rate: float,
         integration_window_length: float,
         cluster_window_length: float,
-        duration: float,
     ) -> None:
         """
         Postprocessor object for converting timeseries
@@ -34,9 +33,6 @@ class Postprocessor:
                 Length of the integration window in seconds
             cluster_window_length:
                 Length of the clustering window in seconds
-            duration:
-                Length of the data segment in seconds. The segment is
-                recorded as the `segments` of the events produced.
         """
 
         self.stream_outputs = StreamOutputs(
@@ -46,7 +42,6 @@ class Postprocessor:
             psd_length,
         )
         self.shifts = shifts
-        self.segment = np.array([[t0, t0 + duration]])
 
         # timestamp of the first output kept after dropping the burn-in
         self.t0 = self.stream_outputs.timestamp(
@@ -92,7 +87,7 @@ class Postprocessor:
         events = np.array(events)
         times = np.array(times)
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
-        return EventSet(events, times, shifts, Tb, segments=self.segment)
+        return EventSet(events, times, shifts, Tb)
 
     def __call__(self, y: np.ndarray | None = None) -> EventSet:
         # in the case where we didn't perform
