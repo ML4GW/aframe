@@ -50,7 +50,6 @@ class BaseSequence(ABC):
         rate: float | None = None,
         **kwargs,
     ):
-        self.inference_sampling_rate = inference_sampling_rate
         self.batch_size = batch_size
         self.rate = rate
 
@@ -104,8 +103,7 @@ class BaseSequence(ABC):
     @property
     def slice(self) -> slice:
         # drop the outputs computed from the final batch's padding
-        num_outputs = len(self) * self.batch_size
-        return slice(num_outputs - self.stream_layout.num_pad_outputs)
+        return slice(self.stream_layout.num_outputs)
 
     def __len__(self):
         # includes the trailing excess that can't fill a full batch; we pad it
@@ -263,11 +261,9 @@ class Hdf5Sequence(BaseSequence):
 
                 # inject waveforms into a copy of the background, if any
                 x_inj = None
-                offset = i * self.batch_size / self.inference_sampling_rate
                 if self.injection_set is not None:
-                    x_inj = self.injection_set.inject(
-                        x.copy(), self.t0 + offset
-                    )
+                    t0 = self.t0 + start / self.sample_rate
+                    x_inj = self.injection_set.inject(x.copy(), t0)
 
                 deadline = _throttle(deadline, interval)
                 yield x, x_inj

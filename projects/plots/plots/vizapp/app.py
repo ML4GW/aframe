@@ -42,7 +42,7 @@ class App:
         integration_length: float,
         fduration: float,
         valid_frac: float,
-        fftlength: float,
+        fftlength: float | None,
         device: str = "cpu",
         vetos: list[VETO_CATEGORIES] | None = None,
         num_far_points: int = DEFAULT_NUM_FAR_POINTS,

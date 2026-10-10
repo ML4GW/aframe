@@ -45,10 +45,11 @@ class StreamLayout:
         return self.num_batches * self.step_size - self.size
 
     @property
-    def num_pad_outputs(self) -> int:
-        """Outputs computed from the padding of the final batch which need
-        to be dropped."""
-        return self.num_pad // self.stride
+    def num_outputs(self) -> int:
+        """Number of outputs, excluding those computed from the padding
+        of the final batch."""
+        num_pad_outputs = self.num_pad // self.stride
+        return self.num_batches * self.batch_size - num_pad_outputs
 
     def batch_bounds(self, batch_idx: int):
         """Sample range for one batch, and whether it is the last one."""
@@ -125,9 +126,3 @@ class StreamOutputs:
         """Timestamp of the integrated output `index` of a stream starting
         at `t0`"""
         return self.availability_time(t0, index) - self.lag
-
-    def index(self, time: float, t0: float) -> int:
-        """Index of the integrated output of a stream starting at `t0`
-        with timestamp `time`."""
-        available = time + self.lag - t0
-        return round(available * self.inference_sampling_rate) - 1

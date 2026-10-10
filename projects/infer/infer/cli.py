@@ -74,7 +74,6 @@ def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
         inference_sampling_rate=cfg.inference_sampling_rate,
         integration_window_length=cfg.integration_window_length,
         cluster_window_length=cfg.cluster_window_length,
-        duration=seq.duration,
     )
     results = infer(client, seq, postproc)
     _write_outputs(outdir, branch_id, results, seq, postproc, cfg)
