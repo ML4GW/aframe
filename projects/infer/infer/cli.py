@@ -17,6 +17,7 @@ from pathlib import Path
 
 import h5py
 import jsonargparse
+import torch
 from ledger.events import EventSet, RecoveredInjectionSet
 from utils.logging import configure_logging
 
@@ -227,7 +228,9 @@ def main_local(args=None):
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
     p.add_argument("--channel", type=str, default=None)  # R&P frames
+    p.add_argument("--augmentor", type=torch.nn.Module | None, default=None)
     cfg = p.parse_args(args)
+    cfg = p.instantiate_classes(cfg)
     if cfg.logfile is not None:
         Path(cfg.logfile).parent.mkdir(parents=True, exist_ok=True)
     configure_logging(cfg.logfile, verbose=cfg.verbose)
@@ -247,5 +250,6 @@ def main_local(args=None):
         batch_size=cfg.batch_size,
         highpass=cfg.highpass,
         fftlength=cfg.fftlength,
+        augmentor=cfg.augmentor,
     )
     _run_group(client, cfg, reset=client.reset)

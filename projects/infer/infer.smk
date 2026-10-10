@@ -451,6 +451,7 @@ else:
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
+            augmentor=json.dumps(config.get("augmentor")),
         shell:
             "infer-local"
             " --weights {input.artifact}"
@@ -460,6 +461,7 @@ else:
             " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
             " --fftlength {params.fftlength}"
+            " '--augmentor={params.augmentor}'"
             + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
             + _GROUP_SHELL_SUFFIX
 
