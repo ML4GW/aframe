@@ -65,9 +65,7 @@ class VetoParser:
             f"Populating {len(self.vetos)} vetos from "
             f"{self.veto_definer_file.name} over [{start:.0f}, {stop:.0f})"
         )
-        self.vetos.populate(
-            source=segment_server, segments=[[start, stop]], verbose=True
-        )
+        self.vetos.populate(source=segment_server, segments=[[start, stop]])
         self.logger.info("Vetos populated")
         self.gate_paths = gate_paths
         self.ifos = ifos

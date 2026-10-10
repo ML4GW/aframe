@@ -17,6 +17,7 @@ from ledger.events import EventSet
 from ml4gw.transforms import ChannelWiseScaler, SpectralDensity, Whiten
 from torch.multiprocessing import Array, Process, Queue
 from utils.preprocessing import BatchWhitener
+from utils.streaming import StreamOutputs
 
 from online.dataloading import (
     arrakis_data_iterator,
@@ -81,27 +82,6 @@ def load_amplfi(model: FlowArchitecture, weights: Path, num_params: int):
     scaler = ChannelWiseScaler(num_params)
     scaler.load_state_dict(scaler_weights)
     return model, scaler
-
-
-def get_time_offset(
-    online_inference_rate: float,
-    fduration: float,
-    integration_window_length: float,
-    kernel_length: float,
-    aframe_right_pad: float,
-):
-    time_offset = (
-        # end of the first kernel in batch
-        1 / online_inference_rate
-        # account for whitening padding
-        - fduration / 2
-        # distance coalescence time lies away from right edge
-        - aframe_right_pad
-        # account for time to build peak
-        - integration_window_length
-    )
-
-    return time_offset
 
 
 def process_event(
@@ -176,7 +156,6 @@ def search(
     shared_samples: Array,
     data_it: Iterable[tuple[torch.Tensor, float, bool]],
     update_size: float,
-    time_offset: float,
     device: str,
     outdir: Path,
     segment_writer: SegmentWriter,
@@ -324,9 +303,7 @@ def search(
         event = None
         if snapshotter.full_psd_present and hl_ready:
             logging.debug("Searching for event...")
-            event = searcher.search(
-                significance_outputs, timing_outputs, t0 + time_offset
-            )
+            event = searcher.search(significance_outputs, timing_outputs, t0)
 
         # record what we were able to do with this block
         segment_writer.update(
@@ -378,7 +355,6 @@ def main(
     offline_inference_rate: float,
     psd_length: float,
     amplfi_psd_length: float,
-    aframe_right_pad: float,
     amplfi_kernel_length: float,
     event_position: float,
     fduration: float,
@@ -461,8 +437,6 @@ def main(
         amplfi_psd_length:
             Length of PSD estimation window in seconds for PSD
             used to whiten amplfi data
-        aframe_right_pad:
-            Time offset for trigger positioning in seconds
         amplfi_kernel_length:
             Length of AMPLFI analysis window in seconds
         event_position:
@@ -792,10 +766,12 @@ def main(
         device="cpu",
     )
 
+    stream_outputs = StreamOutputs(
+        online_inference_rate, fduration, integration_window_length, psd_length
+    )
     output_buffer = OutputBuffer(
-        online_inference_rate=online_inference_rate,
+        stream_outputs=stream_outputs,
         offline_inference_rate=offline_inference_rate,
-        integration_window_length=integration_window_length,
         buffer_length=output_buffer_length,
         device="cpu",
     )
@@ -882,20 +858,12 @@ def main(
     searcher = Searcher(
         background=background,
         far_threshold=far_threshold,
-        online_inference_rate=online_inference_rate,
+        stream_outputs=stream_outputs,
         refractory_period=refractory_period,
         ifos=ifos,
         channels=channels,
         datadir=datadir,
         ifo_suffix=ifo_suffix,
-    )
-
-    time_offset = get_time_offset(
-        online_inference_rate,
-        fduration,
-        integration_window_length,
-        kernel_length,
-        aframe_right_pad,
     )
 
     # warmup amplfi to speed up
@@ -933,7 +901,6 @@ def main(
             shared_samples=shared_samples,
             data_it=data_it,
             update_size=update_size,
-            time_offset=time_offset,
             device=device,
             emails=emails,
             outdir=outdir,

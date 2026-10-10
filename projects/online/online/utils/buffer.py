@@ -1,6 +1,9 @@
+from dataclasses import replace
+
 import h5py
 import numpy as np
 import torch
+from utils.streaming import StreamOutputs
 
 
 class InputBuffer(torch.nn.Module):
@@ -98,39 +101,35 @@ class OutputBuffer(torch.nn.Module):
     A buffer for storing raw and integrated neural network output
 
     Args:
-        online_inference_rate:
-            Rate at which Aframe's output is sampled online
+        stream_outputs:
+            How Aframe's online outputs are integrated and timestamped
         offline_inference_rate:
             Rate at which inference was performed offline when
             establishing the background and foreground distributions
-        integration_window_length:
-            The length of the integration window in seconds
         buffer_length:
             The length of the buffer in seconds
     """
 
     def __init__(
         self,
-        online_inference_rate: float,
+        stream_outputs: StreamOutputs,
         offline_inference_rate: float,
-        integration_window_length: float,
         buffer_length: float,
         device: str,
     ):
         super().__init__()
         self.device = device
+        online_inference_rate = stream_outputs.inference_sampling_rate
         self.online_inference_rate = online_inference_rate
-        self.timing_integrator_size = (
-            int(integration_window_length * online_inference_rate) + 1
-        )
+        self.timing_integrator_size = stream_outputs.integration_size
         self.timing_window = torch.ones(
             (1, 1, self.timing_integrator_size), device=device
         )
         self.timing_window /= self.timing_integrator_size
 
-        significance_integrator_size = (
-            int(integration_window_length * offline_inference_rate) + 1
-        )
+        significance_integrator_size = replace(
+            stream_outputs, inference_sampling_rate=offline_inference_rate
+        ).integration_size
         self.significance_window = torch.ones(
             (1, 1, significance_integrator_size), device=device
         )
