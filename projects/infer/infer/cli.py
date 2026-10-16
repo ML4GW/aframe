@@ -46,8 +46,13 @@ def _write_outputs(outdir, branch_id, results, seq, postproc, cfg):
 
 def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
     shifts = branch["shifts"]
+    # Branch IDs are unique within a run, so use it to get a pair of unique
+    # sequence IDs for background and foreground. Triton handles an ID of 0
+    # as a special case, so avoid it.
+    sequence_id = 2 * int(branch_id) + 1
     if cfg.analysis_type == "rnp":
         seq = RnPSequence(
+            sequence_id=sequence_id,
             injection_file=Path(branch["fname"]),
             channel=cfg.channel,
             ifos=cfg.ifos,
@@ -57,6 +62,7 @@ def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
         )
     else:
         seq = Hdf5Sequence(
+            sequence_id,
             branch["fname"],
             branch["waveforms"],
             cfg.ifos,
