@@ -45,6 +45,14 @@ class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
         self.kth_best_model_path = state_dict["kth_best_model_path"]
         self.kth_value = state_dict["kth_value"]
 
+    def on_train_epoch_end(self, trainer, pl_module):
+        super().on_train_epoch_end(trainer, pl_module)
+        # Lightning 2.6 writes last.ckpt only on epochs that save a new
+        # best; write it every epoch so a resume starts from the latest.
+        if not self._should_skip_saving_checkpoint(trainer):
+            monitor_candidates = self._monitor_candidates(trainer)
+            self._save_last_checkpoint(trainer, monitor_candidates)
+
     def on_train_end(self, trainer, pl_module):
         torch.cuda.empty_cache()
         # Restore the best checkpoint's weights for export.
