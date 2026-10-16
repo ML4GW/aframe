@@ -56,7 +56,6 @@ psd_length: 64
 nside: 64
 min_samples_per_pix: 5
 amplfi_psd_length: 64
-aframe_right_pad: 0.0
 fduration: 1
 amplfi_fduration: 2
 integration_window_length: 1.5

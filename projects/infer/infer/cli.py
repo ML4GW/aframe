@@ -38,8 +38,8 @@ def _write_outputs(outdir, branch_id, results, seq, postproc, cfg):
             background_ts,
             foreground_ts,
             t0=seq.t0,
-            sample_t0=seq.t0 - cfg.fduration / 2,
-            inference_sampling_rate=postproc.inference_sampling_rate,
+            sample_t0=postproc.stream_outputs.availability_time(seq.t0, 0),
+            inference_sampling_rate=cfg.inference_sampling_rate,
             shifts=postproc.shifts,
         )
 

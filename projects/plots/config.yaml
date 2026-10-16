@@ -5,12 +5,12 @@ app:
     background_dir: ${oc.env:AFRAME_TEST_BACKGROUND_DIR}
     waveforms_dir: ${oc.env:AFRAME_TEST_WAVEFORMS_DIR}
     results_dir: ${oc.env:AFRAME_RESULTS_DIR}
-    fftlength: 2
+    fftlength: null
     ifos: ["H1", "L1"]
     mass_combos: [[35, 35], [35, 20], [20, 20], [20, 10]]
     source_prior: priors.priors.end_o3_ratesandpops
     kernel_length: 1.5
-    integration_length: 1.0
+    integration_length: 1.5
     psd_length: 64
     highpass: 32
     lowpass: null
