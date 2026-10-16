@@ -244,18 +244,19 @@ job to Nautilus. This hasn't been tested at all within Snakemake.
 `.snakemake/htcondor/{clusterid}.{log,out,err}` with no rule
 association.
 
-**Dependencies tracked from branches.** `export` and `infer` pin
-hermes to `ML4GW/hermes` branch `dev`, and `online` pins amplfi to
-`ML4GW/amplfi` branch `main`, rather than released versions. Both
-should move to releases once possible, though note that a hermes
-release will also drop support for Volta-era GPUs. 
+**Dependencies tracked from branches.** `online` pins amplfi to
+`ML4GW/amplfi` branch `main`, rather than a released version. It
+should move to a release once possible.
 
 **Blocked on moving to CUDA 13.** Two conditions have to
 be met before we can move to CUDA 13:
 
 1. **Dropping Volta (V100) support.** CUDA 13 drops Volta (`sm_70`)
    and Pascal (`sm_60`), so these are held at CUDA 12 to keep V100
-   nodes on the LDG usable.
+   nodes on the LDG usable. TensorRT already dropped Volta in 10.5,
+   so serving on V100s also needs TensorRT 10.4 or earlier in
+   `projects/export`, and a Triton image with the same version
+   (24.09 or earlier), in place of those below.
 2. **Driver >= 580 everywhere we run.** CUDA 13.x requires NVIDIA
    driver >= 580. Delta is on 570, so it cannot run CUDA 13 binaries,
    regardless of GPU architecture.
@@ -269,17 +270,15 @@ If these conditions are met, then we can implement various upgrades:
   `projects/infer/apptainer.post`.
 - The uv base image in `container_templates/uv.def`, pinned to
   `0.9.30-python3.12-bookworm-slim`.
-- Moving hermes from the `dev` branch to a release, per the note above.
 - `nvidia-cudnn-cu12` and `tensorrt-cu12==10.11.0.33` in
   `projects/export`, plus the Triton image in `config.yaml`.
 
-**Hermes Triton image discovery.** `triton_image` in `config.yaml`
+**Triton image discovery.** `triton_image` in `config.yaml`
 must currently name a local image (a bare filename resolved against
 `$AFRAME_CONTAINER_ROOT`, or an absolute path) because the more modern
 Triton containers have not been added to CVMFS. We could instead
 have a shared cache directory to auto-pull from
-`nvcr.io/nvidia/tritonserver:<release>-py3`. (hermes' images on
-`ghcr.io/ml4gw/hermes` add only a label and stop at 24.12.)
+`nvcr.io/nvidia/tritonserver:<release>-py3`.
 
 **Hyperparameter tuning currently has no Snakemake equivalent.** The law
 pipeline had a `TuneTask` that stood up a Ray cluster on Kubernetes via
