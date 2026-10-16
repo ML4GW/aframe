@@ -35,6 +35,16 @@ class WandbSaveConfig(pl.cli.SaveConfigCallback):
 
 
 class ModelCheckpoint(pl.callbacks.ModelCheckpoint):
+    def load_state_dict(self, state_dict):
+        super().load_state_dict(state_dict)
+        # A resumed run logs to a new logger version, so the dirpath
+        # changes and Lightning drops the pre-resume best. Restore it
+        # so on_train_end exports the best epoch across the whole run.
+        self.best_model_score = state_dict["best_model_score"]
+        self.best_k_models = state_dict["best_k_models"]
+        self.kth_best_model_path = state_dict["kth_best_model_path"]
+        self.kth_value = state_dict["kth_value"]
+
     def on_train_end(self, trainer, pl_module):
         torch.cuda.empty_cache()
         # Restore the best checkpoint's weights for export.
