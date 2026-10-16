@@ -155,6 +155,8 @@ def export(
         aframe.config.optimization.graph.level = -1
     elif platform == qv.Platform.TENSORRT:
         kwargs["use_fp16"] = False
+    if platform in (qv.Platform.ONNX, qv.Platform.TENSORRT):
+        kwargs["dynamo"] = True
 
     # determining the number of neural networks for
     # naming the outputs

@@ -13,7 +13,7 @@ dependencies = [
     "tqdm~=4.66",
     "psutil>=5.9",
     "torch==2.10.0",
-    "ml4gw-hermes[torch]>=0.3.0",
+    "ml4gw-hermes[torch]>=0.3.1",
     "utils[torch]",
     "ledger",
     "gwpy>=4.0,<5",

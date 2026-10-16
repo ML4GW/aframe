@@ -11,7 +11,7 @@ dependencies = [
     "boto3~=1.30",
     "fsspec[s3]>=2024",
     "s3fs>=2024",
-    "ml4gw-hermes[torch]>=0.3.0",
+    "ml4gw-hermes[torch]>=0.3.1",
     "utils[torch]",
     "jsonargparse[signatures]>=4.49,<5",
     "h5py>=3.10,<4",
