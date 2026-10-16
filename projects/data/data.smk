@@ -137,6 +137,18 @@ def train_background_files(wildcards):
     return background_files("train")
 
 
+def test_background_files(wildcards):
+    """Every test background file, for the test_background target.
+
+    The list of files isn't known until generate_segments has queried the
+    test segments.
+
+    Snakemake passes every such function the rule's wildcards. They aren't
+    used here, but the argument is required.
+    """
+    return background_files("test")
+
+
 # Shortest background file to compute waveform PSDs from
 PSD_MIN_DURATION = 2048
 
@@ -278,6 +290,28 @@ rule fetch_background:
         " &> {log}"
 
 
+rule train_background:
+    """Target rule: fetch every training background file.
+
+Runs no command. Its inputs make snakemake query the training segments,
+then run fetch_background for each chunk.
+"""
+    input:
+        train_background_files,
+    localrule: True
+
+
+rule test_background:
+    """Target rule: fetch every testing background file.
+
+Runs no command. Its inputs make snakemake query the training segments,
+then run fetch_background for each chunk.
+"""
+    input:
+        test_background_files,
+    localrule: True
+
+
 rule compute_psd:
     """Compute the PSDs that a split's waveform jobs rejection-sample
 against so that each job reads a small file instead of a full
@@ -341,6 +375,7 @@ the rejected parameters for this branch.
         snr_threshold=config["snr_threshold"],
         spacing=config["spacing"],
         buffer=config["buffer"],
+        jitter=config["jitter"],
         max_num_samples=config["max_num_samples"],
         seed=config["seed"],
     shell:
@@ -351,6 +386,7 @@ the rejected parameters for this branch.
         " --shifts '{params.shifts}'"
         " --spacing {params.spacing}"
         " --buffer {params.buffer}"
+        " --jitter {params.jitter}"
         " --prior {params.prior}"
         " --minimum_frequency {params.minimum_frequency}"
         " --reference_frequency {params.reference_frequency}"

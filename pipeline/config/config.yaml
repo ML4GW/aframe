@@ -78,6 +78,7 @@ shift_steps:
   - 0.0  # seconds to shift H1 each time shift
   - 1.0  # seconds to shift L1 each time shift
 
+jitter: 1.0             # seconds to jitter each injection's time
 spacing: 16.0           # spacing between testing injections (seconds)
 buffer: 16.0            # edge buffer around each segment (seconds)
 highpass: 32.0          # Hz
