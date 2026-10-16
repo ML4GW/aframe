@@ -49,6 +49,10 @@ local-cores: 16
 
 software-deployment-method: apptainer
 
+# Where snakemake would keep images it pulls. Without it, snakemake uses
+# $APPTAINER_CACHEDIR, which may not exist on the EP.
+apptainer-prefix: .snakemake/apptainer
+
 # $AFRAME_DATA_DIRS binds the run's directories into the container.
 # $AFRAME_REPO, the run's copy of the code (code/), is bound to /opt/aframe,
 # where the images install the projects in editable mode, so code comes from

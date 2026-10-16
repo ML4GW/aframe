@@ -77,3 +77,4 @@ rule all:
         # stop_triton only exists in triton mode
         *([rules.stop_triton.output] if INFERENCE_MODE == "triton" else []),
         rules.sensitive_volume.output,
+        expand(rules.generate_segments.output[0], split=["train", "test"]),

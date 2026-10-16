@@ -363,6 +363,7 @@ if INFERENCE_MODE == "triton":
             unpack(get_infer_group_inputs),
             branches=str(group_dir / "branches.json"),
             triton_started=str(triton_dir / "triton.started"),
+            triton_ip=str(triton_dir / "triton.ip"),
         output:
             **_group_outputs,
         log:
@@ -378,8 +379,8 @@ if INFERENCE_MODE == "triton":
             rate=infer_rate,
         shell:
             "infer-triton"
-            # a localrule, so the server is on this node
-            " --address localhost:8001"
+            # the server's address, with the free port it was given
+            " --address $(cat {input.triton_ip})"
             " --model_name {params.model_name}"
             " --model_version {params.model_version}"
             " --rate {params.rate}" + _GROUP_SHELL_SUFFIX
