@@ -38,7 +38,7 @@ def triton_server(
 ):
     """
     Context manager that starts a Triton server and a ServerMonitor.
-    Yields the node's cluster-internal IP address.
+    Yields the server's gRPC address.
     """
     log_file = (
         Path(log_file) if log_file is not None else output_dir / "server.log"
@@ -48,24 +48,27 @@ def triton_server(
         triton_image,
         log_file=log_file,
         wait=True,
+        free_ports=True,
     )
 
     current_gpus = os.getenv("CUDA_VISIBLE_DEVICES", "")
     os.environ["CUDA_VISIBLE_DEVICES"] = gpus
     try:
         with ExitStack() as stack:
-            stack.enter_context(serve_context)
+            instance = stack.enter_context(serve_context)
             monitor = ServerMonitor(
                 model_name=model_name,
                 ips="localhost",
                 filename=output_dir / f"server-stats-{batch_size}.csv",
                 model_version=model_version,
+                grpc_port=instance.grpc_port,
+                metrics_port=instance.metrics_port,
                 name="monitor",
                 rate=10,
             )
             time.sleep(1)
             stack.enter_context(monitor)
-            yield get_ip_address()
+            yield f"{get_ip_address()}:{instance.grpc_port}"
     finally:
         os.environ["CUDA_VISIBLE_DEVICES"] = current_gpus
 
@@ -108,7 +111,7 @@ def build_parser():
         "--ip_file",
         type=Path,
         required=True,
-        help="Path where the server IP address will be written.",
+        help="Path where the server's address will be written.",
     )
     parser.add_argument(
         "--stop_sentinel",
@@ -132,7 +135,7 @@ def main(args=None):
     """
     Entry point for the start-server CLI.
 
-    Starts a Triton server, writes the node IP to ip_file, then blocks
+    Starts a Triton server, writes its address to ip_file, then blocks
     until stop_sentinel appears on disk.
     """
     parser = build_parser()
