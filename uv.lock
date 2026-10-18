@@ -347,7 +347,7 @@ wheels = [
 
 [[package]]
 name = "amplfi"
-version = "0.6.0.post4+git.64ebea2b"
+version = "0.6.0.post4+git.64ebea2b.dirty"
 source = { git = "https://github.com/ML4GW/amplfi?branch=main#64ebea2b11662094ff1028f42809777c5575c7ec" }
 dependencies = [
     { name = "bilby" },
@@ -1840,7 +1840,7 @@ requires-dist = [
     { name = "h5py", specifier = ">=3.10,<4" },
     { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.49,<5" },
     { name = "ml4gw", specifier = ">=0.8.0" },
-    { name = "ml4gw-hermes", extras = ["torch"], git = "https://github.com/ML4GW/hermes?branch=dev" },
+    { name = "ml4gw-hermes", extras = ["torch"], specifier = ">=0.3.1" },
     { name = "nvidia-cudnn-cu12" },
     { name = "s3fs", specifier = ">=2024" },
     { name = "tensorrt-cu12", specifier = "==10.11.0.33" },
@@ -2575,7 +2575,7 @@ requires-dist = [
     { name = "h5py", specifier = ">=3.10,<4" },
     { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.29,<5" },
     { name = "ledger", editable = "libs/ledger" },
-    { name = "ml4gw-hermes", extras = ["torch"], git = "https://github.com/ML4GW/hermes?branch=dev" },
+    { name = "ml4gw-hermes", extras = ["torch"], specifier = ">=0.3.1" },
     { name = "numpy", specifier = ">=2" },
     { name = "psutil", specifier = ">=5.9" },
     { name = "snakemake", specifier = "==9.27.0" },
@@ -3593,8 +3593,8 @@ wheels = [
 
 [[package]]
 name = "ml4gw-hermes"
-version = "0.2.2.post27+git.75ae0381"
-source = { git = "https://github.com/ML4GW/hermes?branch=dev#75ae0381e4ff28e4586a204b46633a64184946d8" }
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "protobuf" },
@@ -3602,6 +3602,10 @@ dependencies = [
     { name = "spython" },
     { name = "tblib" },
     { name = "tritonclient", extra = ["grpc"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5f/60/501576aa1cd45644e09f63d2a14efcee82e7559b288620f9feb6502c6a11/ml4gw_hermes-0.3.1.tar.gz", hash = "sha256:7cb26222d46bfc7ba7bb1a8eba1cfc5feec6ec7ccde77c3a8e71b720694b5224", size = 49079, upload-time = "2026-10-16T16:56:03.804Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/df/fd13a631978ae06681cda5f64c4752a820cb96afa621bd6b065c2fab08aa/ml4gw_hermes-0.3.1-py3-none-any.whl", hash = "sha256:ea26359ea19003bd5827cd5549a07ae7a386f52b5e9bda5f858fede68e7cb8bb", size = 59567, upload-time = "2026-10-16T16:56:02.818Z" },
 ]
 
 [package.optional-dependencies]

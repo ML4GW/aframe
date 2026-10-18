@@ -4,7 +4,6 @@ import re
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from zlib import adler32
 
 import h5py
 import numpy as np
@@ -45,6 +44,7 @@ class BaseSequence(ABC):
 
     def __init__(
         self,
+        sequence_id: int,
         inference_sampling_rate: float,
         batch_size: int,
         rate: float | None = None,
@@ -53,16 +53,13 @@ class BaseSequence(ABC):
         self.inference_sampling_rate = inference_sampling_rate
         self.batch_size = batch_size
         self.rate = rate
+        self.id = sequence_id
 
         # Subclasses set sample_rate, size, t0, duration, and shifts.
         self._setup(**kwargs)
 
         self.stride = int(self.sample_rate / inference_sampling_rate)
         self.step_size = self.stride * batch_size
-
-        # a semi-unique sequence id from a hash of the descriptive metadata
-        fingerprint = f"{self.t0}{self.duration}{self.shifts}".encode()
-        self.id = adler32(fingerprint)
         self._initialize_sequence_state()
 
     @abstractmethod
@@ -158,6 +155,7 @@ class BaseSequence(ABC):
 class Hdf5Sequence(BaseSequence):
     def __init__(
         self,
+        sequence_id: int,
         background_fname: str,
         injection_set_fname: str | None,
         ifos: list[str],
@@ -175,6 +173,9 @@ class Hdf5Sequence(BaseSequence):
         events.
 
         Args:
+            sequence_id:
+                ID for the background stream, with the foreground using the
+                next one. Must be nonzero and unique.
             background_fname:
                 Path to the background segment
             injection_set_fname:
@@ -192,6 +193,7 @@ class Hdf5Sequence(BaseSequence):
         """
         logging.info("Initializing sequence")
         super().__init__(
+            sequence_id=sequence_id,
             inference_sampling_rate=inference_sampling_rate,
             batch_size=batch_size,
             rate=rate,
@@ -294,6 +296,7 @@ class Hdf5Sequence(BaseSequence):
 class RnPSequence(BaseSequence):
     def __init__(
         self,
+        sequence_id: int,
         injection_file: Path,
         channel: str,
         ifos: list[str],
@@ -311,6 +314,9 @@ class RnPSequence(BaseSequence):
         performance much.
 
         Args:
+            sequence_id:
+                ID for the background stream, with the foreground using the
+                next one. Must be nonzero and unique.
             injection_file:
                 R&P injection frame file to analyze
             channel:
@@ -328,6 +334,7 @@ class RnPSequence(BaseSequence):
         self.sample_rate = sample_rate
         # always in-process: no server to throttle, so rate is always None
         super().__init__(
+            sequence_id=sequence_id,
             inference_sampling_rate=inference_sampling_rate,
             batch_size=batch_size,
             rate=None,
