@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from ledger.injections import WaveformPolarizationSet
 
-from .sampler import WaveformSampler
+from .sampler import WaveformSampler, check_waveform_files, waveform_files
 
 
 class WaveformLoader(WaveformSampler):
@@ -20,6 +20,10 @@ class WaveformLoader(WaveformSampler):
     are generated during training or loaded from disk
     The actual loading of the training waveforms is done
     by `waveform_dataloader` in `train.data.base.train_dataloader()`.
+
+    `training_waveform_path` is a file, or a directory of them, e.g.
+    one per population, sampled in proportion to their sizes. See
+    `check_waveform_files`.
     """
 
     def __init__(
@@ -29,20 +33,15 @@ class WaveformLoader(WaveformSampler):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        if training_waveform_path.is_dir():
-            self.training_waveform_files = list(
-                training_waveform_path.iterdir()
-            )
-        else:
-            self.training_waveform_files = [training_waveform_path]
-
-        waveform_set = WaveformPolarizationSet.read(
-            self.training_waveform_files[0]
+        self.training_waveform_files = waveform_files(training_waveform_path)
+        right_pad, _ = check_waveform_files(
+            self.training_waveform_files, WaveformPolarizationSet
         )
-        if waveform_set.right_pad != self.right_pad:
+
+        if right_pad != self.right_pad:
             raise ValueError(
-                "Training waveform file does not have the same "
-                "right pad as validation waveform file"
+                "Training waveform files do not have the same "
+                "right pad as validation waveform files"
             )
 
     def get_train_waveforms(self, world_size, rank, device):
@@ -60,6 +59,9 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
     (https://docs.h5py.org/en/stable/high/dataset.html#chunked-storage).
     This has shown to produce increases in read-time speeds
     of over an order of magnitude.
+
+    Files can hold waveforms of different lengths, which are all cut to
+    the shortest by keeping their ends.
 
     Args:
         fnames:
@@ -132,7 +134,10 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
                     stacklevel=2,
                 )
 
-        self.waveform_size = dset.shape[1]
+        self.waveform_size = min(
+            datasets[self.channels[0]].shape[-1]
+            for datasets in self.mmap_datasets.values()
+        )
         self.probs = np.array([i / self.total for i in self.sizes.values()])
         self.rng = np.random.default_rng()
 
@@ -166,7 +171,9 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
     def load_chunk(self, fname, start, size):
         end = min(start + size, self.sizes[fname])
         return {
-            channel: self.mmap_datasets[fname][channel][start:end]
+            channel: self.mmap_datasets[fname][channel][
+                start:end, -self.waveform_size :
+            ]
             for channel in self.channels
         }
 

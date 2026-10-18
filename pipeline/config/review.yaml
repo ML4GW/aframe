@@ -10,7 +10,9 @@ test_end: 1251109263
 
 # --- Testing waveforms -------------------------------------------------------
 # a fifth of the production count, to keep the run short
-num_testing_signals: 100000
+populations:
+  bbh:
+    num_testing_signals: 100000
 
 # --- Inference ---------------------------------------------------------------
 # one month of background livetime rather than a year
