@@ -32,6 +32,7 @@ class ExportParams(law.Task):
         default="TENSORRT",
         description="Platform to use for exporting model for inference",
     )
+    output_shapes = luigi.OptionalDictParameter(default={"detection_statistic": []})
 
 
 @inherits(ExportParams)
@@ -68,6 +69,7 @@ class ExportLocal(AframeSingularityTask):
         args.append("--psd_length=" + str(self.psd_length))
         args.append("--streams_per_gpu=" + str(self.streams_per_gpu))
         args.append("--platform=" + str(self.platform))
+        args.append("--output_names=" + str([str(key) for key in self.output_shapes.keys()]))
         return args
 
     def run(self):
