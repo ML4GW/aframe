@@ -76,5 +76,9 @@ rule all:
     input:
         # stop_triton only exists in triton mode
         *([rules.stop_triton.output] if INFERENCE_MODE == "triton" else []),
-        rules.sensitive_volume.output,
-        expand(rules.generate_segments.output[0], split=["train", "test"]),
+        # R&P has no testing injections to measure sensitive volume with
+        *(
+            expand(rules.compute_sensitive_volume.output, population=POPULATIONS)
+            if ANALYSIS_TYPE == "hdf5"
+            else rules.aggregate_infer.output
+        ),

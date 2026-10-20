@@ -29,10 +29,26 @@ TRAIN_GPU_ENV = gpu_env(config["train_gpus"], config["train_num_gpus"])
 TRAIN_NUM_GPUS = config["train_num_gpus"]
 
 
+def _val_waveform_inputs(wildcards):
+    """Validation waveforms, one file per population."""
+    return expand(val_waveforms_file, population=POPULATIONS)
+
+
 def _train_waveform_inputs(wildcards):
-    """Pre-generated training waveforms, when enabled."""
-    if config["pregenerate_training_waveforms"]:
-        return [str(train_waveforms / "training_waveforms.hdf5")]
+    """Pre-generated training waveforms, one file per population, when enabled.
+
+    Snakemake calls this even when the model exists, to check it's up to
+    date, so it only insists on pregenerate_training_waveforms when there's
+    no model, i.e. when training is about to run.
+    """
+    model = train_out / "model_exported.pt2"
+    if PREGENERATE_TRAINING_WAVEFORMS is None and not model.exists():
+        raise WorkflowError(
+            "Training needs pregenerate_training_waveforms, which no active "
+            "population sets. Add it to the populations you train on."
+        )
+    if PREGENERATE_TRAINING_WAVEFORMS:
+        return expand(training_waveforms_file, population=POPULATIONS)
     return []
 
 
@@ -80,7 +96,7 @@ if config["remote_train"]:
         """
         input:
             background=train_background_files,
-            val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
+            val_waveforms=_val_waveform_inputs,
             train_waveforms=_train_waveform_inputs,
         output:
             touch(str(train_out / "remote_train.done")),
@@ -104,12 +120,13 @@ else:
         snakemake is invoked.
 
         AFRAME_TRAIN_WAVEFORMS_DIR is exported so the config resolves
-        to this run's validation/training waveform files. The GPU count
-        overrides trainer.devices in the train config.
+        to this run's val_waveforms/ and training_waveforms/, which hold a
+        file per population. The GPU count overrides trainer.devices in the
+        train config.
         """
         input:
             background=train_background_files,
-            val_waveforms=str(train_waveforms / "val_waveforms.hdf5"),
+            val_waveforms=_val_waveform_inputs,
             train_waveforms=_train_waveform_inputs,
         output:
             exported=str(train_out / "model_exported.pt2"),

@@ -10,13 +10,13 @@ max_duration: 2048.0
 
 train_config: pipeline/config/small_train.yaml
 
-num_training_signals: 2000
-num_train_waveform_jobs: 2
-
-num_validation_signals: 500
-num_validation_jobs: 2
-
-num_testing_signals: 500
+populations:
+  bbh:
+    num_training_signals: 2000
+    num_train_waveform_jobs: 2
+    num_validation_signals: 500
+    num_validation_jobs: 2
+    num_testing_signals: 500
 
 # Three shifts plus zero lag: 16 inference branches
 Tb: 20000.0

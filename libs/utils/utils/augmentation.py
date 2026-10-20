@@ -194,9 +194,13 @@ class HeterodyneAugmentor(torch.nn.Module):
         """
         _B, _C, _T = x.shape
         if self.top_k is not None:
-            x_heterodyned = torch.empty((_B, _C * self.top_k, _T))
+            x_heterodyned = torch.empty(
+                (_B, _C * self.top_k, _T), device=x.device
+            )
         else:
-            x_heterodyned = torch.empty((_B, _C * self.num_chirp_masses, _T))
+            x_heterodyned = torch.empty(
+                (_B, _C * self.num_chirp_masses, _T), device=x.device
+            )
         # Heterodyne the whitened timeseries
         x = self.heterodyne_transform(x)
         if self.top_k is not None:

@@ -42,8 +42,8 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
-        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms.hdf5
+        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms
+        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms
     dec:
       class_path: ml4gw.distributions.Cosine
     psi:

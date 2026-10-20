@@ -31,7 +31,8 @@ data:
   class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
   init_args:
     # loading args
-    # data_dir:
+    # background_dir:
+    # waveforms_dir:
     # ifos:
 
     # dataloading args
@@ -76,13 +77,13 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
-        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms.hdf5
+        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms
+        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms
     # waveform_sampler: 
     #   class_path: train.data.waveforms.generator.cbc.CBCGenerator
     #   init_args:
     #     training_prior: ./training_prior.yaml
-    #     val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms.hdf5
+    #     val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms
     #     approximant: ml4gw.waveforms.IMRPhenomPv2
     #     f_min: 20
     #     f_ref: 40

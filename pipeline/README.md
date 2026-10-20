@@ -20,7 +20,7 @@ export AFRAME_DATA_DIRS=...
 uv run build-containers # may need to build one at a time
 # For the ldg-transfer profile, also publish the ones condor jobs run in,
 # from a CIT AP. Repeat after changing an environment.
-python -m scripts.publish_images
+uv run python -m scripts.publish_images
 
 # One-time, for inference_mode: triton: pull the server image named by
 # triton_image in config.yaml
@@ -154,6 +154,64 @@ the profile (default `pipeline/profiles/ldg`).
 `run.sh` passes the default and run configs with `--configfiles`, in that
 order.
 
+## Populations
+
+A population is a set of waveform settings, e.g. `bbh`, `bns`, or any
+population generated using a CBC prior , defined under `populations` in the
+config. `active_populations` lists the ones a run uses:
+
+```yaml
+active_populations: [bbh, bns]
+populations:
+  bns:
+    prior: priors.priors.end_o3_ratesandpops_bns
+    waveform_duration: 25.0
+    num_testing_signals: 1000
+    ...
+```
+
+A population only needs the keys of the tasks it's used for (see the
+comment in `projects/data/data.smk`); a job that needs a missing key stops the
+run with the population and key it needs. Shared settings stay at the top level.
+
+**Waveforms.** Every waveform rule runs once per population. Testing
+waveforms give each population, in `active_populations` order, its own
+block of timeslides, so a timeslide never holds two populations. The
+`*_waveforms` rules have a `{population}` wildcard, so they can't be run
+by name; these target rules run them for every active population:
+
+```bash
+./run.sh testing_waveforms
+./run.sh val_waveforms
+./run.sh training_waveforms
+```
+
+**Training.** Training reads every file in `val_waveforms/` and
+`training_waveforms/`, so it uses all active populations, mixed in each
+batch in proportion to their `num_training_signals`. Waveforms of different
+lengths are cut to the shortest by keeping their ends, where the merger is,
+so every population needs the same `right_pad`, and the shortest needs to
+cover the window training uses around the merger. `val_waveform_file` and
+`training_waveform_path` in the train config can also name a single file,
+e.g. an older run's `val_waveforms.hdf5`, or one population's.
+
+**Inference.** Each inference branch, one background file at one
+timeslide, carries the population of the testing waveforms injected into
+it, or none for background-only branches such as zero lag. A group job
+never mixes two populations, so `aggregate_infer` writes one background
+from every group, `infer/background.hdf5`, and one foreground per
+population from only its groups, `infer/foreground_{population}.hdf5`.
+
+**Plots.** `population_sensitive_volume` computes each population's
+sensitive volume from its own foreground, rejected parameters,
+`mass_combos` and `source_prior`, against the shared background, into
+`plots/{population}/`. `./run.sh sensitive_volume` runs it for every
+active population.
+
+**R&P.** With `analysis_type: rnp`, the frames carry their own injections,
+so populations don't apply: inference writes a single
+`infer/foreground.hdf5`.
+
 ## Data layout
 
 All paths are relative to the run directory:
@@ -161,8 +219,10 @@ All paths are relative to the run directory:
 ```
 data/{train,test}/segments.txt
 data/{train,test}/background-{start}-{duration}.hdf5
-waveforms/train/{val_waveforms,training_waveforms}.hdf5
-waveforms/test/{waveforms,rejected_parameters}.hdf5
+waveforms/train/{population}/psd.hdf5
+waveforms/train/val_waveforms/val_waveforms_{population}.hdf5
+waveforms/train/training_waveforms/training_waveforms_{population}.hdf5
+waveforms/test/{population}/{waveforms,rejected_parameters,psd}.hdf5
 {train,export,triton,infer,plots}/...
 logs/
 code/
@@ -170,7 +230,11 @@ code/
 
 `background_dir` and `waveforms_dir` name another run's `data/` or
 `waveforms/` to use instead of generating new data. Their files are linked
-into this run, and new files stay in this run's directory.
+into this run, and new files stay in this run's directory. Testing
+waveforms are only reused from a run with the same per-population layout
+and settings; a run made before populations has its testing files directly
+in `waveforms/test/`, and they must be moved into `waveforms/test/{population}/`
+to be reused.
 
 Each `./run.sh` copies the files git knows about into a read-only `code/`
 and runs that copy, so edits to the local repo take effect when the run is
