@@ -1,5 +1,6 @@
 import numpy as np
 from ledger.events import EventSet
+from utils.streaming import StreamOutputs
 
 
 class Postprocessor:
@@ -34,45 +35,21 @@ class Postprocessor:
                 Length of the clustering window in seconds
         """
 
-        self.inference_sampling_rate = inference_sampling_rate
+        self.stream_outputs = StreamOutputs(
+            inference_sampling_rate,
+            fduration,
+            integration_window_length,
+            psd_length,
+        )
         self.shifts = shifts
 
-        # offset our initial time both by the psd data
-        # that we're going to slough off as well as by
-        # the filter settle-in and integration time, plus
-        # one inference step since the first output is
-        # produced from a full window ending one step in
-        self.t0 = (
-            t0
-            + psd_length
-            - fduration / 2
-            - integration_window_length
-            + 1 / inference_sampling_rate
-        )
-        self.offset = int(psd_length * inference_sampling_rate)
-
-        # convert our window lengths to sample units
-        self.integration_window_size = (
-            int(inference_sampling_rate * integration_window_length) + 1
+        # timestamp of the first output kept after dropping the burn-in
+        self.t0 = self.stream_outputs.timestamp(
+            t0, self.stream_outputs.burn_in_size
         )
         self.cluster_window_size = int(
             inference_sampling_rate * cluster_window_length
         )
-
-    def integrate(self, y: np.ndarray) -> np.ndarray:
-        """
-        Convolve predictions with boxcar filter
-        to get local integration, slicing off of
-        the last values so that timeseries represents
-        integration of _past_ data only.
-        "Full" convolution means first few samples are
-        integrated with 0s, so will have a lower magnitude
-        than they technically should.
-        """
-        window_size = self.integration_window_size
-        window = np.ones((window_size,)) / window_size
-        integrated = np.convolve(y, window, mode="full")
-        return integrated[: -window_size + 1]
 
     def cluster(self, y) -> EventSet:
         # initial our search index to be in the first
@@ -100,13 +77,13 @@ class Postprocessor:
                 # the value and reset the index to be the
                 # first value outside the current window
                 events.append(val)
-                t = self.t0 + i / self.inference_sampling_rate
+                t = self.t0 + i / self.stream_outputs.inference_sampling_rate
                 times.append(t)
                 i += window_size + 1
 
         # record all this info and some
         # metadata into a ledger object
-        Tb = len(y) / self.inference_sampling_rate
+        Tb = len(y) / self.stream_outputs.inference_sampling_rate
         events = np.array(events)
         times = np.array(times)
         shifts = np.ones((len(events), len(self.shifts))) * self.shifts
@@ -118,7 +95,6 @@ class Postprocessor:
         # just return an empty event set
         if y is None:
             return EventSet()
-        y = y[self.offset :]
-        y = self.integrate(y)
-        y = self.cluster(y)
-        return y
+        burn_in = self.stream_outputs.burn_in_size
+        y = self.stream_outputs.integrate(y[burn_in:], first_output=burn_in)
+        return self.cluster(y)

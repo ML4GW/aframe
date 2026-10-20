@@ -9,6 +9,7 @@ import numpy as np
 from gwpy.time import tconvert
 from ledger.events import EventSet
 from online.dataloading.online import get_prefix
+from utils.streaming import StreamOutputs
 
 SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
 
@@ -103,14 +104,14 @@ class Searcher:
         self,
         background: EventSet,
         far_threshold: float,
-        online_inference_rate: float,
+        stream_outputs: StreamOutputs,
         refractory_period: float,
         ifos: list[str],
         channels: str,
         datadir: Path,
         ifo_suffix: str | None = None,
     ) -> None:
-        self.online_inference_rate = online_inference_rate
+        self.stream_outputs = stream_outputs
         self.refractory_period = refractory_period
         # Take only the first two ifos/channels for H1/L1
         # Hard-coding this until there's an HLV Aframe model
@@ -146,7 +147,8 @@ class Searcher:
         return False
 
     def build_event(self, value: float, t0: float, idx: int):
-        timestamp = t0 + idx / self.online_inference_rate
+        """Build an event from output `idx` of the update starting at `t0`"""
+        timestamp = self.stream_outputs.timestamp(t0, idx)
 
         if self.check_refractory(timestamp, value):
             return None
@@ -187,10 +189,8 @@ class Searcher:
         timeseries of integrated network outputs
         `significance_outputs` and use the peak
         index of `timing_outputs` to estimate a
-        merger time. `t0` should represent the
-        timestamp of the last sample of *input*
-        to the *neural network* that represents the
-        *first sample* of the integration window.
+        merger time. `t0` is the start of the update
+        the outputs were computed from.
         """
 
         max_val = significance_outputs.max()
