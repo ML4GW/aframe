@@ -3,9 +3,11 @@ import time
 
 import numpy as np
 from hermes.aeriel.client import InferenceClient
+from ledger.events import EventSet, RecoveredInjectionSet
 from tqdm import tqdm
 
-from infer.data import BaseSequence
+from infer.data import BaseSequence, ShiftBatchSequence
+from infer.local import LocalInferenceClient
 from infer.postprocess import Postprocessor
 
 
@@ -13,7 +15,7 @@ def infer(
     client: InferenceClient,
     sequence: BaseSequence,
     postprocessor: Postprocessor,
-):
+) -> tuple[EventSet, EventSet, np.ndarray, np.ndarray | None]:
     """
     Perform inference on a sequence of data.
 
@@ -89,3 +91,19 @@ def infer(
 
     logging.info(f"Finished processing sequence {sequence.id}")
     return background, foreground, background_ts, foreground_ts
+
+
+def infer_shift_batch(
+    client: LocalInferenceClient,
+    sequence: ShiftBatchSequence,
+    postprocessors: list[Postprocessor],
+) -> list[
+    tuple[EventSet, RecoveredInjectionSet, np.ndarray, np.ndarray | None]
+]:
+    """Run inference on one file at several shifts at once."""
+    client.reset()
+    outputs = []
+    for update in tqdm(sequence):
+        outputs.append(client.infer_streams(update, sequence.psd_source))
+
+    return sequence.results(np.concatenate(outputs, axis=-1), postprocessors)

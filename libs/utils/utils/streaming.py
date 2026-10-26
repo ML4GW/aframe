@@ -51,7 +51,7 @@ class StreamLayout:
         num_pad_outputs = self.num_pad // self.stride
         return self.num_batches * self.batch_size - num_pad_outputs
 
-    def batch_bounds(self, batch_idx: int):
+    def batch_bounds(self, batch_idx: int) -> tuple[int, int, bool]:
         """Sample range for one batch, and whether it is the last one."""
         last = batch_idx == self.num_batches - 1
         start = batch_idx * self.step_size

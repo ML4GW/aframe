@@ -127,6 +127,11 @@ inference_backend: export
 # Maximum number of (file, shift) branches each job processes.
 branches_per_job: 1
 
+# Number of a job's shifts run through the model together, for in-process
+# inference on hdf5 data with the export or compile backend. When grouping
+# shifts together, each batch is cut short by its largest shift.
+shifts_per_batch: 1
+
 # Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data
 kernel_length: 1.5               # model input window (seconds)

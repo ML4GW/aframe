@@ -12,7 +12,9 @@ Supports three backends:
 
 import logging
 
+import numpy as np
 import torch
+from ml4gw.utils.slicing import unfold_windows
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 
@@ -84,12 +86,14 @@ class LocalInferenceClient:
         ).to(device)
         # one streaming snapshot state per sequence id (background + injection)
         self._states: dict[int, torch.Tensor] = {}
+        self._stream_state: torch.Tensor | None = None
         self._result = None
         logging.info(f"LocalInferenceClient ready (backend={backend})")
 
     def reset(self):
         """Clear between branches when the client is reused"""
         self._states.clear()
+        self._stream_state = None
         self._result = None
 
     def _state(self, sequence_id):
@@ -122,6 +126,69 @@ class LocalInferenceClient:
             self._result = result
         if sequence_end:
             del self._states[sequence_id]
+
+    def infer_streams(
+        self, update: np.ndarray, psd_source: list[int]
+    ) -> np.ndarray:
+        """
+        Send a batch update with several streams through the model.
+
+        Args:
+            update:
+                The new samples for this step, of shape `(N, C, step)`.
+            psd_source:
+                `N` indices. The `i`th stream of `update` is whitened by
+                the PSD of stream `psd_source[i]`.
+
+        Returns:
+            Array of model outputs with shape `(N, batch_size)`.
+
+        """
+        num_streams, num_channels, _ = update.shape
+
+        with torch.no_grad():
+            # Move the new data to the device and append it to the streams'
+            # snapshot state.
+            x = torch.tensor(update, dtype=torch.float32, device=self.device)
+            if self._stream_state is None:
+                self._stream_state = torch.zeros(
+                    num_streams,
+                    num_channels,
+                    self.snapshotter.state_size,
+                    device=self.device,
+                )
+            full, state = self.snapshotter(x, self._stream_state)
+            self._stream_state = state
+
+            # Do the splitting, PSD estimation, and whitening manually, as
+            # opposed to using the BatchWhitener, to avoid the logic in the
+            # PsdEstimator that says that a batch of exactly two means that
+            # the data from the second batch element should be whitened with
+            # the PSD from the first batch element.
+            size = self.whitener.psd_estimator.size
+            psd_part, data = torch.split(
+                full, [full.shape[-1] - size, size], dim=-1
+            )
+            psds = self.whitener.psd_estimator.spectral_density(
+                psd_part[psd_source].double()
+            )
+            whitened = self.whitener.whitener(data.double(), psds)
+
+            # Unfold the whitened streams into kernels, and reshape so
+            # that the ordering goes stream by stream and different streams'
+            # outputs aren't interleaved.
+            kernels = unfold_windows(
+                whitened,
+                self.whitener.kernel_size,
+                self.whitener.stride_size,
+            ).transpose(0, 1)
+
+            kernels = kernels.reshape(
+                -1, num_channels, self.whitener.kernel_size
+            )
+
+            y = self.model(kernels)
+        return y.cpu().reshape(num_streams, -1).numpy()
 
     def get(self, until_empty: bool = False):
         return self._result

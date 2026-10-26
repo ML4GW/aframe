@@ -21,8 +21,8 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from utils.logging import configure_logging
 
 from infer.aggregate import merge_timeseries, write_timeseries
-from infer.data import Hdf5Sequence, RnPSequence
-from infer.main import infer
+from infer.data import Hdf5Sequence, RnPSequence, ShiftBatchSequence
+from infer.main import infer, infer_shift_batch
 from infer.postprocess import Postprocessor
 
 
@@ -42,6 +42,18 @@ def _write_outputs(outdir, branch_id, results, seq, postproc, cfg):
             inference_sampling_rate=cfg.inference_sampling_rate,
             shifts=postproc.shifts,
         )
+
+
+def _postprocessor(cfg, t0, shifts) -> Postprocessor:
+    return Postprocessor(
+        t0=t0,
+        shifts=shifts,
+        psd_length=cfg.psd_length,
+        fduration=cfg.fduration,
+        inference_sampling_rate=cfg.inference_sampling_rate,
+        integration_window_length=cfg.integration_window_length,
+        cluster_window_length=cfg.cluster_window_length,
+    )
 
 
 def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
@@ -72,17 +84,46 @@ def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
             rate=rate,
         )
     client.callback = seq
-    postproc = Postprocessor(
-        t0=seq.t0,
-        shifts=shifts,
-        psd_length=cfg.psd_length,
-        fduration=cfg.fduration,
-        inference_sampling_rate=cfg.inference_sampling_rate,
-        integration_window_length=cfg.integration_window_length,
-        cluster_window_length=cfg.cluster_window_length,
-    )
+    postproc = _postprocessor(cfg, seq.t0, shifts)
     results = infer(client, seq, postproc)
     _write_outputs(outdir, branch_id, results, seq, postproc, cfg)
+
+
+def _run_shift_batches(client, cfg, branches: dict, scratch: Path) -> None:
+    """Run a group's branches in batches of shifts_per_batch shifts."""
+    items = list(branches.items())
+    batches = [
+        items[i : i + cfg.shifts_per_batch]
+        for i in range(0, len(items), cfg.shifts_per_batch)
+    ]
+
+    for batch in batches:
+        fname = batch[0][1]["fname"]
+        sequence = ShiftBatchSequence(
+            fname,
+            [branch["waveforms"] for _, branch in batch],
+            cfg.ifos,
+            [branch["shifts"] for _, branch in batch],
+            cfg.inference_sampling_rate,
+            cfg.batch_size,
+        )
+        postprocessors = [
+            _postprocessor(cfg, sequence.t0, branch["shifts"])
+            for _, branch in batch
+        ]
+
+        results = infer_shift_batch(client, sequence, postprocessors)
+        for (branch_id, _), result, postproc in zip(
+            batch, results, postprocessors, strict=True
+        ):
+            _write_outputs(
+                outdir=scratch / branch_id,
+                branch_id=branch_id,
+                results=result,
+                seq=sequence,
+                postproc=postproc,
+                cfg=cfg,
+            )
 
 
 def _resolve_branches(cfg):
@@ -153,7 +194,7 @@ def _merge_group(cfg, branches, scratch):
         )
 
 
-def _run_group(client, cfg, rate=None, reset=None):
+def _run_group(client, cfg, rate=None, reset=None, shifts_per_batch=1):
     branches = _resolve_branches(cfg)
 
     # Per-branch outputs only exist until they're merged. Keep them next
@@ -163,17 +204,20 @@ def _run_group(client, cfg, rate=None, reset=None):
     with tempfile.TemporaryDirectory(dir=outdir) as scratch:
         scratch = Path(scratch)
         with client:
-            for branch_id, branch in branches.items():
-                if reset:
-                    reset()
-                _run_branch(
-                    client,
-                    cfg,
-                    branch_id=branch_id,
-                    branch=branch,
-                    outdir=scratch / branch_id,
-                    rate=rate,
-                )
+            if shifts_per_batch > 1:
+                _run_shift_batches(client, cfg, branches, scratch)
+            else:
+                for branch_id, branch in branches.items():
+                    if reset:
+                        reset()
+                    _run_branch(
+                        client,
+                        cfg,
+                        branch_id=branch_id,
+                        branch=branch,
+                        outdir=scratch / branch_id,
+                        rate=rate,
+                    )
         _merge_group(cfg, branches, scratch)
 
 
@@ -233,6 +277,7 @@ def main_local(args=None):
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
     p.add_argument("--channel", type=str, default=None)  # R&P frames
+    p.add_argument("--shifts_per_batch", type=int, default=1)
     cfg = p.parse_args(args)
     if cfg.logfile is not None:
         Path(cfg.logfile).parent.mkdir(parents=True, exist_ok=True)
@@ -254,4 +299,6 @@ def main_local(args=None):
         highpass=cfg.highpass,
         fftlength=cfg.fftlength,
     )
-    _run_group(client, cfg, reset=client.reset)
+    _run_group(
+        client, cfg, reset=client.reset, shifts_per_batch=cfg.shifts_per_batch
+    )
