@@ -3,10 +3,10 @@ import time
 
 import numpy as np
 from hermes.aeriel.client import InferenceClient
-from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.events import EventSet
 from tqdm import tqdm
 
-from infer.data import BaseSequence, ShiftBatchSequence
+from infer.data import BaseSequence, RnPStreamSequence, ShiftBatchSequence
 from infer.local import LocalInferenceClient
 from infer.postprocess import Postprocessor
 
@@ -93,14 +93,12 @@ def infer(
     return background, foreground, background_ts, foreground_ts
 
 
-def infer_shift_batch(
+def infer_local(
     client: LocalInferenceClient,
-    sequence: ShiftBatchSequence,
+    sequence: ShiftBatchSequence | RnPStreamSequence,
     postprocessors: list[Postprocessor],
-) -> list[
-    tuple[EventSet, RecoveredInjectionSet, np.ndarray, np.ndarray | None]
-]:
-    """Run inference on one file at several shifts at once."""
+) -> list[tuple[EventSet, EventSet, np.ndarray, np.ndarray | None]]:
+    """Run inference in-process on every stream of a sequence at once."""
     client.reset()
     outputs = []
     for update in tqdm(sequence):

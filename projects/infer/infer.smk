@@ -5,6 +5,11 @@ Both run branches in groups of at most `branches_per_job` via
 `infer-triton` / `infer-local`, and both write the same outputs.
 The `compute_branch_map` rule and the aggregate rules are shared.
 
+    inprocess (default): Each group job is one GPU job that loads the
+               model locally and runs several shifts of a file at once.
+               Best when there are many GPUs available and jobs can be
+               scheduled on them; e.g., Delta or OSG.
+
     triton: A Triton server on the submit node hosts the model, and each group
             job is a CPU client, also on the submit node, that streams its
             branches to it. Best when GPUs are scarce but multiple exist on
