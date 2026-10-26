@@ -27,12 +27,7 @@ def build_model(weights, backend, device, aoti_path=None):
         # `torch` local to this function, breaking the other backends.
         from torch._inductor import codecache  # noqa: F401
 
-        runner = torch._inductor.aoti_load_package(str(aoti_path))
-
-        def model(kernels):
-            return runner(kernels)[0]
-
-        return model
+        return torch._inductor.aoti_load_package(str(aoti_path))
 
     if backend in ("export", "compile"):
         exported = torch.export.load(weights)
