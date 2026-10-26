@@ -1,8 +1,7 @@
-"""In-process inference setup that mirrors the Hermes InferenceClient.
+"""In-process inference: the snapshotter -> whitener -> NN ensemble on a GPU.
 
-Runs the snapshotter -> whitener -> NN ensemble locally on the GPU instead
-of streaming to a Triton server. Has the same interface as InferenceClient,
-so it can be used in main.infer() with the same Sequence and Postprocessor.
+Streams the updates of a stream sequence through the model locally instead of
+sending them to a Triton server.
 
 Supports three backends:
     export: load ExportedProgram and run as a GraphModule. GPU agnostic
@@ -45,14 +44,13 @@ def build_model(weights, backend, device, aoti_path=None):
 
 
 class LocalInferenceClient:
-    """Run the streaming ensemble locally. Same interface as InferenceClient"""
+    """Run the streaming ensemble locally, several streams at a time."""
 
     def __init__(
         self,
         weights: str,
         backend: str = "export",
         aoti_path: str | None = None,
-        num_ifos: int = 2,
         psd_length: float = 64.0,
         kernel_length: float = 1.5,
         fduration: float = 1.0,
@@ -62,11 +60,8 @@ class LocalInferenceClient:
         highpass: float = 32.0,
         fftlength: float | None = None,
         device: str = "cuda",
-        callback=None,
     ):
         self.device = device
-        self.callback = callback
-        self.num_ifos = num_ifos
         self.model = build_model(weights, backend, device, aoti_path)
         self.snapshotter = BackgroundSnapshotter(
             psd_length=psd_length,
@@ -84,48 +79,12 @@ class LocalInferenceClient:
             fftlength=fftlength,
             highpass=highpass,
         ).to(device)
-        # one streaming snapshot state per sequence id (background + injection)
-        self._states: dict[int, torch.Tensor] = {}
         self._stream_state: torch.Tensor | None = None
-        self._result = None
         logging.info(f"LocalInferenceClient ready (backend={backend})")
 
     def reset(self):
-        """Clear between branches when the client is reused"""
-        self._states.clear()
+        """Clear the streams' state before a new sequence"""
         self._stream_state = None
-        self._result = None
-
-    def _state(self, sequence_id):
-        if sequence_id not in self._states:
-            self._states[sequence_id] = torch.zeros(
-                2,  # background + injection
-                self.num_ifos,
-                self.snapshotter.state_size,
-                device=self.device,
-            )
-        return self._states[sequence_id]
-
-    def infer(
-        self,
-        x,
-        request_id=None,
-        sequence_id=None,
-        sequence_start=False,
-        sequence_end=False,
-    ):
-        with torch.no_grad():
-            xt = torch.tensor(x, dtype=torch.float32, device=self.device)
-            full, state = self.snapshotter(xt, self._state(sequence_id))
-            self._states[sequence_id] = state
-            y = self.model(self.whitener(full))
-        result = self.callback(
-            y.detach().cpu().numpy(), request_id, sequence_id
-        )
-        if result is not None:
-            self._result = result
-        if sequence_end:
-            del self._states[sequence_id]
 
     def infer_streams(
         self, update: np.ndarray, psd_source: list[int]
@@ -189,13 +148,3 @@ class LocalInferenceClient:
 
             y = self.model(kernels)
         return y.cpu().reshape(num_streams, -1).numpy()
-
-    def get(self, until_empty: bool = False):
-        return self._result
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        self._states.clear()
-        return False

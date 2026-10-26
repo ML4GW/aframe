@@ -1,13 +1,15 @@
 """Inference CLI for groups of branches.
 
 Two entry points:
-    infer-triton: stream branches to a running Triton server.
-    infer-local: run branches in-process on a GPU.
+    infer-local: run branches in-process on a GPU, several shifts of a file
+        at a time, through main.infer_local().
+    infer-triton: stream branches one at a time to a running Triton server,
+        through main.infer(). Only for hdf5 analyses.
 
-Both use the same main.infer() loop and Postprocessor, so outputs are
-identical and aggregate_infer is client agnostic.
+Both use the same Postprocessor and write the same outputs, so
+aggregate_infer is client agnostic.
 
---analysis_type selects the Sequence: hdf5 (timeslide background + injections)
+--analysis_type selects the data: hdf5 (timeslide background + injections)
 or rnp (Rates and Populations frames).
 """
 
@@ -21,8 +23,8 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from utils.logging import configure_logging
 
 from infer.aggregate import merge_timeseries, write_timeseries
-from infer.data import Hdf5Sequence, RnPSequence, ShiftBatchSequence
-from infer.main import infer, infer_shift_batch
+from infer.data import Hdf5Sequence, RnPStreamSequence, ShiftBatchSequence
+from infer.main import infer, infer_local
 from infer.postprocess import Postprocessor
 
 
@@ -56,41 +58,58 @@ def _postprocessor(cfg, t0, shifts) -> Postprocessor:
     )
 
 
-def _run_branch(client, cfg, branch_id, branch, outdir, rate=None):
-    shifts = branch["shifts"]
-    # Branch IDs are unique within a run, so use it to get a pair of unique
-    # sequence IDs for background and foreground. Triton handles an ID of 0
-    # as a special case, so avoid it.
-    sequence_id = 2 * int(branch_id) + 1
+def _run_triton(client, cfg, branches: dict, scratch: Path) -> None:
+    """Stream a group's branches to the Triton server one at a time."""
+    with client:
+        for branch_id, branch in branches.items():
+            shifts = branch["shifts"]
+            # Branch IDs are unique within a run, so use it to get a pair of
+            # unique sequence IDs for background and foreground. Triton
+            # handles an ID of 0 as a special case, so avoid it.
+            seq = Hdf5Sequence(
+                2 * int(branch_id) + 1,
+                branch["fname"],
+                branch["waveforms"],
+                cfg.ifos,
+                shifts,
+                cfg.inference_sampling_rate,
+                cfg.batch_size,
+                rate=cfg.rate,
+            )
+            client.callback = seq
+            postproc = _postprocessor(cfg, seq.t0, shifts)
+            results = infer(client, seq, postproc)
+            _write_outputs(
+                scratch / branch_id, branch_id, results, seq, postproc, cfg
+            )
+
+
+def _local_sequence(cfg, batch):
+    """The stream sequence for a batch of branches that share one file."""
+    fname = batch[0][1]["fname"]
     if cfg.analysis_type == "rnp":
-        seq = RnPSequence(
-            sequence_id=sequence_id,
-            injection_file=Path(branch["fname"]),
-            channel=cfg.channel,
-            ifos=cfg.ifos,
-            sample_rate=cfg.sample_rate,
-            inference_sampling_rate=cfg.inference_sampling_rate,
-            batch_size=cfg.batch_size,
-        )
-    else:
-        seq = Hdf5Sequence(
-            sequence_id,
-            branch["fname"],
-            branch["waveforms"],
+        return RnPStreamSequence(
+            Path(fname),
+            cfg.channel,
             cfg.ifos,
-            shifts,
+            cfg.sample_rate,
             cfg.inference_sampling_rate,
             cfg.batch_size,
-            rate=rate,
         )
-    client.callback = seq
-    postproc = _postprocessor(cfg, seq.t0, shifts)
-    results = infer(client, seq, postproc)
-    _write_outputs(outdir, branch_id, results, seq, postproc, cfg)
+    return ShiftBatchSequence(
+        fname,
+        [branch["waveforms"] for _, branch in batch],
+        cfg.ifos,
+        [branch["shifts"] for _, branch in batch],
+        cfg.inference_sampling_rate,
+        cfg.batch_size,
+    )
 
 
-def _run_shift_batches(client, cfg, branches: dict, scratch: Path) -> None:
-    """Run a group's branches in batches of shifts_per_batch shifts."""
+def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
+    """Run a group's branches in-process, in batches of shifts_per_batch
+    shifts. Each R&P branch is its own frame, so R&P runs use a
+    shifts_per_batch of 1."""
     items = list(branches.items())
     batches = [
         items[i : i + cfg.shifts_per_batch]
@@ -98,21 +117,13 @@ def _run_shift_batches(client, cfg, branches: dict, scratch: Path) -> None:
     ]
 
     for batch in batches:
-        fname = batch[0][1]["fname"]
-        sequence = ShiftBatchSequence(
-            fname,
-            [branch["waveforms"] for _, branch in batch],
-            cfg.ifos,
-            [branch["shifts"] for _, branch in batch],
-            cfg.inference_sampling_rate,
-            cfg.batch_size,
-        )
+        sequence = _local_sequence(cfg, batch)
         postprocessors = [
             _postprocessor(cfg, sequence.t0, branch["shifts"])
             for _, branch in batch
         ]
 
-        results = infer_shift_batch(client, sequence, postprocessors)
+        results = infer_local(client, sequence, postprocessors)
         for (branch_id, _), result, postproc in zip(
             batch, results, postprocessors, strict=True
         ):
@@ -194,7 +205,12 @@ def _merge_group(cfg, branches, scratch):
         )
 
 
-def _run_group(client, cfg, rate=None, reset=None, shifts_per_batch=1):
+def _run_group(client, cfg, run_branches):
+    """Run a group's branches with `run_branches`, then merge their outputs.
+
+    `run_branches(client, cfg, branches, scratch)` writes each branch's
+    outputs to `scratch / branch_id`.
+    """
     branches = _resolve_branches(cfg)
 
     # Per-branch outputs only exist until they're merged. Keep them next
@@ -203,21 +219,7 @@ def _run_group(client, cfg, rate=None, reset=None, shifts_per_batch=1):
     outdir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=outdir) as scratch:
         scratch = Path(scratch)
-        with client:
-            if shifts_per_batch > 1:
-                _run_shift_batches(client, cfg, branches, scratch)
-            else:
-                for branch_id, branch in branches.items():
-                    if reset:
-                        reset()
-                    _run_branch(
-                        client,
-                        cfg,
-                        branch_id=branch_id,
-                        branch=branch,
-                        outdir=scratch / branch_id,
-                        rate=rate,
-                    )
+        run_branches(client, cfg, branches, scratch)
         _merge_group(cfg, branches, scratch)
 
 
@@ -263,7 +265,7 @@ def main_triton(args=None):
         model_version=cfg.model_version,
         batch_size=cfg.batch_size,
     )
-    _run_group(client, cfg, rate=cfg.rate)
+    _run_group(client, cfg, _run_triton)
 
 
 def main_local(args=None):
@@ -289,7 +291,6 @@ def main_local(args=None):
         weights=cfg.weights,
         backend=cfg.backend,
         aoti_path=cfg.aoti_path,
-        num_ifos=len(cfg.ifos),
         psd_length=cfg.psd_length,
         kernel_length=cfg.kernel_length,
         fduration=cfg.fduration,
@@ -299,6 +300,4 @@ def main_local(args=None):
         highpass=cfg.highpass,
         fftlength=cfg.fftlength,
     )
-    _run_group(
-        client, cfg, reset=client.reset, shifts_per_batch=cfg.shifts_per_batch
-    )
+    _run_group(client, cfg, _run_local)

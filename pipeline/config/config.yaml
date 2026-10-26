@@ -111,9 +111,10 @@ analysis_type: hdf5
 # rnp_channel: <channel>               # channel within the frames
 
 # Inference mode:
-#   - triton: Triton server on GPU + streaming CPU clients
 #   - inprocess: self-contained GPU jobs, model loaded locally per job
-inference_mode: triton
+#   - triton: Triton server on GPU + streaming CPU clients. hdf5 only, and
+#             shifts_per_batch must be 1
+inference_mode: inprocess
 
 # Model backend for in-process inference::
 #   - export: model_exported.pt2 run as a GraphModule. Portable across GPU archs.

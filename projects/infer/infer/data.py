@@ -291,104 +291,6 @@ class Hdf5Sequence(BaseSequence):
         return RecoveredInjectionSet.recover(foreground, self.injection_set)
 
 
-class RnPSequence(BaseSequence):
-    def __init__(
-        self,
-        sequence_id: int,
-        injection_file: Path,
-        channel: str,
-        ifos: list[str],
-        sample_rate: float,
-        inference_sampling_rate: float,
-        batch_size: int,
-    ):
-        """
-        Iterate over an injection frame that already contains injected signals.
-        The same data is yielded as both "background" and "foreground", with
-        no event recovery performed.
-
-        Each sequence is one frame, so the PSD burn-in is performed on each
-        frame. PSD length should be short enough that this doesn't impact
-        performance much.
-
-        Args:
-            sequence_id:
-                ID for the background stream, with the foreground using the
-                next one. Must be nonzero and unique.
-            injection_file:
-                R&P injection frame file to analyze
-            channel:
-                Channel name within the frame, combined as {ifo}:{channel}
-            ifos:
-                Interferometer names
-            sample_rate:
-                Sample rate the data is resampled to for inference
-            inference_sampling_rate:
-                Rate at which inference is performed
-            batch_size:
-                Number of inference requests to send to the model at once
-        """
-        logging.info("Initializing sequence")
-        self.sample_rate = sample_rate
-        # always in-process: no server to throttle, so rate is always None
-        super().__init__(
-            sequence_id=sequence_id,
-            inference_sampling_rate=inference_sampling_rate,
-            batch_size=batch_size,
-            rate=None,
-            injection_file=injection_file,
-            channel=channel,
-            ifos=ifos,
-        )
-
-    def _setup(
-        self,
-        injection_file: Path,
-        channel: str,
-        ifos: list[str],
-    ):
-        self.ifos = ifos
-        # Don't shift timeseries for R&P injections
-        self.shifts = np.zeros(len(ifos), dtype=int)
-        self.channels = [f"{ifo}:{channel}" for ifo in ifos]
-
-        self.injection_file = Path(injection_file)
-        match = FNAME_RE.search(self.injection_file.name)
-        if not match:
-            raise ValueError(
-                f"{self.injection_file.name} does not match expected pattern"
-            )
-        self.t0 = int(match.group("start"))
-        self.duration = int(match.group("duration"))
-        self.size = int(self.duration * self.sample_rate)
-
-        injected = TimeSeriesDict.read(
-            self.injection_file, channels=self.channels
-        ).resample(self.sample_rate)
-        self.timeseries = np.stack(
-            [injected[ch].value for ch in self.channels]
-        ).astype(np.float32)
-
-    @property
-    def inference_filename(self):
-        return self.injection_file.name
-
-    @property
-    def has_foreground(self):
-        return True
-
-    def __iter__(self):
-        for i in range(len(self)):
-            start, end, last = self.stream_layout.batch_bounds(i)
-            x_inj = self.timeseries[:, start:end]
-            x_inj = self._pad_last_batch(x_inj) if last else x_inj
-            # yield the same data as background and foreground
-            yield x_inj, x_inj
-
-    def recover(self, foreground: EventSet) -> EventSet:
-        return foreground
-
-
 def read_shifted(
     f: h5py.File,
     ifos: list[str],
@@ -401,7 +303,7 @@ def read_shifted(
 
     Args:
         f: h5py.File object to read from
-        ifos: List of interferomters
+        ifos: List of interferometers
         shifts:
             Arrays of shifts, in units of samples, of shape [S, C], with
             one row per shift and one column per detector
@@ -601,3 +503,79 @@ class ShiftBatchSequence:
             )
 
         return results
+
+
+class RnPStreamSequence:
+    """Stream one R&P frame, whose data already contains its injections."""
+
+    def __init__(
+        self,
+        injection_file: Path,
+        channel: str,
+        ifos: list[str],
+        sample_rate: float,
+        inference_sampling_rate: float,
+        batch_size: int,
+    ):
+        """
+        Args:
+            injection_file: R&P file matching "{prefix}-{start}-{duration}.gwf"
+            channel:
+                Channel name within the frame, which is read as
+                f"{ifo}:{channel}"
+            ifos: Interferometer names
+            sample_rate:
+                The sampling rate in Hz to which to resample the data in the
+                frame file
+            inference_sampling_rate: The rate of the model's outputs in Hz
+            batch_size: Number of outputs the stream produces per step
+        """
+        self.injection_file = Path(injection_file)
+        match = FNAME_RE.search(self.injection_file.name)
+        if not match:
+            raise ValueError(
+                f"{self.injection_file.name} does not match expected pattern"
+            )
+        self.t0 = int(match.group("start"))
+        duration = int(match.group("duration"))
+        self.size = int(duration * sample_rate)
+
+        channels = [f"{ifo}:{channel}" for ifo in ifos]
+        injected = TimeSeriesDict.read(
+            self.injection_file, channels=channels
+        ).resample(sample_rate)
+        self.timeseries = np.stack(
+            [injected[ch].value for ch in channels]
+        ).astype(np.float32)
+
+        self.stream_layout = StreamLayout(
+            self.size, batch_size, int(sample_rate / inference_sampling_rate)
+        )
+
+    def __len__(self) -> int:
+        return self.stream_layout.num_batches
+
+    def __iter__(self) -> Iterator[np.ndarray]:
+        """
+        Iterate through the timeseries, yielding batches. The frame is a
+        single stream, so add a leading axis of size one.
+        """
+        for i in range(len(self)):
+            start, end, last = self.stream_layout.batch_bounds(i)
+            x = self.timeseries[:, start:end]
+            if last:
+                padding = ((0, 0), (0, self.stream_layout.num_pad))
+                x = np.pad(x, padding, "constant")
+            yield x[None]
+
+    @property
+    def psd_source(self) -> list[int]:
+        return [0]
+
+    def results(
+        self, outputs: np.ndarray, postprocessors: list[Postprocessor]
+    ) -> list[tuple[EventSet, EventSet, np.ndarray, np.ndarray]]:
+        # Trim the outputs computed from the padding of the final step.
+        timeseries = outputs[0, : self.stream_layout.num_outputs]
+        events = postprocessors[0](timeseries)
+        return [(events, events, timeseries, timeseries)]
