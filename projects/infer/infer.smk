@@ -58,6 +58,17 @@ if ANALYSIS_TYPE not in ("hdf5", "rnp"):
 if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
     raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
 
+SHIFTS_PER_BATCH = config["shifts_per_batch"]
+if SHIFTS_PER_BATCH > 1 and (
+    INFERENCE_MODE != "inprocess"
+    or INFERENCE_BACKEND == "aoti"
+    or ANALYSIS_TYPE != "hdf5"
+):
+    raise WorkflowError(
+        "shifts_per_batch > 1 requires inference_mode 'inprocess', "
+        "analysis_type 'hdf5', and the export or compile backend"
+    )
+
 INFER_CONTAINER = container("infer")
 
 # The foreground aggregate_foreground writes: one per population, from the
@@ -504,10 +515,12 @@ else:
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
             augmentor=json.dumps(config.get("augmentor")),
+            shifts_per_batch=SHIFTS_PER_BATCH,
         shell:
             "infer-local"
             " --weights {input.artifact}"
             " --backend {params.backend}"
+            " --shifts_per_batch {params.shifts_per_batch}"
             + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
             + " --sample_rate {params.sample_rate}"
             " --kernel_length {params.kernel_length}"
