@@ -43,8 +43,6 @@ if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
 ANALYSIS_TYPE = config["analysis_type"]
 if ANALYSIS_TYPE not in ("hdf5", "rnp"):
     raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
-if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
-    raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
 
 SHIFTS_PER_BATCH = config["shifts_per_batch"]
 if SHIFTS_PER_BATCH > 1 and (INFERENCE_MODE != "inprocess" or ANALYSIS_TYPE != "hdf5"):
@@ -294,6 +292,7 @@ indices match infer_group's inputs.
 _group_common_params = dict(
     analysis_type=ANALYSIS_TYPE,
     ifos="[" + ",".join(config["ifos"]) + "]",
+    sample_rate=config["sample_rate"],
     inference_sampling_rate=config["inference_sampling_rate"],
     batch_size=config["inference_batch_size"],
     psd_length=config["psd_length"],
@@ -313,6 +312,8 @@ _GROUP_SHELL_SUFFIX = (
     + (" --zero_lag_out {output.zero_lag}" if zero_lag else "")
     + (" --timeseries_out {output.timeseries}" if return_timeseries else "")
     + " '--ifos={params.ifos}'"
+    + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
+    + " --sample_rate {params.sample_rate}"
     " --inference_sampling_rate {params.inference_sampling_rate}"
     " --batch_size {params.batch_size}"
     " --psd_length {params.psd_length}"
@@ -456,7 +457,6 @@ else:
         params:
             **_group_common_params,
             backend=INFERENCE_BACKEND,
-            sample_rate=config["sample_rate"],
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
@@ -467,12 +467,9 @@ else:
             " --backend {params.backend}"
             " --shifts_per_batch {params.shifts_per_batch}"
             + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
-            + " --sample_rate {params.sample_rate}"
-            " --kernel_length {params.kernel_length}"
+            + " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
-            " --fftlength {params.fftlength}"
-            + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
-            + _GROUP_SHELL_SUFFIX
+            " --fftlength {params.fftlength}" + _GROUP_SHELL_SUFFIX
 
 
 rule aggregate_infer:

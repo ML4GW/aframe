@@ -4,7 +4,7 @@ Two entry points:
     infer-local: run branches in-process on a GPU, several shifts of a file
         at a time, through main.infer_local().
     infer-triton: stream branches one at a time to a running Triton server,
-        through main.infer(). Only for hdf5 analyses.
+        through main.infer_triton().
 
 Both use the same Postprocessor and write the same outputs, so
 aggregate_infer is client agnostic.
@@ -23,8 +23,8 @@ from ledger.events import EventSet, RecoveredInjectionSet
 from utils.logging import configure_logging
 
 from infer.aggregate import merge_timeseries, write_timeseries
-from infer.data import Hdf5Sequence, RnPStreamSequence, ShiftBatchSequence
-from infer.main import infer, infer_local
+from infer.data import RnPStreamSequence, ShiftBatchSequence
+from infer.main import infer_local, infer_triton
 from infer.postprocess import Postprocessor
 
 
@@ -58,33 +58,7 @@ def _postprocessor(cfg, t0, shifts) -> Postprocessor:
     )
 
 
-def _run_triton(client, cfg, branches: dict, scratch: Path) -> None:
-    """Stream a group's branches to the Triton server one at a time."""
-    with client:
-        for branch_id, branch in branches.items():
-            shifts = branch["shifts"]
-            # Branch IDs are unique within a run, so use it to get a pair of
-            # unique sequence IDs for background and foreground. Triton
-            # handles an ID of 0 as a special case, so avoid it.
-            seq = Hdf5Sequence(
-                2 * int(branch_id) + 1,
-                branch["fname"],
-                branch["waveforms"],
-                cfg.ifos,
-                shifts,
-                cfg.inference_sampling_rate,
-                cfg.batch_size,
-                rate=cfg.rate,
-            )
-            client.callback = seq
-            postproc = _postprocessor(cfg, seq.t0, shifts)
-            results = infer(client, seq, postproc)
-            _write_outputs(
-                scratch / branch_id, branch_id, results, seq, postproc, cfg
-            )
-
-
-def _local_sequence(cfg, batch):
+def _sequence(cfg, batch):
     """The stream sequence for a batch of branches that share one file."""
     fname = batch[0][1]["fname"]
     if cfg.analysis_type == "rnp":
@@ -106,6 +80,34 @@ def _local_sequence(cfg, batch):
     )
 
 
+def _run_triton(client, cfg, branches: dict, scratch: Path) -> None:
+    """Stream a group's branches to the Triton server one at a time."""
+    with client:
+        for branch_id, branch in branches.items():
+            sequence = _sequence(cfg, [(branch_id, branch)])
+            postprocessor = _postprocessor(cfg, sequence.t0, branch["shifts"])
+
+            # Branch IDs are unique within a run and a branch has at most two
+            # streams, so 2 * ID + 1 gives every stream a unique sequence ID.
+            # Triton handles an ID of 0 as a special case, so avoid it.
+            base_id = 2 * int(branch_id) + 1
+            results = infer_triton(
+                client,
+                sequence,
+                [postprocessor],
+                base_id,
+                cfg.rate,
+            )
+            _write_outputs(
+                scratch / branch_id,
+                branch_id,
+                results[0],
+                sequence,
+                postprocessor,
+                cfg,
+            )
+
+
 def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
     """Run a group's branches in-process, in batches of shifts_per_batch
     shifts. Each R&P branch is its own frame, so R&P runs use a
@@ -117,7 +119,7 @@ def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
     ]
 
     for batch in batches:
-        sequence = _local_sequence(cfg, batch)
+        sequence = _sequence(cfg, batch)
         postprocessors = [
             _postprocessor(cfg, sequence.t0, branch["shifts"])
             for _, branch in batch
@@ -243,6 +245,8 @@ def _shared_args(p):
     p.add_argument("--fduration", type=float)
     p.add_argument("--integration_window_length", type=float)
     p.add_argument("--cluster_window_length", type=float)
+    p.add_argument("--sample_rate", type=float)
+    p.add_argument("--channel", type=str, default=None)  # R&P frames
 
 
 def main_triton(args=None):
@@ -274,11 +278,9 @@ def main_local(args=None):
     p.add_argument("--weights", type=str)
     p.add_argument("--backend", type=str, default="export")
     p.add_argument("--aoti_path", type=str | None, default=None)
-    p.add_argument("--sample_rate", type=float)
     p.add_argument("--kernel_length", type=float)
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
-    p.add_argument("--channel", type=str, default=None)  # R&P frames
     p.add_argument("--shifts_per_batch", type=int, default=1)
     cfg = p.parse_args(args)
     if cfg.logfile is not None:

@@ -112,7 +112,7 @@ analysis_type: hdf5
 
 # Inference mode:
 #   - inprocess: self-contained GPU jobs, model loaded locally per job
-#   - triton: Triton server on GPU + streaming CPU clients. hdf5 only, and
+#   - triton: Triton server on GPU + streaming CPU clients.
 #             shifts_per_batch must be 1
 inference_mode: inprocess
 
