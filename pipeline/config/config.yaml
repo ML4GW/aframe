@@ -128,8 +128,8 @@ inference_backend: export
 branches_per_job: 1
 
 # Number of a job's shifts run through the model together, for in-process
-# inference on hdf5 data with the export or compile backend. When grouping
-# shifts together, each batch is cut short by its largest shift.
+# inference on hdf5 data. When grouping shifts together, each batch is cut
+# short by its largest shift.
 shifts_per_batch: 1
 
 # Whitening / windowing

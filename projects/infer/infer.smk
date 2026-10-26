@@ -46,14 +46,10 @@ if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
     raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
 
 SHIFTS_PER_BATCH = config["shifts_per_batch"]
-if SHIFTS_PER_BATCH > 1 and (
-    INFERENCE_MODE != "inprocess"
-    or INFERENCE_BACKEND == "aoti"
-    or ANALYSIS_TYPE != "hdf5"
-):
+if SHIFTS_PER_BATCH > 1 and (INFERENCE_MODE != "inprocess" or ANALYSIS_TYPE != "hdf5"):
     raise WorkflowError(
-        "shifts_per_batch > 1 requires inference_mode 'inprocess', "
-        "analysis_type 'hdf5', and the export or compile backend"
+        "shifts_per_batch > 1 requires inference_mode 'inprocess' and "
+        "analysis_type 'hdf5'"
     )
 
 INFER_CONTAINER = container("infer")
