@@ -6,6 +6,7 @@ from plots.core.data import AnalysisData
 from plots.core.sv import (
     _astrophysical_volume,
     _far_grid,
+    _weights,
     compute_sensitive_volume,
 )
 from priors.priors import end_o3_ratesandpops
@@ -111,3 +112,21 @@ def test_err_counts_every_miss(
     data = AnalysisData(_background(make_background), fg, rejected)
     mu, err = _efficiency(data, end_o3_ratesandpops()[0], dt=0.1)
     np.testing.assert_allclose([mu, err], [1 / 3, np.sqrt(2 / 27)])
+
+
+def test_weights_reweight_comoving_to_source_frame(
+    make_background, make_foreground, make_rejected
+):
+    data = AnalysisData(
+        _background(make_background),
+        _foreground(make_foreground, [0.1, 1.0]),
+        make_rejected(n=0),
+    )
+    weights, _ = _weights(data, COMBO, end_o3_ratesandpops()[0], 0.1)
+    # end_o3 draws uniform in comoving volume; the target is uniform in
+    # source-frame time, so the weights go as 1 / (1 + z)
+    expected = np.array([1 / 1.1, 1 / 2.0])
+    # bilby tabulates these redshift priors on 1000-point grids
+    np.testing.assert_allclose(
+        weights[0], expected / expected.sum(), rtol=5e-5
+    )

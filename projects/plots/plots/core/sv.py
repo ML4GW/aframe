@@ -21,10 +21,16 @@ if TYPE_CHECKING:
 
 
 def get_prob(prior, ledger):
-    """Evaluate a source-frame mass prior on a ledger's injections."""
+    """Evaluate a prior's source-frame masses and redshift on injections.
+
+    Including redshift carries the `p_target(z) / p_source(z)` factor,
+    which is proportional to `1/(1+z)` for the default comoving-volume
+    source prior.
+    """
     sample = {
         "mass_1": ledger.mass_1_source,
         "mass_2": ledger.mass_2_source,
+        "redshift": ledger.redshift,
     }
     return prior.prob(sample, axis=0)
 
