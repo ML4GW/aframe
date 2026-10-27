@@ -1,6 +1,8 @@
+import logging
 import time
 
 import numpy as np
+import torch
 from hermes.aeriel.client import InferenceClient
 from ledger.events import EventSet
 from tqdm import tqdm
@@ -29,11 +31,32 @@ def infer_local(
 ) -> list[tuple[EventSet, EventSet, np.ndarray, np.ndarray | None]]:
     """Run inference in-process on every stream of a sequence at once."""
     client.reset()
-    outputs = []
-    for update in tqdm(sequence):
-        outputs.append(client.infer_streams(update, sequence.psd_source))
+    on_gpu = torch.device(client.device).type == "cuda"
+    if on_gpu:
+        torch.cuda.reset_peak_memory_stats()
 
-    return sequence.results(np.concatenate(outputs, axis=-1), postprocessors)
+    outputs = []
+    model_time = 0.0
+    start = time.perf_counter()
+    for update in tqdm(sequence):
+        loaded = time.perf_counter()
+        outputs.append(client.infer_streams(update, sequence.psd_source))
+        model_time += time.perf_counter() - loaded
+    inferred = time.perf_counter()
+
+    outputs = np.concatenate(outputs, axis=-1)
+    results = sequence.results(outputs, postprocessors)
+    end = time.perf_counter()
+
+    peak = torch.cuda.max_memory_allocated() / 2**30 if on_gpu else 0.0
+    data_time = inferred - start - model_time
+    logging.info(
+        f"Inferred {len(sequence.psd_source)} streams in "
+        f"{end - start:.1f} s: {data_time:.1f} s loading data, "
+        f"{model_time:.1f} s in the model, {end - inferred:.1f} s "
+        f"postprocessing. Peak GPU memory {peak:.2f} GiB"
+    )
+    return results
 
 
 class TritonOutputs:

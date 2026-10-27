@@ -14,7 +14,9 @@ or rnp (Rates and Populations frames).
 """
 
 import json
+import logging
 import tempfile
+import time
 from pathlib import Path
 
 import h5py
@@ -119,6 +121,7 @@ def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
     ]
 
     for batch in batches:
+        start = time.perf_counter()
         sequence = _sequence(cfg, batch)
         postprocessors = [
             _postprocessor(cfg, sequence.t0, branch["shifts"])
@@ -137,6 +140,13 @@ def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
                 postproc=postproc,
                 cfg=cfg,
             )
+
+        duration = sequence.stream_layout.size / cfg.sample_rate
+        logging.info(
+            f"Finished branches {[branch_id for branch_id, _ in batch]} "
+            f"({duration:.0f} s of strain each) in "
+            f"{time.perf_counter() - start:.1f} s"
+        )
 
 
 def _resolve_branches(cfg):
@@ -289,6 +299,7 @@ def main_local(args=None):
 
     from infer.local import LocalInferenceClient
 
+    logging.info(f"Loading model (backend={cfg.backend})")
     client = LocalInferenceClient(
         weights=cfg.weights,
         backend=cfg.backend,
