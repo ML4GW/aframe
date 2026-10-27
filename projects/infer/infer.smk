@@ -132,7 +132,7 @@ def _load_branch_map():
         return json.load(f)
 
 
-def _assign_groups(branch_map, split_at_file_changes):
+def _assign_groups(branch_map, branches_per_job, split_at_file_changes):
     """Number the branches, in order, into groups of at most branches_per_job.
 
     With `split_at_file_changes`, a group never spans two strain files, so
@@ -213,17 +213,25 @@ if ANALYSIS_TYPE == "rnp":
         """Enumerate R&P frame files as one branch each."""
         output:
             str(infer_dir / "branch_map.json"),
+        # Declared as params so that changing them reruns the checkpoint
+        params:
+            branches_per_job=BRANCHES_PER_JOB,
+            frame_dir=FRAME_DIR,
+            ifos=config["ifos"],
         run:
-            files = sorted(str(p) for p in Path(FRAME_DIR).rglob("*.gwf"))
+            frame_dir = params.frame_dir
+            files = sorted(str(p) for p in Path(frame_dir).rglob("*.gwf"))
             if not files:
-                raise WorkflowError(f"No .gwf frames found in {FRAME_DIR}")
-            shifts = [0.0] * len(config["ifos"])
+                raise WorkflowError(f"No .gwf frames found in {frame_dir}")
+            shifts = [0.0] * len(params.ifos)
             branch_map = {
                 str(i): {"fname": f, "shifts": shifts, "population": None}
                 for i, f in enumerate(files)
             }
             # one frame per branch, so there's nothing to share within a group
-            _assign_groups(branch_map, split_at_file_changes=False)
+            _assign_groups(
+                branch_map, params.branches_per_job, split_at_file_changes=False
+            )
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -247,6 +255,21 @@ else:
             str(bg_dir / "test" / "segments.txt"),
         output:
             str(infer_dir / "branch_map.json"),
+        # Declared as params so that changing them reruns the checkpoint.
+        # The last five are used by the data.smk helpers: _segment_chunks
+        # splits segments into files by max_duration, and
+        # testing_waveform_branches picks which branches get waveforms.
+        params:
+            branches_per_job=BRANCHES_PER_JOB,
+            Tb=config["Tb"],
+            shift_steps=config["shift_steps"],
+            psd_length=config["psd_length"],
+            zero_lag=zero_lag,
+            max_duration=config["max_duration"],
+            num_testing_signals=config["num_testing_signals"],
+            spacing=config["spacing"],
+            buffer=config["buffer"],
+            waveform_duration=config["waveform_duration"],
         run:
             def _get_num_timeslides(segments, Tb, shift_step, psd_length):
                 if Tb == 0:
@@ -261,12 +284,12 @@ else:
                             livetime += dur
                 return num_timeslides
 
-            psd_length = config["psd_length"]
+            psd_length = params.psd_length
             chunks = _segment_chunks(input[0])
             num_timeslides = _get_num_timeslides(
                 [(start, start + duration) for start, duration in chunks],
-                config["Tb"],
-                max(config["shift_steps"]),
+                params.Tb,
+                max(params.shift_steps),
                 psd_length,
             )
             # (start, duration, timeslide) -> population
@@ -277,12 +300,12 @@ else:
             if num_waveform_timeslides > num_timeslides:
                 raise WorkflowError(
                     f"num_testing_signals requires {num_waveform_timeslides} "
-                    f"timeslides but Tb={config['Tb']} only covers "
+                    f"timeslides but Tb={params.Tb} only covers "
                     f"{num_timeslides}. "
                     f"Reduce num_testing_signals or increase Tb."
                 )
             # zero lag is timeslide 0, which has no testing waveforms
-            timeslides = range(0 if zero_lag else 1, num_timeslides + 1)
+            timeslides = range(0 if params.zero_lag else 1, num_timeslides + 1)
             branch_map, i = {}, 0
             for start, duration in chunks:
                 for timeslide in timeslides:
@@ -306,7 +329,9 @@ else:
                         ),
                     }
                     i += 1
-            _assign_groups(branch_map, split_at_file_changes=True)
+            _assign_groups(
+                branch_map, params.branches_per_job, split_at_file_changes=True
+            )
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
