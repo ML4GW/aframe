@@ -75,7 +75,10 @@ class LocalInferenceClient:
             highpass=highpass,
         ).to(device)
         self._stream_state: torch.Tensor | None = None
-        logging.info(f"LocalInferenceClient ready (backend={backend})")
+        name = device
+        if "cuda" in device:
+            name = torch.cuda.get_device_name(device)
+        logging.info(f"LocalInferenceClient ready (backend={backend}, {name})")
 
     def reset(self):
         """Clear the streams' state before a new sequence"""
