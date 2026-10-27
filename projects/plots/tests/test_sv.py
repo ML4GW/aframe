@@ -2,9 +2,16 @@ import numpy as np
 import pytest
 from plots.core import compute
 from plots.core.constants import SECONDS_PER_YEAR
-from plots.core.sv import _far_grid
+from plots.core.data import AnalysisData
+from plots.core.sv import (
+    _astrophysical_volume,
+    _far_grid,
+    compute_sensitive_volume,
+)
+from priors.priors import end_o3_ratesandpops
 
 MASS_COMBOS = [(35, 35), (35, 20), (20, 20), (20, 10)]
+COMBO = [(35, 20)]
 
 
 @pytest.fixture
@@ -56,3 +63,51 @@ def test_far_grid(make_background):
     assert np.all(np.diff(thresholds) <= 0)  # non-increasing
     assert thresholds[0] == background.detection_statistic[-1]
     assert fars[0] == pytest.approx(SECONDS_PER_YEAR / background.Tb)
+
+
+def _at_redshifts(ledger, z):
+    """Put every draw at source-frame masses (35, 20) and redshifts `z`."""
+    z = np.asarray(z, dtype=float)
+    ledger.redshift = z
+    ledger.mass_1, ledger.mass_2 = 35 * (1 + z), 20 * (1 + z)
+    return ledger
+
+
+def _foreground(make_foreground, z):
+    """Draws with statistic 2, injected and recovered 20 s apart from t=10."""
+    fg = _at_redshifts(make_foreground(n=len(z)), z)
+    fg.injection_time = 10 + 20 * np.arange(len(z), dtype=float)
+    fg.detection_time = fg.injection_time.copy()
+    fg.shift = np.zeros((len(z), 2))
+    fg.detection_statistic = np.full(len(z), 2.0)
+    return fg
+
+
+def _background(make_background):
+    """Two statistic-1 events at t=10 and t=30 over Tb=100 s."""
+    bg = make_background(n=2, Tb=100.0)
+    bg.detection_statistic = np.ones(2)
+    bg.detection_time = np.array([10.0, 30.0])
+    bg.shift = np.zeros((2, 2))
+    return bg
+
+
+def _efficiency(data, source, dt=None):
+    """Mean and error at the single threshold 1, as fractions of V0."""
+    result = compute_sensitive_volume(
+        data, COMBO, source, dt=dt, max_far=SECONDS_PER_YEAR, num_far_points=1
+    )
+    v0 = _astrophysical_volume(source)
+    return result.sv[0, 0] / v0, result.err[0, 0] / v0
+
+
+def test_err_counts_every_miss(
+    make_background, make_foreground, make_rejected
+):
+    # three equal draws: one detected, one recovered outside dt, one rejected
+    fg = _foreground(make_foreground, [0.2, 0.2])
+    fg.detection_time[1] += 10
+    rejected = _at_redshifts(make_rejected(n=1), [0.2])
+    data = AnalysisData(_background(make_background), fg, rejected)
+    mu, err = _efficiency(data, end_o3_ratesandpops()[0], dt=0.1)
+    np.testing.assert_allclose([mu, err], [1 / 3, np.sqrt(2 / 27)])

@@ -99,15 +99,20 @@ def _weights(
     data: AnalysisData,
     mass_combos: list[tuple],
     source_prior: "PriorDict",
-    dt: float | None,
     sigma: float,
-) -> np.ndarray:
-    """Importance weights reweighting injections to each target prior."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """Importance weights reweighting injections to each target prior.
+
+    Returns the foreground weights `(C, N)` and the rejected draws'
+    summed squared weights `(C,)`, both normalized over the foreground
+    plus rejected draws.
+    """
     logging.info("Computing data likelihood under source prior")
     source_probs = get_prob(source_prior, data.foreground)
     source_rejected_probs = get_prob(source_prior, data.rejected)
 
     weights = np.zeros((len(mass_combos), len(source_probs)))
+    rejected_w2 = np.zeros(len(mass_combos))
     for i, combo in enumerate(mass_combos):
         logging.info(f"Computing likelihoods under {combo} log normal")
         prior, _ = log_normal_masses(
@@ -121,22 +126,11 @@ def _weights(
         norm = weight.sum() + rejected_weights.sum()
         if norm > 0:
             weight /= norm
-
-        # enforce the recovery time delta by zeroing the weight of
-        # events recovered too far from their injection
-        if dt is not None:
-            logging.info(f"Enforcing recovery time delta of {dt} seconds")
-            mask = (
-                np.abs(
-                    data.foreground.detection_time
-                    - data.foreground.injection_time
-                )
-                <= dt
-            )
-            weight[~mask] = 0
+            rejected_weights /= norm
 
         weights[i] = weight
-    return weights
+        rejected_w2[i] = (rejected_weights**2).sum()
+    return weights, rejected_w2
 
 
 def _astrophysical_volume(source_prior: "PriorDict") -> float:
@@ -171,19 +165,32 @@ def compute_sensitive_volume(
         mass_combos: `(m1, m2)` pairs to compute curves for
         source_prior: the (already instantiated) prior the injections
             were drawn from
-        dt: if given, discard injections recovered more than `dt`
-            seconds from their injection time
+        dt: if given, count injections recovered more than `dt` seconds
+            from their injection time as misses
         max_far: largest false alarm rate to compute out to, per year
         num_far_points: number of points in the FAR grid
         sigma: width of the log normal mass distributions
     """
     v0 = _astrophysical_volume(source_prior)
     fars, thresholds = _far_grid(data.background, max_far, num_far_points)
-    weights = _weights(data, mass_combos, source_prior, dt, sigma)
+    weights, rejected_w2 = _weights(data, mass_combos, source_prior, sigma)
+
+    stats = data.foreground.detection_statistic
+    if dt is not None:
+        logging.info(f"Enforcing recovery time delta of {dt} seconds")
+        recovered = (
+            np.abs(
+                data.foreground.detection_time - data.foreground.injection_time
+            )
+            <= dt
+        )
+        # a recovery that far off is a miss, so it keeps its weight
+        # but can't clear any threshold
+        stats = np.where(recovered, stats, -np.inf)
 
     logging.info("Computing sensitive volume at thresholds")
     sv, err = compute.sensitive_volume(
-        data.foreground.detection_statistic, weights, thresholds
+        stats, weights, thresholds, missed_w2=rejected_w2
     )
     return SensitiveVolumeResult(
         mass_combos=mass_combos,
