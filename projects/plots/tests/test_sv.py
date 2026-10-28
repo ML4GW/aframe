@@ -144,17 +144,15 @@ def test_vetoes_remove_rejected_exposure(
     )
     # injected at t=10 (vetoed) and t=30, both above the threshold
     fg = _foreground(make_foreground, [0.2, 0.2])
-    bg, fg, deadtime = _apply_vetos(
-        _background(make_background),
-        fg,
+    rejected = _at_redshifts(make_rejected(n=2), [0.2, 0.2])
+    data = _apply_vetos(
+        AnalysisData(_background(make_background), fg, rejected),
         ["CAT1"],
         ["H1", "L1"],
         0,
         40,
         veto_segments=segments,
     )
-    rejected = _at_redshifts(make_rejected(n=2), [0.2, 0.2])
-    data = AnalysisData(bg, fg, rejected, live_fraction=1 - deadtime)
     mu, err = _efficiency(data, end_o3_ratesandpops()[0])
     # vetoes cover half the time, so the detected survivor plus half of
     # the two rejected draws: reduced-exposure efficiency 1/2

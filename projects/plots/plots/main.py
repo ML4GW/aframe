@@ -15,6 +15,7 @@ from plots.core.sv import (
 )
 from plots.vetos import VETO_CATEGORIES
 from plots.vetos.masks import (
+    apply_veto_masks,
     combine_masks,
     compute_veto_masks,
     load_or_fetch_segments,
@@ -36,23 +37,15 @@ def analysis_span(background) -> tuple[float, float]:
 
 
 def _apply_vetos(
-    background,
-    foreground,
+    data: AnalysisData,
     vetos,
     ifos,
     start,
     stop,
     veto_definer_file=None,
     veto_segments=None,
-):
-    """Filter background and foreground events through veto categories.
-
-    The background's livetime is reduced by the fraction of injections the
-    same vetoes remove. Vetoing a time in one IFO removes a different set of
-    coincidences in every timeslide, so that fraction, and not the fraction
-    of background events removed, estimates the livetime lost. That fraction
-    is also returned, so the rejected draws can be scaled to match.
-    """
+) -> AnalysisData:
+    """Filter `data` through veto categories; see `apply_veto_masks`."""
     if veto_segments is None:
         segments = load_or_fetch_segments(
             vetos, ifos, start, stop, veto_definer_file=veto_definer_file
@@ -67,23 +60,15 @@ def _apply_vetos(
             )
 
     logging.info("Computing background veto masks")
-    back_masks = compute_veto_masks(background, vetos, ifos, segments)
+    back_masks = compute_veto_masks(data.background, vetos, ifos, segments)
     logging.info("Computing foreground veto masks")
-    fore_masks = compute_veto_masks(foreground, vetos, ifos, segments)
+    fore_masks = compute_veto_masks(data.foreground, vetos, ifos, segments)
 
-    fore_vetoed = combine_masks(fore_masks, vetos)
-    deadtime = fore_vetoed.mean() if len(fore_vetoed) else 0.0
-
-    background = background[~combine_masks(back_masks, vetos)]
-    foreground = foreground[~fore_vetoed]
-
-    logging.info(
-        f"Vetoes removed {100 * deadtime:.2f}% of injections; "
-        f"scaling Tb from {background.Tb:.0f}s to "
-        f"{background.Tb * (1 - deadtime):.0f}s"
+    return apply_veto_masks(
+        data,
+        combine_masks(back_masks, vetos),
+        combine_masks(fore_masks, vetos),
     )
-    background.Tb *= 1 - deadtime
-    return background, foreground, deadtime
 
 
 def sensitive_volume(
@@ -161,26 +146,20 @@ def sensitive_volume(
     """
     configure_logging(log_file, verbose)
     data = AnalysisData.load(background, foreground, rejected_params)
-    background = data.background
-    foreground = data.foreground
 
-    start, stop = analysis_span(background)
+    start, stop = analysis_span(data.background)
     logging.info(f"Loading in vetoes from {start} to {stop}")
 
     # optionally apply vetos if the user passed a list of veto categories
     if vetos is not None:
-        background, foreground, deadtime = _apply_vetos(
-            background,
-            foreground,
+        data = _apply_vetos(
+            data,
             vetos,
             ifos,
             start,
             stop,
             veto_definer_file=veto_definer_file,
             veto_segments=veto_segments,
-        )
-        data = AnalysisData(
-            background, foreground, data.rejected, live_fraction=1 - deadtime
         )
 
     source, _ = source_prior(DEFAULT_COSMOLOGY)

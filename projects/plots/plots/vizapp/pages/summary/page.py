@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 from plots.core.constants import DEFAULT_VIZAPP_MAX_FAR
-from plots.core.data import AnalysisData
 from plots.core.gwtc3 import main as gwtc3_pipeline_sv
 from plots.core.sv import (
     SensitiveVolumePlot,
@@ -18,13 +17,8 @@ class Summary(Page):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        data = AnalysisData(
-            self.app.background,
-            self.app.foreground,
-            self.app.data_manager.rejected_params,
-        )
         result = compute_sensitive_volume(
-            data,
+            self.app.data,
             mass_combos=self.app.mass_combos,
             source_prior=self.app.source_prior,
             max_far=DEFAULT_VIZAPP_MAX_FAR,
@@ -48,13 +42,8 @@ class Summary(Page):
     def update(
         self, background: "EventSet", foreground: "RecoveredInjectionSet"
     ):
-        data = AnalysisData(
-            background,
-            foreground,
-            self.app.data_manager.rejected_params,
-        )
         result = compute_sensitive_volume(
-            data,
+            self.app.data,
             mass_combos=self.app.mass_combos,
             source_prior=self.app.source_prior,
             max_far=DEFAULT_VIZAPP_MAX_FAR,
