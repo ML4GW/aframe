@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 from plots.core import compute
@@ -9,6 +11,7 @@ from plots.core.sv import (
     _weights,
     compute_sensitive_volume,
 )
+from plots.main import _apply_vetos
 from priors.priors import end_o3_ratesandpops
 
 MASS_COMBOS = [(35, 35), (35, 20), (20, 20), (20, 10)]
@@ -130,3 +133,29 @@ def test_weights_reweight_comoving_to_source_frame(
     np.testing.assert_allclose(
         weights[0], expected / expected.sum(), rtol=5e-5
     )
+
+
+def test_vetoes_remove_rejected_exposure(
+    tmp_path, make_background, make_foreground, make_rejected
+):
+    segments = tmp_path / "segments.json"
+    segments.write_text(
+        json.dumps({"segments": {"CAT1": {"H1": [[0, 20]], "L1": []}}})
+    )
+    # injected at t=10 (vetoed) and t=30, both above the threshold
+    fg = _foreground(make_foreground, [0.2, 0.2])
+    bg, fg, deadtime = _apply_vetos(
+        _background(make_background),
+        fg,
+        ["CAT1"],
+        ["H1", "L1"],
+        0,
+        40,
+        veto_segments=segments,
+    )
+    rejected = _at_redshifts(make_rejected(n=2), [0.2, 0.2])
+    data = AnalysisData(bg, fg, rejected, live_fraction=1 - deadtime)
+    mu, err = _efficiency(data, end_o3_ratesandpops()[0])
+    # vetoes cover half the time, so the detected survivor plus half of
+    # the two rejected draws: reduced-exposure efficiency 1/2
+    np.testing.assert_allclose([mu, err], [0.5, np.sqrt(0.125)])

@@ -111,7 +111,7 @@ def _weights(
 
     Returns the foreground weights `(C, N)` and the rejected draws'
     summed squared weights `(C,)`, both normalized over the foreground
-    plus rejected draws.
+    plus the live fraction of the rejected draws.
     """
     logging.info("Computing data likelihood under source prior")
     source_probs = get_prob(source_prior, data.foreground)
@@ -129,13 +129,15 @@ def _weights(
             get_prob(prior, data.rejected) / source_rejected_probs
         )
 
-        norm = weight.sum() + rejected_weights.sum()
+        # only the live fraction of the rejected draws fall in unvetoed time
+        live = data.live_fraction
+        norm = weight.sum() + live * rejected_weights.sum()
         if norm > 0:
             weight /= norm
             rejected_weights /= norm
 
         weights[i] = weight
-        rejected_w2[i] = (rejected_weights**2).sum()
+        rejected_w2[i] = live * (rejected_weights**2).sum()
     return weights, rejected_w2
 
 
