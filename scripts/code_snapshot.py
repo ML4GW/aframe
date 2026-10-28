@@ -29,6 +29,12 @@ def repo_files(repo: Path = REPO) -> list[Path]:
     return [f for f in git_files(repo, "--cached") if (repo / f).is_file()]
 
 
+def make_read_only(file: Path):
+    """Remove the write-bits from a file's permissions"""
+    mode = file.stat().st_mode
+    file.chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+
+
 def snapshot(dest: Path = Path("code"), repo: Path = REPO) -> None:
     # Snakemake holds these while a run is active, and we don't want
     # to copy over the code during that time.
@@ -52,9 +58,14 @@ def snapshot(dest: Path = Path("code"), repo: Path = REPO) -> None:
     for f in repo_files(repo):
         (dest / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(repo / f, dest / f)
-        # Remove the write-bits from each file's permissions
-        mode = (dest / f).stat().st_mode
-        (dest / f).chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+        make_read_only(dest / f)
+
+    version = subprocess.check_output(
+        ["git", "-C", str(repo), "describe", "--always", "--dirty"], text=True
+    )
+    with open(dest / "VERSION", "w") as f:
+        f.write(version)
+    make_read_only(dest / "VERSION")
 
 
 if __name__ == "__main__":

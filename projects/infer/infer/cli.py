@@ -225,14 +225,13 @@ def _run_group(client, cfg, run_branches):
     """
     branches = _resolve_branches(cfg)
 
-    # Per-branch outputs only exist until they're merged. Keep them next
-    # to the group's outputs rather than in /tmp, which may be small.
     outdir = Path(cfg.background_out).parent
     outdir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=outdir) as scratch:
         scratch = Path(scratch)
         run_branches(client, cfg, branches, scratch)
         _merge_group(cfg, branches, scratch)
+        logging.info(f"Wrote group outputs to {outdir}")
 
 
 def _shared_args(p):
