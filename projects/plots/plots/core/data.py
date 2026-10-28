@@ -28,11 +28,16 @@ def drop_unphysical(
 
 @dataclass
 class AnalysisData:
-    """The three ledgers an analysis is summarized from."""
+    """The three ledgers an analysis is summarized from.
+
+    `live_fraction` is the fraction of the analysis time left after vetoes.
+    Rejected draws have no injection times, so they count with that weight.
+    """
 
     background: EventSet
     foreground: RecoveredInjectionSet
     rejected: InjectionParameterSet
+    live_fraction: float = 1.0
 
     @classmethod
     def load(

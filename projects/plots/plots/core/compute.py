@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def sensitive_volume(detection_statistics, weights, thresholds):
+def sensitive_volume(detection_statistics, weights, thresholds, missed_w2=0.0):
     """Mean and standard error of sensitive volume at each threshold.
 
     Args:
@@ -9,6 +9,9 @@ def sensitive_volume(detection_statistics, weights, thresholds):
         weights: `(C, N)` array of per-injection weights, one row per
             mass combo.
         thresholds: `(T,)` array of detection statistic thresholds.
+        missed_w2: `(C,)` array or scalar of summed squared weights of
+            draws left out of `weights` because they can never be
+            detected.
 
     Returns:
         `(y, err)`, each `(C, T)`.
@@ -33,6 +36,7 @@ def sensitive_volume(detection_statistics, weights, thresholds):
     # each threshold.
     idxs = np.searchsorted(ds_sorted, thresholds)
     mu = rev_sum_w[:, idxs]
-    var = (1 - 2 * mu) * rev_sum_w2[:, idxs] + mu**2 * rev_sum_w2[:, :1]
+    total_w2 = rev_sum_w2[:, :1] + np.reshape(missed_w2, (-1, 1))
+    var = (1 - 2 * mu) * rev_sum_w2[:, idxs] + mu**2 * total_w2
     err = np.sqrt(np.maximum(var, 0))
     return mu, err

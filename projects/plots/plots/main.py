@@ -50,7 +50,8 @@ def _apply_vetos(
     The background's livetime is reduced by the fraction of injections the
     same vetoes remove. Vetoing a time in one IFO removes a different set of
     coincidences in every timeslide, so that fraction, and not the fraction
-    of background events removed, estimates the livetime lost.
+    of background events removed, estimates the livetime lost. That fraction
+    is also returned, so the rejected draws can be scaled to match.
     """
     if veto_segments is None:
         segments = load_or_fetch_segments(
@@ -82,7 +83,7 @@ def _apply_vetos(
         f"{background.Tb * (1 - deadtime):.0f}s"
     )
     background.Tb *= 1 - deadtime
-    return background, foreground
+    return background, foreground, deadtime
 
 
 def sensitive_volume(
@@ -168,7 +169,7 @@ def sensitive_volume(
 
     # optionally apply vetos if the user passed a list of veto categories
     if vetos is not None:
-        background, foreground = _apply_vetos(
+        background, foreground, deadtime = _apply_vetos(
             background,
             foreground,
             vetos,
@@ -178,7 +179,9 @@ def sensitive_volume(
             veto_definer_file=veto_definer_file,
             veto_segments=veto_segments,
         )
-        data = AnalysisData(background, foreground, data.rejected)
+        data = AnalysisData(
+            background, foreground, data.rejected, live_fraction=1 - deadtime
+        )
 
     source, _ = source_prior(DEFAULT_COSMOLOGY)
     result = compute_sensitive_volume(
