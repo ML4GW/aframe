@@ -36,11 +36,11 @@ htcondor-held-timeout: 600
 rerun-incomplete: true
 keep-going: false
 
-# Each rule's stdout/stderr goes to a log file, so trim console output 
-# to just a progress counter and job-stats summary. show-failed-logs 
-# dumps a failed job's log to the console so failures aren't silent.
+# Each rule's stdout/stderr goes to a log file, so trim console output
+# to each job's rule name, a progress counter and a job-stats summary.
+# show-failed-logs dumps a failed job's log to the console so failures
+# aren't silent.
 quiet:
-  - rules
   - reason
 show-failed-logs: true
 

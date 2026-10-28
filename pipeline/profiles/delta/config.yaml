@@ -22,7 +22,6 @@ latency-wait: 120
 retries: 2
 
 quiet:
-  - rules
   - reason
 show-failed-logs: true
 

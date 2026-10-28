@@ -111,9 +111,10 @@ analysis_type: hdf5
 # rnp_channel: <channel>               # channel within the frames
 
 # Inference mode:
-#   - triton: Triton server on GPU + streaming CPU clients
 #   - inprocess: self-contained GPU jobs, model loaded locally per job
-inference_mode: triton
+#   - triton: Triton server on GPU + streaming CPU clients.
+#             shifts_per_batch must be 1
+inference_mode: inprocess
 
 # Model backend for in-process inference::
 #   - export: model_exported.pt2 run as a GraphModule. Portable across GPU archs.
@@ -126,6 +127,11 @@ inference_backend: export
 
 # Maximum number of (file, shift) branches each job processes.
 branches_per_job: 1
+
+# Number of a job's shifts run through the model together, for in-process
+# inference on hdf5 data. When grouping shifts together, each batch is cut
+# short by its largest shift.
+shifts_per_batch: 1
 
 # Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data

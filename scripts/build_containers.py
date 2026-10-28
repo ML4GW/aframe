@@ -22,9 +22,13 @@ PROJECTS: list[str] = [x.name for x in BASE_DIR.iterdir() if x.is_dir()]
 # container size. A project that needs a compiler at run time should install
 # it from its apptainer.post, which marks it manually installed and so
 # exempts it from the autoremove. See projects/infer for an example.
+#
+# build-essential is marked as automatically installed which will cause
+# it to be automatically removed when no more manually installed packages
+# depend on it.
 PURGE_BUILD_TOOLS = """# the toolchain was only needed to build the \
 dependencies above
-apt-get purge -y build-essential
+apt-mark auto build-essential
 apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*"""
 
