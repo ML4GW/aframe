@@ -9,7 +9,6 @@ import numpy as np
 from bokeh import io
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource
-from ledger.injections import InjectionParameterSet
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from plots.core import compute, style
@@ -102,37 +101,6 @@ def _far_grid(background, max_far: float, num_far_points: int):
     return fars, thresholds
 
 
-def log_target_density(
-    ledger: InjectionParameterSet, combo: tuple[float, float], sigma: float
-) -> np.ndarray:
-    """
-    Log density of each draw under the GWTC population around `combo`.
-
-    Args:
-        ledger:
-            Ledger object containing the source masses and redshifts
-        combo:
-            The (m1, m2) central source frame masses, with m1 >= m2
-        sigma:
-            Width of each log-normal distribution, in natural-log mass
-
-    Returns:
-        Log density of each draw, not normalized. It is -inf wherever
-        the draw's secondary mass is not below its primary.
-    """
-    params = {
-        "m1_mean": combo[0],
-        "m2_mean": combo[1],
-        "sig_lognorm_m1": sigma,
-        "sig_lognorm_m2": sigma,
-    }
-    log_p_mass = logprob_mass_lognorm(
-        ledger.mass_1_source, ledger.mass_2_source, params
-    )
-    log_p_z = log_dNdz(ledger.redshift, DEFAULT_COSMOLOGY)
-    return log_p_mass + log_p_z
-
-
 def _weights(
     data: AnalysisData,
     mass_combos: list[tuple[float, float]],
@@ -156,26 +124,48 @@ def _weights(
     Returns:
         Weights for each foreground event, with shape `(C, N)` and one
         row per mass combination, and the rejected draws' summed squared
-        weights, with shape `(C,)`. Both
-        are normalized over the foreground plus the live fraction of the
-        rejected draws.
+        weights, with shape `(C,)`. Both are normalized over the foreground
+        plus the live fraction of the rejected draws.
     """
+    # The source density doesn't depend on the target so it can be
+    # evaluated up front
     log_source = np.log(get_prob(source_prior, data.foreground))
     log_source_rejected = np.log(get_prob(source_prior, data.rejected))
+
+    # Likewise, the redshift part of the target population is independent
+    # of the mass combo, so it can be evaluated outside the loop.
+    log_redshift = log_dNdz(data.foreground.redshift, DEFAULT_COSMOLOGY)
+    log_redshift_rejected = log_dNdz(data.rejected.redshift, DEFAULT_COSMOLOGY)
 
     weights = np.zeros((len(mass_combos), len(log_source)))
     rejected_w2 = np.zeros(len(mass_combos))
     live = data.live_fraction
     for i, combo in enumerate(mass_combos):
         logging.info(f"Computing likelihoods under {combo} log normal")
-        weight = log_target_density(data.foreground, combo, sigma) - log_source
-        rejected_weights = (
-            log_target_density(data.rejected, combo, sigma)
+        params = {
+            "m1_mean": combo[0],
+            "m2_mean": combo[1],
+            "sig_lognorm_m1": sigma,
+            "sig_lognorm_m2": sigma,
+        }
+        weight = np.exp(
+            logprob_mass_lognorm(
+                data.foreground.mass_1_source,
+                data.foreground.mass_2_source,
+                params,
+            )
+            + log_redshift
+            - log_source
+        )
+        rejected_weights = np.exp(
+            logprob_mass_lognorm(
+                data.rejected.mass_1_source,
+                data.rejected.mass_2_source,
+                params,
+            )
+            + log_redshift_rejected
             - log_source_rejected
         )
-
-        weight = np.exp(weight)
-        rejected_weights = np.exp(rejected_weights)
 
         norm = weight.sum() + live * rejected_weights.sum()
         if norm > 0:

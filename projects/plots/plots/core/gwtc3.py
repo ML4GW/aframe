@@ -158,26 +158,42 @@ def logprob_spin(sx, sy, sz, params):
     )
 
 
-def log_dNdz(z: np.ndarray, cosmology: cosmo.Cosmology) -> np.ndarray:
+def log_dNdz(
+    z: np.ndarray, cosmology: cosmo.Cosmology, num_points: int = 10_000
+) -> np.ndarray:
     """
     Log redshift density of sources uniform in comoving volume and
     source-frame time.
 
+    For efficiency, the differential comoving volume is evaluated on
+    a grid of `num_points` redshifts spanning the minimum and maximum
+    of `z`, linearly spaced in log(z). This is used to compute a grid
+    of log(dN/dz), which is then interpolated for the requested redshifts.
+
     Args:
         z: source redshifts
         cosmology: astropy cosmology that sets the comoving volume element
+        num_points: Number of points to use to create the redshift grid.
 
     Returns:
         Log of 4 pi dVc/dz / (1 + z), with dVc/dz in units of Gpc^3 / sr
     """
     if len(z) == 0:
-        return np.ndarray([0])
+        return np.empty(0)
+    log_z = np.log(z)
+    log_z_grid = np.linspace(log_z.min(), log_z.max(), num_points)
+    z_grid = np.exp(log_z_grid)
+
     log_dNdV = 0
     log_dVdz = np.log(4 * np.pi) + np.log(
-        cosmology.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value
+        cosmology.differential_comoving_volume(z_grid)
+        .to(u.Gpc**3 / u.sr)
+        .value
     )
-    log_time_dilation = -np.log(1 + z)
-    return log_dNdV + log_dVdz + log_time_dilation
+    log_time_dilation = -np.log(1 + z_grid)
+    log_dNdz_grid = log_dNdV + log_dVdz + log_time_dilation
+
+    return np.interp(log_z, log_z_grid, log_dNdz_grid)
 
 
 def log_dNdm1dm2ds1ds2dz(
