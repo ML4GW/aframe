@@ -9,6 +9,7 @@ import numpy as np
 from astropy.config.paths import get_cache_dir
 from ledger.events import veto_mask
 
+from plots.core.data import AnalysisData
 from plots.vetos import (
     DEFAULT_SEGMENT_SERVER,
     VETO_CATEGORIES,
@@ -36,6 +37,35 @@ def combine_masks(
             )
         combined |= masks[cat]
     return combined
+
+
+def apply_veto_masks(
+    data: AnalysisData,
+    background_mask: np.ndarray,
+    foreground_mask: np.ndarray,
+) -> AnalysisData:
+    """Drop vetoed events from `data` and scale its exposure to match.
+
+    The background's livetime is reduced by the fraction of injections the
+    same vetoes remove. Vetoing a time in one IFO removes a different set of
+    coincidences in every timeslide, so that fraction, and not the fraction
+    of background events removed, estimates the livetime lost. Rejected
+    draws have no injection times, so the same fraction sets the data's
+    `live_fraction`.
+    """
+    deadtime = foreground_mask.mean() if len(foreground_mask) else 0.0
+    background = data.background[~background_mask]
+    foreground = data.foreground[~foreground_mask]
+
+    logging.info(
+        f"Vetoes removed {100 * deadtime:.2f}% of injections; "
+        f"scaling Tb from {background.Tb:.0f}s to "
+        f"{background.Tb * (1 - deadtime):.0f}s"
+    )
+    background.Tb *= 1 - deadtime
+    return AnalysisData(
+        background, foreground, data.rejected, live_fraction=1 - deadtime
+    )
 
 
 def _segments_key(

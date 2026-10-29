@@ -85,9 +85,9 @@ class App:
             results_dir, waveforms_dir, ifos, vetos
         )
 
-        self.background, self.foreground = self.data_manager.update_vetos(
-            None, None, []
-        )
+        self.data = self.data_manager.update_vetos(None, None, [])
+        self.background = self.data.background
+        self.foreground = self.data.foreground
 
         # initialize all our pages and their constituent plots
         self.pages: list[Page] = []
@@ -128,9 +128,9 @@ class App:
 
     def update(self, attr, old, new):
         # update the vetos
-        self.background, self.foreground = self.data_manager.update_vetos(
-            attr, old, new
-        )
+        self.data = self.data_manager.update_vetos(attr, old, new)
+        self.background = self.data.background
+        self.foreground = self.data.foreground
 
         # update pages with latest background and foreground
         for page in self.pages:
