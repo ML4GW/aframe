@@ -9,12 +9,13 @@ import numpy as np
 from bokeh import io
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource
-from priors.priors import log_normal_masses
+from ledger.injections import InjectionParameterSet
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 from plots.core import compute, style
 from plots.core.constants import DEFAULT_NUM_FAR_POINTS, SECONDS_PER_YEAR
 from plots.core.data import AnalysisData
+from plots.core.gwtc3 import log_dNdz, logprob_mass_lognorm
 
 if TYPE_CHECKING:
     from bilby.core.prior import PriorDict
@@ -101,36 +102,81 @@ def _far_grid(background, max_far: float, num_far_points: int):
     return fars, thresholds
 
 
+def log_target_density(
+    ledger: InjectionParameterSet, combo: tuple[float, float], sigma: float
+) -> np.ndarray:
+    """
+    Log density of each draw under the GWTC population around `combo`.
+
+    Args:
+        ledger:
+            Ledger object containing the source masses and redshifts
+        combo:
+            The (m1, m2) central source frame masses, with m1 >= m2
+        sigma:
+            Width of each log-normal distribution, in natural-log mass
+
+    Returns:
+        Log density of each draw, not normalized. It is -inf wherever
+        the draw's secondary mass is not below its primary.
+    """
+    params = {
+        "m1_mean": combo[0],
+        "m2_mean": combo[1],
+        "sig_lognorm_m1": sigma,
+        "sig_lognorm_m2": sigma,
+    }
+    log_p_mass = logprob_mass_lognorm(
+        ledger.mass_1_source, ledger.mass_2_source, params
+    )
+    log_p_z = log_dNdz(ledger.redshift, DEFAULT_COSMOLOGY)
+    return log_p_mass + log_p_z
+
+
 def _weights(
     data: AnalysisData,
-    mass_combos: list[tuple],
+    mass_combos: list[tuple[float, float]],
     source_prior: "PriorDict",
     sigma: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Importance weights reweighting injections to each target prior.
-
-    Returns the foreground weights `(C, N)` and the rejected draws'
-    summed squared weights `(C,)`, both normalized over the foreground
-    plus the live fraction of the rejected draws.
     """
-    logging.info("Computing data likelihood under source prior")
-    source_probs = get_prob(source_prior, data.foreground)
-    source_rejected_probs = get_prob(source_prior, data.rejected)
+    Importance weights reweighting injections to each target population.
 
-    weights = np.zeros((len(mass_combos), len(source_probs)))
+    Args:
+        data:
+            AnalysisData object containing foreground and rejected ledgers,
+            as well as the live fraction after vetoes
+        mass_combos:
+            List of (m1, m2) central source frame masses
+        source_prior:
+            The instantiated prior that injections were drawn from
+        sigma:
+            Width of each log-normal distribution, in natural-log mass
+
+    Returns:
+        Weights for each foreground event, with shape `(C, N)` and one
+        row per mass combination, and the rejected draws' summed squared
+        weights, with shape `(C,)`. Both
+        are normalized over the foreground plus the live fraction of the
+        rejected draws.
+    """
+    log_source = np.log(get_prob(source_prior, data.foreground))
+    log_source_rejected = np.log(get_prob(source_prior, data.rejected))
+
+    weights = np.zeros((len(mass_combos), len(log_source)))
     rejected_w2 = np.zeros(len(mass_combos))
+    live = data.live_fraction
     for i, combo in enumerate(mass_combos):
         logging.info(f"Computing likelihoods under {combo} log normal")
-        prior, _ = log_normal_masses(
-            *combo, sigma=sigma, cosmology=DEFAULT_COSMOLOGY
-        )
-        weight = get_prob(prior, data.foreground) / source_probs
+        weight = log_target_density(data.foreground, combo, sigma) - log_source
         rejected_weights = (
-            get_prob(prior, data.rejected) / source_rejected_probs
+            log_target_density(data.rejected, combo, sigma)
+            - log_source_rejected
         )
 
-        # only the live fraction of the rejected draws fall in unvetoed time
-        live = data.live_fraction
+        weight = np.exp(weight)
+        rejected_weights = np.exp(rejected_weights)
+
         norm = weight.sum() + live * rejected_weights.sum()
         if norm > 0:
             weight /= norm
@@ -138,6 +184,7 @@ def _weights(
 
         weights[i] = weight
         rejected_w2[i] = live * (rejected_weights**2).sum()
+
     return weights, rejected_w2
 
 

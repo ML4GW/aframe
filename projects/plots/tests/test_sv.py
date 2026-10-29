@@ -129,9 +129,9 @@ def test_weights_reweight_comoving_to_source_frame(
     # end_o3 draws uniform in comoving volume; the target is uniform in
     # source-frame time, so the weights go as 1 / (1 + z)
     expected = np.array([1 / 1.1, 1 / 2.0])
-    # bilby tabulates these redshift priors on 1000-point grids
+    # bilby tabulates the source's redshift prior on a 1000-point grid
     np.testing.assert_allclose(
-        weights[0], expected / expected.sum(), rtol=5e-5
+        weights[0], expected / expected.sum(), rtol=1e-4
     )
 
 

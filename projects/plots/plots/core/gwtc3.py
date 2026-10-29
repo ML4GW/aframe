@@ -158,6 +158,28 @@ def logprob_spin(sx, sy, sz, params):
     )
 
 
+def log_dNdz(z: np.ndarray, cosmology: cosmo.Cosmology) -> np.ndarray:
+    """
+    Log redshift density of sources uniform in comoving volume and
+    source-frame time.
+
+    Args:
+        z: source redshifts
+        cosmology: astropy cosmology that sets the comoving volume element
+
+    Returns:
+        Log of 4 pi dVc/dz / (1 + z), with dVc/dz in units of Gpc^3 / sr
+    """
+    if len(z) == 0:
+        return np.ndarray([0])
+    log_dNdV = 0
+    log_dVdz = np.log(4 * np.pi) + np.log(
+        cosmology.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value
+    )
+    log_time_dilation = -np.log(1 + z)
+    return log_dNdV + log_dVdz + log_time_dilation
+
+
 def log_dNdm1dm2ds1ds2dz(
     m1, m2, s1x, s1y, s1z, s2x, s2y, s2z, z, logprob_mass, logprob_spin, params
 ):
@@ -196,14 +218,7 @@ def log_dNdm1dm2ds1ds2dz(
     # where the second term is for time dilation
     # ignoring the rate because it will cancel out anyway
     cosmo = params["cosmo"]
-    log_dNdV = 0
-    log_dVdz = np.log(4 * np.pi) + np.log(
-        cosmo.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value
-    )
-    log_time_dilation = -np.log(1 + z)
-    log_dNdz = log_dNdV + log_dVdz + log_time_dilation
-
-    return log_pm + log_dNdz + log_ps
+    return log_pm + log_ps + log_dNdz(z, cosmo)
 
 
 def logdiffexp(x, y):
