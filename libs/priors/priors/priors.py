@@ -7,7 +7,6 @@ from bilby.core.prior import (
     Constraint,
     Cosine,
     Gaussian,
-    LogNormal,
     LogUniform,
     PowerLaw,
     PriorDict,
@@ -243,51 +242,6 @@ def gaussian_masses(
     prior = PriorDict(conversion_function=mass_constraints)
     prior["mass_1"] = Gaussian(name="mass_1", mu=m1, sigma=sigma)
     prior["mass_2"] = Gaussian(name="mass_2", mu=m2, sigma=sigma)
-    prior["redshift"] = UniformSourceFrame(
-        name="redshift", minimum=0, maximum=2, cosmology=cosmology
-    )
-    prior["dec"] = Cosine(name="dec")
-    prior["ra"] = Uniform(
-        name="ra", minimum=0, maximum=2 * np.pi, boundary="periodic"
-    )
-
-    detector_frame_prior = False
-    return prior, detector_frame_prior
-
-
-def log_normal_masses(
-    m1: float,
-    m2: float,
-    sigma: float = 2,
-    cosmology: cosmo.Cosmology = DEFAULT_COSMOLOGY,
-):
-    """
-    Construct a log normal bilby prior for masses.
-
-    Masses are defined in the source frame.
-
-    Args:
-        m1:
-            Mean of the Log Normal distribution for mass 1
-        m2:
-            Mean of the Log Normal distribution for mass 2
-        sigma:
-            Standard deviation for m1 and m2
-        cosmology:
-            An `astropy` cosmology, used to determine redshift sampling
-
-    Returns:
-        prior:
-            `PriorDict` describing the binary black hole population
-        detector_frame_prior:
-            Boolean indicating which frame masses are defined in
-    """
-    prior = PriorDict(conversion_function=mass_constraints)
-
-    prior["mass_1"] = LogNormal(name="mass_1", mu=np.log(m1), sigma=sigma)
-    prior["mass_2"] = LogNormal(name="mass_2", mu=np.log(m2), sigma=sigma)
-    prior["mass_ratio"] = Constraint(0.02, 1)
-
     prior["redshift"] = UniformSourceFrame(
         name="redshift", minimum=0, maximum=2, cosmology=cosmology
     )
