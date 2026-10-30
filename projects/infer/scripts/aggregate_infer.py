@@ -23,24 +23,61 @@ foreground_cls = (
     else RecoveredInjectionSet
 )
 
-# Total row counts from each group's metadata, which saves opening
-# every group file an extra time to count them.
-lengths = {}
-for fname in snakemake.input.metadata:
-    with open(fname) as f:
-        for name, length in json.load(f).items():
-            lengths[name] = lengths.get(name, 0) + length
 
-event_sets = {"background": EventSet, "foreground": foreground_cls}
-if hasattr(snakemake.output, "zero_lag"):
-    event_sets["zero_lag"] = EventSet
-# Keep the group files, which are aggregate_infer's declared inputs.
-for name, cls in event_sets.items():
-    cls.aggregate(
+def as_list(files):
+    """
+    Snakemake gives a named input with one file as a string
+    """
+    return [files] if isinstance(files, str) else list(files)
+
+
+# Each group's row counts from its metadata, which saves opening every
+# group file an extra time to count them.
+counts = {}
+for fname in as_list(snakemake.input.metadata):
+    with open(fname) as f:
+        counts[fname] = json.load(f)
+
+
+def merge(cls, inputs, output, metadata, name):
+    """
+    Merge the groups' `name` event sets, keeping the group files, which
+    are aggregate_infer's declared inputs.
+    """
+    length = sum(counts[fname][name] for fname in as_list(metadata))
+    cls.aggregate(as_list(inputs), output, clean=False, length=length)
+
+
+# Background (and zero lag) from every group
+names = ["background"] + (
+    ["zero_lag"] if hasattr(snakemake.output, "zero_lag") else []
+)
+for name in names:
+    merge(
+        EventSet,
         snakemake.input[name],
         snakemake.output[name],
-        clean=False,
-        length=lengths[name],
+        snakemake.input.metadata,
+        name,
+    )
+
+# Foreground: for R&P, whose frames carry their own injections, one from
+# every group; otherwise one per population, from only its groups
+if hasattr(snakemake.output, "foreground"):
+    merge(
+        foreground_cls,
+        snakemake.input.foreground,
+        snakemake.output.foreground,
+        snakemake.input.metadata,
+        "foreground",
+    )
+for population in snakemake.params.populations:
+    merge(
+        foreground_cls,
+        snakemake.input[f"foreground_{population}"],
+        snakemake.output[f"foreground_{population}"],
+        snakemake.input[f"metadata_{population}"],
+        "foreground",
     )
 
 background = EventSet.read(snakemake.output.background)

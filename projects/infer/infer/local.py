@@ -59,6 +59,7 @@ class LocalInferenceClient:
         batch_size: int = 128,
         highpass: float = 32.0,
         fftlength: float | None = None,
+        augmentor=None,
         device: str = "cuda",
         callback=None,
     ):
@@ -81,6 +82,7 @@ class LocalInferenceClient:
             fduration=fduration,
             fftlength=fftlength,
             highpass=highpass,
+            augmentor=augmentor,
         ).to(device)
         # one streaming snapshot state per sequence id (background + injection)
         self._states: dict[int, torch.Tensor] = {}

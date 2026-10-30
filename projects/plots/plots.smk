@@ -1,9 +1,10 @@
 """Snakemake rules for pipeline plots and metrics.
 
 Rules:
-  fetch_gwtc3_injections   copy the GWTC-3 injection set into the run dir
-  fetch_veto_segments      query veto segments for the analyzed span
-  sensitive_volume         compute sensitive volume vs. FAR and produce a plot
+  fetch_gwtc3_injections     copy the GWTC-3 injection set into the run dir
+  fetch_veto_segments        query veto segments for the analyzed span
+  compute_sensitive_volume   compute sensitive volume vs. FAR
+  sensitive_volume           sensitive volume vs. FAR and produce a plot for each population
 
 The fetch rules are localrules, so sensitive_volume reads only declared
 inputs and needs no network access.
@@ -54,28 +55,32 @@ rule fetch_veto_segments:
         "scripts/fetch_veto_segments.py"
 
 
-rule sensitive_volume:
-    """Compute sensitive volume vs. FAR and plot against LVK pipelines."""
+rule compute_sensitive_volume:
+    """Compute a population's sensitive volume vs. FAR, against the
+background shared by every population, and plot it against LVK pipelines.
+"""
     input:
         **({"veto_segments": str(plots_dir / "veto_segments.json")} if VETOS else {}),
         background=str(infer_dir / "background.hdf5"),
-        foreground=str(infer_dir / "foreground.hdf5"),
-        rejected_params=str(test_waveforms / "rejected_parameters.hdf5"),
+        foreground=str(infer_dir / "foreground_{population}.hdf5"),
+        rejected_params=str(
+            test_waveforms / "{population}" / "rejected_parameters.hdf5"
+        ),
         injection_file=str(plots_dir / "gwtc3_injections.hdf5"),
     output:
-        sv_data=str(plots_dir / "sensitive_volume.hdf5"),
-        sv_plot=str(plots_dir / "sensitive_volume.html"),
-        gwtc3_sv=str(plots_dir / "gwtc-3_pipeline_sv.hdf5"),
+        sv_data=str(plots_dir / "{population}" / "sensitive_volume.hdf5"),
+        sv_plot=str(plots_dir / "{population}" / "sensitive_volume.html"),
+        gwtc3_sv=str(plots_dir / "{population}" / "gwtc-3_pipeline_sv.hdf5"),
     log:
-        str(plots_log_dir / "sensitive_volume.log"),
+        str(plots_log_dir / "sensitive_volume-{population}.log"),
     container:
         PLOTS_CONTAINER
     resources:
         **rule_resources("sensitive_volume", "plots"),
     params:
         ifos=_fmt_list(config["ifos"]),
-        mass_combos=json.dumps(config["mass_combos"]),
-        source_prior=config["source_prior"],
+        mass_combos=lambda wc: json.dumps(pcfg(wc.population, "mass_combos")),
+        source_prior=lambda wc: pcfg(wc.population, "source_prior"),
         dt=config["dt"] or "null",
         vetos=_fmt_list(VETOS or []),
     shell:
@@ -99,3 +104,19 @@ rule sensitive_volume:
             else ""
         )
         + " &> {log}"
+
+
+rule sensitive_volume:
+    """Target rule: every active population's sensitive volume.
+
+Runs no command. population_sensitive_volume has a {population} wildcard,
+so it can't be run by name; this asks for all of its outputs instead.
+R&P runs have none, since they have no testing injections.
+"""
+    input:
+        (
+            expand(rules.compute_sensitive_volume.output, population=POPULATIONS)
+            if ANALYSIS_TYPE == "hdf5"
+            else []
+        ),
+    localrule: True

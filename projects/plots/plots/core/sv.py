@@ -293,9 +293,8 @@ class SensitiveVolumePlot:
     def _build(self, result: SensitiveVolumeResult):
         figures = style.make_grid(result.mass_combos)
         self._sources = []
-        for i, (p, color) in enumerate(
-            zip(figures, style.palette, strict=False)
-        ):
+        color = style.palette[0]
+        for i, p in enumerate(figures):
             line_source = ColumnDataSource(
                 {"far": result.fars, "sv": result.sv[i]}
             )
