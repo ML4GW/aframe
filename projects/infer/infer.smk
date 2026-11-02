@@ -157,6 +157,19 @@ def get_infer_group_outputs(wildcards):
     }
 
 
+def get_all_infer_group_inputs(wildcards) -> list[str]:
+    """Every file that any infer_group job reads for the infer_inputs target."""
+    branch_map = _load_branch_map()
+    inputs = sorted({b["fname"] for b in branch_map.values()})
+    if ANALYSIS_TYPE == "hdf5":
+        inputs += [
+            b["waveforms"] for b in branch_map.values() if b["waveforms"] is not None
+        ]
+    num_groups = 1 + max(b["group"] for b in branch_map.values())
+    inputs += expand(str(group_dir / "branches.json"), group_id=range(num_groups))
+    return inputs
+
+
 if ANALYSIS_TYPE == "rnp":
 
     checkpoint compute_branch_map:
@@ -495,6 +508,12 @@ else:
             + " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
             " --fftlength {params.fftlength}" + _GROUP_SHELL_SUFFIX
+
+
+rule infer_inputs:
+    """Make every file that inference reads without running inference"""
+    input:
+        get_all_infer_group_inputs,
 
 
 rule aggregate_infer:
