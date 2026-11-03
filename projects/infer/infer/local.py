@@ -10,6 +10,7 @@ Supports three backends:
 """
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -35,6 +36,36 @@ def build_model(weights, backend, device, aoti_path=None):
         return torch.compile(module) if backend == "compile" else module
     raise ValueError(
         f"backend must be 'export', 'compile', or 'aoti', got {backend}"
+    )
+
+
+def compile_aoti(
+    weights: Path,
+    package: Path,
+    batch_size: int,
+    num_ifos: int,
+    num_samples: int,
+    device: str,
+) -> None:
+    """Compile the exported model into an AOTInductor package"""
+    model = torch.export.load(weights).module().to(device)
+    example = torch.randn(
+        batch_size,
+        num_ifos,
+        num_samples,
+        device=device,
+    )
+
+    # Export with the batch dimension left free so that one package runs
+    # any number of kernels per call, which we need for batching over
+    # time shifts.
+    batch = torch.export.Dim("batch")
+    exported_program = torch.export.export(
+        model, example, dynamic_shapes=({0: batch},)
+    )
+
+    torch._inductor.aoti_compile_and_package(
+        exported_program, package_path=str(package)
     )
 
 

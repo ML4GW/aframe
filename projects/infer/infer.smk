@@ -524,7 +524,7 @@ else:
                 kernel_length=config["kernel_length"],
                 batch_size=config["inference_batch_size"],
             script:
-                "../export/scripts/compile_aoti.py"
+                "scripts/compile_aoti.py"
 
     else:
         _artifact = str(train_out / "model_exported.pt2")
