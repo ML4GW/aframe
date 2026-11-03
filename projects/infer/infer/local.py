@@ -49,11 +49,13 @@ def compile_aoti(
 ) -> None:
     """Compile the exported model into an AOTInductor package"""
     model = torch.export.load(weights).module().to(device)
-    example = torch.randn(
-        batch_size,
-        num_ifos,
-        num_samples,
-        device=device,
+    example = (
+        torch.randn(
+            batch_size,
+            num_ifos,
+            num_samples,
+            device=device,
+        ),
     )
 
     # Export with the batch dimension left free so that one package runs
