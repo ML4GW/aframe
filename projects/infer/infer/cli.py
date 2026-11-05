@@ -111,15 +111,32 @@ def _run_triton(client, cfg, branches: dict, scratch: Path) -> None:
             )
 
 
+def _batches(
+    branches: dict[str, dict], shifts_per_batch: int
+) -> list[list[tuple[str, dict]]]:
+    """
+    Divide a group's branches into batches of maximum size
+    `shifts_per_batch` that each read only one background file.
+    """
+    batches = []
+    prev_fname = None
+    for branch_id, branch in branches.items():
+        if (
+            not batches
+            or len(batches[-1]) == shifts_per_batch
+            or branch["fname"] != prev_fname
+        ):
+            batches.append([])
+        batches[-1].append((branch_id, branch))
+        prev_fname = branch["fname"]
+    return batches
+
+
 def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
-    """Run a group's branches in-process, in batches of shifts_per_batch
-    shifts. Each R&P branch is its own frame, so R&P runs use a
-    shifts_per_batch of 1."""
-    items = list(branches.items())
-    batches = [
-        items[i : i + cfg.shifts_per_batch]
-        for i in range(0, len(items), cfg.shifts_per_batch)
-    ]
+    """Run a group's branches in-process, in batches of up to
+    shifts_per_batch shifts of one file. Each R&P branch is its own frame,
+    so R&P batches hold one branch each."""
+    batches = _batches(branches, cfg.shifts_per_batch)
 
     for batch in batches:
         start = time.perf_counter()

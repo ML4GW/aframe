@@ -37,6 +37,7 @@ At very large branch counts the DAG construction can be batched:
 """
 
 import json
+import math
 import os
 from pathlib import Path
 
@@ -62,11 +63,6 @@ if ANALYSIS_TYPE not in ("hdf5", "rnp"):
     raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
 
 SHIFTS_PER_BATCH = config["shifts_per_batch"]
-if SHIFTS_PER_BATCH > 1 and (INFERENCE_MODE != "inprocess" or ANALYSIS_TYPE != "hdf5"):
-    raise WorkflowError(
-        "shifts_per_batch > 1 requires inference_mode 'inprocess' and "
-        "analysis_type 'hdf5'"
-    )
 
 INFER_CONTAINER = container("infer")
 
@@ -132,27 +128,23 @@ def _load_branch_map():
         return json.load(f)
 
 
-def _assign_groups(branch_map, branches_per_job, split_at_file_changes):
+def _assign_groups(branch_map, branches_per_job):
     """Number the branches, in order, into groups of at most branches_per_job.
 
-    With `split_at_file_changes`, a group never spans two strain files, so
-    a file is transferred to a job once for all of its shifts in that group.
     A group never spans two populations either, so that its foreground
     belongs to one. Background-only branches can join any group.
     """
-    group, size, last, group_population = -1, BRANCHES_PER_JOB, None, None
+    group, size, group_population = -1, branches_per_job, None
     for branch in branch_map.values():
         population = branch["population"]
         if (
-            size == BRANCHES_PER_JOB
-            or (split_at_file_changes and branch["fname"] != last)
+            size == branches_per_job
             or (population and group_population not in (None, population))
         ):
             group, size, group_population = group + 1, 0, None
         branch["group"] = group
         group_population = group_population or population
         size += 1
-        last = branch["fname"]
 
 
 def _group_branches(group_id):
@@ -172,12 +164,14 @@ def get_infer_group_inputs(wildcards):
 
 def _infer_group_resources():
     """rule_resources for an inprocess infer_group job. The configured
-    runtime is per branch, so it's scaled to a group of branches_per_job.
+    runtime covers each job's fixed costs, and runtime_per_branch is added
+    for each of its branches_per_job branches.
     """
     res = rule_resources("infer_group", "infer")
     if "runtime" in res:
-        res["runtime"] *= BRANCHES_PER_JOB
-        res["allowed_execute_duration"] *= BRANCHES_PER_JOB
+        per_branch = config["resources"]["infer_group"]["runtime_per_branch"]
+        res["runtime"] += math.ceil(per_branch * BRANCHES_PER_JOB)  # Minutes
+        res["allowed_execute_duration"] = res["runtime"] * 60  # Seconds
     return res
 
 
@@ -241,10 +235,7 @@ if ANALYSIS_TYPE == "rnp":
                 str(i): {"fname": f, "shifts": shifts, "population": None}
                 for i, f in enumerate(files)
             }
-            # one frame per branch, so there's nothing to share within a group
-            _assign_groups(
-                branch_map, params.branches_per_job, split_at_file_changes=False
-            )
+            _assign_groups(branch_map, params.branches_per_job)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -342,9 +333,7 @@ else:
                         ),
                     }
                     i += 1
-            _assign_groups(
-                branch_map, params.branches_per_job, split_at_file_changes=True
-            )
+            _assign_groups(branch_map, params.branches_per_job)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
