@@ -34,14 +34,7 @@ def build_model(weights, backend, device, aoti_path=None):
     if backend in ("export", "compile"):
         exported = torch.export.load(weights)
         module = exported.module().to(device)
-        if backend == "export":
-            return module
-        # Setting `dynamic=False` means that the model will compile once
-        # per call size, rather than a single time with more generic sizes.
-        # There are are most two different sizes: full batches and potentially
-        # a partial final batch, so overall compiling twice with more
-        # specificity is faster.
-        return torch.compile(module, dynamic=False)
+        return torch.compile(module) if backend == "compile" else module
 
     raise ValueError(
         f"backend must be 'export', 'compile', or 'aoti', got {backend}"
