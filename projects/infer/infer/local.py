@@ -10,6 +10,7 @@ Supports three backends:
 """
 
 import logging
+import time
 from pathlib import Path
 
 import numpy as np
@@ -33,7 +34,15 @@ def build_model(weights, backend, device, aoti_path=None):
     if backend in ("export", "compile"):
         exported = torch.export.load(weights)
         module = exported.module().to(device)
-        return torch.compile(module) if backend == "compile" else module
+        if backend == "export":
+            return module
+        # Setting `dynamic=False` means that the model will compile once
+        # per call size, rather than a single time with more generic sizes.
+        # There are are most two different sizes: full batches and potentially
+        # a partial final batch, so overall compiling twice with more
+        # specificity is faster.
+        return torch.compile(module, dynamic=False)
+
     raise ValueError(
         f"backend must be 'export', 'compile', or 'aoti', got {backend}"
     )
@@ -108,6 +117,7 @@ class LocalInferenceClient:
             highpass=highpass,
         ).to(device)
         self._stream_state: torch.Tensor | None = None
+        self._call_sizes: set[int] = set()
         name = device
         if "cuda" in device:
             name = torch.cuda.get_device_name(device)
@@ -177,5 +187,15 @@ class LocalInferenceClient:
                 -1, num_channels, self.whitener.kernel_size
             )
 
-            y = self.model(kernels)
-        return y.cpu().reshape(num_streams, -1).numpy()
+            # With the compile backend, the first call at each size includes
+            # compiling for that size. Time how long that takes and log it.
+            start = time.perf_counter()
+            y = self.model(kernels).cpu()
+            num_kernels = len(kernels)
+            if num_kernels not in self._call_sizes:
+                self._call_sizes.add(num_kernels)
+                logging.info(
+                    f"First call with {num_kernels} kernels took "
+                    f"{time.perf_counter() - start:.1f} s"
+                )
+        return y.reshape(num_streams, -1).numpy()
