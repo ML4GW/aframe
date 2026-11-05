@@ -22,5 +22,5 @@ num_testing_signals: 500
 Tb: 20000.0
 zero_lag: true
 
-# Groups of more than one branch, still within one file
-branches_per_job: 2
+# Each file has four branches, so groups of three span files
+branches_per_job: 3

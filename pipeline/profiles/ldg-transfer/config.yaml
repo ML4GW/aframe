@@ -90,6 +90,8 @@ default-resources:
   classad_AcctGroupUser: $ENV(LIGO_USERNAME)
 
   # Defaults for rules the run config's `resources` block doesn't cover.
-  # The disk holds the image (up to 4.2 GB for infer) as well as the files.
+  # The disk holds the image (up to 4.2 GB for infer) and the input files
+  # that condor copies in, which is input.size_mb for each job. Minimum
+  # of 10GB for any outputs.
   htcondor_request_mem_mb: 8192
-  request_disk: 10GB
+  htcondor_request_disk_mb: "max(10240, 5000 + input.size_mb)"
