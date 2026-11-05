@@ -5,20 +5,22 @@ Both run branches in groups of at most `branches_per_job` via
 `infer-triton` / `infer-local`, and both write the same outputs.
 The `compute_branch_map` and `aggregate_infer` rules are shared.
 
+    inprocess (default): Each group job is one GPU job that loads the
+               model locally and runs several shifts of a file at once.
+               Best when there are many GPUs available and jobs can be
+               scheduled on them; e.g., Delta or OSG.
+
     triton: A Triton server on the submit node hosts the model, and each group
             job is a CPU client, also on the submit node, that streams its
             branches to it. Best when GPUs are scarce but multiple exist on
             the submit node. Realistically, only used on LDG.
-
-    inprocess: Each group job is one GPU job that loads the model locally.
-               Best when there are many GPUs available and jobs can be
-               scheduled on them; e.g., Delta or OSG.
 
 At very large branch counts the DAG construction can be batched:
     snakemake --batch aggregate_infer=1/10
 """
 
 import json
+import math
 import os
 from pathlib import Path
 
@@ -42,8 +44,8 @@ if INFERENCE_BACKEND not in ("export", "compile", "aoti"):
 ANALYSIS_TYPE = config["analysis_type"]
 if ANALYSIS_TYPE not in ("hdf5", "rnp"):
     raise WorkflowError(f"analysis_type must be 'hdf5' or 'rnp', got {ANALYSIS_TYPE}")
-if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
-    raise WorkflowError("analysis_type 'rnp' requires inference_mode 'inprocess'")
+
+SHIFTS_PER_BATCH = config["shifts_per_batch"]
 
 INFER_CONTAINER = container("infer")
 
@@ -99,21 +101,14 @@ def _load_branch_map():
         return json.load(f)
 
 
-def _assign_groups(branch_map, split_at_file_changes):
-    """Number the branches, in order, into groups of at most branches_per_job.
-
-    With `split_at_file_changes`, a group never spans two strain files, so
-    a file is transferred to a job once for all of its shifts in that group.
-    """
-    group, size, last = -1, BRANCHES_PER_JOB, None
+def _assign_groups(branch_map, branches_per_job):
+    """Number the branches, in order, into groups of at most branches_per_job."""
+    group, size = -1, branches_per_job
     for branch in branch_map.values():
-        if size == BRANCHES_PER_JOB or (
-            split_at_file_changes and branch["fname"] != last
-        ):
+        if size == branches_per_job:
             group, size = group + 1, 0
         branch["group"] = group
         size += 1
-        last = branch["fname"]
 
 
 def _group_branches(group_id):
@@ -133,12 +128,14 @@ def get_infer_group_inputs(wildcards):
 
 def _infer_group_resources():
     """rule_resources for an inprocess infer_group job. The configured
-    runtime is per branch, so it's scaled to a group of branches_per_job.
+    runtime covers each job's fixed costs, and runtime_per_branch is added
+    for each of its branches_per_job branches.
     """
     res = rule_resources("infer_group", "infer")
     if "runtime" in res:
-        res["runtime"] *= BRANCHES_PER_JOB
-        res["allowed_execute_duration"] *= BRANCHES_PER_JOB
+        per_branch = config["resources"]["infer_group"]["runtime_per_branch"]
+        res["runtime"] += math.ceil(per_branch * BRANCHES_PER_JOB)  # Minutes
+        res["allowed_execute_duration"] = res["runtime"] * 60  # Seconds
     return res
 
 
@@ -151,22 +148,40 @@ def get_infer_group_outputs(wildcards):
     }
 
 
+def get_all_infer_group_inputs(wildcards) -> list[str]:
+    """Every file that any infer_group job reads for the infer_inputs target."""
+    branch_map = _load_branch_map()
+    inputs = sorted({b["fname"] for b in branch_map.values()})
+    if ANALYSIS_TYPE == "hdf5":
+        inputs += [
+            b["waveforms"] for b in branch_map.values() if b["waveforms"] is not None
+        ]
+    num_groups = 1 + max(b["group"] for b in branch_map.values())
+    inputs += expand(str(group_dir / "branches.json"), group_id=range(num_groups))
+    return inputs
+
+
 if ANALYSIS_TYPE == "rnp":
 
     checkpoint compute_branch_map:
         """Enumerate R&P frame files as one branch each."""
         output:
             str(infer_dir / "branch_map.json"),
+        # Declared as params so that changing them reruns the checkpoint
+        params:
+            branches_per_job=BRANCHES_PER_JOB,
+            frame_dir=FRAME_DIR,
+            ifos=config["ifos"],
         run:
-            files = sorted(str(p) for p in Path(FRAME_DIR).rglob("*.gwf"))
+            frame_dir = params.frame_dir
+            files = sorted(str(p) for p in Path(frame_dir).rglob("*.gwf"))
             if not files:
-                raise WorkflowError(f"No .gwf frames found in {FRAME_DIR}")
-            shifts = [0.0] * len(config["ifos"])
+                raise WorkflowError(f"No .gwf frames found in {frame_dir}")
+            shifts = [0.0] * len(params.ifos)
             branch_map = {
                 str(i): {"fname": f, "shifts": shifts} for i, f in enumerate(files)
             }
-            # one frame per branch, so there's nothing to share within a group
-            _assign_groups(branch_map, split_at_file_changes=False)
+            _assign_groups(branch_map, params.branches_per_job)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -189,6 +204,21 @@ else:
             str(bg_dir / "test" / "segments.txt"),
         output:
             str(infer_dir / "branch_map.json"),
+        # Declared as params so that changing them reruns the checkpoint.
+        # The last five are used by the data.smk helpers: _segment_chunks
+        # splits segments into files by max_duration, and
+        # testing_waveform_branches picks which branches get waveforms.
+        params:
+            branches_per_job=BRANCHES_PER_JOB,
+            Tb=config["Tb"],
+            shift_steps=config["shift_steps"],
+            psd_length=config["psd_length"],
+            zero_lag=zero_lag,
+            max_duration=config["max_duration"],
+            num_testing_signals=config["num_testing_signals"],
+            spacing=config["spacing"],
+            buffer=config["buffer"],
+            waveform_duration=config["waveform_duration"],
         run:
             def _get_num_timeslides(segments, Tb, shift_step, psd_length):
                 if Tb == 0:
@@ -203,12 +233,12 @@ else:
                             livetime += dur
                 return num_timeslides
 
-            psd_length = config["psd_length"]
+            psd_length = params.psd_length
             chunks = _segment_chunks(input[0])
             num_timeslides = _get_num_timeslides(
                 [(start, start + duration) for start, duration in chunks],
-                config["Tb"],
-                max(config["shift_steps"]),
+                params.Tb,
+                max(params.shift_steps),
                 psd_length,
             )
             waveform_branches = set(testing_waveform_branches())
@@ -218,12 +248,12 @@ else:
             if num_waveform_timeslides > num_timeslides:
                 raise WorkflowError(
                     f"num_testing_signals requires {num_waveform_timeslides} "
-                    f"timeslides but Tb={config['Tb']} only covers "
+                    f"timeslides but Tb={params.Tb} only covers "
                     f"{num_timeslides}. "
                     f"Reduce num_testing_signals or increase Tb."
                 )
             # zero lag is timeslide 0, which has no testing waveforms
-            timeslides = range(0 if zero_lag else 1, num_timeslides + 1)
+            timeslides = range(0 if params.zero_lag else 1, num_timeslides + 1)
             branch_map, i = {}, 0
             for start, duration in chunks:
                 for timeslide in timeslides:
@@ -245,7 +275,7 @@ else:
                         ),
                     }
                     i += 1
-            _assign_groups(branch_map, split_at_file_changes=True)
+            _assign_groups(branch_map, params.branches_per_job)
             Path(output[0]).parent.mkdir(parents=True, exist_ok=True)
             with open(output[0], "w") as f:
                 json.dump(branch_map, f, indent=2)
@@ -286,6 +316,7 @@ indices match infer_group's inputs.
 _group_common_params = dict(
     analysis_type=ANALYSIS_TYPE,
     ifos="[" + ",".join(config["ifos"]) + "]",
+    sample_rate=config["sample_rate"],
     inference_sampling_rate=config["inference_sampling_rate"],
     batch_size=config["inference_batch_size"],
     psd_length=config["psd_length"],
@@ -305,6 +336,8 @@ _GROUP_SHELL_SUFFIX = (
     + (" --zero_lag_out {output.zero_lag}" if zero_lag else "")
     + (" --timeseries_out {output.timeseries}" if return_timeseries else "")
     + " '--ifos={params.ifos}'"
+    + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
+    + " --sample_rate {params.sample_rate}"
     " --inference_sampling_rate {params.inference_sampling_rate}"
     " --batch_size {params.batch_size}"
     " --psd_length {params.psd_length}"
@@ -422,7 +455,7 @@ else:
                 kernel_length=config["kernel_length"],
                 batch_size=config["inference_batch_size"],
             script:
-                "../export/scripts/compile_aoti.py"
+                "scripts/compile_aoti.py"
 
     else:
         _artifact = str(train_out / "model_exported.pt2")
@@ -448,21 +481,25 @@ else:
         params:
             **_group_common_params,
             backend=INFERENCE_BACKEND,
-            sample_rate=config["sample_rate"],
             kernel_length=config["kernel_length"],
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
+            shifts_per_batch=SHIFTS_PER_BATCH,
         shell:
             "infer-local"
             " --weights {input.artifact}"
             " --backend {params.backend}"
+            " --shifts_per_batch {params.shifts_per_batch}"
             + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
-            + " --sample_rate {params.sample_rate}"
-            " --kernel_length {params.kernel_length}"
+            + " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
-            " --fftlength {params.fftlength}"
-            + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
-            + _GROUP_SHELL_SUFFIX
+            " --fftlength {params.fftlength}" + _GROUP_SHELL_SUFFIX
+
+
+rule infer_inputs:
+    """Make every file that inference reads without running inference"""
+    input:
+        get_all_infer_group_inputs,
 
 
 rule aggregate_infer:

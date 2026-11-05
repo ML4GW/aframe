@@ -3,7 +3,8 @@ import subprocess
 import sys
 import traceback
 from logging.handlers import QueueHandler
-from multiprocessing import Process, Queue
+from multiprocessing import Process
+from multiprocessing.queues import Queue
 
 
 def subprocess_wrapper(

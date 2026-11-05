@@ -78,3 +78,9 @@ rule all:
         *([rules.stop_triton.output] if INFERENCE_MODE == "triton" else []),
         rules.sensitive_volume.output,
         expand(rules.generate_segments.output[0], split=["train", "test"]),
+
+
+# Rather than the full block of inputs, outputs and resources, name each
+# job by its rule name and wildcards
+for r in workflow.rules:
+    r.message = "{rule} {wildcards}"
