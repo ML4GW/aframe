@@ -34,6 +34,7 @@ from online.utils.segments import (
 )
 from online.utils.snapshotter import OnlineSnapshotter
 from online.utils.timing import gps_now
+from online.utils.version import PIPELINE_VERSION
 from utils.preprocessing import BatchWhitener
 from online.subprocesses import (
     amplfi_subprocess,
@@ -581,6 +582,7 @@ def main(
     )
     subprocesses.append(logging_subprocess)
 
+    logging.info(f"Running Aframe online {PIPELINE_VERSION}")
     logging.info(f"Setting matmul precision to {matmul_precision}")
     torch.set_float32_matmul_precision(matmul_precision)
 
