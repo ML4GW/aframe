@@ -60,3 +60,15 @@ def parse_frame_name(fname: PATH_LIKE) -> tuple[str, int, int]:
 
 def is_gwf(match):
     return match is not None and match.group("suffix") == "gwf"
+
+
+def span_ready(last_ready: list[bool], ready: list[bool]) -> list[bool]:
+    """
+    Readiness of a yielded chunk of data. Most of what gets yielded is the
+    newest block, but starts `crop_length` seconds before it, at the end
+    of the previous block. Each interferometer is marked ready only if it
+    was ready in both blocks.
+    """
+    return [
+        prev and curr for prev, curr in zip(last_ready, ready, strict=True)
+    ]
