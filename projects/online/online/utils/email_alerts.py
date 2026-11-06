@@ -5,6 +5,7 @@ import logging
 from lal import gpstime
 
 from online.utils.timing import gps_now
+from online.utils.version import PIPELINE_VERSION
 
 SENDER_EMAIL = "aframe-online"
 
@@ -87,6 +88,8 @@ def send_init_email(recipients: list[str], outdir):
     # Email body
     body = f"""
     Aframe online deployment has been initialized at {date} UTC
+
+    Version: {PIPELINE_VERSION}
 
     The run output directory is {outdir}
     """

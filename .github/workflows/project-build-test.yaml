@@ -69,6 +69,8 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: recursive
+        # full history and tags
+        fetch-depth: 0
     - 
       name: log in to the Container registry
       uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -133,6 +135,9 @@ jobs:
         if [ -n "$ld_prepend" ]; then
           changes+=(--change "ENV PREPEND_LD_LIBRARY_PATH=$ld_prepend")
         fi
+        # Record the tag and commit in the container environment
+        changes+=(--change "ENV AFRAME_VERSION=$(git describe --tags --always)")
+        changes+=(--change "ENV AFRAME_COMMIT=$(git rev-parse HEAD)")
         cat app.tar.gz | docker import "${changes[@]}" - $TAG_LC
         docker push $TAG_LC
 

@@ -11,6 +11,7 @@ from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
 from online.utils.searcher import Event
 from online.utils.timing import gps_now
+from online.utils.version import PIPELINE_VERSION
 import matplotlib.pyplot as plt
 from ligo.skymap.tool.ligo_skymap_from_samples import (
     main as ligo_skymap_from_samples,
@@ -196,6 +197,8 @@ class GraceDb(_GraceDb):
         )
         with open(latency_fname, "w") as f:
             f.write(latency)
+
+        self.write_log(graceid, f"Aframe online {PIPELINE_VERSION}")
 
         return graceid
 
