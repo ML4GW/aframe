@@ -2101,22 +2101,23 @@ wheels = [
 
 [[package]]
 name = "ligo-gracedb"
-version = "2.15.4"
+version = "2.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "igwn-auth-utils" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2d/7a/6fa8ee52bb99b7d510a51686e7bd935be263031464eb38a710d458893916/ligo_gracedb-2.15.4.tar.gz", hash = "sha256:06c246f76bdded0bbb4c0471e77a69b0da95cdc97f2c6736a3966ad77667a8bb", size = 2444113, upload-time = "2026-03-25T20:23:00.73Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/9d/2abfc92eaae3065222cef9291bf065f13a56ae3997c1d6ef95b8a7683256/ligo_gracedb-2.16.1.tar.gz", hash = "sha256:71793ffaef49faf9d0fdf9af06060da9b26361ad4c31876a8ce90563978ca013", size = 2673435, upload-time = "2026-09-29T16:46:52.335Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/a6/075ee856218dcd9597fbfb829a60b7daf55ed877f2c0493735d7d9a8ea91/ligo_gracedb-2.15.4-py3-none-any.whl", hash = "sha256:3ac1b4dcac86d7f533b931a4ab140f37a09497eea2fbb314c40c34aac57211c2", size = 2516860, upload-time = "2026-03-25T20:22:59.234Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/a7/0fb89b5fc0feb1b4048030a79c0378b6d55e999e48194764aa024b7bdfd5/ligo_gracedb-2.16.1-py3-none-any.whl", hash = "sha256:b95360aeea4e6ff0099df3756537a515cb9f04208c909b96ad9f91d0e9ddfe34", size = 2929256, upload-time = "2026-09-29T16:46:50.836Z" },
 ]
 
 [package.optional-dependencies]
 kafka = [
     { name = "certifi" },
     { name = "confluent-kafka" },
+    { name = "jsonschema" },
 ]
 
 [[package]]
@@ -2840,7 +2841,7 @@ requires-dist = [
     { name = "architectures", editable = "../../libs/architectures" },
     { name = "arrakis", specifier = ">=0.19.0,<0.20.0" },
     { name = "ledger", editable = "../../libs/ledger" },
-    { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.15.4" },
+    { name = "ligo-gracedb", extras = ["kafka"], specifier = ">=2.16.1" },
     { name = "ligo-skymap", specifier = ">=2.4.0,<3" },
     { name = "matplotlib", specifier = "==3.9.4" },
     { name = "ml4gw", specifier = ">=0.7.4" },

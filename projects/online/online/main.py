@@ -683,6 +683,7 @@ def main(
         outdir / "events",
         amplfi_queue,
         pastro_queue,
+        emails,
     )
     event_process = Process(
         target=event_creation_subprocess,
