@@ -6,6 +6,7 @@ import bilby
 import certifi
 import h5py
 from ligo.gracedb.kafka import GraceDbKafkaProducer
+from ligo.gracedb.kafka.exceptions import KafkaAuthenticationError
 from ligo.gracedb.rest import GraceDb as _GraceDb
 from ligo.skymap.tool.ligo_skymap_plot import main as ligo_skymap_plot
 from ligo.skymap.io.fits import write_sky_map
@@ -20,6 +21,10 @@ if TYPE_CHECKING:
     from astropy.io.fits import BinTableHDU
     from amplfi.utils.result import AmplfiResult
 from enum import Enum
+
+# Seconds to wait for a GraceDB server to accept a connection and
+# to send each part of its response, respectively
+REQUEST_TIMEOUT = (10, 60)
 
 
 class GdbServer(Enum):
@@ -114,6 +119,11 @@ class GraceDb(_GraceDb):
         else:
             self.logger = logger
 
+    def request(self, *args, timeout=None, **kwargs):
+        if timeout is None:
+            timeout = REQUEST_TIMEOUT
+        return super().request(*args, timeout=timeout, **kwargs)
+
     def setup_kafka_producer(self):
         """
         Create the kafka producer used to submit events, connecting
@@ -126,6 +136,8 @@ class GraceDb(_GraceDb):
             bootstrap_servers=self.server.kafka_bootstrap_server,
             service_url=self.server.service_url,
             ca_cert_path=certifi.where(),
+            # send librdkafka's messages to our logs
+            logger=logging.getLogger("librdkafka"),
         )
 
     def submit(self, event: Event):
@@ -134,14 +146,34 @@ class GraceDb(_GraceDb):
         filename = event_dir / event.filename
         self.logger.info("Creating event in GraceDB")
         submission_start = gps_now()
-        response = self.create_event(
-            group="CBC",
-            pipeline="aframe",
-            filename=str(filename),
-            search="AllSky",
-            kafka=self.kafka_producer,
-            http_fallback=self.http_fallback,
-        )
+
+        # If setting up a producer failed or if the last one hit an auth
+        # error, try to set one up here. If that raises, skip this event
+        # and try again on the next one.
+        if self.kafka_producer is None and self.server != GdbServer.local:
+            try:
+                self.setup_kafka_producer()
+            except Exception as e:
+                self.logger.error(f"Couldn't set up Kafka producer: {e}")
+                return None
+
+        try:
+            response = self.create_event(
+                group="CBC",
+                pipeline="aframe",
+                filename=str(filename),
+                search="AllSky",
+                kafka=self.kafka_producer,
+                http_fallback=self.http_fallback,
+            )
+        except KafkaAuthenticationError as e:
+            # producer's don't recover from auth errors, so reset
+            self.logger.error(f"Kafka authentication failed: {e}")
+            self.kafka_producer = None
+            return None
+        except Exception as e:
+            self.logger.error(f"Creating event in GraceDB failed: {e}")
+            return None
 
         self.logger.debug("Event created")
 
