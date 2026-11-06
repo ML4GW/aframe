@@ -22,16 +22,20 @@ def send_email(message: MIMEMultipart, recipients: list[str]):
         logging.error(f"Failed to send notification email: {str(e)}")
 
 
+def send_alert(subject: str, body: str, recipients: list[str]):
+    """Email an alert about the search"""
+    message = MIMEMultipart()
+    message["Subject"] = subject
+    message["From"] = SENDER_EMAIL
+    message["To"] = ", ".join(recipients)
+    message.attach(MIMEText(body, "plain"))
+    send_email(message, recipients)
+
+
 def send_error_email(
     name: str, error: str, traceback: str, recipients: list[str]
 ):
     date = gpstime.gps_to_utc(int(gps_now()))
-
-    # Create message
-    message = MIMEMultipart()
-    message["Subject"] = f"Error Alert: {name} Process Failed"
-    message["From"] = SENDER_EMAIL
-    message["To"] = ", ".join(recipients)
 
     # Email body
     body = f"""
@@ -45,20 +49,32 @@ def send_error_email(
     Aframe online deployment will be automatically relaunched.
     """
 
-    message.attach(MIMEText(body, "plain"))
+    send_alert(f"Error Alert: {name} Process Failed", body, recipients)
 
-    send_email(message, recipients)
+
+def send_submission_failure_email(
+    error: str, traceback: str, recipients: list[str]
+):
+    date = gpstime.gps_to_utc(int(gps_now()))
+
+    body = f"""
+    Submitting an event to GraceDB failed at {date} UTC
+
+    Error message: {error}
+
+    Traceback:
+    {traceback}
+
+    The search is still running. The event may not exist in GraceDB,
+    so no PE products or p_astro will be uploaded for it.
+    """
+
+    send_alert("Error Alert: Aframe event submission failed", body, recipients)
 
 
 def send_detection_email(
     recipients: list[str], result, event, graceid: str, gracedb_url: str
 ):
-    # Create message
-    message = MIMEMultipart()
-    message["Subject"] = "Aframe identified event"
-    message["From"] = SENDER_EMAIL
-    message["To"] = ", ".join(recipients)
-
     body = f"""
     Aframe has identified an event with the following properties
 
@@ -73,16 +89,10 @@ def send_detection_email(
     See {gracedb_url} for more information
     """
 
-    message.attach(MIMEText(body, "plain"))
-
-    send_email(message, recipients)
+    send_alert("Aframe identified event", body, recipients)
 
 
 def send_init_email(recipients: list[str], outdir):
-    message = MIMEMultipart()
-    message["Subject"] = "Aframe Online Initialized"
-    message["From"] = SENDER_EMAIL
-    message["To"] = ", ".join(recipients)
     date = gpstime.gps_to_utc(int(gps_now()))
 
     # Email body
@@ -94,6 +104,4 @@ def send_init_email(recipients: list[str], outdir):
     The run output directory is {outdir}
     """
 
-    message.attach(MIMEText(body, "plain"))
-
-    send_email(message, recipients)
+    send_alert("Aframe Online Initialized", body, recipients)

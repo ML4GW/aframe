@@ -104,6 +104,11 @@ def pastro_subprocess(
         logger.info("Calculating p_astro")
         pastro = float(pastro_model(event.detection_statistic))
         graceid = pastro_queue.get()
+        if graceid is None:
+            logger.warning(
+                f"Not submitting p_astro for {event}: not in GraceDB"
+            )
+            continue
 
         event_dir = outdir / "events" / event.event_dir
         posterior_file = event_dir / "amplfi.posterior_samples.hdf5"
