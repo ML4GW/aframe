@@ -2,6 +2,7 @@ import os
 import numpy as np
 from pathlib import Path
 from online.dataloading.utils import (
+    span_ready,
     build_resample_filter,
     resample,
     parse_frame_name,
@@ -310,14 +311,10 @@ def offline_data_iterator(
                     x = resample(frame_buffer, factor, b, a)
                     x = x[:, buffer_slc]
                     frame_buffer = frame_buffer[:, BLOCK_SIZE:]
-                    # yield last_ready, which corresponds to
-                    # the data quality bits of the previous second
-                    # of data, i.e. the middle second of the
-                    # buffer that is being yielded as well
                     yield (
                         torch.Tensor(x.copy()).double(),
                         t0 - crop_length,
-                        last_ready,
+                        span_ready(last_ready, ready),
                     )
 
                 last_ready = ready
