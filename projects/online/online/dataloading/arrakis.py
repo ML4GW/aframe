@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from arrakis import Client, Time
 from online.dataloading.utils import (
+    span_ready,
     resample,
     build_resample_filter,
 )
@@ -65,6 +66,27 @@ def get_strain_sample_rate(strain_channels: list[str], metadata: dict) -> int:
     return int(sample_rates.pop())
 
 
+def gapped_ifos(
+    block,
+    ifos: list[str],
+    strain_channels: list[str],
+    state_channels: dict[str, str] | None = None,
+) -> list[bool]:
+    """
+    Which interferometers have a gap in either their strain channel or
+    state vector
+    """
+    return [
+        block[strain_channel].has_gaps
+        or (
+            block[state_channels[ifo]].has_gaps
+            if state_channels is not None
+            else False
+        )
+        for ifo, strain_channel in zip(ifos, strain_channels, strict=True)
+    ]
+
+
 def data_iterator(
     strain_channels: list[str],
     ifos: list[str],
@@ -110,16 +132,20 @@ def data_iterator(
     # a discontinuous jump
     expected_t0 = None
 
+    # whether the buffer is being refilled after a gap
+    refilling = False
+
     blocks = client.stream(channels, replay_id=replay_id)
     for block in blocks:
         # Check if the expected t0 differs by more than half a sample
         discontinuous = expected_t0 is not None and (
             abs(block.t0 - expected_t0) > 0.5 / strain_sample_rate
         )
-        if block.has_gaps or discontinuous:
+        gapped = gapped_ifos(block, ifos, strain_channels, state_channels)
+        if any(gapped[:2]) or discontinuous:
             if discontinuous:
                 logging.warning(
-                    f"Stream jumped from {expected_t0} to {block.to}, "
+                    f"Stream jumped from {expected_t0} to {block.t0}, "
                     "resetting states"
                 )
             else:
@@ -127,19 +153,28 @@ def data_iterator(
                     f"Gap in stream at {block.t0}, resetting states"
                 )
 
-            yield None, float(block.t0), [False] * len(ifos)
+            yield None, float(block.t0 - crop_length), [False] * len(ifos)
 
             block_buffer = np.zeros((len(ifos), 0))
             last_ready = [False] * len(ifos)
             expected_t0 = None
+            refilling = True
             continue
 
-        ready = [True] * len(ifos)
+        # Initialize the readiness array based on which ifos don't contain
+        # gaps. Only V1 can still contain gaps at this point due to the check
+        # above, so this can only be (assuming HLV) `[True, True, True]` or
+        # `[True, True, False]`.
+        ready = [not gap for gap in gapped]
         if state_channels is not None:
             for i, ifo in enumerate(ifos):
                 state_vector = block[state_channels[ifo]].data
 
-                ifo_ready = ((state_vector & 3) == 3).all()
+                # a gapped state vector can't show readiness, and checking
+                # one that's fully masked gives `masked` rather than a bool
+                ifo_ready = not gapped[i] and bool(
+                    ((state_vector & 3) == 3).all()
+                )
 
                 if ifo_ready and not last_ready[i]:
                     logging.info(f"{ifo} entering analysis-ready mode")
@@ -148,8 +183,13 @@ def data_iterator(
 
                 ready[i] &= ifo_ready
 
+        # Replace any gapped V1 data with zeros. Only V1 can be gapped here,
+        # since neither H1 nor L1 can be after the check above.
         strain_data = np.stack(
-            [block[channel].data for channel in strain_channels]
+            [
+                np.ma.filled(block[channel].data, 0)
+                for channel in strain_channels
+            ]
         )
         block_buffer = np.append(block_buffer, strain_data, axis=1)
         block_size = strain_data.shape[-1]
@@ -165,7 +205,13 @@ def data_iterator(
             yield (
                 torch.Tensor(x.copy()).double(),
                 float(block.t0 - crop_length),
-                last_ready,
+                span_ready(last_ready, ready),
             )
+            refilling = False
+        elif refilling:
+            # the first block after a gap can't be analyzed because the
+            # buffer hasn't refilled yet. Yielding as we do above with data
+            # gaps makes sure that time is recorded as part of the gap.
+            yield None, float(block.t0 - crop_length), [False] * len(ifos)
 
         last_ready = ready
