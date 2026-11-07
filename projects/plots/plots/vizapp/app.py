@@ -45,6 +45,7 @@ class App:
         fftlength: float,
         device: str = "cpu",
         vetos: list[VETO_CATEGORIES] | None = None,
+        population: str = "bbh",
         num_far_points: int = DEFAULT_NUM_FAR_POINTS,
         verbose: bool = False,
     ) -> None:
@@ -56,6 +57,7 @@ class App:
         self.background_dir = background_dir
         self.waveforms_dir = waveforms_dir
         self.results_dir = results_dir
+        self.population = population
         self.ifos = ifos
         self.mass_combos = mass_combos
         self.source_prior, _ = source_prior()
@@ -82,7 +84,7 @@ class App:
         # instantiate object for managing
         # data loading and application of vetos
         self.data_manager = DataManager(
-            results_dir, waveforms_dir, ifos, vetos
+            results_dir, waveforms_dir, ifos, vetos, population
         )
 
         self.background, self.foreground = self.data_manager.update_vetos(

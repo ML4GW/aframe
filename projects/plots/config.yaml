@@ -14,6 +14,7 @@ app:
     psd_length: 64
     highpass: 32
     lowpass: null
+    population: bbh
     batch_size: 128
     sample_rate: 2048
     inference_sampling_rate: 4
