@@ -80,8 +80,8 @@ data:
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
       init_args:
-        training_waveform_path:
-        val_waveform_file:
+        val_waveform_files:
+        training_waveform_files:
     dec: 
       class_path: ml4gw.distributions.Cosine
     psi: 

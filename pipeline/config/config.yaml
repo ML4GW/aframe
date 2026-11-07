@@ -53,50 +53,65 @@ max_duration: 20000.0       # maximum chunk length when splitting segments (seco
 sample_rate: 2048.0         # Hz
 
 # --- Waveform generation -----------------------------------------------------
-# Define a population dictionary that takes in population specific parameters
-populations:
-  bbh:
-    prior: &prior priors.priors.end_o3_ratesandpops        # module path to a prior
-    waveform_approximant: IMRPhenomPv2
-    minimum_frequency: 20.0                                # Hz
-    reference_frequency: 50.0                              # Hz
-    waveform_duration: 8.0                                 # seconds
-    # --- Training waveforms ---------------------------------------------------
-    num_training_signals: 100000
-    pregenerate_training_waveforms: true
-    # Number of condor jobs that training waveforms are split across when
-    # pregenerate_training_waveforms is true.
-    num_train_waveform_jobs: 100
-    # --- Testing / validation waveforms ---------------------------------------
-    num_validation_signals: 20000
-    # Number of condor jobs that validation waveforms are split across
-    num_validation_jobs: 200
-    num_testing_signals: 500000
-    spacing: 16.0                                          # spacing between testing injections (seconds)
-    buffer: 16.0                                           # edge buffer around each segment (seconds)
-    snr_threshold: 4.0                                     # minimum network SNR for rejection sampling
-    max_num_samples: 3000                                  # max waveforms per rejection-sampling batch
-    # --- Plots ----------------------------------------------------------------
-    source_prior: *prior
-    mass_combos:
-      - [35, 35]
-      - [35, 20]
-      - [20, 20]
-      - [20, 10]
-
-active_populations: [bbh]
-
-# These are shared waveform generation parameters across different population
-right_pad: 2.0                                             # seconds
+prior: priors.priors.end_o3_ratesandpops  # module path to a prior
+minimum_frequency: 20.0                          # Hz
+reference_frequency: 50.0                        # Hz
+waveform_duration: 8.0                           # seconds
+waveform_approximant: IMRPhenomPv2
+right_pad: 2.0                                   # seconds
 seed: 1122
-jitter: 0.1                                                # seconds to jitter each injection's time
-highpass: 32.0                                             # Hz
-lowpass: null                                              # Hz; null to skip lowpass filtering
 
-# --- Inference ----------------------------------------------------------------
+# --- Training waveforms ------------------------------------------------------
+num_training_signals: 100000
+# Pre-generate training waveforms to disk instead of sampling them
+# on the fly during training.
+pregenerate_training_waveforms: true
+# Number of condor jobs that training waveforms are split across when
+# pregenerate_training_waveforms is true.
+num_train_waveform_jobs: 100
+
+# --- Testing / validation waveforms ------------------------------------------
+num_testing_signals: 500000
+num_validation_signals: 20000
+
 shift_steps:
   - 0.0  # seconds to shift H1 each time shift
   - 1.0  # seconds to shift L1 each time shift
+
+jitter: 0.1             # seconds to jitter each injection's time
+spacing: 16.0           # spacing between testing injections (seconds)
+buffer: 16.0            # edge buffer around each segment (seconds)
+highpass: 32.0          # Hz
+lowpass: null           # Hz; null to skip lowpass filtering
+snr_threshold: 4.0      # minimum network SNR for rejection sampling
+max_num_samples: 3000   # max waveforms generated per rejection-sampling batch
+
+# Number of condor jobs that validation waveforms are split across
+num_validation_jobs: 200
+
+# --- Populations -------------------------------------------------------------
+# The waveform settings above (prior through num_validation_jobs, except
+# pregenerate_training_waveforms), and mass_combos under Plots, are the defaults
+# of every population. A population lists only the ones it changes, e.g.
+
+#   populations:
+#     bbh: {}
+#     bns:
+#       prior: priors.priors.end_o3_ratesandpops_bns
+#       waveform_duration: 25.0
+#       num_testing_signals: 50000
+#       mass_combos: 
+#         - [1.4, 1.4]
+#   active_populations: [bbh, bns]
+
+# Each active population gets its own waveforms, inference foreground and
+# sensitive volume, against a shared background. right_pad, seed, jitter,
+# highpass, lowpass, sample_rate and pregenerate_training_waveforms are
+# shared by every population.
+
+populations:
+  bbh: {}
+active_populations: [bbh]
 
 # --- Training -----------------------------------------------------------------
 # Lightning CLI YAML config for `train fit`.
@@ -173,6 +188,12 @@ triton_idle_timeout: 1200
 rate_per_gpu: 70.0
 
 # --- Plots -------------------------------------------------------------------
+mass_combos:
+  - [35, 35]
+  - [35, 20]
+  - [20, 20]
+  - [20, 10]
+
 dt: null  # recovery time delta in seconds (null to disable)
 
 # Data-quality veto categories to apply before computing sensitive volume.
@@ -219,7 +240,8 @@ resources:
   compile_model: {mem_mb: 32000, runtime: 10}
   # runtime per branch, scaled by branches_per_job
   infer_group: {mem_mb: 8192, runtime: 20}
-  aggregate_infer: {mem_mb: 4096, runtime: 15}
+  aggregate_background: {mem_mb: 4096, runtime: 15}
+  aggregate_foreground: {mem_mb: 4096, runtime: 15}
   sensitive_volume: {mem_mb: 16384, runtime: 15}
 
 # --- GPUs --------------------------------------------------------------------

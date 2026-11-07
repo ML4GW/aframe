@@ -3,7 +3,7 @@
 Two inference modes, selected by `inference_mode` in the run config.
 Both run branches in groups of at most `branches_per_job` via
 `infer-triton` / `infer-local`, and both write the same outputs.
-The `compute_branch_map` and `aggregate_infer` rules are shared.
+The `compute_branch_map` rule and the aggregate rules are shared.
 
     triton: A Triton server on the submit node hosts the model, and each group
             job is a CPU client, also on the submit node, that streams its
@@ -16,16 +16,15 @@ The `compute_branch_map` and `aggregate_infer` rules are shared.
 
 
 Each branch is tagged with the population of its testing waveforms
-and a group never mixes populations, so aggregate_infer writes one
-foreground per population, foreground_<population>.hdf5, and one background
-from every group.
+and a group never mixes populations. The groups' outputs are merged by:
 
-R&P frames carry their own injections, so an R&P run ignores the
-populations and writes a single foreground.hdf5, as before.
-
-
-At very large branch counts the DAG construction can be batched:
-    snakemake --batch aggregate_infer=1/10
+    aggregate_background: the background, from every group.
+    aggregate_foreground: each population's foreground,
+                          foreground_<population>.hdf5, from only its
+                          groups. R&P frames carry their own injections,
+                          so for R&P it ignores the populations and writes
+                          a single foreground.hdf5 from every group.
+    aggregate_infer:      target rule for all of them.
 """
 
 import json
@@ -57,17 +56,14 @@ if ANALYSIS_TYPE == "rnp" and INFERENCE_MODE == "triton":
 
 INFER_CONTAINER = container("infer")
 
-# The foreground event sets aggregate_infer writes: one per active
-# population, from the testing waveforms injected into its timeslides, or
-# for R&P, whose frames carry their own injections, a single one that
-# doesn't depend on the populations.
+# The foreground aggregate_foreground writes: one per population, from the
+# testing waveforms injected into its timeslides, or for R&P, whose frames
+# carry their own injections, a single one that doesn't depend on the
+# populations.
 if ANALYSIS_TYPE == "rnp":
-    FOREGROUNDS = {"foreground": str(infer_dir / "foreground.hdf5")}
+    FOREGROUND = str(infer_dir / "foreground.hdf5")
 else:
-    FOREGROUNDS = {
-        f"foreground_{population}": str(infer_dir / f"foreground_{population}.hdf5")
-        for population in POPULATIONS
-    }
+    FOREGROUND = str(infer_dir / "foreground_{population}.hdf5")
 
 TRITON_IMAGE = os.path.join(
     os.getenv("AFRAME_CONTAINER_ROOT", ""), config["triton_image"]
@@ -103,7 +99,8 @@ wildcard_constraints:
     group_id=r"\d+",
 
 
-# Outputs of each group job, merged across groups by aggregate_infer.
+# Outputs of each group job, merged across groups by aggregate_background
+# and aggregate_foreground.
 # metadata.json holds the row count of each event set.
 group_dir = infer_dir / "groups" / "{group_id}"
 _group_outputs = {
@@ -170,25 +167,30 @@ def _infer_group_resources():
     return res
 
 
-def get_infer_group_outputs(wildcards):
-    """Every group's outputs, keyed by output name, plus each population's
-    groups' foregrounds and metadata under foreground_<population>/metadata_<population>.
+def get_background_inputs(wildcards):
+    """Every group's outputs but its foreground, keyed by output name, for
+    aggregate_background.
     """
-    branch_map = _load_branch_map().values()
-    num_groups = 1 + max(b["group"] for b in branch_map)
-    outputs = {
+    num_groups = 1 + max(b["group"] for b in _load_branch_map().values())
+    return {
         name: expand(fname, group_id=range(num_groups))
         for name, fname in _group_outputs.items()
+        if name != "foreground"
     }
-    for population in POPULATIONS if ANALYSIS_TYPE == "hdf5" else []:
-        groups = sorted(
-            {b["group"] for b in branch_map if b["population"] == population}
-        )
-        for name in ("foreground", "metadata"):
-            outputs[f"{name}_{population}"] = expand(
-                _group_outputs[name], group_id=groups
-            )
-    return outputs
+
+
+def get_foreground_inputs(wildcards):
+    """The foregrounds and metadata of the groups that make up a foreground,
+    for aggregate_foreground: a population's groups, or for R&P every group.
+    """
+    branches = _load_branch_map().values()
+    if ANALYSIS_TYPE == "hdf5":
+        branches = [b for b in branches if b["population"] == wildcards.population]
+    groups = sorted({b["group"] for b in branches})
+    return {
+        name: expand(_group_outputs[name], group_id=groups)
+        for name in ("foreground", "metadata")
+    }
 
 
 if ANALYSIS_TYPE == "rnp":
@@ -512,10 +514,12 @@ else:
             + _GROUP_SHELL_SUFFIX
 
 
-rule aggregate_infer:
-    """Merge per-group outputs into the final background and each population's foreground."""
+rule aggregate_background:
+    """Merge every group's background into the final background, and its
+    zero lag and timeseries when they're requested.
+    """
     input:
-        unpack(get_infer_group_outputs),
+        unpack(get_background_inputs),
     output:
         **({"zero_lag": str(infer_dir / "0lag.hdf5")} if zero_lag else {}),
         **(
@@ -523,17 +527,59 @@ rule aggregate_infer:
             if return_timeseries
             else {}
         ),
-        **FOREGROUNDS,
         background=str(infer_dir / "background.hdf5"),
     log:
-        str(infer_log_dir / "aggregate_infer.log"),
+        str(infer_log_dir / "aggregate_background.log"),
     localrule: config["aggregate_rules_local"]
     container:
         INFER_CONTAINER
     resources:
-        **rule_resources("aggregate_infer", "infer"),
+        **rule_resources("aggregate_background", "infer"),
+    script:
+        "scripts/aggregate_background.py"
+
+
+rule aggregate_foreground:
+    """Merge a population's per-group foregrounds into its foreground,
+    foreground_{population}.hdf5, or for R&P every group's into foreground.hdf5.
+    """
+    input:
+        unpack(get_foreground_inputs),
+    output:
+        foreground=FOREGROUND,
+    log:
+        str(
+            infer_log_dir
+            / (
+                "aggregate_foreground.log"
+                if ANALYSIS_TYPE == "rnp"
+                else "aggregate_foreground-{population}.log"
+            )
+        ),
+    localrule: config["aggregate_rules_local"]
+    container:
+        INFER_CONTAINER
+    resources:
+        **rule_resources("aggregate_foreground", "infer"),
     params:
         analysis_type=ANALYSIS_TYPE,
-        populations=POPULATIONS if ANALYSIS_TYPE == "hdf5" else [],
     script:
-        "scripts/aggregate_infer.py"
+        "scripts/aggregate_foreground.py"
+
+
+rule aggregate_infer:
+    """Target rule: every inference output, the background and every active
+    population's foreground, or for R&P its single foreground.
+
+    Runs no command. aggregate_foreground has a {population} wildcard, so it
+    can't be run by name; this asks for all of its outputs, and
+    aggregate_background's, instead.
+    """
+    input:
+        rules.aggregate_background.output,
+        (
+            expand(rules.aggregate_foreground.output, population=POPULATIONS)
+            if ANALYSIS_TYPE == "hdf5"
+            else rules.aggregate_foreground.output
+        ),
+    localrule: True

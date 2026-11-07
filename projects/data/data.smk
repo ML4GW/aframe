@@ -34,7 +34,6 @@ split its num_validation_signals and num_training_signals between them.
 """
 
 import math
-import re
 from pathlib import Path
 
 bg_dir = run_dir / "data"
@@ -45,80 +44,55 @@ train_waveforms = waveform_dir / "train"
 test_waveforms = waveform_dir / "test"
 training_waveforms_dir = train_waveforms / "training_waveforms"
 val_waveforms_dir = train_waveforms / "val_waveforms"
-training_waveforms_file = str(
+training_waveform_files = str(
     training_waveforms_dir / "training_waveforms_{population}.hdf5"
 )
-val_waveforms_file = str(val_waveforms_dir / "val_waveforms_{population}.hdf5")
+val_waveform_files = str(val_waveforms_dir / "val_waveforms_{population}.hdf5")
 data_log_dir = log_dir / "data"
 
 DATA_CONTAINER = container("data")
 
 
-# See `populations` in pipeline/config/config.yaml. These are the keys a
-# population can set, which exist only inside a population. It only needs
-# the ones of the tasks it's used for, which its jobs read through pcfg():
-#   training:          prior, waveform_approximant, minimum_frequency,
-#                      reference_frequency, waveform_duration,
-#                      num_training_signals, num_train_waveform_jobs,
-#                      pregenerate_training_waveforms
-#   validation:        prior, waveform_approximant, minimum_frequency,
-#                      reference_frequency, waveform_duration, snr_threshold,
-#                      num_validation_signals, num_validation_jobs
-#   testing:           prior, waveform_approximant, minimum_frequency,
-#                      reference_frequency, waveform_duration, snr_threshold,
-#                      max_num_samples, num_testing_signals, spacing, buffer,
-#   sensitive volume:  source_prior, mass_combos
-
+# --- Populations -------------------------------------------------------------
+# See `populations` in pipeline/config/config.yaml. Every population setting
+# (prior, waveform_duration, num_testing_signals, mass_combos, ...) has a
+# default at the top level of the config, and a population under
+# `populations` overrides only the ones it sets. Jobs read them through
+# population_cfg().
 
 POPULATIONS = config["active_populations"]
 if isinstance(POPULATIONS, str):
     POPULATIONS = [POPULATIONS]
 
 
-def pcfg(population, key):
-    """A population's value of `key`, which is reported missing here, by the
-    first job of this run that needs it.
+def population_cfg(population, key):
+    """A population's value of `key`: its own, if it sets one under
+    `populations`, or else the top-level default.
     """
-    try:
-        return config["populations"][population][key]
-    except KeyError:
-        raise WorkflowError(
-            f"Population {population!r} doesn't set {key!r}, which this run "
-            f"needs. Add it under `populations: {population}:`."
-        ) from None
+    overrides = config["populations"][population] or {}
+    return overrides[key] if key in overrides else config[key]
 
 
-# Training has one waveform_sampler (in train_config), which either loads
-# every population's training waveforms from disk or generates them all on
-# the fly, so every active population must agree on this.
-_pregenerate = {
-    pcfg(p, "pregenerate_training_waveforms")
-    for p in POPULATIONS
-    if "pregenerate_training_waveforms" in config["populations"][p]
-}
-if len(_pregenerate) > 1:
-    raise WorkflowError(
-        "Active populations must all set the same "
-        "pregenerate_training_waveforms, since training either loads every "
-        "population's training waveforms from disk or generates them all."
-    )
-PREGENERATE_TRAINING_WAVEFORMS = _pregenerate.pop() if _pregenerate else None
+# Shared by every population, since training has one waveform_sampler (in
+# train_config), which either loads every population's training waveforms
+# from disk or generates them all on the fly.
+PREGENERATE_TRAINING_WAVEFORMS = config["pregenerate_training_waveforms"]
 
 
 def _population_params(*keys):
     """Rule params that read each of `keys` for the job's {population}."""
-    return {key: lambda wc, key=key: pcfg(wc.population, key) for key in keys}
+    return {key: lambda wc, key=key: population_cfg(wc.population, key) for key in keys}
 
 
 def branch_ids(population, jobs_key):
     """IDs of a population's validation or training waveform branches."""
-    return [str(i) for i in range(pcfg(population, jobs_key))]
+    return [str(i) for i in range(population_cfg(population, jobs_key))]
 
 
 def validation_seed(population, vbranch_id):
     """A validation branch's seed, distinct across every population's."""
     earlier = POPULATIONS[: POPULATIONS.index(population)]
-    offset = sum(pcfg(p, "num_validation_jobs") for p in earlier)
+    offset = sum(population_cfg(p, "num_validation_jobs") for p in earlier)
     return config["seed"] + offset + int(vbranch_id)
 
 
@@ -266,10 +240,10 @@ def testing_waveform_branches():
     psd_length = config["psd_length"]
     branches, timeslide = [], 0
     for population in POPULATIONS:
-        target, total = pcfg(population, "num_testing_signals"), 0
-        waveform_duration = pcfg(population, "waveform_duration")
-        edge = pcfg(population, "buffer") + waveform_duration // 2
-        stride = pcfg(population, "spacing") + waveform_duration
+        target, total = population_cfg(population, "num_testing_signals"), 0
+        waveform_duration = population_cfg(population, "waveform_duration")
+        edge = population_cfg(population, "buffer") + waveform_duration // 2
+        stride = population_cfg(population, "spacing") + waveform_duration
         while total < target:
             timeslide += 1
             shifts = timeslide_shifts(timeslide)
@@ -396,7 +370,7 @@ then run fetch_background for each chunk.
 rule test_background:
     """Target rule: fetch every testing background file.
 
-Runs no command. Its inputs make snakemake query the training segments,
+Runs no command. Its inputs make snakemake query the testing segments,
 then run fetch_background for each chunk.
 """
     input:
@@ -419,7 +393,7 @@ a full background file.
         DATA_CONTAINER
     params:
         ifos=config["ifos"],
-        df=lambda wc: 1 / pcfg(wc.population, "waveform_duration"),
+        df=lambda wc: 1 / population_cfg(wc.population, "waveform_duration"),
     script:
         "scripts/compute_psd.py"
 
@@ -550,8 +524,8 @@ The PSDs are those of the last fetched train-background chunk.
             "max_num_samples",
         ),
         num_signals=lambda wc: math.ceil(
-            pcfg(wc.population, "num_validation_signals")
-            / pcfg(wc.population, "num_validation_jobs")
+            population_cfg(wc.population, "num_validation_signals")
+            / population_cfg(wc.population, "num_validation_jobs")
         ),
         ifos=_fmt_list(config["ifos"]),
         sample_rate=config["sample_rate"],
@@ -582,7 +556,7 @@ The PSDs are those of the last fetched train-background chunk.
 
 
 rule aggregate_val_waveforms:
-    """Merge population's per-branch validation waveforms into val_waveforms/val_waveforms_{population}.hdf5"""
+    """Merge a population's per-branch validation waveforms into its file."""
     input:
         waveforms=lambda wc: expand(
             str(val_waveforms_dir / "{population}" / "waveforms-{vbranch_id}.hdf5"),
@@ -590,7 +564,7 @@ rule aggregate_val_waveforms:
             vbranch_id=branch_ids(wc.population, "num_validation_jobs"),
         ),
     output:
-        waveforms=str(val_waveforms_dir / "val_waveforms_{population}.hdf5"),
+        waveforms=val_waveform_files,
     log:
         str(data_log_dir / "aggregate_val_waveforms-{population}.log"),
     localrule: config["aggregate_rules_local"]
@@ -622,10 +596,7 @@ they can't be run by name; this asks for all of their outputs instead.
 rule val_waveforms:
     """Target rule: every active population's validation waveforms."""
     input:
-        expand(
-            str(val_waveforms_dir / "val_waveforms_{population}.hdf5"),
-            population=POPULATIONS,
-        ),
+        expand(val_waveform_files, population=POPULATIONS),
     localrule: True
 
 
@@ -656,8 +627,8 @@ if PREGENERATE_TRAINING_WAVEFORMS:
                 "waveform_approximant",
             ),
             num_signals=lambda wc: math.ceil(
-                pcfg(wc.population, "num_training_signals")
-                / pcfg(wc.population, "num_train_waveform_jobs")
+                population_cfg(wc.population, "num_training_signals")
+                / population_cfg(wc.population, "num_train_waveform_jobs")
             ),
             sample_rate=config["sample_rate"],
             right_pad=config["right_pad"],
@@ -677,10 +648,7 @@ if PREGENERATE_TRAINING_WAVEFORMS:
     rule training_waveforms:
         """Target rule: every active population's training waveforms."""
         input:
-            expand(
-                str(training_waveforms_dir / "training_waveforms_{population}.hdf5"),
-                population=POPULATIONS,
-            ),
+            expand(training_waveform_files, population=POPULATIONS),
         localrule: True
 
     rule aggregate_training_waveforms:
@@ -692,9 +660,7 @@ if PREGENERATE_TRAINING_WAVEFORMS:
                 tbranch_id=branch_ids(wc.population, "num_train_waveform_jobs"),
             ),
         output:
-            waveforms=str(
-                training_waveforms_dir / "training_waveforms_{population}.hdf5"
-            ),
+            waveforms=training_waveform_files,
         log:
             str(data_log_dir / "aggregate_training_waveforms-{population}.log"),
         localrule: config["aggregate_rules_local"]

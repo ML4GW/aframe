@@ -74,11 +74,16 @@ data:
          # decay_steps: 989
     # If loading waveforms from disk, waveform_sampler should be
     # an instance of train.data.waveforms.WaveformLoader
+    # If using snakemake pipeline, training and validation waveform
+    # files will be mapped to the waveforms/train directtory in the run directory.
+    # For non pipeline training, you can specify the paths to the waveform files.
     waveform_sampler:
       class_path: train.data.waveforms.WaveformLoader
-      init_args:
-        val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms
-        training_waveform_path: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/training_waveforms
+      # init_args:
+      #   val_waveform_files:
+      #     - /path/to/run/waveforms/train/val_waveforms/val_waveforms_{population}.hdf5
+      #   training_waveform_files:
+      #     - /path/to/run/waveforms/train/training_waveforms/training_waveforms_{population}.hdf5
     # waveform_sampler: 
     #   class_path: train.data.waveforms.generator.cbc.CBCGenerator
     #   init_args:

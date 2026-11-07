@@ -31,24 +31,13 @@ TRAIN_NUM_GPUS = config["train_num_gpus"]
 
 def _val_waveform_inputs(wildcards):
     """Validation waveforms, one file per population."""
-    return expand(val_waveforms_file, population=POPULATIONS)
+    return expand(val_waveform_files, population=POPULATIONS)
 
 
 def _train_waveform_inputs(wildcards):
-    """Pre-generated training waveforms, one file per population, when enabled.
-
-    Snakemake calls this even when the model exists, to check it's up to
-    date, so it only insists on pregenerate_training_waveforms when there's
-    no model, i.e. when training is about to run.
-    """
-    model = train_out / "model_exported.pt2"
-    if PREGENERATE_TRAINING_WAVEFORMS is None and not model.exists():
-        raise WorkflowError(
-            "Training needs pregenerate_training_waveforms, which no active "
-            "population sets. Add it to the populations you train on."
-        )
+    """Pre-generated training waveforms, one file per population, when enabled."""
     if PREGENERATE_TRAINING_WAVEFORMS:
-        return expand(training_waveforms_file, population=POPULATIONS)
+        return expand(training_waveform_files, population=POPULATIONS)
     return []
 
 
@@ -119,10 +108,9 @@ else:
         With gpu_rules_local set to True, this runs on the node where
         snakemake is invoked.
 
-        AFRAME_TRAIN_WAVEFORMS_DIR is exported so the config resolves
-        to this run's val_waveforms/ and training_waveforms/, which hold a
-        file per population. The GPU count overrides trainer.devices in the
-        train config.
+        The waveform sampler is given exactly this rule's validation and
+        training waveform files, one per active population. The GPU count
+        overrides trainer.devices in the train config.
         """
         input:
             background=train_background_files,
@@ -148,8 +136,19 @@ else:
             background_dir=str(train_bg),
             waveforms_dir=str(train_waveforms),
             save_dir=str(train_out),
+            # comma-separated, since snakemake writes a list of files with
+            # spaces, which the CLI would read as a single path
+            val_files=lambda wc, input: ",".join(input.val_waveforms),
+            train_files=lambda wc, input: ",".join(input.train_waveforms),
         shell:
-            "{params.gpu_env}AFRAME_TRAIN_WAVEFORMS_DIR={params.waveforms_dir}"
-            " python -m train fit"
+            "{params.gpu_env}python -m train fit"
             + train_cli_args
+            + " --data.waveform_sampler.init_args.val_waveform_files"
+            " '[{params.val_files}]'"
+            + (
+                " --data.waveform_sampler.init_args.training_waveform_files"
+                " '[{params.train_files}]'"
+                if PREGENERATE_TRAINING_WAVEFORMS
+                else ""
+            )
             + " --trainer.devices {params.num_gpus} &> {log}"

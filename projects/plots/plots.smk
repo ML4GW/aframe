@@ -3,10 +3,10 @@
 Rules:
   fetch_gwtc3_injections     copy the GWTC-3 injection set into the run dir
   fetch_veto_segments        query veto segments for the analyzed span
-  compute_sensitive_volume   compute sensitive volume vs. FAR
-  sensitive_volume           sensitive volume vs. FAR and produce a plot for each population
+  compute_sensitive_volume   a population's sensitive volume vs. FAR, and its plot
+  sensitive_volume           every active population's sensitive volume
 
-The fetch rules are localrules, so sensitive_volume reads only declared
+The fetch rules are localrules, so compute_sensitive_volume reads only declared
 inputs and needs no network access.
 """
 
@@ -79,8 +79,8 @@ background shared by every population, and plot it against LVK pipelines.
         **rule_resources("sensitive_volume", "plots"),
     params:
         ifos=_fmt_list(config["ifos"]),
-        mass_combos=lambda wc: json.dumps(pcfg(wc.population, "mass_combos")),
-        source_prior=lambda wc: pcfg(wc.population, "source_prior"),
+        mass_combos=lambda wc: json.dumps(population_cfg(wc.population, "mass_combos")),
+        source_prior=lambda wc: population_cfg(wc.population, "prior"),
         dt=config["dt"] or "null",
         vetos=_fmt_list(VETOS or []),
     shell:
@@ -109,7 +109,7 @@ background shared by every population, and plot it against LVK pipelines.
 rule sensitive_volume:
     """Target rule: every active population's sensitive volume.
 
-Runs no command. population_sensitive_volume has a {population} wildcard,
+Runs no command. compute_sensitive_volume has a {population} wildcard,
 so it can't be run by name; this asks for all of its outputs instead.
 R&P runs have none, since they have no testing injections.
 """

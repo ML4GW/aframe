@@ -80,5 +80,6 @@ rule all:
         *(
             expand(rules.compute_sensitive_volume.output, population=POPULATIONS)
             if ANALYSIS_TYPE == "hdf5"
-            else rules.aggregate_infer.output
+            else rules.aggregate_infer.input
         ),
+        expand(rules.generate_segments.output[0], split=["train", "test"]),

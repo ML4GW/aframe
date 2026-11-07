@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from ledger.injections import WaveformPolarizationSet
 
-from .sampler import WaveformSampler, check_waveform_files, waveform_files
+from .sampler import WaveformSampler, check_waveform_files
 
 
 class WaveformLoader(WaveformSampler):
@@ -21,19 +21,19 @@ class WaveformLoader(WaveformSampler):
     The actual loading of the training waveforms is done
     by `waveform_dataloader` in `train.data.base.train_dataloader()`.
 
-    `training_waveform_path` is a file, or a directory of them, e.g.
-    one per population, sampled in proportion to their sizes. See
-    `check_waveform_files`.
+    `training_waveform_files` is the paths to the training waveform files,
+    e.g. one per population, which are sampled in proportion to their
+    sizes. See `check_waveform_files`.
     """
 
     def __init__(
         self,
         *args,
-        training_waveform_path: Path,
+        training_waveform_files: list[Path],
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.training_waveform_files = waveform_files(training_waveform_path)
+        self.training_waveform_files = list(training_waveform_files)
         right_pad, _ = check_waveform_files(
             self.training_waveform_files, WaveformPolarizationSet
         )
