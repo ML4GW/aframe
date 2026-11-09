@@ -127,8 +127,6 @@ class EventPage(MonitorPage):
             "far": None,
             "p_bbh": None,
             "total latency": None,
-            "frame write latency": None,
-            "aframe latency": None,
             "chirp_mass_mean": None,
             "chirp_mass_median": None,
             "mass_ratio_mean": None,
@@ -166,8 +164,6 @@ class EventPage(MonitorPage):
             if latency_path.exists():
                 latencies = np.genfromtxt(latency_path, delimiter=",")[1]
                 event_dict["total latency"] = latencies[0]
-                event_dict["frame write latency"] = latencies[1]
-                event_dict["aframe latency"] = latencies[2]
 
             # Load posterior data
             posterior_path = event / "amplfi.posterior_samples.hdf5"

@@ -138,14 +138,15 @@ def q_plots(
 
 def latency_plot(plotsdir: Path, df: pd.DataFrame) -> None:
     """
-    Create a histogram of the Aframe latencies
+    Create a histogram of the time from each event's merger
+    to its submission to GraceDB
 
     Args:
         plotsdir: Directory to save the plots
         df: DataFrame containing event data
     """
     plt.figure(figsize=(10, 6))
-    latency = df["aframe latency"].dropna()
+    latency = df["total latency"].dropna()
     median = latency.median()
     ninetieth_percentile = latency.quantile(0.9)
     # Pad the range so that the fastest and slowest events are inside the bins
@@ -161,7 +162,7 @@ def latency_plot(plotsdir: Path, df: pd.DataFrame) -> None:
         label=f"90th Percentile: {ninetieth_percentile:.2f} s",
     )
     plt.xscale("log")
-    plt.xlabel("Aframe latency (s)")
+    plt.xlabel("Latency from merger to GraceDB submission (s)")
     plt.ylabel("Count")
     plt.legend()
     plt.savefig(plotsdir / "aframe_latency.png", dpi=150)
