@@ -67,14 +67,19 @@ class GdbServer(Enum):
             return graceid
         return self.url + f"events/{graceid}/view"
 
-    def create_gracedb(self, write_dir: Path, **kwargs) -> "GraceDb":
+    def create_gracedb(
+        self, write_dir: Path, config_file: Path, **kwargs
+    ) -> "GraceDb":
         """Create a GraceDb client instance for this server."""
         if self == GdbServer.local:
-            return LocalGraceDb(server=self, write_dir=write_dir)
+            return LocalGraceDb(
+                server=self, write_dir=write_dir, config_file=config_file
+            )
 
         return GraceDb(
             server=self,
             write_dir=write_dir,
+            config_file=config_file,
             **kwargs,
         )
 
@@ -100,6 +105,7 @@ class GraceDb(_GraceDb):
         *args,
         server: GdbServer,
         write_dir: Path,
+        config_file: Path,
         logger: Optional[logging.Logger] = None,
         http_fallback: bool = False,
         **kwargs,
@@ -117,6 +123,7 @@ class GraceDb(_GraceDb):
 
         self.server = server
         self.write_dir = write_dir
+        self.config_file = config_file
         self.http_fallback = http_fallback
         if logger is None:
             self.logger = logging.getLogger()
@@ -203,7 +210,11 @@ class GraceDb(_GraceDb):
         with open(latency_fname, "w") as f:
             f.write(latency)
 
-        self.write_log(graceid, f"Aframe online {PIPELINE_VERSION}")
+        self.write_log(
+            graceid,
+            f"Aframe online {PIPELINE_VERSION}",
+            filename=self.config_file,
+        )
 
         return graceid
 

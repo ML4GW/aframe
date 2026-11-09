@@ -636,6 +636,7 @@ def main(
     gdb = server.create_gracedb(
         outdir / "events",
         http_fallback=http_fallback,
+        config_file=outdir / "config.yaml",
         reload_cred=True,
         reload_buffer=MIN_VALID_LIFETIME,
     )
