@@ -35,7 +35,7 @@ def amplfi_subprocess(
 
     while True:
         arg = amplfi_queue.get()
-        if isinstance(arg[0], Event):
+        if arg is not None and isinstance(arg[0], Event):
             event: Event
             amplfi_ifos: list[str]
 
@@ -64,6 +64,11 @@ def amplfi_subprocess(
             )
 
             graceid = amplfi_queue.get()
+            if graceid is None:
+                logger.warning(
+                    f"Not submitting PE for {event}: not in GraceDB"
+                )
+                continue
 
             logger.info(
                 f"Submitting posterior and low resolution skymap for {graceid}"
@@ -100,6 +105,11 @@ def amplfi_subprocess(
             event: Event
             amplfi_ifos: list[str]
             event, amplfi_ifos = amplfi_queue.get()
+            if graceid is None:
+                logger.warning(
+                    f"Not submitting PE for {event}: not in GraceDB"
+                )
+                continue
 
             descaled_samples = torch.reshape(
                 torch.Tensor(shared_samples[:]), (-1, len(inference_params))
