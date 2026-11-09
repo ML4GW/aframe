@@ -1,22 +1,14 @@
 import json
 import logging
-import os
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
-from gwpy.time import tconvert
 
 from ledger.events import EventSet
-from online.dataloading.online import get_prefix
 
 SECONDS_PER_YEAR = 31556952  # 60 * 60 * 24 * 365.2425
-
-
-def gps_from_timestamp(timestamp: float):
-    return float(tconvert(datetime.fromtimestamp(timestamp, tz=timezone.utc)))
 
 
 @dataclass
@@ -26,35 +18,6 @@ class Event:
     far: float
     ifos: List[str]
     channels: List[str]
-    datadir: Path
-    ifo_suffix: Optional[str] = None
-
-    def get_frame_write_time(self):
-        """
-        Get the time the frame corresponding
-        to this event was written to disk
-        """
-        t_write = 0
-        if self.ifo_suffix is not None:
-            ifo_dir = "_".join([self.ifos[0], self.ifo_suffix])
-        else:
-            ifo_dir = self.ifos[0]
-        prefix, length, _ = get_prefix(self.datadir / ifo_dir)
-        middle = "_".join(prefix.split("_")[1:])
-        for ifo in self.ifos:
-            if self.ifo_suffix is not None:
-                ifo_dir = "_".join([ifo, self.ifo_suffix])
-            else:
-                ifo_dir = ifo
-            prefix = f"{ifo[0]}-{ifo}_{middle}"
-            fname = (
-                self.datadir
-                / ifo_dir
-                / f"{prefix}-{int(self.gpstime)}-{length}.gwf"
-            )
-            t_write = max(t_write, os.path.getmtime(fname))
-
-        return gps_from_timestamp(t_write)
 
     def __str__(self):
         return (
@@ -84,7 +47,6 @@ class Event:
         filename = path / self.filename
 
         event = asdict(self)
-        _, _ = event.pop("datadir"), event.pop("ifo_suffix", None)
         event["ifos"] = ",".join(event["ifos"])
         event["end_time"] = int(self.gpstime)
         event["end_time_ns"] = int(self.gpstime % 1 * 1e9)
@@ -109,8 +71,6 @@ class Searcher:
         refractory_period: float,
         ifos: List[str],
         channels: str,
-        datadir: Path,
-        ifo_suffix: Optional[str] = None,
     ) -> None:
         self.online_inference_rate = online_inference_rate
         self.refractory_period = refractory_period
@@ -118,13 +78,11 @@ class Searcher:
         # Hard-coding this until there's an HLV Aframe model
         self.ifos = ifos[:2]
         self.channels = channels[:2]
-        self.datadir = datadir
-        self.ifo_suffix = ifo_suffix
 
         # initialize the state of the searcher:
 
         # flag that declares if we're in the process
-        # of detecting an event between frames
+        # of detecting an event between blocks
         self.detecting = False
 
         self.last_detection_time = 0
@@ -170,8 +128,6 @@ class Searcher:
             far=far,
             ifos=self.ifos,
             channels=self.channels,
-            datadir=self.datadir,
-            ifo_suffix=self.ifo_suffix,
         )
         # reset state to not detecting
         # after we've detected an event
@@ -202,21 +158,21 @@ class Searcher:
             return None
 
         # check if the integrated output is still
-        # ramping as we get to the end of the frame
+        # ramping as we get to the end of the block
         idx = np.argmax(timing_outputs)
         if idx < (len(timing_outputs) - 1):
             # if not, assume the event is in this
-            # frame and build an event around it
+            # block and build an event around it
             logging.info(
                 f"Detected event with detection statistic {max_val:0.3f}"
             )
             return self.build_event(max_val, t0, idx)
         else:
             # otherwise, note that we're mid-event but
-            # wait until the next frame to mark it
+            # wait until the next block to mark it
             logging.info(
                 f"Event with detection statistic {max_val:0.3f} "
-                "found but still ramping, waiting for next frame"
+                "found but still ramping, waiting for next block"
             )
             self.detecting = True
             return None

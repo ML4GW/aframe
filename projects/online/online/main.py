@@ -184,7 +184,7 @@ def search(
 ):
     significance_outputs, timing_outputs = None, None
 
-    # flag that declares if the most previous frame
+    # flag that declares if the most previous block
     # was analysis ready or not
     in_spec = False
 
@@ -209,7 +209,7 @@ def search(
             error._email_sent = True
             raise error
 
-        # if this frame was not analysis ready, assuming HLV ordering
+        # if this block was not analysis ready, assuming HLV ordering
         # on ready array
         hl_ready = ready[0] and ready[1]
         virgo_ready.append(ready[-1])
@@ -249,21 +249,22 @@ def search(
                         device,
                     )
 
-            # check if this is because the frame stream stopped
+            # check if this is because the data stopped
             # being analysis ready, in which case perform updates
             # but don't search for events
             if X is not None:
                 logging.debug(
-                    "Frame {} is not analysis ready. Using dummy values "
+                    "Data at {} is not analysis ready. Using dummy values "
                     "for inference and ignoring any triggers".format(floor(t0))
                 )
                 pass
-            # or if it's because frames were dropped within the stream
+            # or if it's because data is missing from the stream
             # in which case we should reset our states
             else:
                 logging.warning(
-                    "Missing frame files after timestep {}, "
-                    "resetting states".format(floor(t0))
+                    "No data received at {}, resetting states".format(
+                        floor(t0)
+                    )
                 )
 
                 state = snapshotter.reset()
@@ -272,13 +273,13 @@ def search(
 
                 segment_writer.update(PipelineState.MISSING_DATA, t0, ready)
 
-                # nothing left to do, so move on to next frame
+                # nothing left to do, so move on to the next block
                 continue
 
         elif not in_spec:
-            # the frame is analysis ready, but previous frames
+            # the block is analysis ready, but previous blocks
             # weren't, so reset our running states
-            logging.info(f"Frame {floor(t0)} is ready again, resetting states")
+            logging.info(f"Data at {floor(t0)} ready again, resetting states")
             state = snapshotter.reset()
             input_buffer.reset()
             output_buffer.reset()
@@ -288,7 +289,7 @@ def search(
         logging.debug("Updating input buffer")
         input_buffer.update(X, t0)
 
-        # we have a frame that is analysis ready,
+        # we have a block that is analysis ready,
         # so lets analyze it, taking the first two
         # channels, which correspond to H1/L1
         X = X[:2].to(device)
@@ -318,7 +319,7 @@ def search(
             y.cpu(), t0
         )
 
-        # if this frame was analysis ready,
+        # if this block was analysis ready,
         # and we had enough previous to build whitening filter
         # search for events in the integrated output
         event = None
@@ -903,8 +904,6 @@ def main(
         refractory_period=refractory_period,
         ifos=ifos,
         channels=channels,
-        datadir=datadir,
-        ifo_suffix=ifo_suffix,
     )
 
     time_offset = get_time_offset(

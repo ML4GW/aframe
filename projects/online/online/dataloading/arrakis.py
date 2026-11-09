@@ -85,7 +85,7 @@ def data_iterator(
     if not factor.is_integer():
         raise ValueError(
             f"Specified sample rate {sample_rate} must "
-            f"evenly divide the frame sample rate {strain_sample_rate}"
+            f"evenly divide the strain sample rate {strain_sample_rate}"
         )
     factor = int(factor)
     b, a = build_resample_filter(factor, numtaps)
