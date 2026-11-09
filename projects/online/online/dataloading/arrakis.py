@@ -142,6 +142,10 @@ def data_iterator(
             abs(block.t0 - expected_t0) > 0.5 / strain_sample_rate
         )
         gapped = gapped_ifos(block, ifos, strain_channels, state_channels)
+        # The main search loop requires the ifos to be HL or HLV, so the first
+        # two are always H1 and L1. The search can't run without both, so a gap
+        # or a jump in either resets the states. We can run without V1, so a
+        # gap or a jump there just marks V1 as not ready.
         if any(gapped[:2]) or discontinuous:
             if discontinuous:
                 logging.warning(
@@ -170,7 +174,10 @@ def data_iterator(
             for i, ifo in enumerate(ifos):
                 state_vector = block[state_channels[ifo]].data
 
-                # a gapped state vector can't show readiness, and checking
+                # An ifo is ready when the two lowest bits of its state
+                # vector are both 1. 3 is 0b11, so bitwise-anding with 3
+                # results in 3 only when the two lowest bits are on.
+                # A gapped state vector can't show readiness, and checking
                 # one that's fully masked gives `masked` rather than a bool
                 ifo_ready = not gapped[i] and bool(
                     ((state_vector & 3) == 3).all()

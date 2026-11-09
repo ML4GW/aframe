@@ -64,10 +64,10 @@ def is_gwf(match):
 
 def span_ready(last_ready: list[bool], ready: list[bool]) -> list[bool]:
     """
-    Readiness of a yielded chunk of data. Most of what gets yielded is the
-    newest block, but starts `crop_length` seconds before it, at the end
-    of the previous block. Each interferometer is marked ready only if it
-    was ready in both blocks.
+    Readiness of a yielded chunk of data. When resampling, the end of the
+    most recent block is cropped to remove edge effects, so the yielded
+    chunk spans two blocks of data. Each detector is marked ready only
+    if it was ready in both blocks.
     """
     return [
         prev and curr for prev, curr in zip(last_ready, ready, strict=True)
