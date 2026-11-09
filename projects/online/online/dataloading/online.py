@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from gwpy.timeseries import TimeSeries
 from online.dataloading.utils import (
+    span_ready,
     resample,
     build_resample_filter,
     fname_re,
@@ -110,6 +111,8 @@ def data_iterator(
     resampled_block_size = BLOCK_DURATION * sample_rate
     slc = slice(-int(crop_size + resampled_block_size), -int(crop_size))
     last_ready = [True] * len(ifos)
+    # whether the buffer is being refilled after a gap
+    refilling = False
     while True:
         frames = []
         logging.debug(f"Reading frames from timestamp {t0}")
@@ -133,10 +136,11 @@ def data_iterator(
                         )
                     )
 
-                    yield None, t0, [False] * len(ifos)
+                    yield None, t0 - crop_length, [False] * len(ifos)
 
                     frame_buffer = np.zeros((len(ifos), 0))
                     last_ready = [False] * len(ifos)
+                    refilling = True
                     t0 = reset_t0(datadir / ifo, t0 - length)
                     break
             else:
@@ -191,15 +195,17 @@ def data_iterator(
                 x = resample(frame_buffer, factor, b, a)
                 x = x[:, slc]
                 frame_buffer = frame_buffer[:, BLOCK_SIZE:]
-                # yield last_ready, which corresponds to
-                # the data quality bits of the previous second
-                # of data, i.e. the middle second of the
-                # buffer that is being yielded as well
                 yield (
                     torch.Tensor(x.copy()).double(),
                     t0 - crop_length,
-                    last_ready,
+                    span_ready(last_ready, ready),
                 )
+                refilling = False
+            elif refilling:
+                # the first block after a gap can't be analyzed because the
+                # buffer hasn't refilled yet. Yielding as we do above with data
+                # gaps makes sure that time is recorded as part of the gap.
+                yield None, t0 - crop_length, [False] * len(ifos)
 
             last_ready = ready
             t0 += length
