@@ -4,6 +4,8 @@ import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ligo.gracedb.kafka.exceptions import KafkaError
+
 from online.utils.email_alerts import send_submission_failure_email
 from .utils import subprocess_wrapper
 
@@ -27,13 +29,13 @@ def event_creation_subprocess(
     # override with subprocesses logger
     gdb.logger = logger
 
-    # Need to set up the producer withon the subprocess that uses it.
+    # Need to set up the producer within the subprocess that uses it.
     # In ligo-gracedb 2.16, an error raises if the broker can't be reached,
     # so keep the search running and let the `submit` function try to create
     # one again if it fails here.
     try:
         gdb.setup_kafka_producer()
-    except Exception as e:
+    except KafkaError as e:
         logger.error(f"Couldn't set up Kafka producer: {e}")
         if emails is not None:
             send_submission_failure_email(
@@ -51,6 +53,8 @@ def event_creation_subprocess(
         # `submit` returns None when the event may not have been created
         event.write(outdir)
         graceid, error, tb = None, None, ""
+        # Catch everything here so that a failed upload doesn't restart
+        # the entire search
         try:
             graceid = gdb.submit(event)
         except Exception as e:
