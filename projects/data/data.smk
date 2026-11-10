@@ -89,13 +89,6 @@ def branch_ids(population, jobs_key):
     return [str(i) for i in range(population_cfg(population, jobs_key))]
 
 
-def validation_seed(population, vbranch_id):
-    """A validation branch's seed, distinct across every population's."""
-    earlier = POPULATIONS[: POPULATIONS.index(population)]
-    offset = sum(population_cfg(p, "num_validation_jobs") for p in earlier)
-    return config["seed"] + offset + int(vbranch_id)
-
-
 localrules:
     compute_psd,
     # DQSegDB seems to be unreachable from execute points
@@ -532,8 +525,14 @@ The PSDs are those of the last fetched train-background chunk.
         right_pad=config["right_pad"],
         highpass=config["highpass"],
         lowpass=config["lowpass"] or "null",
-        # offset by branch so each branch samples different parameters
-        seed=lambda wc: validation_seed(wc.population, wc.vbranch_id),
+        # offset by branch, and by 1,000,000 per position in
+        # active_populations, so no two branches draw the same parameters;
+        # the first population keeps dev's seeds
+        seed=lambda wc: (
+            config["seed"]
+            + POPULATIONS.index(wc.population) * 1000000
+            + int(wc.vbranch_id)
+        ),
     shell:
         "generate-validation-waveforms"
         " --num_signals {params.num_signals}"

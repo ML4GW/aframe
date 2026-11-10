@@ -25,6 +25,10 @@ and a group never mixes populations. The groups' outputs are merged by:
                           so for R&P it ignores the populations and writes
                           a single foreground.hdf5 from every group.
     aggregate_infer:      target rule for all of them.
+
+
+At very large branch counts the DAG construction can be batched:
+    snakemake --batch aggregate_background=1/10
 """
 
 import json

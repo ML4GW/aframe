@@ -88,7 +88,8 @@ data:
     #   class_path: train.data.waveforms.generator.cbc.CBCGenerator
     #   init_args:
     #     training_prior: ./training_prior.yaml
-    #     val_waveform_file: ${oc.env:AFRAME_TRAIN_WAVEFORMS_DIR}/val_waveforms
+    #     val_waveform_files:
+    #       - /path/to/run/waveforms/train/val_waveforms/val_waveforms_{population}.hdf5
     #     approximant: ml4gw.waveforms.IMRPhenomPv2
     #     f_min: 20
     #     f_ref: 40

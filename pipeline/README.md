@@ -188,11 +188,6 @@ testing waveforms. For testing, each population gets its own timeslides, in
 the order of `active_populations`, so a timeslide only ever has injections
 from one population. To generate the waveforms of every active population:
 
-**Waveforms.** Each population gets its own training, validation and
-testing waveforms. Testing waveforms give each population, in `active_populations`
-order, its own block of timeslides, so a timeslide never holds two populations.
-To generate the waveforms of every active population:
-
 ```bash
 ./run.sh training_waveforms
 ./run.sh val_waveforms
