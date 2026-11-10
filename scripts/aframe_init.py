@@ -281,8 +281,10 @@ def create_online_crontab(path: Path):
     content = f"""
     # Relaunch this run when the node reboots after giving it time to
     # finish starting up. Add the line below to the account's crontab
-    # with `crontab -e`.
-    @reboot sleep 120 && cd {path} && /bin/bash run.sh
+    # with `crontab -e`. Discard the output so that it doesn't get
+    # included in the cronjob log. The output is still written to
+    # online.log and monitoring.log.
+    @reboot sleep 120 && cd {path} && /bin/bash run.sh > /dev/null 2>&1
     """
     crontab = path / "crontab"
     write_content(content, crontab)
