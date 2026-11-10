@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 import torch
 from torch import nn
@@ -9,6 +9,7 @@ from torch import Tensor
 
 from architectures import Architecture
 from architectures.networks import S4Model, WaveNet, Xylophone
+
 
 
 class SupervisedArchitecture(Architecture):

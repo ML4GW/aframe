@@ -161,6 +161,9 @@ branches_per_job: 200
 # In-process inference only. Each batch is cut short by its largest shift.
 shifts_per_batch: 16
 
+#Name and shapes of outputs
+output_shapes: '{"detection_statistic": []}'
+
 # Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data
 kernel_length: 1.5               # model input window (seconds)

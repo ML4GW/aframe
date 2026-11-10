@@ -376,6 +376,8 @@ _group_common_params = dict(
     fduration=config["fduration"],
     integration_window_length=config["integration_window_length"],
     cluster_window_length=config["cluster_window_length"],
+    output_shapes=config["output_shapes"],
+    kernel_length=config["kernel_length"],
 )
 
 _GROUP_SHELL_SUFFIX = (
@@ -397,6 +399,8 @@ _GROUP_SHELL_SUFFIX = (
     " --fduration {params.fduration}"
     " --integration_window_length {params.integration_window_length}"
     " --cluster_window_length {params.cluster_window_length}"
+    " --output_shapes {params.output_shapes:q}"
+    " --kernel_length {params.kernel_length}"
     " &> {log}"
 )
 
@@ -529,7 +533,6 @@ else:
         params:
             **_group_common_params,
             backend=INFERENCE_BACKEND,
-            kernel_length=config["kernel_length"],
             highpass=config["highpass"],
             fftlength=config["fftlength"] or "null",
             augmentor=json.dumps(config.get("augmentor")),
@@ -540,8 +543,7 @@ else:
             " --backend {params.backend}"
             " --shifts_per_batch {params.shifts_per_batch}"
             + (" --aoti_path {input.artifact}" if INFERENCE_BACKEND == "aoti" else "")
-            + " --kernel_length {params.kernel_length}"
-            " --highpass {params.highpass}"
+            + " --highpass {params.highpass}"
             " --fftlength {params.fftlength}"
             " '--augmentor={params.augmentor}'" + _GROUP_SHELL_SUFFIX
 

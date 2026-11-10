@@ -60,6 +60,7 @@ snakemake is invoked.
         gpu_env=gpu_env(config["inference_gpus"], 1),
         weights=_weights,
         batch_file=_batch_file,
+        output_shapes=config["output_shapes"]
     shell:
         "{params.gpu_env}python -m export"
         " --weights {params.weights}"
@@ -74,6 +75,7 @@ snakemake is invoked.
         " --fduration {params.fduration}"
         " --psd_length {params.psd_length}"
         " --streams_per_gpu {params.streams_per_gpu}"
+        " --output_shapes {params.output_shapes:q}"
         # the rest of the preprocessor's arguments are linked from the above
         " --preprocessor.init_args.fftlength {params.fftlength}"
         " --preprocessor.init_args.highpass {params.highpass}"

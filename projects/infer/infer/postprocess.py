@@ -94,9 +94,9 @@ class Postprocessor:
         # in the case where we didn't perform
         # injections on this shift
         # just return an empty event set
-        y = y['detection_statistic']
         if y is None:
             return EventSet()
+        y = y['detection_statistic']
         burn_in = self.stream_outputs.burn_in_size
         y = self.stream_outputs.integrate(y[burn_in:], first_output=burn_in)
         return self.cluster(y)
@@ -180,7 +180,7 @@ class MergerTimePostprocessor(Postprocessor):
         # in the case where we didn't perform
         # injections on this shift
         # just return an empty event set
-        if y["detection_statistic"] is None:
+        if y is None:
             return EventSet()
 
         burn_in = self.stream_outputs.burn_in_size

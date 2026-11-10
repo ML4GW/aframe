@@ -28,7 +28,7 @@ from utils.logging import configure_logging
 from infer.aggregate import merge_timeseries, write_timeseries
 from infer.data import RnPStreamSequence, ShiftBatchSequence
 from infer.main import infer_local, infer_triton
-from infer.postprocess import Postprocessor
+from infer.postprocess import MergerTimePostprocessor as Postprocessor
 
 
 def _write_outputs(outdir, branch_id, results, seq, postproc, cfg):
@@ -58,6 +58,7 @@ def _postprocessor(cfg, t0, shifts) -> Postprocessor:
         inference_sampling_rate=cfg.inference_sampling_rate,
         integration_window_length=cfg.integration_window_length,
         cluster_window_length=cfg.cluster_window_length,
+        kernel_length=cfg.kernel_length,
     )
 
 
@@ -100,6 +101,7 @@ def _run_triton(client, cfg, branches: dict, scratch: Path) -> None:
                 [postprocessor],
                 base_id,
                 cfg.rate,
+                cfg.output_shapes,
             )
             _write_outputs(
                 scratch / branch_id,
@@ -146,7 +148,7 @@ def _run_local(client, cfg, branches: dict, scratch: Path) -> None:
             for _, branch in batch
         ]
 
-        results = infer_local(client, sequence, postprocessors)
+        results = infer_local(client, sequence, postprocessors, cfg.output_shapes)
         for (branch_id, _), result, postproc in zip(
             batch, results, postprocessors, strict=True
         ):
@@ -274,6 +276,9 @@ def _shared_args(p):
     p.add_argument("--cluster_window_length", type=float)
     p.add_argument("--sample_rate", type=float)
     p.add_argument("--channel", type=str, default=None)  # R&P frames
+    p.add_argument("--output_shapes", type=dict[str, list[int]],
+                   default={"detection_statistic": []})
+    p.add_argument("--kernel_length", type=float)
 
 
 def main_triton(args=None):
@@ -305,7 +310,6 @@ def main_local(args=None):
     p.add_argument("--weights", type=str)
     p.add_argument("--backend", type=str, default="export")
     p.add_argument("--aoti_path", type=str | None, default=None)
-    p.add_argument("--kernel_length", type=float)
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
     p.add_argument("--augmentor", type=torch.nn.Module | None, default=None)

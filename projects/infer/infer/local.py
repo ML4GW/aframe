@@ -102,7 +102,7 @@ class LocalInferenceClient:
         self._stream_state = None
 
     def infer_streams(
-        self, update: np.ndarray, psd_source: list[int]
+        self, update: np.ndarray, psd_source: list[int], output_shapes: dict[str, tuple[int, ...]] = {"detection_statistic": ()}
     ) -> np.ndarray:
         """
         Send a batch update with several streams through the model.
@@ -168,7 +168,14 @@ class LocalInferenceClient:
             # With the compile backend, the first call at each size includes
             # compiling for that size. Time how long that takes and log it.
             start = time.perf_counter()
-            y = self.model(kernels).cpu()
+            y = self.model(kernels)
+            if not isinstance(y, (tuple, list)):
+                y = (y,)
+            y = {key: y[i].cpu() for i, key in enumerate(output_shapes.keys())}
+            batches = y['detection_statistic'].reshape(num_streams, -1).shape[1]
+            for key in output_shapes.keys():
+                y[key] = y[key].reshape(num_streams, batches, *output_shapes[key]).numpy()
+
             num_kernels = len(kernels)
             if num_kernels not in self._call_sizes:
                 self._call_sizes.add(num_kernels)
@@ -176,4 +183,4 @@ class LocalInferenceClient:
                     f"First call with {num_kernels} kernels took "
                     f"{time.perf_counter() - start:.1f} s"
                 )
-        return y.reshape(num_streams, -1).numpy()
+        return y

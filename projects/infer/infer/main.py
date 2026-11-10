@@ -28,6 +28,7 @@ def infer_local(
     client: LocalInferenceClient,
     sequence: ShiftBatchSequence | RnPStreamSequence,
     postprocessors: list[Postprocessor],
+    output_shapes: dict[str, tuple[int, ...]] = {"detection_statistic": ()},
 ) -> list[tuple[EventSet, EventSet, np.ndarray, np.ndarray | None]]:
     """Run inference in-process on every stream of a sequence at once."""
     client.reset()
@@ -35,17 +36,18 @@ def infer_local(
     if on_gpu:
         torch.cuda.reset_peak_memory_stats()
 
-    outputs = []
+    outputs = {key: [] for key in output_shapes.keys()}
     model_time = 0.0
     start = time.perf_counter()
     for update in tqdm(sequence):
         loaded = time.perf_counter()
-        outputs.append(client.infer_streams(update, sequence.psd_source))
+        for key, value in client.infer_streams(update, sequence.psd_source, output_shapes).items():
+            outputs[key].append(value)
         model_time += time.perf_counter() - loaded
     inferred = time.perf_counter()
 
-    outputs = np.concatenate(outputs, axis=-1)
-    results = sequence.results(outputs, postprocessors)
+    outputs = {key: np.concatenate(value, axis=1) for key, value in outputs.items()}
+    results = sequence.results(outputs, postprocessors, output_shapes)
     end = time.perf_counter()
 
     peak = torch.cuda.max_memory_allocated() / 2**30 if on_gpu else 0.0
@@ -124,7 +126,7 @@ class TritonOutputs:
         # Record that the stream has started, and whether this was the
         # response to its last step.
         self._started[sequence_id] = True
-        if stop == self.outputs.shape[-1]:
+        if stop == self.outputs['detection_statistic'].shape[-1]:
             self._done[sequence_id] = True
 
         if self.done:

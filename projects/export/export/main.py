@@ -34,7 +34,7 @@ def export(
     psd_length: float,
     preprocessor: torch.nn.Module,
     streams_per_gpu: int = 1,
-    output_names: list[str] = ["detection_statistic"],
+    output_shapes: dict[str, tuple[int, ...]] = {"detection_statistic": ()},
     aframe_instances: int | None = None,
     preproc_instances: int | None = None,
     platform: qv.Platform = qv.Platform.TENSORRT,
@@ -138,7 +138,7 @@ def export(
         input_shape_dict = {
             key: (batch_size,) + tuple(batch_file[key].shape[1:])
             for key in batch_file.keys()
-            if key.startswith("input")
+            if ~key.startswith("output")
         }
 
     # the network will have some different keyword
@@ -158,6 +158,7 @@ def export(
     if platform in (qv.Platform.ONNX, qv.Platform.TENSORRT):
         kwargs["dynamo"] = True
 
+    output_names = list(output_shapes.keys())
     aframe.export_version(
         graph,
         input_shapes=input_shape_dict,

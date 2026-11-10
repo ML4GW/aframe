@@ -171,7 +171,7 @@ class SaveAugmentedBatch(Callback):
                     for i, x in enumerate(X):
                         f[f"input_{i}"] = x.cpu().numpy()
                     for i, out in enumerate(y):
-                        h5file[f"output_{i}"] = out.cpu().numpy()
+                        f[f"output_{i}"] = out.cpu().numpy()
 
                 with h5py.File(
                     os.path.join(save_dir, "val_batch.hdf5"), "w"
