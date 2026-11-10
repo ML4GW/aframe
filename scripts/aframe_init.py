@@ -31,7 +31,6 @@ REVIEW_CONFIGS = [
 ONLINE_CONFIGS = [
     root / "projects" / "online" / "config.yaml",
     root / "projects" / "online" / "prior.yaml",
-    root / "projects" / "online" / "crontab",
 ]
 
 
@@ -136,12 +135,49 @@ def create_online_runfile(path: Path):
     content = f"""
     #!/bin/bash
 
-    # kill the whole process group so both the search and the monitor are killed
-    control_c() {{
-        kill 0
-        exit
+    # Stop the search and monitor together. The search runs in its own
+    # process group and the monitor runs in this script's group, so both
+    # have to be handled.
+    stop() {{
+        # Ignore any further signals so that this script isn't killed by
+        # `kill -TERM 0` and a second Ctrl-C doesn't interrupt the shutdown
+        trap '' INT TERM HUP EXIT
+
+        # Remove the file containing the PID of this script
+        rm -f {path}/run.pid
+
+        # Send a TERM signal to everything. The search will clean up
+        # before it exits. The subprocesses and monitor will halt
+        # immediately.
+        kill -TERM -- -$search_pid 2>/dev/null
+        kill -TERM 0
+
+        # Give the search up to GRACE seconds to finish cleaning up,
+        # and then kill whatever is left, including this script
+        for _ in $(seq $GRACE); do
+            # The -0 checks if the process is still running
+            kill -0 $search_pid 2>/dev/null || break
+            sleep 1
+        done
+        kill -KILL -- -$search_pid 2>/dev/null
+        kill -KILL 0
     }}
-    trap control_c SIGINT
+    trap stop INT TERM HUP EXIT
+    # Seconds the search gets to shut down cleanly before it's killed
+    GRACE=30
+
+    # Record this script's PID, so the run can be stopped with
+    # `kill $(cat {path}/run.pid)`
+    echo $$ > {path}/run.pid
+    echo "run.sh started on $(date) with PID $$" >> {path}/monitoring.log
+
+    # Space-separated addresses to email if the search keeps crashing
+    ALERT_EMAILS=
+    # Email once the search has crashed this many times in a row
+    ALERT_AFTER=5
+    # Longest wait between restarts, in seconds. A run that lasted
+    # longer than this is treated as a separate crash group.
+    MAX_DELAY=300
 
     # ligo skymap from samples
     export TQDM_DISABLE=1
@@ -197,16 +233,59 @@ def create_online_runfile(path: Path):
     # {monitor_cmd}
 
     export CUDA_VISIBLE_DEVICES=
+
+    # Restart the search whenever it crashes, waiting longer after each
+    # crash in a row to avoid repeatedly restarting, e.g., when resources
+    # aren't ready after a server reboot.
     crash_count=0
-    until {cmd}; do
-        ((crash_count++))
-        echo "Online deployment crashed on $(date) with error code $?,
-        crash count = $crash_count" >> monitoring.log
-        sleep 1
+    delay=1
+    started=$SECONDS
+
+    # Start the process in the background and store its PID in search_pid.
+    # Wait until that process returns, and then clean up, log, and
+    # potentially send an email.
+    until setsid {cmd} & search_pid=$!; wait $search_pid; do
+        return_code=$?
+
+        # Kill any lingering subprocesses
+        kill -KILL -- -$search_pid 2>/dev/null
+
+        # If its been long enough, consider a new crash to be part of a separate
+        # group of crashes
+        if (( SECONDS - started > MAX_DELAY )); then
+            crash_count=0
+            delay=1
+        fi
+
+        # Log the return code and the count of crashes
+        crash_count=$(( crash_count + 1 ))
+        echo "Online deployment crashed on $(date) with error code $return_code, crash $crash_count in a row" >> monitoring.log
+
+        # If we've crashed enough times in a row and ALERT_EMAILS have been given, then send an email
+        if (( crash_count == ALERT_AFTER )) && [[ -n $ALERT_EMAILS ]]; then
+            tail -n 50 monitoring.log | mail -s "Aframe online search in $RUN_DIR has crashed $crash_count times in a row" $ALERT_EMAILS
+        fi
+
+        $ Sleep for delay seconds in the background so that an interrupt doesn't get delayed
+        sleep $delay & wait $!
+        # Double the value of delay unless that value is greater than MAX_DELAY, in which case set the value to MAX_DELAY
+        delay=$(( delay * 2 > MAX_DELAY ? MAX_DELAY : delay * 2 ))
+        started=$SECONDS
     done
     """  # noqa E501
     runfile = path / "run.sh"
     write_content(content, runfile)
+
+
+def create_online_crontab(path: Path):
+    content = f"""
+    # Relaunch this run when the node reboots after giving it time to
+    # finish starting up. Add the line below to the account's crontab
+    # with `crontab -e`.
+    @reboot sleep 120 && cd {path} && /bin/bash run.sh
+    """
+    crontab = path / "crontab"
+    write_content(content, crontab)
 
 
 def create_offline_runfile(
@@ -283,7 +362,8 @@ def main():
     # Create the run directory and move in weights if specified
     directory.mkdir(parents=True, exist_ok=True)
     if weights_dir:
-        shutil.copytree(weights_dir, directory / "training")
+        weights_dest = "models" if subcommand == "online" else "training"
+        shutil.copytree(weights_dir, directory / weights_dest)
 
     if subcommand == "offline":
         if args.s3_bucket is not None and not args.s3_bucket.startswith(
@@ -306,6 +386,7 @@ def main():
     elif subcommand == "online":
         copy_configs(directory, ONLINE_CONFIGS, "online")
         create_online_runfile(directory)
+        create_online_crontab(directory)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import logging
+import signal
 import sys
 from logging.handlers import QueueHandler
 from multiprocessing import Process, Queue
@@ -24,6 +25,13 @@ def subprocess_wrapper(
         *args,
         **kwargs,
     ):
+        # The main process sets the action for SIGINT and SIGTERM to be
+        # `signal_handler`, below, which subprocesses inherit. Restore
+        # the default actions so that a signal to the subprocess shuts
+        # it down immediately.
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
         # add a queue handler to the root logger;
         # in python logging, any child loggers
         # will by default inherit the parent logger handler
@@ -69,9 +77,13 @@ def cleanup_subprocesses(
 
 def signal_handler(signum, frame):
     """
-    Handle signals so that os signals can
-    trigger subprocess cleanup
+    Handle signals so that os signals can trigger subprocess cleanup
     """
+    # Ignore any further signals so they can't interrupt the cleanup started
+    # by this one. The `stop` in run.sh sends a signal to the entire process
+    # group, and Apptainer will send its own copy to its child processes.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     logging.debug(f"Received signal: {signum}")
     sys.exit(0)
 
