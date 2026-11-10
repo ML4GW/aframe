@@ -29,6 +29,13 @@ def cli(args=None):
     parser = build_parser()
     args = parser.parse_args(args)
     args.pop("config")
+
+    # Save the config with environment variables and default filled in
+    args.outdir.mkdir(parents=True, exist_ok=True)
+    (args.outdir / "config.yaml").write_text(
+        parser.dump(args, skip_none=False)
+    )
+
     args = parser.instantiate_classes(args)
     main(**vars(args))
 
