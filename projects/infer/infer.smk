@@ -507,11 +507,6 @@ else:
             resources:
                 **rule_resources("compile_model", "infer"),
                 **gpu_resources(),
-            params:
-                num_ifos=len(config["ifos"]),
-                sample_rate=config["sample_rate"],
-                kernel_length=config["kernel_length"],
-                batch_size=config["inference_batch_size"],
             script:
                 "scripts/compile_aoti.py"
 

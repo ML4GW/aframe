@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from ml4gw.utils.slicing import unfold_windows
+from torch.export.passes import move_to_device_pass
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 
@@ -41,36 +42,12 @@ def build_model(weights, backend, device, aoti_path=None):
     )
 
 
-def compile_aoti(
-    weights: Path,
-    package: Path,
-    batch_size: int,
-    num_ifos: int,
-    num_samples: int,
-    device: str,
-) -> None:
+def compile_aoti(weights: Path, package: Path, device: str) -> None:
     """Compile the exported model into an AOTInductor package"""
-    model = torch.export.load(weights).module().to(device)
-    example = (
-        torch.randn(
-            batch_size,
-            num_ifos,
-            num_samples,
-            device=device,
-        ),
-    )
-
-    # Export with the batch dimension left free so that one package runs
-    # any number of kernels per call, which we need for batching over
-    # time shifts.
-    batch = torch.export.Dim("batch")
-    exported_program = torch.export.export(
-        model, example, dynamic_shapes=({0: batch},)
-    )
-
-    torch._inductor.aoti_compile_and_package(
-        exported_program, package_path=str(package)
-    )
+    # Training exports the model on the CPU with its batch dimension left
+    # free, so one package runs any number of kernels per call
+    exported = move_to_device_pass(torch.export.load(weights), device)
+    torch._inductor.aoti_compile_and_package(exported, package_path=package)
 
 
 class LocalInferenceClient:

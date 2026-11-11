@@ -9,12 +9,4 @@ must be done on the same GPU as compilation.
 
 from infer.local import compile_aoti
 
-params = snakemake.params
-compile_aoti(
-    snakemake.input.exported,
-    snakemake.output[0],
-    batch_size=int(params.batch_size),
-    num_ifos=int(params.num_ifos),
-    num_samples=int(float(params.kernel_length) * float(params.sample_rate)),
-    device="cuda",
-)
+compile_aoti(snakemake.input.exported, snakemake.output[0], device="cuda")
