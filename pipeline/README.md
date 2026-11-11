@@ -20,7 +20,7 @@ export AFRAME_DATA_DIRS=...
 uv run build-containers # may need to build one at a time
 # For the ldg-transfer profile, also publish the ones condor jobs run in,
 # from a CIT AP. Repeat after changing an environment.
-python -m scripts.publish_images
+uv run python -m scripts.publish_images
 
 # One-time, for inference_mode: triton: pull the server image named by
 # triton_image in config.yaml
@@ -154,6 +154,69 @@ the profile (default `pipeline/profiles/ldg`).
 `run.sh` passes the default and run configs with `--configfiles`, in that
 order.
 
+## Populations
+
+A population is a set of waveform settings, e.g. `bbh`, `bns`, or any
+population generated using a CBC prior. A run can use one or several populations.
+
+Every waveform setting has a default at the top level of `config.yaml`.
+The default population is `bbh`, defined as `bbh: {}`, so it uses all the
+defaults. To add another population, list only the settings that are
+different from the top level keys or if `bbh` waveform settings have to differ from
+defaults add the changes as follows:
+
+```yaml
+populations:
+  bbh:
+    waveform_duration: 10.0 # change in waveform duration from default
+  bns:
+    prior: priors.priors.end_o3_ratesandpops_bns
+    waveform_duration: 25.0
+    num_testing_signals: 50000
+    mass_combos: 
+      - [1.4, 1.4]
+active_populations: [bbh, bns]
+```
+
+`active_populations` is the list of populations the run uses, and each one
+must be defined under `populations`.  A few settings are shared by all populations
+and can't be set per population: `right_pad`, `seed`, `jitter`, `highpass`, `lowpass`, 
+`sample_rate` and `pregenerate_training_waveforms`.
+
+**Waveforms.** Each population gets its own training, validation and
+testing waveforms. For testing, each population gets its own timeslides, in
+the order of `active_populations`, so a timeslide only ever has injections
+from one population. To generate the waveforms of every active population:
+
+```bash
+./run.sh training_waveforms
+./run.sh val_waveforms
+./run.sh testing_waveforms
+```
+
+**Training.** During training, the pipeline provides validation and training files
+of every active population as the lists `val_waveform_files` and
+`training_waveform_files`. When training without the pipeline, list these
+files in the train config yourself. Each batch mixes the populations in
+proportion to how many training waveforms each one has. All waveforms are
+cut to the length of the shortest population, keeping the end where the
+merger is, so every population needs the same `right_pad`, and the shortest
+waveforms must still be long enough for `kernel_length`.
+
+**Inference.** All populations share one background distribution. `aggregate_background`
+merges it into `infer/background.hdf5`, and `aggregate_foreground` merges
+each population's foreground into `infer/foreground_{population}.hdf5`. A group job
+never mixes two populations. `./run.sh aggregate_infer` runs both.
+
+**Plots.** `compute_sensitive_volume` works out each population's
+sensitive volume from its own foreground, `mass_combos` and `prior` against
+the shared background, and saves it in `plots/{population}/`. `./run.sh sensitive_volume`
+runs it for every active population.
+
+**R&P.** With `analysis_type: rnp`, the frames carry their own injections,
+so populations don't apply: inference writes a single
+`infer/foreground.hdf5`.
+
 ## Data layout
 
 All paths are relative to the run directory:
@@ -161,8 +224,13 @@ All paths are relative to the run directory:
 ```
 data/{train,test}/segments.txt
 data/{train,test}/background-{start}-{duration}.hdf5
-waveforms/train/{val_waveforms,training_waveforms}.hdf5
-waveforms/test/{waveforms,rejected_parameters}.hdf5
+waveforms/train/{population}/psd.hdf5
+waveforms/train/val_waveforms/val_waveforms_{population}.hdf5
+waveforms/train/training_waveforms/training_waveforms_{population}.hdf5
+waveforms/test/{population}/{waveforms,rejected_parameters,psd}.hdf5
+infer/background.hdf5
+infer/foreground_{population}.hdf5
+plots/{population}/sensitive_volume.{hdf5,html}
 {train,export,triton,infer,plots}/...
 logs/
 code/
@@ -170,7 +238,11 @@ code/
 
 `background_dir` and `waveforms_dir` name another run's `data/` or
 `waveforms/` to use instead of generating new data. Their files are linked
-into this run, and new files stay in this run's directory.
+into this run, and new files stay in this run's directory. Testing
+waveforms are only reused from a run with the same per-population layout
+and settings; a run made before populations has its testing files directly
+in `waveforms/test/`, and they must be moved into `waveforms/test/{population}/`
+to be reused.
 
 Each `./run.sh` copies the files git knows about into a read-only `code/`
 and runs that copy, so edits to the local repo take effect when the run is

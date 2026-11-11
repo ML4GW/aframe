@@ -1,5 +1,6 @@
 # ruff: noqa: F821
-"""Merge per-group inference outputs into the final event sets.
+"""Merge every group's background into the final background, and its zero
+lag and timeseries when they're requested.
 
 Executed via the snakemake `script:` directive.
 The `snakemake` object is injected by snakemake.
@@ -9,19 +10,14 @@ import json
 import sys
 
 from infer.aggregate import merge_timeseries
-from ledger.events import EventSet, RecoveredInjectionSet
+from ledger.events import EventSet
 
 sys.stdout = sys.stderr = open(snakemake.log[0], "w", buffering=1)
 
 # Each group job has already split zero-lag branches out of its background
 # when a zero_lag output is requested. Otherwise, everything is in
 # background.hdf5 (useful for R&P analysis).
-# R&P foregrounds are plain EventSets, not RecoveredInjectionSets.
-foreground_cls = (
-    EventSet
-    if snakemake.params.analysis_type == "rnp"
-    else RecoveredInjectionSet
-)
+
 
 # Total row counts from each group's metadata, which saves opening
 # every group file an extra time to count them.
@@ -31,12 +27,13 @@ for fname in snakemake.input.metadata:
         for name, length in json.load(f).items():
             lengths[name] = lengths.get(name, 0) + length
 
-event_sets = {"background": EventSet, "foreground": foreground_cls}
+# Background (and zero lag) from every group
+names = ["background"]
 if hasattr(snakemake.output, "zero_lag"):
-    event_sets["zero_lag"] = EventSet
-# Keep the group files, which are aggregate_infer's declared inputs.
-for name, cls in event_sets.items():
-    cls.aggregate(
+    names.append("zero_lag")
+# Keep the group files, which are aggregate_background's declared inputs.
+for name in names:
+    EventSet.aggregate(
         snakemake.input[name],
         snakemake.output[name],
         clean=False,

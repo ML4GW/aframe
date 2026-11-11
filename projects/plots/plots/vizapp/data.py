@@ -25,17 +25,21 @@ class DataManager:
         waveforms_dir: Path,
         ifos: list[str],
         vetos: list[VETO_CATEGORIES] | None = None,
+        population: str = "bbh",
     ):
         self.logger = logging.getLogger("vizapp")
         self.ifos = ifos
         self.categories = vetos
-        # load results and data from the run we're visualizing
-        self.response_set = waveforms_dir / "waveforms.hdf5"
+        self.population = population
+        # load results and data from the run we're visualizing: one
+        # population's injections and foreground, and the shared background
+        population_dir = waveforms_dir / self.population
+        self.response_set = population_dir / "waveforms.hdf5"
 
         self.data = AnalysisData.load(
             background=results_dir / "background.hdf5",
-            foreground=results_dir / "foreground.hdf5",
-            rejected=waveforms_dir / "rejected_parameters.hdf5",
+            foreground=results_dir / f"foreground_{self.population}.hdf5",
+            rejected=population_dir / "rejected_parameters.hdf5",
         )
         self.logger.info("Data loaded")
 

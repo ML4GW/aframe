@@ -48,17 +48,17 @@ If you think your contribution would benefit from being included in a broader pi
 For any code that you contribute, make sure to add unit tests which explicitly state and validate expectations about the behavior of your code. Tests should be placed in a `tests` subdirectory of each library and project, and should be structured similarly to the library code itself but with `test_` prepended to all the names.
 
 ### Pre-commit hooks
-To keep the code style consistent and neat throughout the repo, we implement [pre-commit hooks](https://pre-commit.com/) to statically lint and style-check any code that wants to get added to the upstream `main` branch. `pre-commit` is already installed in the root `Aframe` environment, so you can run 
+To keep the code style consistent and neat throughout the repo, we implement [pre-commit hooks](https://pre-commit.com/) to statically lint and style-check any code that wants to get added to the upstream `main` branch. `prek` is already installed in the root `Aframe` environment, so you can run
 
 ```console
-uv run pre-commit install
+uv run prek install
 ```
 
 to install the hooks.
 
 Now any attempts to commit new code will require these tests to past first (and even do some reformatting for you if possible). To run the hooks on existing code, you can run 
 ```console
-uv run pre-commit run --all
+uv run prek run --all-files
 ```
 
 ### Non-automatable style guidelines
