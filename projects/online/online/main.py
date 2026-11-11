@@ -386,7 +386,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
-    data_source: Literal["frames", "arrakis"] = "frames",
+    data_source: Literal["frames", "arrakis"] = "arrakis",
     replay_id: str | None = None,
     state_channels: Optional[list[str]] = None,
     fftlength: Optional[float] = None,

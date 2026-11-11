@@ -24,6 +24,14 @@ Once the files are populated correctly, the analysis can be launched via
 bash run.sh
 ```
 
+`run.sh` writes its PID to `run.pid` in the run directory. To stop the search and the monitor, run
+
+```console
+kill $(cat run.pid)
+```
+
+from the run directory.
+
 ## Uploading Events to GraceDB
 
 Uploading events to gracedb requires the use of [scitokens](https://computing.docs.ligo.org/guide/auth/scitokens/?h=sci#scitokens)
@@ -38,8 +46,8 @@ in the configuration, which will write events to disk instead of uploading to Gr
 
 ## Crontab
 
-A `crontab` file is also added to the directory, which will automatically refresh scitokens used for gracedb authentication, as well as relaunch `run.sh` if there are any failures. Make sure to adjust the token refresh commands with your own credentials, and then you can launch the analysis with
+A `crontab` file is also added to the directory. It holds a single `@reboot` line that relaunches `run.sh` when the node reboots. Add the line to the account's crontab with
 
 ```
-crontab crontab
+crontab -e
 ```

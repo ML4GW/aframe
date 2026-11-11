@@ -206,7 +206,11 @@ class EventPage(MonitorPage):
             df = prev_df.copy()
             df.loc[idx] = self.event_data
 
-        df.to_hdf(self.dataframe_file, key="event_data", index=False)
+        # Write a temp file and rename it in-place so the table can't get
+        # left half-written.
+        tmp = self.dataframe_file.with_suffix(".hdf5.tmp")
+        df.to_hdf(tmp, key="event_data", index=False, mode="w")
+        tmp.replace(self.dataframe_file)
 
     def write_html(self) -> None:
         self.write_atomic(
