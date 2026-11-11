@@ -136,9 +136,10 @@ analysis_type: hdf5
 # rnp_channel: <channel>               # channel within the frames
 
 # Inference mode:
-#   - triton: Triton server on GPU + streaming CPU clients
 #   - inprocess: self-contained GPU jobs, model loaded locally per job
-inference_mode: triton
+#   - triton: Triton server on GPU + streaming CPU clients.
+#             Streams one shift at a time, ignoring shifts_per_batch
+inference_mode: inprocess
 
 # Model backend for in-process inference::
 #   - export: model_exported.pt2 run as a GraphModule. Portable across GPU archs.
@@ -149,8 +150,16 @@ inference_mode: triton
 #              on clusters with heterogeneous GPU pools like OSG.
 inference_backend: export
 
-# Maximum number of (file, shift) branches each job processes.
-branches_per_job: 1
+# Maximum number of (file, shift) branches each job processes, so the
+# number of jobs is about the number of branches divided by this.
+# 200 is good for a Tb of about a year. Raise it for larger Tb, e.g.,
+# to 1000 for 100 years, so that each job's fixed costs stay small 
+# relative to the inference time.
+branches_per_job: 200
+
+# Number of a job's shifts of one file run through the model together.
+# In-process inference only. Each batch is cut short by its largest shift.
+shifts_per_batch: 16
 
 # Whitening / windowing
 psd_length: 64.0                 # seconds of PSD data
@@ -238,8 +247,9 @@ resources:
   train: {mem_mb: 32000, runtime: 2880}
   export: {mem_mb: 32000, runtime: 10}
   compile_model: {mem_mb: 32000, runtime: 10}
-  # runtime per branch, scaled by branches_per_job
-  infer_group: {mem_mb: 8192, runtime: 20}
+  # runtime for each job's fixed costs, plus runtime_per_branch for each
+  # of its branches_per_job branches
+  infer_group: {mem_mb: 8192, runtime: 10, runtime_per_branch: 0.5}
   aggregate_background: {mem_mb: 4096, runtime: 15}
   aggregate_foreground: {mem_mb: 4096, runtime: 15}
   sensitive_volume: {mem_mb: 16384, runtime: 15}

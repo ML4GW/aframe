@@ -83,3 +83,9 @@ rule all:
             else rules.aggregate_infer.input
         ),
         expand(rules.generate_segments.output[0], split=["train", "test"]),
+
+
+# Rather than the full block of inputs, outputs and resources, name each
+# job by its rule name and wildcards
+for r in workflow.rules:
+    r.message = "{rule} {wildcards}"

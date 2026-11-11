@@ -1,8 +1,7 @@
-"""In-process inference setup that mirrors the Hermes InferenceClient.
+"""In-process inference: the snapshotter -> whitener -> NN ensemble on a GPU.
 
-Runs the snapshotter -> whitener -> NN ensemble locally on the GPU instead
-of streaming to a Triton server. Has the same interface as InferenceClient,
-so it can be used in main.infer() with the same Sequence and Postprocessor.
+Streams the updates of a stream sequence through the model locally instead of
+sending them to a Triton server.
 
 Supports three backends:
     export: load ExportedProgram and run as a GraphModule. GPU agnostic
@@ -11,8 +10,13 @@ Supports three backends:
 """
 
 import logging
+import time
+from pathlib import Path
 
+import numpy as np
 import torch
+from ml4gw.utils.slicing import unfold_windows
+from torch.export.passes import move_to_device_pass
 from utils.preprocessing import BackgroundSnapshotter, BatchWhitener
 
 
@@ -26,31 +30,36 @@ def build_model(weights, backend, device, aoti_path=None):
         # `torch` local to this function, breaking the other backends.
         from torch._inductor import codecache  # noqa: F401
 
-        runner = torch._inductor.aoti_load_package(str(aoti_path))
-
-        def model(kernels):
-            return runner(kernels)[0]
-
-        return model
+        return torch._inductor.aoti_load_package(str(aoti_path))
 
     if backend in ("export", "compile"):
         exported = torch.export.load(weights)
         module = exported.module().to(device)
         return torch.compile(module) if backend == "compile" else module
+
     raise ValueError(
         f"backend must be 'export', 'compile', or 'aoti', got {backend}"
     )
 
 
+def compile_aoti(weights: Path, package: Path, device: str) -> None:
+    """Compile the exported model into an AOTInductor package"""
+    # Training exports the model on the CPU with its batch dimension left
+    # free, so one package runs any number of kernels per call
+    exported = move_to_device_pass(torch.export.load(weights), device)
+    torch._inductor.aoti_compile_and_package(
+        exported, package_path=str(package)
+    )
+
+
 class LocalInferenceClient:
-    """Run the streaming ensemble locally. Same interface as InferenceClient"""
+    """Run the streaming ensemble locally, several streams at a time."""
 
     def __init__(
         self,
         weights: str,
         backend: str = "export",
         aoti_path: str | None = None,
-        num_ifos: int = 2,
         psd_length: float = 64.0,
         kernel_length: float = 1.5,
         fduration: float = 1.0,
@@ -61,11 +70,8 @@ class LocalInferenceClient:
         fftlength: float | None = None,
         augmentor=None,
         device: str = "cuda",
-        callback=None,
     ):
         self.device = device
-        self.callback = callback
-        self.num_ifos = num_ifos
         self.model = build_model(weights, backend, device, aoti_path)
         self.snapshotter = BackgroundSnapshotter(
             psd_length=psd_length,
@@ -84,53 +90,90 @@ class LocalInferenceClient:
             highpass=highpass,
             augmentor=augmentor,
         ).to(device)
-        # one streaming snapshot state per sequence id (background + injection)
-        self._states: dict[int, torch.Tensor] = {}
-        self._result = None
-        logging.info(f"LocalInferenceClient ready (backend={backend})")
+        self._stream_state: torch.Tensor | None = None
+        self._call_sizes: set[int] = set()
+        name = device
+        if "cuda" in device:
+            name = torch.cuda.get_device_name(device)
+        logging.info(f"LocalInferenceClient ready (backend={backend}, {name})")
 
     def reset(self):
-        """Clear between branches when the client is reused"""
-        self._states.clear()
-        self._result = None
+        """Clear the streams' state before a new sequence"""
+        self._stream_state = None
 
-    def _state(self, sequence_id):
-        if sequence_id not in self._states:
-            self._states[sequence_id] = torch.zeros(
-                2,  # background + injection
-                self.num_ifos,
-                self.snapshotter.state_size,
-                device=self.device,
-            )
-        return self._states[sequence_id]
+    def infer_streams(
+        self, update: np.ndarray, psd_source: list[int]
+    ) -> np.ndarray:
+        """
+        Send a batch update with several streams through the model.
 
-    def infer(
-        self,
-        x,
-        request_id=None,
-        sequence_id=None,
-        sequence_start=False,
-        sequence_end=False,
-    ):
+        Args:
+            update:
+                The new samples for this step, of shape `(N, C, step)`.
+            psd_source:
+                `N` indices. The `i`th stream of `update` is whitened by
+                the PSD of stream `psd_source[i]`.
+
+        Returns:
+            Array of model outputs with shape `(N, batch_size)`.
+
+        """
+        num_streams, num_channels, _ = update.shape
+
         with torch.no_grad():
-            xt = torch.tensor(x, dtype=torch.float32, device=self.device)
-            full, state = self.snapshotter(xt, self._state(sequence_id))
-            self._states[sequence_id] = state
-            y = self.model(self.whitener(full))
-        result = self.callback(
-            y.detach().cpu().numpy(), request_id, sequence_id
-        )
-        if result is not None:
-            self._result = result
-        if sequence_end:
-            del self._states[sequence_id]
+            # Move the new data to the device and append it to the streams'
+            # snapshot state.
+            x = torch.tensor(update, dtype=torch.float32, device=self.device)
+            if self._stream_state is None:
+                self._stream_state = torch.zeros(
+                    num_streams,
+                    num_channels,
+                    self.snapshotter.state_size,
+                    device=self.device,
+                )
+            full, state = self.snapshotter(x, self._stream_state)
+            self._stream_state = state
 
-    def get(self, until_empty: bool = False):
-        return self._result
+            # Do the splitting, PSD estimation, and whitening manually, as
+            # opposed to using the BatchWhitener, to avoid the logic in the
+            # PsdEstimator that says that a batch of exactly two means that
+            # the data from the second batch element should be whitened with
+            # the PSD from the first batch element.
+            size = self.whitener.psd_estimator.size
+            psd_part, data = torch.split(
+                full, [full.shape[-1] - size, size], dim=-1
+            )
+            psds = self.whitener.psd_estimator.spectral_density(
+                psd_part[psd_source].double()
+            )
+            whitened = self.whitener.whitener(data.double(), psds)
 
-    def __enter__(self):
-        return self
+            # Unfold the whitened streams into kernels, and reshape so
+            # that the ordering goes stream by stream and different streams'
+            # outputs aren't interleaved.
+            kernels = unfold_windows(
+                whitened,
+                self.whitener.kernel_size,
+                self.whitener.stride_size,
+            ).transpose(0, 1)
 
-    def __exit__(self, *exc):
-        self._states.clear()
-        return False
+            kernels = kernels.reshape(
+                -1, num_channels, self.whitener.kernel_size
+            )
+
+            # If the BatchWhitener was created with an augmentor, apply it here
+            if self.whitener.augmentor is not None:
+                kernels = self.whitener.augmentor(kernels)
+
+            # With the compile backend, the first call at each size includes
+            # compiling for that size. Time how long that takes and log it.
+            start = time.perf_counter()
+            y = self.model(kernels).cpu()
+            num_kernels = len(kernels)
+            if num_kernels not in self._call_sizes:
+                self._call_sizes.add(num_kernels)
+                logging.info(
+                    f"First call with {num_kernels} kernels took "
+                    f"{time.perf_counter() - start:.1f} s"
+                )
+        return y.reshape(num_streams, -1).numpy()

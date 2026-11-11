@@ -1,7 +1,7 @@
 import time
 
 import pytest
-from infer.data import _throttle
+from infer.main import _throttle
 from pytest import approx
 
 
