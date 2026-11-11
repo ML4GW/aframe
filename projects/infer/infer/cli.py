@@ -308,7 +308,6 @@ def main_local(args=None):
     p.add_argument("--kernel_length", type=float)
     p.add_argument("--highpass", type=float)
     p.add_argument("--fftlength", type=float | None, default=None)
-    p.add_argument("--channel", type=str, default=None)  # R&P frames
     p.add_argument("--augmentor", type=torch.nn.Module | None, default=None)
     p.add_argument("--shifts_per_batch", type=int, default=1)
     cfg = p.parse_args(args)

@@ -15,10 +15,6 @@ The `compute_branch_map` rule and the aggregate rules are shared.
             branches to it. Best when GPUs are scarce but multiple exist on
             the submit node. Realistically, only used on LDG.
 
-    inprocess: Each group job is one GPU job that loads the model locally.
-               Best when there are many GPUs available and jobs can be
-               scheduled on them; e.g., Delta or OSG.
-
 
 Each branch is tagged with the population of its testing waveforms
 and a group never mixes populations. The groups' outputs are merged by:
@@ -131,15 +127,14 @@ def _load_branch_map():
 def _assign_groups(branch_map, branches_per_job):
     """Number the branches, in order, into groups of at most branches_per_job.
 
-    A group never spans two populations either, so that its foreground
+    A group never spans two populations, so that its foreground
     belongs to one. Background-only branches can join any group.
     """
     group, size, group_population = -1, branches_per_job, None
     for branch in branch_map.values():
         population = branch["population"]
-        if (
-            size == branches_per_job
-            or (population and group_population not in (None, population))
+        if size == branches_per_job or (
+            population and group_population not in (None, population)
         ):
             group, size, group_population = group + 1, 0, None
         branch["group"] = group
@@ -548,12 +543,7 @@ else:
             + " --kernel_length {params.kernel_length}"
             " --highpass {params.highpass}"
             " --fftlength {params.fftlength}"
-            " '--augmentor={params.augmentor}'"
-            + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
-            + _GROUP_SHELL_SUFFIX
-            " --fftlength {params.fftlength}"
-            + (f" --channel {CHANNEL}" if ANALYSIS_TYPE == "rnp" else "")
-            + _GROUP_SHELL_SUFFIX
+            " '--augmentor={params.augmentor}'" + _GROUP_SHELL_SUFFIX
 
 
 rule infer_inputs:

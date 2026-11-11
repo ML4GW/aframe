@@ -47,7 +47,9 @@ def compile_aoti(weights: Path, package: Path, device: str) -> None:
     # Training exports the model on the CPU with its batch dimension left
     # free, so one package runs any number of kernels per call
     exported = move_to_device_pass(torch.export.load(weights), device)
-    torch._inductor.aoti_compile_and_package(exported, package_path=package)
+    torch._inductor.aoti_compile_and_package(
+        exported, package_path=str(package)
+    )
 
 
 class LocalInferenceClient:
@@ -158,6 +160,10 @@ class LocalInferenceClient:
             kernels = kernels.reshape(
                 -1, num_channels, self.whitener.kernel_size
             )
+
+            # If the BatchWhitener was created with an augmentor, apply it here
+            if self.whitener.augmentor is not None:
+                kernels = self.whitener.augmentor(kernels)
 
             # With the compile backend, the first call at each size includes
             # compiling for that size. Time how long that takes and log it.
