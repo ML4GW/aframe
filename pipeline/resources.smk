@@ -46,6 +46,10 @@ def authenticate():
     if not (set(config["flags"]) - OPEN_DATA_FLAGS or vetos):
         return
 
+    # Set the location of the scitoken to /tmp so that its visible to any
+    # containers that need to use it.
+    os.environ["BEARER_TOKEN_FILE"] = f"/tmp/bt_u{os.getuid()}"
+
     # The server at segments.igwn.org still only accepts tokens for the old
     # segments.ligo.org audience, so request both audiences
     subprocess.run(
