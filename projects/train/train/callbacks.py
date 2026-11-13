@@ -9,13 +9,14 @@ import torch
 from botocore.exceptions import ClientError, ConnectTimeoutError
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import Callback
+from lightning.pytorch.cli import SaveConfigCallback
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities import grad_norm
 
 BOTO_RETRY_EXCEPTIONS = (ClientError, ConnectTimeoutError)
 
 
-class WandbSaveConfig(pl.cli.SaveConfigCallback):
+class WandbSaveConfig(SaveConfigCallback):
     """
     Override of `lightning.pytorch.cli.SaveConfigCallback` for use with WandB
     to ensure all the hyperparameters are logged to the WandB dashboard.
@@ -170,3 +171,65 @@ class GradientTracker(Callback):
         norms = grad_norm(pl_module, norm_type=self.norm_type)
         total_norm = norms[f"grad_{float(self.norm_type)}_norm_total"]
         self.log(f"grad_norm_{self.norm_type}", total_norm)
+
+
+class SVDUnfreezeCallback(Callback):
+    """Two-phase training callback for SVD networks.
+
+    During Phase 1, SVD projection layers are frozen and only the
+    dense network trains. At `unfreeze_epoch`, SVD layers are
+    unfrozen and added to the optimizer with a reduced learning rate.
+
+    Args:
+        unfreeze_epoch: Epoch at which to unfreeze SVD layers.
+        svd_lr_factor: Factor to multiply the base LR by for SVD
+            parameters. E.g. 0.01 means SVD params train at 1% of
+            the main learning rate.
+    """
+
+    def __init__(
+        self, unfreeze_epoch: int = 300, svd_lr_factor: float = 0.01
+    ):
+        super().__init__()
+        self.unfreeze_epoch = unfreeze_epoch
+        self.svd_lr_factor = svd_lr_factor
+        self._unfrozen = False
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        if self._unfrozen:
+            return
+        if trainer.current_epoch < self.unfreeze_epoch:
+            return
+
+        self._unfrozen = True
+
+        # Unfreeze SVD layers
+        if hasattr(pl_module.model, "set_svd_frozen"):
+            pl_module.model.set_svd_frozen(False)
+        else:
+            print(
+                "Warning: model has no set_svd_frozen method, "
+                "SVDUnfreezeCallback has no effect"
+            )
+            return
+
+        # Add SVD parameters to optimizer with reduced LR
+        optimizer = trainer.optimizers[0]
+        base_lr = optimizer.param_groups[0]["lr"]
+        svd_lr = base_lr * self.svd_lr_factor
+
+        svd_params = []
+        for svd_layer in pl_module.model.svd_layers:
+            svd_params.extend(
+                p for p in svd_layer.parameters() if p.requires_grad
+            )
+
+        if svd_params:
+            optimizer.add_param_group(
+                {"params": svd_params, "lr": svd_lr}
+            )
+            print(
+                f"Epoch {trainer.current_epoch}: Unfroze SVD layers, "
+                f"added {len(svd_params)} params at lr={svd_lr:.2e} "
+                f"(base lr={base_lr:.2e})"
+            )
