@@ -46,13 +46,15 @@ def authenticate():
     if not (set(config["flags"]) - OPEN_DATA_FLAGS or vetos):
         return
 
+    # The server at segments.igwn.org still only accepts tokens for the old
+    # segments.ligo.org audience, so request both audiences
     subprocess.run(
         [
             "htgettoken",
             "-a",
             "vault.ligo.org",
             "--audience",
-            config["segment_server"],
+            f"https://segments.ligo.org,{config['segment_server']}",
             "--scopes",
             "dqsegdb.read",
         ],
