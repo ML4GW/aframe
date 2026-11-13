@@ -69,6 +69,7 @@ onstart:
     set_container_binds()
     check_images()
     check_triton_image()
+    authenticate()
 
 
 rule all:

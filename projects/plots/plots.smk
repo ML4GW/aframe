@@ -2,6 +2,7 @@
 
 Rules:
   fetch_gwtc3_injections     copy the GWTC-3 injection set into the run dir
+  refresh_scitoken           refresh the DQSegDB SciToken before fetch_veto_segments
   fetch_veto_segments        query veto segments for the analyzed span
   compute_sensitive_volume   a population's sensitive volume vs. FAR, and its plot
   sensitive_volume           every active population's sensitive volume
@@ -22,6 +23,7 @@ VETOS = config["vetos"]
 
 localrules:
     fetch_gwtc3_injections,
+    refresh_scitoken,
     fetch_veto_segments,
 
 
@@ -37,10 +39,25 @@ rule fetch_gwtc3_injections:
         "scripts/fetch_gwtc3_injections.py"
 
 
+rule refresh_scitoken:
+    """Refresh the DQSegDB SciToken on the submit node prior to fetching vetos.
+
+The token from start-up might have expired by the time we get to plotting,
+so refresh it here before we run `fetch_veto_segments`.
+"""
+    input:
+        background=str(infer_dir / "background.hdf5"),
+    output:
+        temp(touch(str(plots_dir / "scitoken_refreshed"))),
+    run:
+        authenticate()
+
+
 rule fetch_veto_segments:
     """Query DQSegDB for the veto segments covering the background."""
     input:
         background=str(infer_dir / "background.hdf5"),
+        scitoken=rules.refresh_scitoken.output[0],
     output:
         str(plots_dir / "veto_segments.json"),
     log:
