@@ -32,6 +32,39 @@ from scripts.publish_images import OSDF_PROJECTS, image_name, staging_dir
 # `shared-fs-usage: none`.
 SHARED_FS = bool(workflow.storage_settings.shared_fs_usage)
 
+OPEN_DATA_FLAGS = {"H1_DATA", "L1_DATA", "V1_DATA"}
+
+
+def authenticate():
+    """Get a SciToken for DQSegDB on the submit node if needed."""
+
+    # Every veto category but CATALOG is read from DQSegDB.
+    vetos = [veto for veto in config["vetos"] if veto != "CATALOG"]
+
+    # If there aren't any vetos or if we're using only open data flags,
+    # then skip authentication.
+    if not (set(config["flags"]) - OPEN_DATA_FLAGS or vetos):
+        return
+
+    # Set the location of the scitoken to /tmp so that its visible to any
+    # containers that need to use it.
+    os.environ["BEARER_TOKEN_FILE"] = f"/tmp/bt_u{os.getuid()}"
+
+    # The server at segments.igwn.org still only accepts tokens for the old
+    # segments.ligo.org audience, so request both audiences
+    subprocess.run(
+        [
+            "htgettoken",
+            "-a",
+            "vault.ligo.org",
+            "--audience",
+            f"https://segments.ligo.org,{config['segment_server']}",
+            "--scopes",
+            "dqsegdb.read",
+        ],
+        check=True,
+    )
+
 
 def container(project):
     """The image that `project`'s rules run in.

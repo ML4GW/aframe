@@ -1,4 +1,3 @@
-import subprocess
 from collections.abc import Iterable
 
 from gwpy.segments import DataQualityDict, DataQualityFlag, SegmentList
@@ -11,45 +10,7 @@ O3A_END = 1253977218
 O3B_START = 1256655618
 
 
-def authenticate():
-    """
-    Generate a SciToken with permission to read segments
-    from DQSegDB.
-
-    See https://computing.docs.ligo.org/guide/auth/scitokens/
-    for details
-    """
-
-    args = [
-        "htgettoken",
-        "-a",
-        "vault.ligo.org",
-        "--audience",
-        "https://segments.ligo.org",
-        "--scopes",
-        "dqsegdb.read",
-    ]
-    subprocess.run(args)
-
-
 class DataQualityDict(DataQualityDict):
-    @classmethod
-    def query_non_open(
-        cls, flags: Iterable[str], start: float, end: float, **kwargs
-    ) -> DataQualityDict:
-        try:
-            return cls.query_dqsegdb(flags, start, end, **kwargs)
-        except OSError as e:
-            if not str(e).startswith(
-                "Could not find the TLS certificate file"
-            ):
-                # TODO: what's the error for an expired certificate?
-                raise
-
-            # try to authenticate then re-query
-            # authenticate()
-            return cls.query_dqsegdb(flags, start, end, **kwargs)
-
     @classmethod
     def query_open(
         cls, flags: Iterable[str], start: float, end: float, **kwargs
@@ -79,12 +40,12 @@ class DataQualityDict(DataQualityDict):
 
         segments = cls()
         if flags:
-            # Authenticate only if we need to query non-open flags
-            authenticate()
-            # Only `query_non_open` needs host passed. `query_open` reads
+            # Non-open flags need a SciToken. In the pipeline, `authenticate`
+            # from `pipeline/resources.smk` is called at start-up to get one.
+            # Only `query_dqsegdb` needs host passed. `query_open` reads
             # from the GWOSC host.
             segments.update(
-                cls.query_non_open(
+                cls.query_dqsegdb(
                     flags, start, end, host=segment_server, **kwargs
                 )
             )
