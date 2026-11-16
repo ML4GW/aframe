@@ -2,7 +2,7 @@ import atexit
 import logging
 import signal
 import traceback
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from math import floor
 from pathlib import Path
 from queue import Empty
@@ -361,6 +361,7 @@ def main(
     amplfi_fduration: float,
     integration_window_length: float,
     astro_event_rate: float,
+    source_prior: Callable,
     data_source: Literal["frames", "arrakis"] = "frames",
     augmentor: torch.nn.Module | None = None,
     state_channels: list[str] | None = None,
@@ -450,6 +451,9 @@ def main(
             Length of output integration window in seconds
         astro_event_rate:
             Prior on rate of astrophysical events in units Gpc^-3 yr^-1
+        source_prior:
+            Function that returns the prior the p_astro injections were
+            drawn from, given a cosmology
         fftlength:
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
@@ -696,6 +700,7 @@ def main(
         foreground_path,
         rejected_path,
         astro_event_rate,
+        source_prior,
         gdb,
         outdir,
     )

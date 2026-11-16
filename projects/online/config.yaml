@@ -48,6 +48,7 @@ state_channels: ["H1:GDS-CALIB_STATE_VECTOR", "L1:GDS-CALIB_STATE_VECTOR", "V1:D
 data_source: "frames"
 sample_rate: 2048
 astro_event_rate: 31
+source_prior: priors.priors.end_o3_ratesandpops
 kernel_length: 1.5
 online_inference_rate: 512
 offline_inference_rate: 4

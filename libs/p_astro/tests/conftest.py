@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
+from bilby.core.prior import PriorDict
+from bilby.gw.prior import UniformComovingVolume
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 
 @pytest.fixture
@@ -21,7 +24,7 @@ def foreground():
         foreground[field] = np.random.default_rng().standard_normal(1000)
 
     foreground["num_injections"] = 1000
-    foreground["redshift"] = np.linspace(0, 1, 1000)
+    foreground["redshift"] = np.linspace(0.01, 1, 1000)
     return RecoveredInjectionSet(**foreground)
 
 
@@ -31,10 +34,21 @@ def rejected():
     for field in InjectionParameterSet.__dataclass_fields__:
         rejected[field] = np.random.default_rng().standard_normal(1000)
 
-    rejected["redshift"] = np.linspace(0, 1, 1000)
+    rejected["redshift"] = np.linspace(0.01, 1, 1000)
     return InjectionParameterSet(**rejected)
 
 
 @pytest.fixture(params=[1, 2, 3])
 def astro_event_rate(request):
     return request.param
+
+
+@pytest.fixture
+def source_prior():
+    return PriorDict(
+        {
+            "redshift": UniformComovingVolume(
+                0, 2, name="redshift", cosmology=DEFAULT_COSMOLOGY
+            )
+        }
+    )

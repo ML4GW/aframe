@@ -1,6 +1,7 @@
 import logging
 import pickle
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,7 @@ from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
 from p_astro.p_astro import Pastro
 from torch.multiprocessing import Queue
+from utils.cosmology import DEFAULT_COSMOLOGY
 
 from .utils import subprocess_wrapper
 
@@ -30,6 +32,7 @@ def fit_or_load_pastro(
     foreground_path: Path,
     rejected_path: Path,
     astro_event_rate: float,
+    source_prior: Callable,
 ) -> Pastro:
     """
     Load a pastro model from disk if it exists, otherwise fit a new one.
@@ -45,6 +48,9 @@ def fit_or_load_pastro(
             Path to rejected injection set.
         astro_event_rate:
             Expected rate of astrophysical events
+        source_prior:
+            Function that returns the prior the injections were drawn
+            from, given a cosmology. Called as `source_prior(cosmology)[0]`
 
     Returns: Pastro model
     """
@@ -66,7 +72,10 @@ def fit_or_load_pastro(
         logger.info("Data loaded, fitting pastro model")
         background_model = KdeAndPolynomialBackground(background)
         foreground_model = KdeForeground(
-            foreground, rejected, astro_event_rate
+            foreground,
+            rejected,
+            astro_event_rate,
+            source_prior(DEFAULT_COSMOLOGY)[0],
         )
         pastro = Pastro(foreground_model, background_model)
         logger.info("Fitting complete, saving pastro model")
@@ -83,6 +92,7 @@ def pastro_subprocess(
     foreground_path,
     rejected_path,
     astro_event_rate,
+    source_prior,
     gdb: "GraceDb",
     outdir: Path,
 ):
@@ -96,6 +106,7 @@ def pastro_subprocess(
         foreground_path,
         rejected_path,
         astro_event_rate=astro_event_rate,
+        source_prior=source_prior,
     )
     while True:
         event = pastro_queue.get()

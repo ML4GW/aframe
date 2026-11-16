@@ -4222,6 +4222,7 @@ dependencies = [
     { name = "omegaconf" },
     { name = "p-astro" },
     { name = "pandas" },
+    { name = "priors" },
     { name = "psutil" },
     { name = "pytz" },
     { name = "pyyaml" },
@@ -4263,6 +4264,7 @@ requires-dist = [
     { name = "omegaconf", specifier = ">=2.3.0,<3" },
     { name = "p-astro", editable = "libs/p_astro" },
     { name = "pandas", specifier = ">=2" },
+    { name = "priors", editable = "libs/priors" },
     { name = "psutil", specifier = ">=5.9" },
     { name = "pytz" },
     { name = "pyyaml" },
@@ -4450,10 +4452,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "bilby" },
     { name = "jupyter" },
     { name = "pytest" },
 ]
 test = [
+    { name = "bilby" },
     { name = "pytest" },
 ]
 
@@ -4468,10 +4472,14 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "bilby", specifier = ">=2.2.2,<3" },
     { name = "jupyter", specifier = ">=1.0.0,<2" },
     { name = "pytest", specifier = ">=8.2.0,<9" },
 ]
-test = [{ name = "pytest", specifier = ">=8.2.0,<9" }]
+test = [
+    { name = "bilby", specifier = ">=2.2.2,<3" },
+    { name = "pytest", specifier = ">=8.2.0,<9" },
+]
 
 [[package]]
 name = "packaging"
