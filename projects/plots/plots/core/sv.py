@@ -9,12 +9,16 @@ import numpy as np
 from bokeh import io
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource
-from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
+from utils.cosmology import (
+    DEFAULT_COSMOLOGY,
+    get_astrophysical_volume,
+    log_dNdz,
+)
 
 from plots.core import compute, style
 from plots.core.constants import DEFAULT_NUM_FAR_POINTS, SECONDS_PER_YEAR
 from plots.core.data import AnalysisData
-from plots.core.gwtc3 import log_dNdz, logprob_mass_lognorm
+from plots.core.gwtc3 import logprob_mass_lognorm
 
 if TYPE_CHECKING:
     from bilby.core.prior import PriorDict
