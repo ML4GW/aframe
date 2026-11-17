@@ -13,6 +13,7 @@ dependencies = [
     "utils[torch]",
     "ledger",
     "p_astro",
+    "priors",
     "architectures",
     "arrakis>=0.20,<0.21",
     "amplfi",
@@ -52,6 +53,7 @@ dev = [{ include-group = "test" }, "jupyter>=1.0.0,<2"]
 utils = { workspace = true }
 ledger = { workspace = true }
 p_astro = { workspace = true }
+priors = { workspace = true }
 architectures = { workspace = true }
 # TODO: point at released version once available
 amplfi = { git = "https://github.com/ML4GW/amplfi", branch = "main" }

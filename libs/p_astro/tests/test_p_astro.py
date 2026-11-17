@@ -7,9 +7,11 @@ from p_astro.background import KdeAndPolynomialBackground
 from p_astro.foreground import KdeForeground
 
 
-def test_pastro(events, foreground, rejected, astro_event_rate):
+def test_pastro(events, foreground, rejected, astro_event_rate, source_prior):
     background = KdeAndPolynomialBackground(events)
-    foreground = KdeForeground(foreground, rejected, astro_event_rate)
+    foreground = KdeForeground(
+        foreground, rejected, astro_event_rate, source_prior
+    )
     pastro = Pastro(foreground, background)
 
     assert isinstance(pastro(1), float)
