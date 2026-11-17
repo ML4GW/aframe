@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from bilby.core.prior import PriorDict
+from bilby.core.prior import Cosine, PriorDict
 from bilby.gw.prior import UniformComovingVolume
 from ledger.events import EventSet, RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
@@ -49,6 +49,7 @@ def source_prior():
         {
             "redshift": UniformComovingVolume(
                 0, 2, name="redshift", cosmology=DEFAULT_COSMOLOGY
-            )
+            ),
+            "dec": Cosine(),
         }
     )

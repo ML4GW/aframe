@@ -35,7 +35,8 @@ class ForegroundModel:
             The instantiated prior the injections were drawn from.
             Its redshift prior sets the weights that reweight the
             injections to the target redshift distribution
-            (uniform in comoving volume and source-frame time).
+            (uniform in comoving volume and source-frame time), and
+            its redshift and declination bounds set the injected volume.
         cosmology:
             The cosmology to use when calculating the injected volume
     """
@@ -52,7 +53,7 @@ class ForegroundModel:
         self.foreground = foreground
         self.rejected = rejected
         self.astro_event_rate = astro_event_rate
-        self.injected_volume = self.get_injected_volume()
+        self.injected_volume = self.get_injected_volume(source_prior)
 
         accepted_weights = self.get_weights(foreground, source_prior)
         rejected_weights = self.get_weights(rejected, source_prior)
@@ -83,24 +84,20 @@ class ForegroundModel:
         log_source = np.log(source_prior["redshift"].prob(z))
         return np.exp(log_target - log_source)
 
-    def get_injected_volume(self) -> float:
+    def get_injected_volume(self, source_prior: "PriorDict") -> float:
         """
-        Calculate the volume of the universe in which injections were made.
+        Calculate the volume of the universe in which injections were made,
+        from the redshift and declination bounds of the source prior.
 
         Returns:
             The injection volume in cubic gigaparsecs
         """
-        zmin = min(
-            self.rejected.redshift.min(), self.foreground.redshift.min()
-        )
-        zmax = max(
-            self.rejected.redshift.max(), self.foreground.redshift.max()
-        )
-        dec_min = min(self.rejected.dec.min(), self.foreground.dec.min())
-        dec_max = max(self.rejected.dec.max(), self.foreground.dec.max())
-
+        redshift, dec = source_prior["redshift"], source_prior["dec"]
         volume = get_astrophysical_volume(
-            zmin, zmax, self.cosmology, dec_range=(dec_min, dec_max)
+            redshift.minimum,
+            redshift.maximum,
+            self.cosmology,
+            dec_range=(dec.minimum, dec.maximum),
         )
         return volume / 1e9
 
