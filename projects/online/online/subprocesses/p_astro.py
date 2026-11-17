@@ -33,6 +33,8 @@ def fit_or_load_pastro(
     rejected_path: Path,
     astro_event_rate: float,
     source_prior: Callable,
+    rate_index: float,
+    rate_redshift: float,
 ) -> Pastro:
     """
     Load a pastro model from disk if it exists, otherwise fit a new one.
@@ -47,10 +49,14 @@ def fit_or_load_pastro(
         rejected:
             Path to rejected injection set.
         astro_event_rate:
-            Expected rate of astrophysical events
+            Expected rate of astrophysical events at `rate_redshift`
         source_prior:
             Function that returns the prior the injections were drawn
             from, given a cosmology. Called as `source_prior(cosmology)[0]`
+        rate_index:
+            Power-law index of the event rate in (1 + z)
+        rate_redshift:
+            Redshift at which `astro_event_rate` is quoted
 
     Returns: Pastro model
     """
@@ -76,6 +82,8 @@ def fit_or_load_pastro(
             rejected,
             astro_event_rate,
             source_prior(DEFAULT_COSMOLOGY)[0],
+            rate_index=rate_index,
+            rate_redshift=rate_redshift,
         )
         pastro = Pastro(foreground_model, background_model)
         logger.info("Fitting complete, saving pastro model")
@@ -93,6 +101,8 @@ def pastro_subprocess(
     rejected_path,
     astro_event_rate,
     source_prior,
+    rate_index,
+    rate_redshift,
     gdb: "GraceDb",
     outdir: Path,
 ):
@@ -107,6 +117,8 @@ def pastro_subprocess(
         rejected_path,
         astro_event_rate=astro_event_rate,
         source_prior=source_prior,
+        rate_index=rate_index,
+        rate_redshift=rate_redshift,
     )
     while True:
         event = pastro_queue.get()

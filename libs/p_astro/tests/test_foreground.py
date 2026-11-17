@@ -3,11 +3,10 @@ import tempfile
 
 import numpy as np
 import pytest
-from bilby.core.prior import Cosine, PriorDict
-from bilby.gw.prior import UniformComovingVolume
 from ledger.events import RecoveredInjectionSet
 from ledger.injections import InjectionParameterSet
 from p_astro.foreground import KdeForeground
+from scipy.integrate import quad
 from utils.cosmology import DEFAULT_COSMOLOGY, get_astrophysical_volume
 
 
@@ -39,19 +38,8 @@ def make_ledger(cls, **fields):
     return cls(**{**data, **fields})
 
 
-def test_foreground_rate_follows_target_redshift():
-    # draws uniform in comoving volume, every source below z0 accepted:
-    # the total rate is the rate density times the time-dilated
-    # volume below z0
-    rate, z0 = 19.0, 1.0
-    prior = PriorDict(
-        {
-            "redshift": UniformComovingVolume(
-                0, 2, name="redshift", cosmology=DEFAULT_COSMOLOGY
-            ),
-            "dec": Cosine(),
-        }
-    )
+def known_answer_ledgers(prior, z0):
+    # draws from the prior, with every source below z0 accepted
     draws = prior.sample(200_000)
     accepted = draws["redshift"] < z0
     foreground = make_ledger(
@@ -68,8 +56,40 @@ def test_foreground_rate_follows_target_redshift():
         redshift=draws["redshift"][~accepted],
         dec=draws["dec"][~accepted],
     )
+    return foreground, rejected
 
-    model = KdeForeground(foreground, rejected, rate, prior)
+
+def test_foreground_rate_follows_target_redshift(source_prior):
+    # draws uniform in comoving volume: the total rate is the rate
+    # density times the time-dilated volume below z0
+    rate, z0 = 19.0, 1.0
+    foreground, rejected = known_answer_ledgers(source_prior, z0)
+
+    model = KdeForeground(foreground, rejected, rate, source_prior)
 
     expected = rate * get_astrophysical_volume(0, z0, DEFAULT_COSMOLOGY) / 1e9
+    assert model.scale_factor == pytest.approx(expected, rel=0.03)
+
+
+def test_foreground_rate_follows_rate_evolution(source_prior):
+    # a rate of 30.4 at z = 0.2 that rises as (1 + z)^2.5: the total
+    # rate is the integral of rate times time-dilated volume below z0
+    rate, rate_index, rate_redshift, z0 = 30.4, 2.5, 0.2, 1.0
+    foreground, rejected = known_answer_ledgers(source_prior, z0)
+
+    model = KdeForeground(
+        foreground,
+        rejected,
+        rate,
+        source_prior,
+        rate_index=rate_index,
+        rate_redshift=rate_redshift,
+    )
+
+    def rate_per_redshift(z):
+        volume = DEFAULT_COSMOLOGY.differential_comoving_volume(z).value
+        evolution = ((1 + z) / (1 + rate_redshift)) ** rate_index
+        return rate * 4 * np.pi * volume / (1 + z) * evolution
+
+    expected = quad(rate_per_redshift, 0, z0)[0] / 1e9
     assert model.scale_factor == pytest.approx(expected, rel=0.03)

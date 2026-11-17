@@ -362,6 +362,8 @@ def main(
     integration_window_length: float,
     astro_event_rate: float,
     source_prior: Callable,
+    astro_rate_index: float,
+    astro_rate_redshift: float,
     data_source: Literal["frames", "arrakis"] = "frames",
     augmentor: torch.nn.Module | None = None,
     state_channels: list[str] | None = None,
@@ -450,10 +452,15 @@ def main(
         integration_window_length:
             Length of output integration window in seconds
         astro_event_rate:
-            Prior on rate of astrophysical events in units Gpc^-3 yr^-1
+            Prior on rate of astrophysical events in units Gpc^-3 yr^-1,
+            at redshift `astro_rate_redshift`
         source_prior:
             Function that returns the prior the p_astro injections were
             drawn from, given a cosmology
+        astro_rate_index:
+            Power-law index of the astrophysical event rate in (1 + z)
+        astro_rate_redshift:
+            Redshift at which `astro_event_rate` is quoted
         fftlength:
             FFT length in seconds (defaults to kernel_length + fduration)
         highpass:
@@ -701,6 +708,8 @@ def main(
         rejected_path,
         astro_event_rate,
         source_prior,
+        astro_rate_index,
+        astro_rate_redshift,
         gdb,
         outdir,
     )
