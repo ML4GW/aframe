@@ -40,7 +40,7 @@ def make_ledger(cls, **fields):
 
 
 def test_foreground_rate_follows_target_redshift():
-    # draws uniform in comoving volume, every source below z0 found:
+    # draws uniform in comoving volume, every source below z0 accepted:
     # the total rate is the rate density times the time-dilated
     # volume below z0
     rate, z0 = 19.0, 1.0
@@ -53,20 +53,20 @@ def test_foreground_rate_follows_target_redshift():
         }
     )
     draws = prior.sample(200_000)
-    found = draws["redshift"] < z0
+    accepted = draws["redshift"] < z0
     foreground = make_ledger(
         RecoveredInjectionSet,
-        redshift=draws["redshift"][found],
-        dec=draws["dec"][found],
+        redshift=draws["redshift"][accepted],
+        dec=draws["dec"][accepted],
         detection_statistic=np.random.default_rng().standard_normal(
-            found.sum()
+            accepted.sum()
         ),
-        num_injections=int(found.sum()),
+        num_injections=int(accepted.sum()),
     )
     rejected = make_ledger(
         InjectionParameterSet,
-        redshift=draws["redshift"][~found],
-        dec=draws["dec"][~found],
+        redshift=draws["redshift"][~accepted],
+        dec=draws["dec"][~accepted],
     )
 
     model = KdeForeground(foreground, rejected, rate, prior)

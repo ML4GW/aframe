@@ -54,17 +54,21 @@ class ForegroundModel:
         self.astro_event_rate = astro_event_rate
         self.injected_volume = self.get_injected_volume()
 
-        found = self.get_weights(foreground, source_prior)
-        missed = self.get_weights(rejected, source_prior)
-        self.weights = found
-        self.found_fraction = found.sum() / (found.sum() + missed.sum())
+        accepted_weights = self.get_weights(foreground, source_prior)
+        rejected_weights = self.get_weights(rejected, source_prior)
+        self.weights = accepted_weights
+        self.accepted_fraction = accepted_weights.sum() / (
+            accepted_weights.sum() + rejected_weights.sum()
+        )
         self.fit()
 
     @property
     def scale_factor(self):
         """Scale factor to convert from rate density to count rate"""
         return (
-            self.astro_event_rate * self.injected_volume * self.found_fraction
+            self.astro_event_rate
+            * self.injected_volume
+            * self.accepted_fraction
         )
 
     def get_weights(
