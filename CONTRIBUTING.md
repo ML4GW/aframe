@@ -1,15 +1,12 @@
-Contributing
-============
+# Contributing
 
-Thanks for taking the time to contribute! While we appreciate all who wish to contribute, at the moment we're prioritizing contributions from IGWN scientists.
+Thanks for taking the time to contribute! While we appreciate all who wish to contribute, at the moment we're prioritizing contributions from members of our group.
 
 Here are some guidelines on how code in this repo should be structured, as well as best practices for making contributions to it.
 
 ## Getting started
-```{eval-rst}
-..note:
-    It is assumed that you have succesfully completed the `ml4gw quickstart <https://github.com/ml4gw/quickstart/>`_ instructions for pre-requisite environment and software setup, or have installed the equivalent by hand.
-```
+
+> **Note:** It is assumed that you have successfully completed the [ml4gw quickstart](https://github.com/ml4gw/quickstart/) instructions for pre-requisite environment and software setup, or have installed the equivalent by hand.
 
 To start contributing, create a [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository. You can then clone your fork
 
@@ -79,3 +76,16 @@ If any of the CI tests fail or your reviewers request changes to the code, you c
 Once all the checks pass and at least one reviewer approves your code, your changes will be merged into the main repository for all the world to use!
 
 Occasionally, you may have a branch that is not ready to pass all the checks required for merging, but is still useful to make others aware of the work that is going on (for e.g. Project board planning). If this is the case, consider opening a [draft pull request](https://github.blog/2019-02-14-introducing-draft-pull-requests/), then updating its status once the code is complete.
+
+
+### Policy on LLM Usage
+
+We do not prohibit the use of LLMs for writing code. However, we expect the human contributor to have a complete understanding of the change they are proposing.
+
+Guidelines for different areas in which an LLM might be used:
+- **Identification**: pointing out the bug or potential feature. Contributors should ensure they have a sufficient understanding of the codebase to evaluate whether the bug is truly a bug, or if a feature would be useful. If in doubt, create an issue and ask.
+- **Solution**: proposing the shape of the solution. Likewise, contributors should understand the problem well enough to judge whether the proposed solution adequately addresses the problem and fits in well with the surrounding context.
+- **Implementation**: writing the code, integrating with existing modules. Code should match the structure and style of code throughout the rest of repository. It may be be generic where there are multiple consumers, but should not create abstractions for hypothetical situations; it may be specific for single-use applications, but should not create a slew of bespoke solutions for every possible use case. In brief, no slop.
+- **Testing**: Creating unit tests. LLMs are often overly defensive coders, writing tests for highly unlikely situations, or covering the same area multiple times. This can make tests harder to review, read, and maintain. If an LLM is used to create tests, ensure that every test is prudent and reasonable.
+- **Validation**: Checking that the new feature produces the desired outcome. If an LLM is used to, e.g., generate plots demonstrating the result, it is expected that the code used to create the plots is also understood by the contributor.
+- **Documentation**: Docstrings and comments should be primarily written by hand. The text that comes out of LLMs, even if technically more accurate and precise, is often harder to parse than text written by humans. If text in your PR sounds too much like an LLM, you may be asked to re-write it.
