@@ -43,19 +43,20 @@ data:
     chunk_size: 10000
 
     # preprocessing args
-    # kernel_length:
+    windowing:
+      # kernel_length:
+      window_lead_min: 0.05
+      # window_lead_max: set to kernel_length - desired_left_pad
     psd_length: 8
     # fduration:
-    # highpass: 
-    # lowpass: 
+    # highpass:
+    # lowpass:
     fftlength: null
 
     # augmentation args
     waveform_prob: 0.277
     swap_prob: 0.014
     mute_prob: 0.055
-    left_pad: 0.25
-    right_pad: 0.05
     snr_sampler:
       class_path: ml4gw.distributions.PowerLaw
       init_args: 
