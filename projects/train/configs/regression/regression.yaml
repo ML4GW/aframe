@@ -1,0 +1,136 @@
+# Regression-only training config.
+# Predicts injection parameters directly from whitened strain.
+#
+# Key differences from the classification configs:
+#   - waveform_prob: 1.0  (every sample is injected)
+#   - num_valid_views: 1  (multi-view averaging is not useful for regression)
+#   - No AUROC metric; EarlyStopping monitors per-parameter MAE instead.
+#
+# IMPORTANT: param_names and num_params must be consistent. Set them to the
+# parameter names present in the "parameters" group of your waveform HDF5
+# files plus any extrinsic params added by inject() (dec, psi, phi, snr).
+
+model:
+  class_path: train.model.SupervisedRegressionAframe
+  init_args:
+    arch:
+      class_path: architectures.RegressionTimeDomainResNet
+      init_args:
+        layers: [3, 4, 6, 3]
+        # Must equal len(param_names) below
+        num_params: 1
+        norm_layer:
+          class_path: ml4gw.nn.norm.GroupNorm1DGetter
+          init_args:
+            groups: 16
+
+    # Update to match the parameters available in your waveform files.
+    # Extrinsic params (dec, psi, phi, snr) are always available.
+    param_names:
+      - chirp_mass
+
+    # optimization
+    learning_rate: 1e-3
+    pct_lr_ramp: 0.115
+    weight_decay: 1e-4
+
+data:
+  class_path: train.data.supervised.TimeDomainSupervisedAframeDataset
+  init_args:
+    background_dir: data/bns/background_data
+    waveforms_dir: data/bns/aframe_train/
+    ifos: [H1, L1]
+    sample_rate: 2048
+
+    kernel_length: 2.0
+    left_pad: 1.75
+    right_pad: 0
+
+    batch_size: 256
+    batches_per_epoch: 1000
+    chunk_size: 10000
+    chunks_per_epoch: 10
+    num_files_per_batch: 4
+
+    fduration: 2.0
+    fftlength: 2.0
+    psd_length: 20
+    highpass: 20
+    lowpass: 1024
+
+    # Inject into every sample so the regression loss is never sparse.
+    waveform_prob: 1.0
+    swap_prob: 0.0
+    mute_prob: 0.0
+    max_num_workers: 16
+
+    valid_stride: 0.5
+    num_valid_views: 5
+    valid_livetime: 57600
+
+    snr_sampler:
+      class_path: train.augmentations.SnrSampler
+      init_args:
+        alpha: -3
+        max_min_snr: 8.0
+        min_min_snr: 4.0
+        max_snr: 100.0
+        decay_steps: 10000
+        # distribution_type: uniform
+
+    param_transforms:
+      - class_path: train.transforms.ChirpMass
+
+    waveform_sampler:
+      class_path: train.data.waveforms.WaveformLoader
+      init_args:
+        ifos: [H1, L1]
+        sample_rate: 2048
+        val_waveform_file: data/bns/aframe_train/val_waveforms.hdf5
+        training_waveform_path: data/bns/uniform_chirp_mass_waveforms/training_waveforms.hdf5
+
+    dec:
+      class_path: ml4gw.distributions.Cosine
+    psi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: 0
+        high: 3.14159
+        validate_args: false
+    phi:
+      class_path: torch.distributions.Uniform
+      init_args:
+        low: -3.14159
+        high: 3.14159
+        validate_args: false
+
+trainer:
+  logger:
+    - class_path: train.callbacks.AframeWandbLogger
+      init_args:
+        name: "aframe_regression"
+        save_dir: outputs
+        project: "aframe"
+
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        # Monitor the first param's MAE; adjust to taste.
+        monitor: "validation/mae_chirp_mass"
+        mode: "min"
+        patience: 50
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: "validation/mae_chirp_mass"
+        mode: "min"
+        save_top_k: 1
+        save_last: true
+        auto_insert_metric_name: false
+    - class_path: train.callbacks.SaveAugmentedBatch
+
+  accelerator: auto
+  max_epochs: 200
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 20
+  enable_progress_bar: true
+  benchmark: true

@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 import math
 import warnings
-from typing import Iterable, Optional
+from typing import Sequence, Optional
 
 import h5py
 import numpy as np
@@ -85,12 +85,12 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
 
     def __init__(
         self,
-        fnames: Iterable[Path],
-        channels: Iterable[str],
+        fnames: Sequence[Path],
+        channels: Sequence[str],
         batch_size: int,
         batches_per_epoch: int,
         chunk_size: int = 1000,
-        path: Optional[Path] = None,
+        path: Optional[Path | str] = None,
     ):
         self.fnames = fnames
         self.channels = channels
@@ -99,23 +99,39 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
         self.chunk_size = chunk_size
 
         if path is not None:
-            self.path = path.split("/")
+            self.path = Path(path).parts
         else:
             self.path = None
 
         self.sizes = {}
         self.mmap_files = {}
         self.mmap_datasets = {}
+        self.param_datasets = {}
 
         # for each file store the datasets
         # of interest in a dictionary so we
         # can access them at will without needing
         # to reopen the files each time
+        self.param_keys = None
         for fname in self.fnames:
             f, g = self.open(fname)
             self.mmap_files[fname] = f
             self.mmap_datasets[fname] = {
                 channel: g[channel] for channel in self.channels
+            }
+
+            pm_grp = f["parameters"]
+
+            keys = list(pm_grp.keys())
+            if self.param_keys is None:
+                self.param_keys = keys
+            elif set(keys) != set(self.param_keys):
+                raise ValueError(
+                    f"Parameter keys in {fname} ({keys}) do not match "
+                    f"those in the first file ({self.param_keys})"
+                )
+            self.param_datasets[fname] = {
+                k: pm_grp[k] for k in self.param_keys
             }
 
             # store sizes of each dataset and warn if not chunked;
@@ -167,16 +183,28 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
 
     def load_chunk(self, fname, start, size):
         end = min(start + size, self.sizes[fname])
-        return {
+        waveforms = {
             channel: self.mmap_datasets[fname][channel][start:end]
             for channel in self.channels
         }
+        params = {
+            k: self.param_datasets[fname][k][start:end]
+            for k in self.param_keys
+        }
+        return waveforms, params
 
     def sample_batch(self):
         # allocate batch up front
         batch = np.zeros(
             (self.batch_size, self.num_channels, self.waveform_size)
         )
+        params_buf = {
+            k: np.zeros(
+                self.batch_size,
+                dtype=self.param_datasets[self.fnames[0]][k].dtype,
+            )
+            for k in self.param_keys
+        }
 
         for i in range(self.chunks_per_batch):
             fname = np.random.choice(self.fnames, p=self.probs)
@@ -190,14 +218,20 @@ class Hdf5WaveformLoader(torch.utils.data.IterableDataset):
             start = np.random.randint(0, max_start + 1)
 
             # load the chunk and insert it into the batch
-            chunk = self.load_chunk(fname, start, chunk_size)
+            wf_chunk, param_chunk = self.load_chunk(fname, start, chunk_size)
+
             batch_start = i * self.chunk_size
             batch_end = batch_start + chunk_size
 
-            for i, channel in enumerate(self.channels):
-                batch[batch_start:batch_end, i, :] = chunk[channel]
+            for k in self.param_keys:
+                params_buf[k][batch_start:batch_end] = param_chunk[k]
 
-        return torch.tensor(batch)
+            for j, channel in enumerate(self.channels):
+                batch[batch_start:batch_end, j, :] = wf_chunk[channel]
+
+        waveforms = torch.tensor(batch)
+        params = {k: torch.tensor(v) for k, v in params_buf.items()}
+        return waveforms, params
 
     def __iter__(self):
         for _ in range(self.batches_per_epoch):
@@ -227,7 +261,7 @@ class ChunkedWaveformDataset(torch.utils.data.IterableDataset):
 
     def __init__(
         self,
-        chunk_it: Iterable,
+        chunk_it: Sequence,
         batch_size: int,
         batches_per_chunk: int,
     ) -> None:
@@ -241,17 +275,27 @@ class ChunkedWaveformDataset(torch.utils.data.IterableDataset):
 
     def __iter__(self):
         it = iter(self.chunk_it)
-        [chunk] = next(it)
 
-        num_waveforms, _, _ = chunk.shape
+        def _next(it):
+            [waveform_chunk], param_dict_chunk = next(it)
+            return waveform_chunk, {
+                k: v[0] for k, v in param_dict_chunk.items()
+            }
+
+        waveform_chunk, param_chunk = _next(it)
+        num_waveforms, _, _ = waveform_chunk.shape
+
         while True:
             # generate batches from the current chunk
             for _ in range(self.batches_per_chunk):
                 idx = torch.randperm(num_waveforms)[: self.batch_size]
-                yield chunk[idx]
+                yield (
+                    waveform_chunk[idx],
+                    {k: v[idx] for k, v in param_chunk.items()},
+                )
 
             try:
-                [chunk] = next(it)
+                waveform_chunk, param_chunk = _next(it)
             except StopIteration:
                 break
-            num_waveforms, _, _ = chunk.shape
+            num_waveforms, _, _ = waveform_chunk.shape

@@ -29,8 +29,8 @@ class WaveformGenerator(WaveformSampler):
     def sample(self, X: torch.Tensor):
         N = len(X)
         parameters = self.training_prior(N, device=X.device)
-        hc, hp = self(**parameters)
-        return hc, hp
+        waveforms = self(**parameters)
+        return waveforms, parameters
 
     def forward(self):
         raise NotImplementedError
