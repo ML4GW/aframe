@@ -48,7 +48,13 @@ class SupervisedTimeDomainResNet(ResNet1D, SupervisedArchitecture):
             stride_type=stride_type,
             norm_layer=norm_layer,
         )
-
+        
+    def extract_embeddings(self, X: Tensor) -> Tensor:
+        """Return pooled features before the detection head."""
+        X = self.maxpool(self.relu(self.bn1(self.conv1(X))))
+        for layer in self.residual_layers:
+            X = layer(X)
+        return torch.flatten(self.avgpool(X), 1)
 
 class SupervisedFrequencyDomainResNet(ResNet1D, SupervisedArchitecture):
     def __init__(
